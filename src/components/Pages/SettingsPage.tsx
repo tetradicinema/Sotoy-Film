@@ -1,0 +1,1236 @@
+import React, { useState, useRef } from 'react';
+import {
+  User as UserIcon,
+  Shield,
+  Lock,
+  Eye,
+  EyeOff,
+  Bell,
+  Sliders,
+  Activity,
+  Upload,
+  Camera,
+  Trash2,
+  CheckCircle2,
+  AlertTriangle,
+  Download,
+  Smartphone,
+  Globe,
+  Key,
+  Mail,
+  Film,
+  Sparkles,
+  Save,
+  ChevronRight,
+  RefreshCw,
+  LogOut,
+  Layers,
+  Award,
+  Flame,
+  TrendingUp,
+  MessageSquare,
+  Bookmark,
+  Star,
+  Send,
+} from 'lucide-react';
+import { useApp } from '../../context/AppContext';
+import { SettingsSubPage, UserSettings } from '../../types';
+
+export const SettingsPage: React.FC = () => {
+  const {
+    currentUser,
+    updateUserProfile,
+    uploadProfilePhoto,
+    userSettings,
+    updateUserSettings,
+    activeSettingsTab,
+    setActiveSettingsTab,
+    changeEmail,
+    changePassword,
+    toggleTwoFactor,
+    exportUserData,
+    ratings,
+    watchlist,
+    buzzList,
+    addBuzzPost,
+    showToast,
+    logout,
+    navigateTo,
+  } = useApp();
+
+  // Profile Form state
+  const [name, setName] = useState(currentUser.name);
+  const [handle, setHandle] = useState(currentUser.handle);
+  const [bio, setBio] = useState(currentUser.bio);
+  const [avatarPreview, setAvatarPreview] = useState(currentUser.avatar);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Security Form state
+  const [currentEmail, setCurrentEmail] = useState(currentUser.email || 'budi.cinephile@sotoyfilm.id');
+  const [newEmail, setNewEmail] = useState('');
+  const [confirmEmail, setConfirmEmail] = useState('');
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+
+  // Quick buzz text in Activity subpage
+  const [quickBuzzText, setQuickBuzzText] = useState('');
+
+  // Preset Avatars
+  const PRESET_AVATARS = [
+    { label: 'Director Auteur', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80' },
+    { label: 'Cinematographer', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80' },
+    { label: 'Neo-Noir Lead', url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80' },
+    { label: 'Sci-Fi Explorer', url: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=300&q=80' },
+    { label: 'Screenwriter', url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=300&q=80' },
+    { label: 'Gear Specialist', url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80' },
+  ];
+
+  // All Available Genres
+  const ALL_GENRES = [
+    'Sci-Fi',
+    'Psychological Thriller',
+    'Neo-Noir',
+    'Cinema Gear',
+    'Anime',
+    'Indie Cinema',
+    'Horror',
+    'Action & Epik',
+    'Drama & Biografi',
+    'Komedi Satir',
+    'Dokumenter Sinema',
+    'Cyberpunk',
+  ];
+
+  // Handle device file upload
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('Mohon pilih file gambar yang valid (JPG, PNG, WEBP).');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Ukuran gambar terlalu besar. Maksimal 5 MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = event => {
+      const base64 = event.target?.result as string;
+      if (base64) {
+        setAvatarPreview(base64);
+        uploadProfilePhoto(base64);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateUserProfile({
+      name,
+      handle,
+      bio,
+      avatar: avatarPreview,
+    });
+  };
+
+  const handleUpdateEmail = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEmail.trim()) {
+      showToast('Masukkan alamat email baru.');
+      return;
+    }
+    if (newEmail !== confirmEmail) {
+      showToast('Konfirmasi email baru tidak cocok.');
+      return;
+    }
+    if (changeEmail(newEmail)) {
+      setCurrentEmail(newEmail);
+      setNewEmail('');
+      setConfirmEmail('');
+    }
+  };
+
+  const handleUpdatePassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!oldPassword) {
+      showToast('Masukkan kata sandi lama.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showToast('Konfirmasi kata sandi baru tidak cocok.');
+      return;
+    }
+    if (changePassword(oldPassword, newPassword)) {
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    }
+  };
+
+  const toggleGenre = (genre: string) => {
+    const current = userSettings.favoriteGenres || [];
+    const next = current.includes(genre)
+      ? current.filter(g => g !== genre)
+      : [...current, genre];
+    updateUserSettings({ favoriteGenres: next });
+  };
+
+  const handleQuickBuzzPost = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickBuzzText.trim()) return;
+    addBuzzPost(quickBuzzText);
+    setQuickBuzzText('');
+  };
+
+  const userReviewsCount = ratings.filter(r => r.userId === currentUser.id).length;
+  const userBuzzCount = buzzList.filter(b => b.author.id === currentUser.id).length;
+  const currentXP = 340 + userReviewsCount * 25 + userBuzzCount * 15 + watchlist.length * 10;
+  const targetXP = 1000;
+  const xpPercentage = Math.min(100, Math.round((currentXP / targetXP) * 100));
+
+  const navItems: { id: SettingsSubPage; label: string; icon: any; desc: string }[] = [
+    {
+      id: 'profile',
+      label: 'Profil & Foto Perangkat',
+      icon: UserIcon,
+      desc: 'Nama, bio & upload foto dari device',
+    },
+    {
+      id: 'activity',
+      label: 'Pusat Aktivitas',
+      icon: Activity,
+      desc: 'Statistik XP, lencana & live log',
+    },
+    {
+      id: 'security',
+      label: 'Keamanan & Akun',
+      icon: Lock,
+      desc: 'Email, ganti sandi & sesi login',
+    },
+    {
+      id: 'privacy',
+      label: 'Privasi & Visibilitas',
+      icon: Shield,
+      desc: 'Visibilitas data, tag & unduh arsip',
+    },
+    {
+      id: 'preferences',
+      label: 'Preferensi Sinema',
+      icon: Sliders,
+      desc: 'Genre film, player & autoplay',
+    },
+    {
+      id: 'notifications',
+      label: 'Notifikasi',
+      icon: Bell,
+      desc: 'Pemberitahuan suka, rilis & buzz',
+    },
+  ];
+
+  return (
+    <div className="min-h-screen py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#00F0FF] shadow-sm shadow-[#00F0FF]" />
+              <h1 className="font-display font-black text-2xl sm:text-3xl text-white tracking-tight">
+                Pengaturan Akun & Pusat Aktivitas
+              </h1>
+            </div>
+            <p className="text-slate-400 text-xs sm:text-sm mt-1">
+              Kelola identitas, foto profil dari perangkat, keamanan data, privasi, serta pantau progres kurasimu.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              id="back-to-dashboard-btn"
+              onClick={() => navigateTo('user-profile')}
+              className="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors"
+            >
+              <UserIcon className="w-3.5 h-3.5 text-[#00F0FF]" />
+              <span>Lihat Dashboard</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Settings Main Grid: Sidebar Sub-Pages + Active Content Card */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          {/* Subpage Navigation Sidebar */}
+          <aside className="lg:col-span-4 bg-[#121324] border border-slate-800 rounded-3xl p-3 sm:p-4 space-y-1 shadow-xl">
+            <div className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-800/80 mb-2">
+              Kategori Pengaturan
+            </div>
+
+            {navItems.map(item => {
+              const Icon = item.icon;
+              const isActive = activeSettingsTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  id={`settings-nav-${item.id}`}
+                  onClick={() => setActiveSettingsTab(item.id)}
+                  className={`w-full text-left p-3 rounded-2xl transition-all flex items-center justify-between group ${
+                    isActive
+                      ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/10 border border-[#00F0FF]/40 text-white shadow-lg shadow-cyan-500/10'
+                      : 'hover:bg-slate-850 text-slate-300 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                        isActive
+                          ? 'bg-[#00F0FF] text-black font-black'
+                          : 'bg-slate-800 text-slate-400 group-hover:text-white'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className={`text-xs font-bold truncate ${isActive ? 'text-[#00F0FF]' : 'text-white'}`}>
+                        {item.label}
+                      </div>
+                      <div className="text-[10px] text-slate-400 truncate">
+                        {item.desc}
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight
+                    className={`w-4 h-4 shrink-0 transition-transform ${
+                      isActive ? 'text-[#00F0FF] translate-x-0.5' : 'text-slate-600 group-hover:text-slate-400'
+                    }`}
+                  />
+                </button>
+              );
+            })}
+
+            {/* Quick Export / Danger actions */}
+            <div className="pt-4 mt-2 border-t border-slate-800/80 space-y-1">
+              <button
+                onClick={exportUserData}
+                className="w-full text-left p-2.5 rounded-xl hover:bg-slate-800 text-xs font-bold text-slate-300 hover:text-white flex items-center gap-2.5 transition-colors"
+              >
+                <Download className="w-4 h-4 text-emerald-400" />
+                <span>Unduh Salinan Data Akun</span>
+              </button>
+              <button
+                onClick={logout}
+                className="w-full text-left p-2.5 rounded-xl hover:bg-red-500/10 text-xs font-bold text-red-400 hover:text-red-300 flex items-center gap-2.5 transition-colors"
+              >
+                <LogOut className="w-4 h-4 text-red-400" />
+                <span>Keluar (Log Out)</span>
+              </button>
+            </div>
+          </aside>
+
+          {/* Subpage Active Content Pane */}
+          <section className="lg:col-span-8 bg-[#121324] border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-6">
+            
+            {/* =================================================================== */}
+            {/* SUBPAGE 1: PROFIL & UPLOAD FOTO DARI DEVICE */}
+            {/* =================================================================== */}
+            {activeSettingsTab === 'profile' && (
+              <div id="settings-pane-profile" className="space-y-6 animate-in fade-in duration-200">
+                <div className="border-b border-slate-800 pb-4">
+                  <h2 className="text-lg font-display font-black text-white flex items-center gap-2">
+                    <UserIcon className="w-5 h-5 text-[#00F0FF]" />
+                    <span>Identitas Profil & Foto Perangkat</span>
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Unggah foto profil langsung dari komputer atau ponsel kamu, dan sesuaikan profil sinematikmu.
+                  </p>
+                </div>
+
+                {/* Upload Foto Profil Langsung dari Device Section */}
+                <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4">
+                  <div className="text-xs font-black uppercase text-slate-400 tracking-wider">
+                    Foto Profil Kamu
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
+                    {/* Live Avatar Preview */}
+                    <div className="relative group shrink-0">
+                      <img
+                        src={avatarPreview}
+                        alt={name}
+                        className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover ring-2 ring-[#00F0FF] shadow-xl"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute inset-0 bg-black/60 rounded-2xl flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-bold gap-1"
+                        title="Klik untuk memilih foto"
+                      >
+                        <Camera className="w-5 h-5 text-[#00F0FF]" />
+                        <span>Ganti Foto</span>
+                      </button>
+                    </div>
+
+                    <div className="flex-1 space-y-3 text-center sm:text-left">
+                      <div>
+                        <div className="text-sm font-bold text-white">Unggah Foto dari Perangkat</div>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Mendukung file JPG, PNG, atau WEBP langsung dari penyimpanan lokal perangkatmu (Maksimal 5MB).
+                        </p>
+                      </div>
+
+                      {/* Hidden File Input */}
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                        id="device-photo-upload-input"
+                      />
+
+                      <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5 pt-1">
+                        <button
+                          type="button"
+                          id="btn-upload-from-device"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="px-4 py-2 rounded-xl bg-[#00F0FF] hover:bg-[#00d0e0] text-black font-black text-xs flex items-center gap-2 shadow-lg shadow-cyan-500/20 transition-all hover:scale-105"
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          <span>Pilih Foto dari Galeri / Device</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAvatarPreview(PRESET_AVATARS[0].url);
+                            uploadProfilePhoto(PRESET_AVATARS[0].url);
+                          }}
+                          className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs flex items-center gap-1.5 transition-colors"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          <span>Reset ke Default</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Preset Avatars Fallback */}
+                  <div className="pt-3 border-t border-slate-800 space-y-2">
+                    <div className="text-[11px] font-medium text-slate-400">
+                      Atau pilih dari Preset Karakter Sinema Sotoy:
+                    </div>
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                      {PRESET_AVATARS.map((preset, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            setAvatarPreview(preset.url);
+                            uploadProfilePhoto(preset.url);
+                          }}
+                          className={`p-1.5 rounded-xl border flex flex-col items-center gap-1.5 transition-all ${
+                            avatarPreview === preset.url
+                              ? 'bg-cyan-500/20 border-[#00F0FF] ring-1 ring-[#00F0FF]'
+                              : 'bg-slate-800/60 border-slate-700/60 hover:border-slate-500'
+                          }`}
+                        >
+                          <img
+                            src={preset.url}
+                            alt={preset.label}
+                            className="w-10 h-10 rounded-lg object-cover"
+                          />
+                          <span className="text-[9px] font-bold text-slate-300 truncate w-full text-center">
+                            {preset.label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Profile Form Fields */}
+                <form onSubmit={handleSaveProfile} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-300">Nama Lengkap / Tampilan</label>
+                      <input
+                        type="text"
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        required
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF]"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-300">Handle / Username (@)</label>
+                      <input
+                        type="text"
+                        value={handle}
+                        onChange={e => setHandle(e.target.value)}
+                        required
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-300">Bio Sinematik & Filosofi Menonton</label>
+                    <textarea
+                      value={bio}
+                      onChange={e => setBio(e.target.value)}
+                      rows={3}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF] resize-none"
+                      placeholder="Ceritakan seleramu tentang film, sutradara favorit, atau gaya visual yang kamu sukai..."
+                    />
+                  </div>
+
+                  <div className="flex justify-end pt-2">
+                    <button
+                      type="submit"
+                      id="save-profile-btn"
+                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#00F0FF] to-[#00A3FF] hover:brightness-110 text-black font-black text-xs flex items-center gap-2 shadow-lg shadow-cyan-500/20 transition-all"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      <span>Simpan Perubahan Profil</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* =================================================================== */}
+            {/* SUBPAGE 2: PUSAT AKTIVITAS (ACTIVITY CENTRE INSIDE SETTINGS) */}
+            {/* =================================================================== */}
+            {activeSettingsTab === 'activity' && (
+              <div id="settings-pane-activity" className="space-y-6 animate-in fade-in duration-200">
+                <div className="border-b border-slate-800 pb-4">
+                  <h2 className="text-lg font-display font-black text-white flex items-center gap-2">
+                    <Activity className="w-5 h-5 text-[#00F0FF]" />
+                    <span>Pusat Aktivitas & Progres Kurasi (Activity Centre)</span>
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Pantau tingkat ke-sotoy-an, XP sinema, lencana penghargaan, dan rekam jejak aktivitasmu.
+                  </p>
+                </div>
+
+                {/* Level & XP Banner */}
+                <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-900 via-[#10192A] to-slate-900 border border-[#00F0FF]/30 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-[#00F0FF]/15 border border-[#00F0FF]/40 flex items-center justify-center text-[#00F0FF] shrink-0">
+                        <Flame className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-black uppercase tracking-wider text-[#00F0FF]">
+                          Level Kurator Sinema
+                        </div>
+                        <div className="text-base sm:text-lg font-display font-black text-white">
+                          Level 3: Cinephile Auteur
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <div className="text-xs font-mono font-bold text-white">
+                        {currentXP} / {targetXP} XP
+                      </div>
+                      <div className="text-[10px] text-slate-400">
+                        +{targetXP - currentXP} XP menuju Level 4 Master Critic
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="space-y-1.5">
+                    <div className="w-full bg-slate-800/80 rounded-full h-2.5 overflow-hidden p-0.5 border border-slate-700/50">
+                      <div
+                        className="bg-gradient-to-r from-[#00F0FF] to-[#FF2E7E] h-full rounded-full transition-all duration-500"
+                        style={{ width: `${xpPercentage}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                      <span>Progres {xpPercentage}%</span>
+                      <span>1 Review = +25 XP • 1 Buzz = +15 XP</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Koleksi Lencana (Badges) */}
+                <div className="space-y-3">
+                  <div className="text-xs font-black uppercase text-slate-400 tracking-wider flex items-center gap-2">
+                    <Award className="w-4 h-4 text-[#FFD000]" />
+                    <span>Lencana Penghargaan Sinema</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="p-3 bg-slate-900 border border-amber-500/30 rounded-2xl flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-[#FFD000] flex items-center justify-center shrink-0">
+                        <Star className="w-4 h-4 fill-current" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-white truncate">Early Reviewer</div>
+                        <div className="text-[9px] text-amber-400 font-semibold">Terkunci (Terverifikasi)</div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-slate-900 border border-cyan-500/30 rounded-2xl flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-cyan-500/20 text-[#00F0FF] flex items-center justify-center shrink-0">
+                        <Film className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-white truncate">Optics Nerd</div>
+                        <div className="text-[9px] text-cyan-400 font-semibold">Aktif</div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-slate-900 border border-emerald-500/30 rounded-2xl flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                        <Bookmark className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-white truncate">Watchlist Hunter</div>
+                        <div className="text-[9px] text-emerald-400 font-semibold">{watchlist.length} Film Tersimpan</div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-slate-900 border border-pink-500/30 rounded-2xl flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-pink-500/20 text-[#FF2E7E] flex items-center justify-center shrink-0">
+                        <MessageSquare className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-white truncate">Teori Liar</div>
+                        <div className="text-[9px] text-pink-400 font-semibold">{userBuzzCount} Buzz Terkirim</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Buzz Composer inside Activity Centre */}
+                <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-2xl space-y-3">
+                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#00F0FF]" />
+                    <span>Kirim Opini Cepat ke Feed Komunitas</span>
+                  </div>
+                  <form onSubmit={handleQuickBuzzPost} className="space-y-2">
+                    <textarea
+                      value={quickBuzzText}
+                      onChange={e => setQuickBuzzText(e.target.value)}
+                      rows={2}
+                      placeholder="Tulis teori sinema atau pendapat film barumu hari ini... (#SotoyFilm)"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF] resize-none"
+                    />
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        className="px-3 py-1.5 rounded-lg bg-[#FF2E7E] hover:bg-pink-600 text-white font-bold text-xs flex items-center gap-1.5 transition-colors"
+                      >
+                        <Send className="w-3 h-3" />
+                        <span>Posting Opini (+15 XP)</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                {/* Live Activity Log */}
+                <div className="space-y-3">
+                  <div className="text-xs font-black uppercase text-slate-400 tracking-wider">
+                    Riwayat Aktivitas Terkini (Live Activity Log)
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="p-3 bg-slate-900/60 border border-slate-800/80 rounded-xl flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-3">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                        <span className="text-slate-200">
+                          Menyimpan <strong className="text-white">{watchlist.length} film</strong> ke Watchlist pribadi
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono">Baru saja</span>
+                    </div>
+
+                    <div className="p-3 bg-slate-900/60 border border-slate-800/80 rounded-xl flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-3">
+                        <span className="w-2 h-2 rounded-full bg-amber-400" />
+                        <span className="text-slate-200">
+                          Memberikan Skor Sotoy & ulasan pada <strong className="text-white">{userReviewsCount} film</strong>
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono">Hari ini</span>
+                    </div>
+
+                    <div className="p-3 bg-slate-900/60 border border-slate-800/80 rounded-xl flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-3">
+                        <span className="w-2 h-2 rounded-full bg-[#FF2E7E]" />
+                        <span className="text-slate-200">
+                          Mempublikasikan <strong className="text-white">{userBuzzCount} postingan diskusi</strong> di Buzz feed
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono">Kemarin</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* =================================================================== */}
+            {/* SUBPAGE 3: KEAMANAN & AKUN (GANTI EMAIL, SANDI, 2FA) */}
+            {/* =================================================================== */}
+            {activeSettingsTab === 'security' && (
+              <div id="settings-pane-security" className="space-y-6 animate-in fade-in duration-200">
+                <div className="border-b border-slate-800 pb-4">
+                  <h2 className="text-lg font-display font-black text-white flex items-center gap-2">
+                    <Lock className="w-5 h-5 text-[#00F0FF]" />
+                    <span>Keamanan Akun & Kredensial</span>
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Perbarui alamat email terdaftar, ganti kata sandi, dan aktifkan proteksi autentikasi dua langkah (2FA).
+                  </p>
+                </div>
+
+                {/* Ganti Email Form */}
+                <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-bold text-white flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-[#00F0FF]" />
+                        <span>Alamat Email Terdaftar</span>
+                      </div>
+                      <div className="text-xs text-slate-400 mt-0.5">
+                        Email aktif saat ini: <span className="font-mono text-white font-bold">{currentEmail}</span>
+                      </div>
+                    </div>
+                    <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      Terverifikasi
+                    </span>
+                  </div>
+
+                  <form onSubmit={handleUpdateEmail} className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-medium text-slate-400">Email Baru</label>
+                      <input
+                        type="email"
+                        value={newEmail}
+                        onChange={e => setNewEmail(e.target.value)}
+                        placeholder="contoh@domain.com"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#00F0FF]"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-medium text-slate-400">Konfirmasi Email Baru</label>
+                      <input
+                        type="email"
+                        value={confirmEmail}
+                        onChange={e => setConfirmEmail(e.target.value)}
+                        placeholder="Ulangi email baru"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#00F0FF]"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2 flex justify-end pt-1">
+                      <button
+                        type="submit"
+                        className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors"
+                      >
+                        Perbarui Alamat Email
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                {/* Ganti Kata Sandi Form */}
+                <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4">
+                  <div>
+                    <div className="text-sm font-bold text-white flex items-center gap-2">
+                      <Key className="w-4 h-4 text-[#FFD000]" />
+                      <span>Ganti Kata Sandi (Password)</span>
+                    </div>
+                    <div className="text-xs text-slate-400 mt-0.5">
+                      Gunakan kombinasi minimal 6 karakter dengan huruf dan angka untuk keamanan optimal.
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleUpdatePassword} className="space-y-3 pt-2">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-medium text-slate-400">Kata Sandi Saat Ini</label>
+                      <div className="relative">
+                        <input
+                          type={showOldPassword ? 'text' : 'password'}
+                          value={oldPassword}
+                          onChange={e => setOldPassword(e.target.value)}
+                          placeholder="Masukkan password lama kamu"
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#00F0FF] pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowOldPassword(!showOldPassword)}
+                          className="absolute right-3 top-2.5 text-slate-500 hover:text-white"
+                        >
+                          {showOldPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-slate-400">Kata Sandi Baru</label>
+                        <div className="relative">
+                          <input
+                            type={showNewPassword ? 'text' : 'password'}
+                            value={newPassword}
+                            onChange={e => setNewPassword(e.target.value)}
+                            placeholder="Minimal 6 karakter"
+                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#00F0FF] pr-10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowNewPassword(!showNewPassword)}
+                            className="absolute right-3 top-2.5 text-slate-500 hover:text-white"
+                          >
+                            {showNewPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-slate-400">Konfirmasi Sandi Baru</label>
+                        <input
+                          type="password"
+                          value={confirmPassword}
+                          onChange={e => setConfirmPassword(e.target.value)}
+                          placeholder="Ulangi kata sandi baru"
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#00F0FF]"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end pt-1">
+                      <button
+                        type="submit"
+                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:brightness-110 text-black font-black text-xs transition-all shadow-md shadow-amber-500/20"
+                      >
+                        Simpan Kata Sandi Baru
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                {/* 2-Factor Authentication (2FA) */}
+                <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-emerald-400" />
+                      <span className="text-sm font-bold text-white">Autentikasi Dua Langkah (2FA)</span>
+                    </div>
+                    <p className="text-xs text-slate-400 max-w-lg">
+                      Tambahkan perlindungan ekstra dengan verifikasi kode OTP setiap kali masuk dari perangkat baru.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={toggleTwoFactor}
+                    className={`px-4 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-2 shrink-0 ${
+                      userSettings.twoFactorEnabled
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                        : 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-white'
+                    }`}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${userSettings.twoFactorEnabled ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+                    <span>{userSettings.twoFactorEnabled ? '2FA Aktif' : 'Aktifkan 2FA'}</span>
+                  </button>
+                </div>
+
+                {/* Active Sessions */}
+                <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3">
+                  <div className="text-xs font-black uppercase text-slate-400 tracking-wider">
+                    Perangkat & Sesi Login Aktif
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Smartphone className="w-4 h-4 text-[#00F0FF]" />
+                        <div>
+                          <div className="text-xs font-bold text-white flex items-center gap-2">
+                            <span>Chrome di Windows 11</span>
+                            <span className="bg-emerald-500/20 text-emerald-400 text-[9px] font-bold px-1.5 py-0.2 rounded">
+                              Sesi Saat Ini
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-400">Jakarta, Indonesia • IP 182.253.xx.xx</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* =================================================================== */}
+            {/* SUBPAGE 4: PENGATURAN PRIVASI & DATA */}
+            {/* =================================================================== */}
+            {activeSettingsTab === 'privacy' && (
+              <div id="settings-pane-privacy" className="space-y-6 animate-in fade-in duration-200">
+                <div className="border-b border-slate-800 pb-4">
+                  <h2 className="text-lg font-display font-black text-white flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-[#00F0FF]" />
+                    <span>Pengaturan Privasi & Visibilitas Data</span>
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Kontrol siapa saja yang dapat melihat profil, daftar tontonan, ulasan, serta izin ditandai dalam komunitas.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  {/* Mode Profil Privat */}
+                  <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-2xl flex items-center justify-between gap-4">
+                    <div>
+                      <div className="text-xs font-bold text-white">Jadikan Profil Privat</div>
+                      <div className="text-[11px] text-slate-400">
+                        Hanya pengguna yang disetujui sebagai pengikut yang dapat melihat ulasan lengkap dan watchlist kamu.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateUserSettings({ isPrivateProfile: !userSettings.isPrivateProfile })}
+                      className={`w-12 h-6 rounded-full transition-colors relative p-0.5 shrink-0 ${
+                        userSettings.isPrivateProfile ? 'bg-[#00F0FF]' : 'bg-slate-800'
+                      }`}
+                    >
+                      <div
+                        className={`w-5 h-5 rounded-full bg-black transition-transform ${
+                          userSettings.isPrivateProfile ? 'translate-x-6' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Visibilitas Watchlist */}
+                  <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-2xl flex items-center justify-between gap-4">
+                    <div>
+                      <div className="text-xs font-bold text-white">Tampilkan Watchlist ke Publik</div>
+                      <div className="text-[11px] text-slate-400">
+                        Izinkan penonton lain melihat daftar film yang ingin kamu tonton di halaman profilmu.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateUserSettings({ isWatchlistPublic: !userSettings.isWatchlistPublic })}
+                      className={`w-12 h-6 rounded-full transition-colors relative p-0.5 shrink-0 ${
+                        userSettings.isWatchlistPublic ? 'bg-emerald-500' : 'bg-slate-800'
+                      }`}
+                    >
+                      <div
+                        className={`w-5 h-5 rounded-full bg-black transition-transform ${
+                          userSettings.isWatchlistPublic ? 'translate-x-6' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Visibilitas Riwayat Ulasan */}
+                  <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-2xl flex items-center justify-between gap-4">
+                    <div>
+                      <div className="text-xs font-bold text-white">Publikasikan Skor & Ulasan Saya di Feed</div>
+                      <div className="text-[11px] text-slate-400">
+                        Setiap kali kamu memberi rating bintang atau ulasan, tampilkan di tab ulasan film publik.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateUserSettings({ isReviewsPublic: !userSettings.isReviewsPublic })}
+                      className={`w-12 h-6 rounded-full transition-colors relative p-0.5 shrink-0 ${
+                        userSettings.isReviewsPublic ? 'bg-[#FFD000]' : 'bg-slate-800'
+                      }`}
+                    >
+                      <div
+                        className={`w-5 h-5 rounded-full bg-black transition-transform ${
+                          userSettings.isReviewsPublic ? 'translate-x-6' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Izin Penandaan (Tagging) di Buzz */}
+                  <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-2xl space-y-2">
+                    <div className="text-xs font-bold text-white">Izin Ditandai di Postingan Buzz (@mention)</div>
+                    <div className="grid grid-cols-3 gap-2 pt-1">
+                      {[
+                        { id: 'everyone', label: 'Semua Orang' },
+                        { id: 'following', label: 'Hanya yang Diikuti' },
+                        { id: 'none', label: 'Jangan Izinkan' },
+                      ].map(opt => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => updateUserSettings({ allowTagging: opt.id as any })}
+                          className={`p-2 rounded-xl text-xs font-bold border transition-colors ${
+                            userSettings.allowTagging === opt.id
+                              ? 'bg-cyan-500/20 border-[#00F0FF] text-[#00F0FF]'
+                              : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Data Export & Zona Berbahaya */}
+                <div className="pt-4 border-t border-slate-800 space-y-3">
+                  <div className="text-xs font-black uppercase text-slate-400 tracking-wider">
+                    Arsip Data & Zona Berbahaya
+                  </div>
+
+                  <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-bold text-white">Unduh Arsip Data Pribadi (JSON)</div>
+                      <div className="text-[11px] text-slate-400">
+                        Dapatkan salinan data ulasan film, watchlist tersimpan, dan daftar following/followers.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={exportUserData}
+                      className="px-3.5 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/40 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-1.5 transition-colors shrink-0"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Unduh Data Saya</span>
+                    </button>
+                  </div>
+
+                  <div className="p-4 bg-red-950/20 border border-red-900/40 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-bold text-red-400">Hapus Akun Sotoy Film</div>
+                      <div className="text-[11px] text-slate-400">
+                        Tindakan ini akan menghapus semua ulasan, thread buzz, dan progres kurasi secara permanen.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => showToast('Permintaan penghapusan akun telah dicatat. Hubungi tim support untuk konfirmasi akhir.')}
+                      className="px-3.5 py-2 rounded-xl bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 text-red-400 text-xs font-bold flex items-center gap-1.5 transition-colors shrink-0"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Hapus Akun</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* =================================================================== */}
+            {/* SUBPAGE 5: PREFERENSI SINEMA & GENRE */}
+            {/* =================================================================== */}
+            {activeSettingsTab === 'preferences' && (
+              <div id="settings-pane-preferences" className="space-y-6 animate-in fade-in duration-200">
+                <div className="border-b border-slate-800 pb-4">
+                  <h2 className="text-lg font-display font-black text-white flex items-center gap-2">
+                    <Sliders className="w-5 h-5 text-[#00F0FF]" />
+                    <span>Preferensi Sinema & Pemutar Film</span>
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Personalisasi rekomendasi film di beranda dan sesuaikan pemutar trailer sesuai koneksi internetmu.
+                  </p>
+                </div>
+
+                {/* Genre Favorit Multi-select */}
+                <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3">
+                  <div>
+                    <div className="text-sm font-bold text-white">Genre Film Favorit Kamu</div>
+                    <div className="text-xs text-slate-400 mt-0.5">
+                      Pilih genre yang paling sering kamu tonton untuk mengasah algoritma rekomendasi:
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    {ALL_GENRES.map(genre => {
+                      const isFav = userSettings.favoriteGenres?.includes(genre);
+                      return (
+                        <button
+                          key={genre}
+                          type="button"
+                          onClick={() => toggleGenre(genre)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                            isFav
+                              ? 'bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] text-white shadow-md shadow-[#FF2E7E]/20'
+                              : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {isFav ? `✓ ${genre}` : `+ ${genre}`}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Kualitas Pemutar Trailer */}
+                <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3">
+                  <div className="text-sm font-bold text-white">Resolusi Pemutar Trailer Video</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                    {(['4K Ultra HD', '1080p Full HD', 'Auto Data Saver'] as const).map(quality => (
+                      <button
+                        key={quality}
+                        type="button"
+                        onClick={() => updateUserSettings({ cinemaQuality: quality })}
+                        className={`p-3 rounded-xl border text-xs font-bold text-left transition-all ${
+                          userSettings.cinemaQuality === quality
+                            ? 'bg-cyan-500/20 border-[#00F0FF] text-[#00F0FF]'
+                            : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <div className="font-bold">{quality}</div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">
+                          {quality === '4K Ultra HD' ? 'Kualitas sinematik terbaik' : quality === '1080p Full HD' ? 'Seimbang & tajam' : 'Hemat kuota internet'}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Language Setting */}
+                <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3">
+                  <div className="text-sm font-bold text-white">Bahasa / Language</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                    {(['en', 'id'] as const).map(lang => (
+                      <button
+                        key={lang}
+                        type="button"
+                        onClick={() => updateUserSettings({ language: lang })}
+                        className={`p-3 rounded-xl border text-xs font-bold text-left transition-all ${
+                          userSettings.language === lang
+                            ? 'bg-cyan-500/20 border-[#00F0FF] text-[#00F0FF]'
+                            : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <div className="font-bold">{lang === 'en' ? 'English' : 'Bahasa Indonesia'}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Autoplay Trailer */}
+                <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-2xl flex items-center justify-between gap-4">
+                  <div>
+                    <div className="text-xs font-bold text-white">Autoplay Trailer di Halaman Detail Film</div>
+                    <div className="text-[11px] text-slate-400">
+                      Putar trailer secara otomatis saat membuka halaman ulasan film.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => updateUserSettings({ autoplayTrailer: !userSettings.autoplayTrailer })}
+                    className={`w-12 h-6 rounded-full transition-colors relative p-0.5 shrink-0 ${
+                      userSettings.autoplayTrailer ? 'bg-[#00F0FF]' : 'bg-slate-800'
+                    }`}
+                  >
+                    <div
+                      className={`w-5 h-5 rounded-full bg-black transition-transform ${
+                        userSettings.autoplayTrailer ? 'translate-x-6' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* =================================================================== */}
+            {/* SUBPAGE 6: NOTIFIKASI */}
+            {/* =================================================================== */}
+            {activeSettingsTab === 'notifications' && (
+              <div id="settings-pane-notifications" className="space-y-6 animate-in fade-in duration-200">
+                <div className="border-b border-slate-800 pb-4">
+                  <h2 className="text-lg font-display font-black text-white flex items-center gap-2">
+                    <Bell className="w-5 h-5 text-[#00F0FF]" />
+                    <span>Preferensi Notifikasi</span>
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Atur interaksi dan pengingat yang ingin kamu terima dari komunitas dan redaksi film.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-2xl flex items-center justify-between gap-4">
+                    <div>
+                      <div className="text-xs font-bold text-white">Notifikasi Suka Ulasan</div>
+                      <div className="text-[11px] text-slate-400">
+                        Beri tahu saya saat cinephile lain menyukai Skor Sotoy atau ulasan saya.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateUserSettings({ notifyReviewLikes: !userSettings.notifyReviewLikes })}
+                      className={`w-12 h-6 rounded-full transition-colors relative p-0.5 shrink-0 ${
+                        userSettings.notifyReviewLikes ? 'bg-pink-500' : 'bg-slate-800'
+                      }`}
+                    >
+                      <div
+                        className={`w-5 h-5 rounded-full bg-black transition-transform ${
+                          userSettings.notifyReviewLikes ? 'translate-x-6' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-2xl flex items-center justify-between gap-4">
+                    <div>
+                      <div className="text-xs font-bold text-white">Balasan Buzz Komunitas</div>
+                      <div className="text-[11px] text-slate-400">
+                        Beri tahu saya saat kurator atau penonton lain membalas thread buzz saya.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateUserSettings({ notifyCuratorBuzz: !userSettings.notifyCuratorBuzz })}
+                      className={`w-12 h-6 rounded-full transition-colors relative p-0.5 shrink-0 ${
+                        userSettings.notifyCuratorBuzz ? 'bg-[#00F0FF]' : 'bg-slate-800'
+                      }`}
+                    >
+                      <div
+                        className={`w-5 h-5 rounded-full bg-black transition-transform ${
+                          userSettings.notifyCuratorBuzz ? 'translate-x-6' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-2xl flex items-center justify-between gap-4">
+                    <div>
+                      <div className="text-xs font-bold text-white">Pengingat Rilis Film di Watchlist</div>
+                      <div className="text-[11px] text-slate-400">
+                        Kirim notifikasi saat film yang ada di daftar tontonanmu mulai tayang di bioskop atau streaming.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateUserSettings({ notifyWatchlistRelease: !userSettings.notifyWatchlistRelease })}
+                      className={`w-12 h-6 rounded-full transition-colors relative p-0.5 shrink-0 ${
+                        userSettings.notifyWatchlistRelease ? 'bg-[#FFD000]' : 'bg-slate-800'
+                      }`}
+                    >
+                      <div
+                        className={`w-5 h-5 rounded-full bg-black transition-transform ${
+                          userSettings.notifyWatchlistRelease ? 'translate-x-6' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+};
