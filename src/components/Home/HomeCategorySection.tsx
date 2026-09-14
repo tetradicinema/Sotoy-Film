@@ -37,11 +37,6 @@ export const HomeCategorySection: React.FC = () => {
   return (
     <section id="category-articles-section" className="py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Mid-Page Leaderboard Ad Banner */}
-        <div className="mb-8">
-          <AdBannerSlot variant="leaderboard" />
-        </div>
-
         {/* Main 2-Column Layout: Left Content (8 cols), Right Sidebar (4 cols) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
