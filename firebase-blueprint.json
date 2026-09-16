@@ -1,0 +1,148 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile database document",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "handle": { "type": "string" },
+        "avatar": { "type": "string" },
+        "role": { "type": "string", "enum": ["warga_sotoy", "si_paling_sotoy", "penulis_sotoy", "admin"] },
+        "roleTitle": { "type": "string" },
+        "bio": { "type": "string" },
+        "email": { "type": "string" },
+        "totalReviews": { "type": "integer" },
+        "totalBuzz": { "type": "integer" },
+        "followers": { "type": "array" },
+        "following": { "type": "array" }
+      },
+      "required": ["id", "name", "handle", "role"]
+    },
+    "Article": {
+      "title": "Article",
+      "description": "Article document written by writers or admins",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "slug": { "type": "string" },
+        "excerpt": { "type": "string" },
+        "content": { "type": "string" },
+        "coverImage": { "type": "string" },
+        "category": { "type": "string" },
+        "subCategory": { "type": "string" },
+        "author": { "type": "object" },
+        "publishedAt": { "type": "string" },
+        "readTime": { "type": "string" },
+        "views": { "type": "integer" },
+        "likes": { "type": "integer" },
+        "commentsCount": { "type": "integer" },
+        "tags": { "type": "array" }
+      },
+      "required": ["id", "title", "content", "category", "author"]
+    },
+    "FilmItem": {
+      "title": "FilmItem",
+      "description": "Film item in the film database",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "type": { "type": "string", "enum": ["movie", "series", "anime"] },
+        "year": { "type": "integer" },
+        "poster": { "type": "string" },
+        "backdrop": { "type": "string" },
+        "synopsis": { "type": "string" },
+        "director": { "type": "string" },
+        "cast": { "type": "array" },
+        "genres": { "type": "array" },
+        "skorSotoy": { "type": "number" },
+        "totalVotes": { "type": "integer" },
+        "criticsSkorSotoy": { "type": "number" }
+      },
+      "required": ["id", "title", "type", "year", "genres"]
+    },
+    "BuzzPost": {
+      "title": "BuzzPost",
+      "description": "Community buzz feed post",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "author": { "type": "object" },
+        "content": { "type": "string" },
+        "image": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "likes": { "type": "integer" },
+        "repliesCount": { "type": "integer" },
+        "tags": { "type": "array" }
+      },
+      "required": ["id", "author", "content", "createdAt"]
+    },
+    "UserRating": {
+      "title": "UserRating",
+      "description": "A review or score left on a film by a user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "filmId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userAvatar": { "type": "string" },
+        "userRole": { "type": "string" },
+        "score": { "type": "number" },
+        "headline": { "type": "string" },
+        "reviewText": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "likes": { "type": "integer" }
+      },
+      "required": ["id", "filmId", "userId", "score", "createdAt"]
+    },
+    "CriticSubmission": {
+      "title": "CriticSubmission",
+      "description": "A submission to become a verfied critic",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "publicationName": { "type": "string" },
+        "publicationUrl": { "type": "string" },
+        "portfolioUrl": { "type": "string" },
+        "twitterHandle": { "type": "string" },
+        "motivation": { "type": "string" },
+        "date": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] }
+      },
+      "required": ["id", "userId", "userName", "userEmail", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Profiles of the users"
+    },
+    "/articles/{articleId}": {
+      "schema": "Article",
+      "description": "Articles published on the website"
+    },
+    "/films/{filmId}": {
+      "schema": "FilmItem",
+      "description": "Film titles database"
+    },
+    "/buzz/{buzzId}": {
+      "schema": "BuzzPost",
+      "description": "Posts in the community feed"
+    },
+    "/ratings/{ratingId}": {
+      "schema": "UserRating",
+      "description": "Ratings left on films"
+    },
+    "/criticSubmissions/{submissionId}": {
+      "schema": "CriticSubmission",
+      "description": "Critic submissions"
+    }
+  }
+}

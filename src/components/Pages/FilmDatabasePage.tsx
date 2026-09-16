@@ -18,12 +18,147 @@ import {
   Trophy,
   UserCheck,
   Info,
+  Ghost,
+  Rocket,
+  Clapperboard,
+  Zap,
+  Eye,
+  Tv,
+  SlidersHorizontal,
+  Layers,
+  RotateCcw,
+  ArrowUpDown,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { FilmItem, UserRating } from '../../types';
 import { StarRating } from '../Common/StarRating';
 import { RateFilmModal } from '../Modals/RateFilmModal';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
+
+export interface GenreCategory {
+  id: string;
+  name: string;
+  icon: React.ElementType;
+  badgeClass: string;
+  activeClass: string;
+  description: string;
+  themeColor: string;
+}
+
+export const GENRE_CATEGORIES: GenreCategory[] = [
+  {
+    id: 'all',
+    name: 'Semua Genre',
+    icon: Layers,
+    badgeClass: 'text-slate-300 border-slate-700 bg-slate-900/60',
+    activeClass: 'bg-white text-slate-950 border-white shadow-lg shadow-white/10 ring-2 ring-white/20 font-black',
+    description: 'Jelajahi seluruh katalog film bioskop, tayangan serial, dan anime di database Sotoy Film.',
+    themeColor: '#ffffff',
+  },
+  {
+    id: 'Horror',
+    name: 'Horror',
+    icon: Ghost,
+    badgeClass: 'text-rose-400 border-rose-900/50 bg-rose-950/30 hover:border-rose-600/60',
+    activeClass: 'bg-gradient-to-r from-red-600 to-rose-600 text-white border-red-500 shadow-lg shadow-red-600/30 ring-2 ring-red-400/40 font-black',
+    description: 'Sensasi mencekam, teror supernatural, dan misteri psikologis pilihan kurator & penonton.',
+    themeColor: '#ef4444',
+  },
+  {
+    id: 'Sci-Fi',
+    name: 'Sci-Fi',
+    icon: Rocket,
+    badgeClass: 'text-cyan-400 border-cyan-900/50 bg-cyan-950/30 hover:border-cyan-600/60',
+    activeClass: 'bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 border-cyan-400 shadow-lg shadow-cyan-500/30 ring-2 ring-cyan-300/40 font-black',
+    description: 'Fiksi ilmiah futuristik, eksplorasi luar angkasa, distopia teknologi, dan multiverse spektakuler.',
+    themeColor: '#00F0FF',
+  },
+  {
+    id: 'Drama',
+    name: 'Drama',
+    icon: Clapperboard,
+    badgeClass: 'text-amber-400 border-amber-900/50 bg-amber-950/30 hover:border-amber-600/60',
+    activeClass: 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 border-amber-400 shadow-lg shadow-amber-500/30 ring-2 ring-amber-300/40 font-black',
+    description: 'Konflik emosional mendalam, pergulatan nurani manusia, drama persidangan, dan relasi autentik.',
+    themeColor: '#FFD000',
+  },
+  {
+    id: 'Anime',
+    name: 'Anime',
+    icon: Sparkles,
+    badgeClass: 'text-pink-400 border-pink-900/50 bg-pink-950/30 hover:border-pink-600/60',
+    activeClass: 'bg-gradient-to-r from-pink-500 to-rose-500 text-white border-pink-400 shadow-lg shadow-pink-500/30 ring-2 ring-pink-300/40 font-black',
+    description: 'Mahakarya animasi Jepang, aksi sakuga spektakuler, adaptasi manga hits, dan film layar lebar studio papan atas.',
+    themeColor: '#FF2E7E',
+  },
+  {
+    id: 'Action',
+    name: 'Action',
+    icon: Flame,
+    badgeClass: 'text-orange-400 border-orange-900/50 bg-orange-950/30 hover:border-orange-600/60',
+    activeClass: 'bg-gradient-to-r from-orange-500 to-amber-600 text-slate-950 border-orange-400 shadow-lg shadow-orange-500/30 ring-2 ring-orange-300/40 font-black',
+    description: 'Aksi laga memacu adrenalin, koreografi pertempuran intens, spionase, dan petualangan tanpa henti.',
+    themeColor: '#f97316',
+  },
+  {
+    id: 'Mystery',
+    name: 'Mystery & Thriller',
+    icon: Eye,
+    badgeClass: 'text-purple-400 border-purple-900/50 bg-purple-950/30 hover:border-purple-600/60',
+    activeClass: 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-400 shadow-lg shadow-purple-500/30 ring-2 ring-purple-300/40 font-black',
+    description: 'Plot twist tak terduga, teka-teki kriminal misterius, investigasi pembunuhan, dan tensi tegang.',
+    themeColor: '#a855f7',
+  },
+];
+
+export const matchesGenre = (film: FilmItem, genreId: string): boolean => {
+  if (!genreId || genreId === 'all') return true;
+  const target = genreId.toLowerCase();
+
+  if (target === 'anime') {
+    return (
+      film.type === 'anime' ||
+      film.genres.some(g => {
+        const gl = g.toLowerCase();
+        return gl === 'anime' || gl === 'animation' || gl.includes('anime');
+      })
+    );
+  }
+
+  if (target === 'sci-fi' || target === 'scifi') {
+    return film.genres.some(g => {
+      const gl = g.toLowerCase();
+      return gl === 'sci-fi' || gl === 'scifi' || gl.includes('sci-fi') || gl.includes('science fiction');
+    });
+  }
+
+  if (target === 'horror') {
+    return film.genres.some(g => {
+      const gl = g.toLowerCase();
+      return gl.includes('horror') || gl.includes('horor');
+    });
+  }
+
+  if (target === 'drama') {
+    return film.genres.some(g => g.toLowerCase().includes('drama'));
+  }
+
+  if (target === 'action') {
+    return film.genres.some(g => {
+      const gl = g.toLowerCase();
+      return gl.includes('action') || gl.includes('aksi');
+    });
+  }
+
+  if (target === 'mystery' || target === 'thriller') {
+    return film.genres.some(g => {
+      const gl = g.toLowerCase();
+      return gl.includes('mystery') || gl.includes('misteri') || gl.includes('thriller');
+    });
+  }
+
+  return film.genres.some(g => g.toLowerCase() === target || g.toLowerCase().includes(target));
+};
 
 export const FilmDatabasePage: React.FC = () => {
   const {
@@ -41,20 +176,44 @@ export const FilmDatabasePage: React.FC = () => {
   const [selectedFormat, setSelectedFormat] = useState<'all' | 'movie' | 'series' | 'anime'>('all');
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
   const [ratingFilter, setRatingFilter] = useState<number>(0);
+  const [sortBy, setSortBy] = useState<'rating' | 'votes' | 'year' | 'title'>('rating');
   const [ratingModalFilm, setRatingModalFilm] = useState<FilmItem | null>(null);
   const [reviewsFilterRole, setReviewsFilterRole] = useState<'all' | 'critic' | 'warga'>('all');
 
-  // Film sections data
+  // Dynamic helper to count films per genre
+  const getGenreCount = (genreId: string) => {
+    if (genreId === 'all') return films.length;
+    return films.filter(f => matchesGenre(f, genreId)).length;
+  };
+
+  // Currently selected category configuration for spotlight banner
+  const activeCategoryConfig = GENRE_CATEGORIES.find(
+    c => c.id.toLowerCase() === selectedGenre.toLowerCase()
+  ) || {
+    id: selectedGenre,
+    name: selectedGenre,
+    icon: Film,
+    badgeClass: 'text-slate-300 border-slate-700 bg-slate-900/60',
+    activeClass: 'bg-[#FFD000] text-slate-950 border-[#FFD000]',
+    description: `Koleksi film dan tayangan dengan genre ${selectedGenre}.`,
+    themeColor: '#FFD000',
+  };
+
+  // Film sections data (respects selectedGenre if set)
   const recentReleased = films.filter(f => f.isRecentRelease || f.year >= 2024);
   const popularReleased = films.filter(f => f.isPopularRelease || f.totalVotes > 600);
   const popularThisWeek = films.filter(f => f.isPopularThisWeek || f.skorSotoy >= 4.8);
 
-  // Search results
+  const filteredRecentReleased = recentReleased.filter(f => matchesGenre(f, selectedGenre));
+  const filteredPopularReleased = popularReleased.filter(f => matchesGenre(f, selectedGenre));
+  const filteredPopularThisWeek = popularThisWeek.filter(f => matchesGenre(f, selectedGenre));
+
+  // Search results with smart genre matching
   const allGenres = Array.from(new Set(films.flatMap(f => f.genres)));
 
   const searchResults = films.filter(f => {
     if (selectedFormat !== 'all' && f.type !== selectedFormat) return false;
-    if (selectedGenre !== 'all' && !f.genres.includes(selectedGenre)) return false;
+    if (!matchesGenre(f, selectedGenre)) return false;
     if (ratingFilter > 0 && f.skorSotoy < ratingFilter) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -68,6 +227,24 @@ export const FilmDatabasePage: React.FC = () => {
     }
     return true;
   });
+
+  // Sorted search results
+  const sortedSearchResults = [...searchResults].sort((a, b) => {
+    if (sortBy === 'rating') return b.skorSotoy - a.skorSotoy;
+    if (sortBy === 'votes') return b.totalVotes - a.totalVotes;
+    if (sortBy === 'year') return b.year - a.year;
+    if (sortBy === 'title') return a.title.localeCompare(b.title);
+    return 0;
+  });
+
+  // Calculate average rating for current genre selection
+  const genreFilms = films.filter(f => matchesGenre(f, selectedGenre));
+  const avgGenreScore = genreFilms.length > 0
+    ? (genreFilms.reduce((acc, curr) => acc + curr.skorSotoy, 0) / genreFilms.length).toFixed(1)
+    : '0.0';
+  const topRatedGenreFilm = genreFilms.length > 0
+    ? [...genreFilms].sort((a, b) => b.skorSotoy - a.skorSotoy)[0]
+    : null;
 
   // Filtered popular reviews
   const filteredReviews = ratings.filter(r => {
@@ -179,6 +356,135 @@ export const FilmDatabasePage: React.FC = () => {
         </div>
 
         {/* ========================================================================= */}
+        {/* GENRE-BASED FILTERING SYSTEM & QUICK BROWSE PILLS */}
+        {/* ========================================================================= */}
+        <section id="genre-filter-system" className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#FFD000]/20 text-[#FFD000] flex items-center justify-center shadow-inner">
+                <SlidersHorizontal className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-display font-black text-xl text-white">Eksplorasi Berdasarkan Genre</h2>
+                  {selectedGenre !== 'all' && (
+                    <span className="text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#FFD000] text-slate-950 shadow-sm animate-pulse">
+                      Filter Aktif
+                    </span>
+                  )}
+                </div>
+                <p className="text-slate-400 text-xs">Pilih kategori genre untuk memfilter katalog film, serial, dan anime secara instan</p>
+              </div>
+            </div>
+
+            {/* Clear Filter Button if active */}
+            {selectedGenre !== 'all' && (
+              <button
+                id="reset-genre-filter-btn"
+                onClick={() => setSelectedGenre('all')}
+                className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-[#FFD000] text-xs font-bold transition-all shadow-sm group"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-[#FFD000] group-hover:-rotate-45 transition-transform" />
+                <span>Reset ke Semua ({films.length})</span>
+              </button>
+            )}
+          </div>
+
+          {/* Genre Category Pills */}
+          <div className="flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-800">
+            {GENRE_CATEGORIES.map(cat => {
+              const Icon = cat.icon;
+              const count = getGenreCount(cat.id);
+              const isActive = selectedGenre.toLowerCase() === cat.id.toLowerCase();
+
+              return (
+                <button
+                  key={cat.id}
+                  id={`genre-pill-${cat.id.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
+                  onClick={() => setSelectedGenre(isActive ? 'all' : cat.id)}
+                  className={`flex-shrink-0 inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl border text-xs font-bold transition-all duration-200 cursor-pointer select-none ${
+                    isActive
+                      ? cat.activeClass
+                      : `${cat.badgeClass} hover:scale-[1.02]`
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 ${isActive ? 'scale-110' : 'opacity-80'}`} />
+                  <span>{cat.name}</span>
+                  <span
+                    className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                      isActive
+                        ? 'bg-black/25 text-inherit'
+                        : 'bg-slate-800/90 text-slate-400'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Genre Spotlight Banner when a specific genre is selected */}
+          {selectedGenre !== 'all' && (
+            <div
+              id="genre-spotlight-banner"
+              className="bg-gradient-to-r from-[#17182e] via-[#121324] to-[#15162a] border border-slate-800/90 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl relative overflow-hidden"
+            >
+              <div
+                className="absolute top-0 right-0 w-64 h-full pointer-events-none opacity-20 blur-3xl"
+                style={{ backgroundColor: activeCategoryConfig.themeColor }}
+              />
+
+              <div className="flex items-start sm:items-center gap-3.5 relative z-10">
+                <div
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg border border-white/10"
+                  style={{ backgroundColor: `${activeCategoryConfig.themeColor}20`, color: activeCategoryConfig.themeColor }}
+                >
+                  {React.createElement(activeCategoryConfig.icon, { className: 'w-6 h-6' })}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-display font-black text-lg text-white">
+                      Koleksi Film: {activeCategoryConfig.name}
+                    </h3>
+                    <span className="bg-slate-800 text-slate-300 text-xs px-2.5 py-0.5 rounded-full border border-slate-700 font-bold">
+                      {searchResults.length} Film Ditemukan
+                    </span>
+                  </div>
+                  <p className="text-slate-400 text-xs mt-0.5 max-w-xl">
+                    {activeCategoryConfig.description}
+                  </p>
+                </div>
+              </div>
+
+              {/* Genre Stats pill */}
+              <div className="flex items-center gap-4 text-xs relative z-10 self-stretch sm:self-auto justify-between sm:justify-start border-t sm:border-t-0 sm:border-l border-slate-800 pt-3 sm:pt-0 sm:pl-5">
+                <div>
+                  <div className="text-[10px] text-slate-500 uppercase font-black">Rata-Rata Skor</div>
+                  <div className="font-black text-sm text-[#FFD000] flex items-center gap-1 mt-0.5">
+                    <Star className="w-3.5 h-3.5 fill-current" />
+                    <span>{avgGenreScore} / 5.0</span>
+                  </div>
+                </div>
+
+                {topRatedGenreFilm && (
+                  <div>
+                    <div className="text-[10px] text-slate-500 uppercase font-black">Rating Tertinggi</div>
+                    <div
+                      onClick={() => navigateTo('film-detail', { filmId: topRatedGenreFilm.id })}
+                      className="font-bold text-sm text-white hover:text-[#FFD000] truncate max-w-[140px] cursor-pointer mt-0.5 transition-colors"
+                      title={topRatedGenreFilm.title}
+                    >
+                      {topRatedGenreFilm.title}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* ========================================================================= */}
         {/* SEARCH SECTION WITH POSTERS & RATINGS */}
         {/* ========================================================================= */}
         <section id="film-search-section" className="bg-[#121324] border border-slate-800 rounded-3xl p-6 shadow-xl space-y-5">
@@ -189,7 +495,7 @@ export const FilmDatabasePage: React.FC = () => {
                 <span>Pencarian Film & Penilaian</span>
               </h2>
               <p className="text-slate-400 text-xs mt-0.5">
-                Cari judul film, sutradara, atau filter berdasarkan rating bintang dan format tayangan
+                Cari judul film, sutradara, atau filter berdasarkan genre, rating bintang, dan format tayangan
               </p>
             </div>
 
@@ -200,7 +506,7 @@ export const FilmDatabasePage: React.FC = () => {
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Cari Dune, Nolan, Shōgun, Horror..."
+                placeholder="Cari Dune, Nolan, Shōgun, Horror, Anime..."
                 className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 pl-10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000] transition-all"
               />
               <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
@@ -262,41 +568,99 @@ export const FilmDatabasePage: React.FC = () => {
               </button>
             </div>
 
-            {/* Genre and Minimum Rating filter */}
-            <div className="flex items-center gap-2">
-              <select
-                value={selectedGenre}
-                onChange={e => setSelectedGenre(e.target.value)}
-                className="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-[#FFD000]"
-              >
-                <option value="all">Semua Genre</option>
-                {allGenres.map(g => (
-                  <option key={g} value={g}>{g}</option>
-                ))}
-              </select>
+            {/* Genre, Minimum Rating, and Sort by filters */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Synced Genre Selector */}
+              <div className="flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1">
+                <span className="text-slate-400 text-[11px] font-bold">Genre:</span>
+                <select
+                  id="genre-filter-select"
+                  value={selectedGenre}
+                  onChange={e => setSelectedGenre(e.target.value)}
+                  className="bg-transparent text-slate-200 text-xs focus:outline-none focus:text-[#FFD000] font-medium cursor-pointer"
+                >
+                  <option value="all" className="bg-slate-900 text-slate-200">Semua Genre ({films.length})</option>
+                  <option value="Horror" className="bg-slate-900 text-rose-400 font-bold">👻 Horror ({getGenreCount('Horror')})</option>
+                  <option value="Sci-Fi" className="bg-slate-900 text-cyan-400 font-bold">🚀 Sci-Fi ({getGenreCount('Sci-Fi')})</option>
+                  <option value="Drama" className="bg-slate-900 text-amber-400 font-bold">🎬 Drama ({getGenreCount('Drama')})</option>
+                  <option value="Anime" className="bg-slate-900 text-pink-400 font-bold">✨ Anime ({getGenreCount('Anime')})</option>
+                  <option value="Action" className="bg-slate-900 text-orange-400 font-bold">🔥 Action ({getGenreCount('Action')})</option>
+                  <option value="Mystery" className="bg-slate-900 text-purple-400 font-bold">👁️ Mystery & Thriller ({getGenreCount('Mystery')})</option>
+                  {allGenres
+                    .filter(g => !['horror', 'sci-fi', 'drama', 'anime', 'action', 'mystery', 'thriller'].includes(g.toLowerCase()))
+                    .map(g => (
+                      <option key={g} value={g} className="bg-slate-900 text-slate-300">
+                        {g} ({getGenreCount(g)})
+                      </option>
+                    ))}
+                </select>
+              </div>
 
+              {/* Rating Filter */}
               <select
                 value={ratingFilter}
                 onChange={e => setRatingFilter(Number(e.target.value))}
-                className="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-[#FFD000]"
+                className="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-[#FFD000] cursor-pointer"
               >
                 <option value={0}>Semua Skor Sotoy</option>
                 <option value={4.5}>★ 4.5+ Bintang</option>
                 <option value={4.0}>★ 4.0+ Bintang</option>
                 <option value={3.5}>★ 3.5+ Bintang</option>
               </select>
+
+              {/* Sort By Selector */}
+              <div className="flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1">
+                <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                <select
+                  value={sortBy}
+                  onChange={e => setSortBy(e.target.value as any)}
+                  className="bg-transparent text-slate-300 text-xs focus:outline-none focus:text-[#FFD000] cursor-pointer font-medium"
+                >
+                  <option value="rating" className="bg-slate-900 text-slate-200">Skor Tertinggi</option>
+                  <option value="votes" className="bg-slate-900 text-slate-200">Paling Banyak Diulas</option>
+                  <option value="year" className="bg-slate-900 text-slate-200">Tahun Rilis</option>
+                  <option value="title" className="bg-slate-900 text-slate-200">Judul (A-Z)</option>
+                </select>
+              </div>
             </div>
           </div>
 
           {/* Search Result Posters Grid */}
           <div className="pt-2">
-            <div className="flex items-center justify-between mb-3 text-xs text-slate-400">
-              <span>Menampilkan {searchResults.length} judul film & series:</span>
+            <div className="flex flex-wrap items-center justify-between mb-3 text-xs text-slate-400 gap-2">
+              <div className="flex items-center gap-2">
+                <span>
+                  Menampilkan <strong className="text-white">{sortedSearchResults.length}</strong> judul film & series
+                  {selectedGenre !== 'all' && (
+                    <span className="ml-1 text-[#FFD000] font-bold">
+                      (Genre: {activeCategoryConfig.name})
+                    </span>
+                  )}
+                  :
+                </span>
+              </div>
+
+              {(selectedGenre !== 'all' || selectedFormat !== 'all' || ratingFilter > 0 || searchQuery) && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedFormat('all');
+                    setSelectedGenre('all');
+                    setRatingFilter(0);
+                  }}
+                  className="text-xs font-bold text-slate-400 hover:text-[#FFD000] transition-colors flex items-center gap-1"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Reset Semua Filter</span>
+                </button>
+              )}
             </div>
 
-            {searchResults.length === 0 ? (
+            {sortedSearchResults.length === 0 ? (
               <div className="text-center py-12 bg-slate-900/50 rounded-2xl border border-slate-800">
-                <p className="text-slate-400 text-sm">Tidak ada film yang cocok dengan filter pencarian.</p>
+                <p className="text-slate-400 text-sm">
+                  Tidak ada film {selectedGenre !== 'all' ? `dengan genre "${selectedGenre}"` : ''} yang cocok dengan filter pencarian.
+                </p>
                 <button
                   onClick={() => {
                     setSearchQuery('');
@@ -311,7 +675,7 @@ export const FilmDatabasePage: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                {searchResults.map(film => {
+                {sortedSearchResults.map(film => {
                   const inWatchlist = isFilmInWatchlist(film.id);
 
                   return (
@@ -366,12 +730,37 @@ export const FilmDatabasePage: React.FC = () => {
                         <div>
                           <h3
                             onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                            className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FFD000] transition-colors line-clamp-1 cursor-pointer mb-0.5"
+                            className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FFD000] transition-colors line-clamp-1 cursor-pointer mb-1"
+                            title={film.title}
                           >
                             {film.title}
                           </h3>
-                          <div className="text-[10px] text-slate-400 line-clamp-1 mb-2">
-                            {film.director} • {film.genres[0]}
+                          <div className="text-[10px] text-slate-400 line-clamp-1 mb-1.5">
+                            {film.director}
+                          </div>
+
+                          {/* Clickable Genre Tags */}
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {film.genres.slice(0, 2).map(g => {
+                              const isTagActive = selectedGenre.toLowerCase() === g.toLowerCase();
+                              return (
+                                <button
+                                  key={g}
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    setSelectedGenre(isTagActive ? 'all' : g);
+                                  }}
+                                  className={`text-[9px] font-bold px-1.5 py-0.5 rounded transition-colors ${
+                                    isTagActive
+                                      ? 'bg-[#FFD000] text-slate-950 font-black'
+                                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                                  }`}
+                                  title={`Filter genre ${g}`}
+                                >
+                                  {g}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
 
@@ -418,50 +807,81 @@ export const FilmDatabasePage: React.FC = () => {
                 <p className="text-slate-400 text-xs">Film bioskop dan tayangan serial yang baru saja dirilis resmi</p>
               </div>
             </div>
-            <span className="text-xs font-bold text-[#00F0FF]">{recentReleased.length} Judul Rilis Baru</span>
+            <span className="text-xs font-bold text-[#00F0FF]">
+              {filteredRecentReleased.length} Judul {selectedGenre !== 'all' ? `(${activeCategoryConfig.name})` : 'Rilis Baru'}
+            </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {recentReleased.map(film => (
-              <div
-                key={film.id}
-                id={`recent-film-card-${film.id}`}
-                onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                className="bg-[#121324] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#00F0FF] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
+          {filteredRecentReleased.length === 0 ? (
+            <div className="text-center py-8 bg-slate-900/30 rounded-2xl border border-slate-800/80">
+              <p className="text-slate-400 text-xs">
+                Tidak ada film rilis baru untuk genre <strong className="text-white">{activeCategoryConfig.name}</strong>.
+              </p>
+              <button
+                onClick={() => setSelectedGenre('all')}
+                className="mt-2 text-xs font-bold text-[#00F0FF] hover:underline"
               >
-                <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
-                  <img
-                    src={film.poster}
-                    alt={film.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#121324] via-transparent to-transparent opacity-80" />
+                Lihat semua rilis baru
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {filteredRecentReleased.map(film => (
+                <div
+                  key={film.id}
+                  id={`recent-film-card-${film.id}`}
+                  onClick={() => navigateTo('film-detail', { filmId: film.id })}
+                  className="bg-[#121324] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#00F0FF] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
+                >
+                  <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
+                    <img
+                      src={film.poster}
+                      alt={film.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#121324] via-transparent to-transparent opacity-80" />
 
-                  <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/50 text-[#FFD000] text-[11px] font-black flex items-center gap-1">
-                    <Star className="w-3 h-3 fill-current" />
-                    <span>{film.skorSotoy.toFixed(1)}</span>
+                    <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/50 text-[#FFD000] text-[11px] font-black flex items-center gap-1">
+                      <Star className="w-3 h-3 fill-current" />
+                      <span>{film.skorSotoy.toFixed(1)}</span>
+                    </div>
+
+                    <span className="absolute top-2 right-2 bg-cyan-500 text-slate-950 text-[9px] font-black uppercase px-2 py-0.5 rounded shadow">
+                      NEW
+                    </span>
+
+                    <div className="absolute bottom-2 left-2 right-2 text-[10px] text-slate-300 font-bold">
+                      {film.duration} • {film.year}
+                    </div>
                   </div>
 
-                  <span className="absolute top-2 right-2 bg-cyan-500 text-slate-950 text-[9px] font-black uppercase px-2 py-0.5 rounded shadow">
-                    NEW
-                  </span>
-
-                  <div className="absolute bottom-2 left-2 right-2 text-[10px] text-slate-300 font-bold">
-                    {film.duration} • {film.year}
+                  <div className="p-3">
+                    <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#00F0FF] transition-colors line-clamp-1 mb-1">
+                      {film.title}
+                    </h3>
+                    <div className="flex flex-wrap gap-1">
+                      {film.genres.slice(0, 2).map(g => (
+                        <span
+                          key={g}
+                          onClick={e => {
+                            e.stopPropagation();
+                            setSelectedGenre(g);
+                          }}
+                          className={`text-[9px] font-medium px-1.5 py-0.2 rounded ${
+                            selectedGenre.toLowerCase() === g.toLowerCase()
+                              ? 'bg-cyan-500 text-slate-950 font-bold'
+                              : 'text-slate-400 bg-slate-800/80 hover:text-white'
+                          }`}
+                        >
+                          {g}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
-
-                <div className="p-3">
-                  <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#00F0FF] transition-colors line-clamp-1 mb-1">
-                    {film.title}
-                  </h3>
-                  <div className="text-[11px] text-slate-400 line-clamp-1">
-                    {film.genres.slice(0, 2).join(', ')}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* ========================================================================= */}
@@ -478,50 +898,81 @@ export const FilmDatabasePage: React.FC = () => {
                 <p className="text-slate-400 text-xs">Film dengan jumlah vote ulasan tertinggi dan antusiasme penonton terbesar</p>
               </div>
             </div>
-            <span className="text-xs font-bold text-[#FF2E7E]">Paling Banyak Diulas</span>
+            <span className="text-xs font-bold text-[#FF2E7E]">
+              {filteredPopularReleased.length} Judul {selectedGenre !== 'all' ? `(${activeCategoryConfig.name})` : 'Paling Banyak Diulas'}
+            </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {popularReleased.map(film => (
-              <div
-                key={film.id}
-                id={`popular-film-card-${film.id}`}
-                onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                className="bg-[#121324] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FF2E7E] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
+          {filteredPopularReleased.length === 0 ? (
+            <div className="text-center py-8 bg-slate-900/30 rounded-2xl border border-slate-800/80">
+              <p className="text-slate-400 text-xs">
+                Belum ada film populer dalam kurasi untuk genre <strong className="text-white">{activeCategoryConfig.name}</strong>.
+              </p>
+              <button
+                onClick={() => setSelectedGenre('all')}
+                className="mt-2 text-xs font-bold text-[#FF2E7E] hover:underline"
               >
-                <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
-                  <img
-                    src={film.poster}
-                    alt={film.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#121324] via-transparent to-transparent opacity-80" />
+                Lihat semua film populer
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {filteredPopularReleased.map(film => (
+                <div
+                  key={film.id}
+                  id={`popular-film-card-${film.id}`}
+                  onClick={() => navigateTo('film-detail', { filmId: film.id })}
+                  className="bg-[#121324] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FF2E7E] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
+                >
+                  <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
+                    <img
+                      src={film.poster}
+                      alt={film.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#121324] via-transparent to-transparent opacity-80" />
 
-                  <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/50 text-[#FFD000] text-[11px] font-black flex items-center gap-1">
-                    <Star className="w-3 h-3 fill-current" />
-                    <span>{film.skorSotoy.toFixed(1)}</span>
+                    <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/50 text-[#FFD000] text-[11px] font-black flex items-center gap-1">
+                      <Star className="w-3 h-3 fill-current" />
+                      <span>{film.skorSotoy.toFixed(1)}</span>
+                    </div>
+
+                    <span className="absolute top-2 right-2 bg-[#FF2E7E] text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow">
+                      HOT
+                    </span>
+
+                    <div className="absolute bottom-2 left-2 right-2 text-[10px] text-slate-300 font-bold">
+                      {film.totalVotes} votes
+                    </div>
                   </div>
 
-                  <span className="absolute top-2 right-2 bg-[#FF2E7E] text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow">
-                    HOT
-                  </span>
-
-                  <div className="absolute bottom-2 left-2 right-2 text-[10px] text-slate-300 font-bold">
-                    {film.totalVotes} votes
+                  <div className="p-3">
+                    <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-1 mb-1">
+                      {film.title}
+                    </h3>
+                    <div className="flex flex-wrap gap-1">
+                      {film.genres.slice(0, 2).map(g => (
+                        <span
+                          key={g}
+                          onClick={e => {
+                            e.stopPropagation();
+                            setSelectedGenre(g);
+                          }}
+                          className={`text-[9px] font-medium px-1.5 py-0.2 rounded ${
+                            selectedGenre.toLowerCase() === g.toLowerCase()
+                              ? 'bg-[#FF2E7E] text-white font-bold'
+                              : 'text-slate-400 bg-slate-800/80 hover:text-white'
+                          }`}
+                        >
+                          {g}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
-
-                <div className="p-3">
-                  <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-1 mb-1">
-                    {film.title}
-                  </h3>
-                  <div className="text-[11px] text-slate-400 line-clamp-1">
-                    {film.director}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* ========================================================================= */}
@@ -538,50 +989,81 @@ export const FilmDatabasePage: React.FC = () => {
                 <p className="text-slate-400 text-xs">Paling banyak dibicarakan di Buzz Feed dan media sosial pekan ini</p>
               </div>
             </div>
-            <span className="text-xs font-bold text-[#FFD000]">Trending Minggu Ini</span>
+            <span className="text-xs font-bold text-[#FFD000]">
+              {filteredPopularThisWeek.length} Judul {selectedGenre !== 'all' ? `(${activeCategoryConfig.name})` : 'Trending Minggu Ini'}
+            </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {popularThisWeek.map(film => (
-              <div
-                key={film.id}
-                id={`trending-film-card-${film.id}`}
-                onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                className="bg-[#121324] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FFD000] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
+          {filteredPopularThisWeek.length === 0 ? (
+            <div className="text-center py-8 bg-slate-900/30 rounded-2xl border border-slate-800/80">
+              <p className="text-slate-400 text-xs">
+                Tidak ada film trending pekan ini untuk genre <strong className="text-white">{activeCategoryConfig.name}</strong>.
+              </p>
+              <button
+                onClick={() => setSelectedGenre('all')}
+                className="mt-2 text-xs font-bold text-[#FFD000] hover:underline"
               >
-                <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
-                  <img
-                    src={film.poster}
-                    alt={film.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#121324] via-transparent to-transparent opacity-80" />
+                Lihat semua film trending
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {filteredPopularThisWeek.map(film => (
+                <div
+                  key={film.id}
+                  id={`trending-film-card-${film.id}`}
+                  onClick={() => navigateTo('film-detail', { filmId: film.id })}
+                  className="bg-[#121324] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FFD000] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
+                >
+                  <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
+                    <img
+                      src={film.poster}
+                      alt={film.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#121324] via-transparent to-transparent opacity-80" />
 
-                  <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/50 text-[#FFD000] text-[11px] font-black flex items-center gap-1">
-                    <Star className="w-3 h-3 fill-current" />
-                    <span>{film.skorSotoy.toFixed(1)}</span>
+                    <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/50 text-[#FFD000] text-[11px] font-black flex items-center gap-1">
+                      <Star className="w-3 h-3 fill-current" />
+                      <span>{film.skorSotoy.toFixed(1)}</span>
+                    </div>
+
+                    <span className="absolute top-2 right-2 bg-amber-400 text-slate-950 text-[9px] font-black uppercase px-2 py-0.5 rounded shadow">
+                      TRENDING
+                    </span>
+
+                    <div className="absolute bottom-2 left-2 right-2 text-[10px] text-slate-300 font-bold">
+                      {film.whereToWatch[0]?.platform}
+                    </div>
                   </div>
 
-                  <span className="absolute top-2 right-2 bg-amber-400 text-slate-950 text-[9px] font-black uppercase px-2 py-0.5 rounded shadow">
-                    TRENDING
-                  </span>
-
-                  <div className="absolute bottom-2 left-2 right-2 text-[10px] text-slate-300 font-bold">
-                    {film.whereToWatch[0]?.platform}
+                  <div className="p-3">
+                    <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FFD000] transition-colors line-clamp-1 mb-1">
+                      {film.title}
+                    </h3>
+                    <div className="flex flex-wrap gap-1">
+                      {film.genres.slice(0, 2).map(g => (
+                        <span
+                          key={g}
+                          onClick={e => {
+                            e.stopPropagation();
+                            setSelectedGenre(g);
+                          }}
+                          className={`text-[9px] font-medium px-1.5 py-0.2 rounded ${
+                            selectedGenre.toLowerCase() === g.toLowerCase()
+                              ? 'bg-[#FFD000] text-slate-950 font-bold'
+                              : 'text-slate-400 bg-slate-800/80 hover:text-white'
+                          }`}
+                        >
+                          {g}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
-
-                <div className="p-3">
-                  <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FFD000] transition-colors line-clamp-1 mb-1">
-                    {film.title}
-                  </h3>
-                  <div className="text-[11px] text-slate-400 line-clamp-1">
-                    {film.genres.slice(0, 2).join(', ')}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* ========================================================================= */}

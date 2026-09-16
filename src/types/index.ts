@@ -151,6 +151,12 @@ export interface UserRating {
 export interface BuzzReply {
   id: string;
   buzzId: string;
+  parentId?: string;
+  replyToUser?: {
+    id: string;
+    name: string;
+    handle: string;
+  };
   author: {
     id: string;
     name: string;
@@ -162,6 +168,16 @@ export interface BuzzReply {
   createdAt: string;
   likes: number;
   likedByMe?: boolean;
+}
+
+export type ReactionType = 'heart' | 'mindblown' | 'fire' | 'laugh' | 'clap';
+
+export interface BuzzReactions {
+  heart?: number;
+  mindblown?: number;
+  fire?: number;
+  laugh?: number;
+  clap?: number;
 }
 
 export interface BuzzPost {
@@ -195,6 +211,8 @@ export interface BuzzPost {
   createdAt: string;
   likes: number;
   likedByMe?: boolean;
+  reactions?: BuzzReactions;
+  myReaction?: ReactionType | null;
   repliesCount: number;
   replies?: BuzzReply[];
   tags: string[];
@@ -209,4 +227,18 @@ export interface AdBanner {
   imageUrl: string;
   tag: string;
   sponsorName: string;
+}
+
+export interface CriticSubmission {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  publicationName: string;
+  publicationUrl: string;
+  portfolioUrl: string;
+  twitterHandle: string;
+  motivation: string;
+  date: string;
+  status: 'pending' | 'approved' | 'rejected';
 }

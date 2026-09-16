@@ -51,6 +51,18 @@ export const FilmDetailPage: React.FC = () => {
   const [isPlayingTrailer, setIsPlayingTrailer] = useState(false);
 
   const film: FilmItem = films.find(f => f.id === selectedFilmId) || films[0];
+
+  if (films.length === 0 || !film) {
+    return (
+      <div className="min-h-screen py-8 flex items-center justify-center bg-[#090a10]">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-[#00F0FF] border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-slate-400 font-bold">Memuat Detail Film...</p>
+        </div>
+      </div>
+    );
+  }
+
   const filmReviews = ratings.filter(r => r.filmId === film.id);
   const isInWatchlist = isFilmInWatchlist(film.id);
 
@@ -306,19 +318,20 @@ export const FilmDetailPage: React.FC = () => {
                   onClick={() => toggleWatchlist(film.id)}
                   className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all min-h-[40px] ${
                     isInWatchlist
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'
                       : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
                   }`}
+                  title={isInWatchlist ? 'Hapus dari Perpustakaan & Watchlist' : 'Simpan ke Perpustakaan & Watchlist'}
                 >
                   {isInWatchlist ? (
                     <>
                       <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Tersimpan di Watchlist</span>
+                      <span>Tersimpan di Library</span>
                     </>
                   ) : (
                     <>
-                      <Bookmark className="w-3.5 h-3.5" />
-                      <span>+ Tambah ke Watchlist</span>
+                      <Bookmark className="w-3.5 h-3.5 text-[#00F0FF]" />
+                      <span>+ Simpan ke Library</span>
                     </>
                   )}
                 </button>

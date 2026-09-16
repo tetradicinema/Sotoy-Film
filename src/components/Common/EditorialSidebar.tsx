@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { AdBannerSlot } from './AdBannerSlot';
+import { QuickReactionBar } from './QuickReactionBar';
 
 interface EditorialSidebarProps {
   currentArticleId?: string;
@@ -178,24 +179,14 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                 {post.content}
               </p>
 
-              <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800/50">
-                <button
-                  onClick={() => {
-                    if (!isLoggedIn) {
-                      setLoginModalOpen(true);
-                      showToast('Silakan masuk untuk menyukai buzz ini!');
-                      return;
-                    }
-                    likeBuzzPost(post.id);
-                  }}
-                  className={`flex items-center gap-1 hover:text-[#FF2E7E] transition-colors ${
-                    post.likedByMe ? 'text-[#FF2E7E] font-bold' : ''
-                  }`}
-                >
-                  <Heart className={`w-3.5 h-3.5 ${post.likedByMe ? 'fill-current' : ''}`} />
-                  <span>{post.likes}</span>
-                </button>
-                <div className="flex items-center gap-2">
+              <div className="pt-2 border-t border-slate-800/50 space-y-2">
+                <QuickReactionBar
+                  buzzId={post.id}
+                  reactions={post.reactions}
+                  myReaction={post.myReaction}
+                  compact={true}
+                />
+                <div className="flex items-center justify-between text-[11px] text-slate-400">
                   <button
                     id={`sidebar-buzz-reply-${post.id}`}
                     onClick={() => navigateTo('buzz-detail', { buzzId: post.id })}
@@ -203,7 +194,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                     title="Balas diskusi buzz ini"
                   >
                     <MessageSquare className="w-3.5 h-3.5 text-[#00F0FF]" />
-                    <span>{(post.replies && post.replies.length > 0 ? post.replies.length : post.repliesCount) || 0}</span>
+                    <span>{(post.replies && post.replies.length > 0 ? post.replies.length : post.repliesCount) || 0} Balasan</span>
                   </button>
                   <button
                     onClick={() => {

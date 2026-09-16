@@ -6,6 +6,7 @@ import {
   Heart,
   Share2,
   Bookmark,
+  BookmarkCheck,
   MessageCircle,
   Star,
   Sparkles,
@@ -36,6 +37,8 @@ export const ArticleDetailPage: React.FC = () => {
     likeArticle,
     toggleWatchlist,
     isFilmInWatchlist,
+    toggleSaveArticle,
+    isArticleSaved,
     navigateTo,
     showToast,
     openShareModal,
@@ -46,15 +49,6 @@ export const ArticleDetailPage: React.FC = () => {
   const article = articles.find(a => a.id === selectedArticleId) || articles[0];
   const [commentText, setCommentText] = useState('');
   const [rateModalOpen, setRateModalOpen] = useState(false);
-
-  // Cari film yang dibahas dalam artikel ini
-  const discussedFilm = article.relatedFilmId
-    ? films.find(f => f.id === article.relatedFilmId)
-    : films.find(f =>
-        article.title.toLowerCase().includes(f.title.toLowerCase()) ||
-        article.tags.some(t => t.toLowerCase() === f.title.toLowerCase()) ||
-        (f.id === 'film-1' && (article.category === 'movies' || article.title.includes('Dune')))
-      );
   const [comments, setComments] = useState<{ name: string; avatar: string; text: string; time: string }[]>([
     {
       name: 'Rian Sinematografer',
@@ -69,6 +63,26 @@ export const ArticleDetailPage: React.FC = () => {
       time: '3 jam lalu',
     },
   ]);
+
+  if (articles.length === 0 || !article) {
+    return (
+      <div className="min-h-screen py-8 flex items-center justify-center bg-[#090a10]">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-[#FF2E7E] border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-slate-400 font-bold">Memuat Artikel...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Cari film yang dibahas dalam artikel ini
+  const discussedFilm = article.relatedFilmId
+    ? films.find(f => f.id === article.relatedFilmId)
+    : films.find(f =>
+        article.title.toLowerCase().includes(f.title.toLowerCase()) ||
+        article.tags.some(t => t.toLowerCase() === f.title.toLowerCase()) ||
+        (f.id === 'film-1' && (article.category === 'movies' || article.title.includes('Dune')))
+      );
 
   const handleAddComment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -234,7 +248,30 @@ export const ArticleDetailPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 text-xs text-slate-400">
+            <div className="flex items-center gap-2.5 flex-wrap text-xs text-slate-400">
+              <button
+                id="article-save-library-btn"
+                onClick={() => toggleSaveArticle(article.id)}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-bold transition-all border ${
+                  isArticleSaved(article.id)
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
+                    : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-800'
+                }`}
+                title={isArticleSaved(article.id) ? 'Hapus dari Perpustakaan' : 'Simpan ke Perpustakaan'}
+              >
+                {isArticleSaved(article.id) ? (
+                  <>
+                    <BookmarkCheck className="w-4 h-4 text-emerald-400" />
+                    <span>Tersimpan di Library</span>
+                  </>
+                ) : (
+                  <>
+                    <Bookmark className="w-4 h-4 text-[#00F0FF]" />
+                    <span>+ Simpan ke Library</span>
+                  </>
+                )}
+              </button>
+
               <button
                 id="article-like-btn"
                 onClick={() => likeArticle(article.id)}

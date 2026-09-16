@@ -71,7 +71,7 @@ export const WriteArticlePage: React.FC = () => {
     setSubCategory(subCategoryOptions[newCat][0].id);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !content.trim()) {
       showToast('Harap isi judul dan konten artikel!');
@@ -88,7 +88,7 @@ export const WriteArticlePage: React.FC = () => {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
 
-    const success = addArticle({
+    const success = await addArticle({
       title,
       slug,
       excerpt: excerpt || title,

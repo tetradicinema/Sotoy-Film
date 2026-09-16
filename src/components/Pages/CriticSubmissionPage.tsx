@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { Star, ShieldCheck, FileText, Send, CheckCircle2 } from 'lucide-react';
 
 export const CriticSubmissionPage: React.FC = () => {
-  const { navigateTo, isLoggedIn, setLoginModalOpen, showToast } = useApp();
+  const { navigateTo, isLoggedIn, setLoginModalOpen, showToast, currentUser, addCriticSubmission } = useApp();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
@@ -14,7 +14,7 @@ export const CriticSubmissionPage: React.FC = () => {
     motivation: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isLoggedIn) {
       setLoginModalOpen(true);
@@ -22,11 +22,23 @@ export const CriticSubmissionPage: React.FC = () => {
       return;
     }
     
-    // Simulate submission
-    setTimeout(() => {
+    const success = await addCriticSubmission({
+      userId: currentUser.id,
+      userName: formData.fullName,
+      userEmail: currentUser.email || 'visitor@sotoyfilm.id',
+      publicationName: formData.publicationName,
+      publicationUrl: formData.publicationUrl,
+      portfolioUrl: formData.portfolioUrl,
+      twitterHandle: formData.twitterHandle,
+      motivation: formData.motivation,
+    });
+
+    if (success) {
       setIsSubmitted(true);
       showToast('Formulir pengajuan kritikus berhasil dikirim!');
-    }, 800);
+    } else {
+      showToast('Gagal mengirimkan formulir pengajuan.');
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

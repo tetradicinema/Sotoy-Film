@@ -4,6 +4,9 @@ import {
   Star,
   MessageSquare,
   Bookmark,
+  BookmarkCheck,
+  BookOpen,
+  FileText,
   Award,
   Shield,
   PenSquare,
@@ -42,6 +45,7 @@ import {
   Search,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { QuickReactionBar } from '../Common/QuickReactionBar';
 import { UserTab, UserSettings } from '../../types';
 import { StarRating } from '../Common/StarRating';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
@@ -59,6 +63,8 @@ export const UserPage: React.FC = () => {
     articles,
     watchlist,
     toggleWatchlist,
+    savedArticles,
+    toggleSaveArticle,
     activeUserTab,
     setActiveUserTab,
     userSettings,
@@ -88,6 +94,7 @@ export const UserPage: React.FC = () => {
   const [modalSearchQuery, setModalSearchQuery] = useState('');
   const [communityFilter, setCommunityFilter] = useState<'all' | 'following' | 'followers'>('all');
   const [communitySearch, setCommunitySearch] = useState('');
+  const [librarySubTab, setLibrarySubTab] = useState<'films' | 'articles'>('films');
 
   // Settings local form state
   const [profileForm, setProfileForm] = useState({
@@ -130,6 +137,7 @@ export const UserPage: React.FC = () => {
   const myReviews = ratings.filter(r => r.userId === targetUser.id);
   const myArticles = articles.filter(a => a.author.id === targetUser.id || a.author.name === targetUser.name);
   const myWatchlistFilms = films.filter(f => watchlist.includes(f.id));
+  const mySavedArticles = articles.filter(a => savedArticles.includes(a.id));
 
   // Compute stats for the target user
   const averageScore = myReviews.length > 0
@@ -618,7 +626,7 @@ export const UserPage: React.FC = () => {
             }`}
           >
             <Bookmark className="w-4 h-4" />
-            <span>{isOwnProfile ? 'Watchlist Saya' : 'Watchlist Kurasi'} ({myWatchlistFilms.length})</span>
+            <span>{isOwnProfile ? 'Perpustakaan (Library)' : 'Perpustakaan Kurasi'} ({myWatchlistFilms.length + mySavedArticles.length})</span>
           </button>
 
           <button
@@ -906,103 +914,212 @@ export const UserPage: React.FC = () => {
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 2: WATCHLIST SAYA (DAFTAR TONTONAN) */}
+        {/* TAB 2: PERPUSTAKAAN SAYA (LIBRARY - FILMS & ARTICLES) */}
         {/* ========================================================================= */}
         {activeUserTab === 'watchlist' && (
           <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
               <div>
                 <h3 className="font-display font-black text-xl text-white flex items-center gap-2.5">
                   <Bookmark className="w-5 h-5 text-emerald-400" />
-                  <span>Daftar Tontonan (Watchlist Saya)</span>
+                  <span>Perpustakaan & Bookmark ({myWatchlistFilms.length + mySavedArticles.length})</span>
                 </h3>
                 <p className="text-slate-400 text-xs mt-1">
-                  Koleksi film yang ingin kamu tonton lengkap dengan platform tayang resminya
+                  Koleksi film tontonan dan artikel favorit yang kamu simpan untuk dibaca dan dirujuk kapan saja.
                 </p>
               </div>
-              <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full self-start sm:self-auto">
-                {myWatchlistFilms.length} Film Tersimpan
-              </span>
-            </div>
 
-            {myWatchlistFilms.length === 0 ? (
-              <div className="text-center py-16 bg-slate-900/50 rounded-2xl border border-slate-800 space-y-4">
-                <Bookmark className="w-12 h-12 text-slate-600 mx-auto" />
-                <div className="space-y-1">
-                  <h4 className="font-display font-bold text-white text-base">
-                    Watchlist kamu masih kosong
-                  </h4>
-                  <p className="text-slate-400 text-xs max-w-sm mx-auto">
-                    Jelajahi Database Film atau Rekomendasi Film untuk menemukan tontonan menarik dan klik "+ Tambah ke Watchlist".
-                  </p>
-                </div>
+              {/* Sub-tab switcher */}
+              <div className="flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-2xl border border-slate-800 self-start sm:self-auto">
                 <button
-                  onClick={() => navigateTo('film-database')}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20"
+                  id="library-subtab-films"
+                  onClick={() => setLibrarySubTab('films')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                    librarySubTab === 'films'
+                      ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
                 >
-                  Jelajahi Database Film
+                  <Film className="w-3.5 h-3.5" />
+                  <span>Film Tersimpan ({myWatchlistFilms.length})</span>
+                </button>
+                <button
+                  id="library-subtab-articles"
+                  onClick={() => setLibrarySubTab('articles')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                    librarySubTab === 'articles'
+                      ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-[#00F0FF] border border-cyan-500/40 shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Artikel Tersimpan ({mySavedArticles.length})</span>
                 </button>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-                {myWatchlistFilms.map(film => (
-                  <div
-                    key={film.id}
-                    id={`watchlist-card-${film.id}`}
-                    className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden hover:border-emerald-500/50 transition-all flex flex-col group shadow-lg"
+            </div>
+
+            {/* FILMS SUB-TAB CONTENT */}
+            {librarySubTab === 'films' && (
+              myWatchlistFilms.length === 0 ? (
+                <div className="text-center py-16 bg-slate-900/50 rounded-2xl border border-slate-800 space-y-4">
+                  <Film className="w-12 h-12 text-slate-600 mx-auto" />
+                  <div className="space-y-1">
+                    <h4 className="font-display font-bold text-white text-base">
+                      Belum Ada Film Tersimpan
+                    </h4>
+                    <p className="text-slate-400 text-xs max-w-sm mx-auto">
+                      Jelajahi Database Film atau Rekomendasi Film untuk menemukan tontonan menarik dan klik "+ Simpan ke Library".
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => navigateTo('film-database')}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 hover:brightness-110 transition-all"
                   >
-                    <div className="aspect-video w-full overflow-hidden relative bg-slate-800">
-                      <img
-                        src={film.backdrop || film.poster}
-                        alt={film.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                      <div className="absolute top-2 left-2 bg-black/80 px-2 py-0.5 rounded text-[11px] font-bold text-[#FFD000] border border-[#FFD000]/40 flex items-center gap-1">
-                        <Star className="w-3 h-3 fill-current" />
-                        <span>{film.skorSotoy.toFixed(1)}</span>
-                      </div>
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          toggleWatchlist(film.id);
-                        }}
-                        className="absolute top-2 right-2 p-1.5 rounded-lg bg-red-500/80 hover:bg-red-500 text-white shadow"
-                        title="Hapus dari Watchlist"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
-                      <div>
-                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">
-                          {film.year} • {film.duration || 'Standar Bioskop'}
-                        </div>
-                        <h4 className="font-display font-black text-sm text-white group-hover:text-emerald-300 transition-colors">
-                          {film.title}
-                        </h4>
-                        <p className="text-slate-400 text-xs line-clamp-2 mt-1">
-                          {film.synopsis}
-                        </p>
-                      </div>
-
-                      <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
-                        <div className="flex items-center gap-1 text-[10px] text-slate-400">
-                          <Tv className="w-3 h-3 text-[#00F0FF]" />
-                          <span>{film.whereToWatch[0]?.platform || 'Bioskop'}</span>
+                    Jelajahi Database Film
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+                  {myWatchlistFilms.map(film => (
+                    <div
+                      key={film.id}
+                      id={`watchlist-card-${film.id}`}
+                      className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden hover:border-emerald-500/50 transition-all flex flex-col group shadow-lg"
+                    >
+                      <div className="aspect-video w-full overflow-hidden relative bg-slate-800">
+                        <img
+                          src={film.backdrop || film.poster}
+                          alt={film.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <div className="absolute top-2 left-2 bg-black/80 px-2 py-0.5 rounded text-[11px] font-bold text-[#FFD000] border border-[#FFD000]/40 flex items-center gap-1">
+                          <Star className="w-3 h-3 fill-current" />
+                          <span>{film.skorSotoy.toFixed(1)}</span>
                         </div>
                         <button
-                          onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                          className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                          onClick={e => {
+                            e.stopPropagation();
+                            toggleWatchlist(film.id);
+                          }}
+                          className="absolute top-2 right-2 p-1.5 rounded-lg bg-red-500/80 hover:bg-red-500 text-white shadow"
+                          title="Hapus dari Library"
                         >
-                          <span>Buka Detail Film</span>
-                          <ChevronRight className="w-3 h-3" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
+
+                      <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                        <div>
+                          <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">
+                            {film.year} • {film.duration || 'Standar Bioskop'}
+                          </div>
+                          <h4 className="font-display font-black text-sm text-white group-hover:text-emerald-300 transition-colors">
+                            {film.title}
+                          </h4>
+                          <p className="text-slate-400 text-xs line-clamp-2 mt-1">
+                            {film.synopsis}
+                          </p>
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
+                          <div className="flex items-center gap-1 text-[10px] text-slate-400">
+                            <Tv className="w-3 h-3 text-[#00F0FF]" />
+                            <span>{film.whereToWatch[0]?.platform || 'Bioskop'}</span>
+                          </div>
+                          <button
+                            onClick={() => navigateTo('film-detail', { filmId: film.id })}
+                            className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                          >
+                            <span>Buka Detail Film</span>
+                            <ChevronRight className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
+                  ))}
+                </div>
+              )
+            )}
+
+            {/* ARTICLES SUB-TAB CONTENT */}
+            {librarySubTab === 'articles' && (
+              mySavedArticles.length === 0 ? (
+                <div className="text-center py-16 bg-slate-900/50 rounded-2xl border border-slate-800 space-y-4">
+                  <FileText className="w-12 h-12 text-slate-600 mx-auto" />
+                  <div className="space-y-1">
+                    <h4 className="font-display font-bold text-white text-base">
+                      Belum Ada Artikel Tersimpan
+                    </h4>
+                    <p className="text-slate-400 text-xs max-w-sm mx-auto">
+                      Jelajahi ulasan & artikel editorial menarik, lalu klik "+ Simpan ke Library" untuk membacanya nanti.
+                    </p>
                   </div>
-                ))}
-              </div>
+                  <button
+                    onClick={() => navigateTo('home')}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-slate-950 font-black text-xs shadow-lg shadow-cyan-500/20 hover:brightness-110 transition-all"
+                  >
+                    Jelajahi Beranda Artikel
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+                  {mySavedArticles.map(article => (
+                    <div
+                      key={article.id}
+                      id={`saved-article-card-${article.id}`}
+                      className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden hover:border-cyan-500/50 transition-all flex flex-col group shadow-lg"
+                    >
+                      <div className="aspect-video w-full overflow-hidden relative bg-slate-800">
+                        <img
+                          src={article.coverImage}
+                          alt={article.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <div className="absolute top-2 left-2 bg-black/80 px-2.5 py-1 rounded text-[10px] font-bold text-[#00F0FF] uppercase border border-[#00F0FF]/30">
+                          {article.category}
+                        </div>
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            toggleSaveArticle(article.id);
+                          }}
+                          className="absolute top-2 right-2 p-1.5 rounded-lg bg-red-500/80 hover:bg-red-500 text-white shadow"
+                          title="Hapus dari Library"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                        <div>
+                          <div className="flex items-center gap-2 text-[10px] text-slate-400 mb-1.5">
+                            <span className="text-[#FF2E7E] font-bold">{article.author.name}</span>
+                            <span>•</span>
+                            <span>{article.readTime}</span>
+                          </div>
+                          <h4 className="font-display font-black text-sm text-white group-hover:text-[#00F0FF] transition-colors line-clamp-2 leading-snug">
+                            {article.title}
+                          </h4>
+                          <p className="text-slate-400 text-xs line-clamp-2 mt-1.5">
+                            {article.excerpt}
+                          </p>
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
+                          <span className="text-[10px] text-slate-500">{article.publishedAt}</span>
+                          <button
+                            onClick={() => navigateTo('article-detail', { articleId: article.id })}
+                            className="text-xs font-bold text-[#00F0FF] hover:underline flex items-center gap-1"
+                          >
+                            <span>Baca Artikel</span>
+                            <ChevronRight className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
             )}
           </div>
         )}
@@ -1236,15 +1353,21 @@ export const UserPage: React.FC = () => {
                       </div>
                     )}
 
-                    <div className="pt-2 border-t border-slate-800 flex items-center gap-4 text-xs text-slate-400">
-                      <span className="flex items-center gap-1 text-[#FF2E7E]">
-                        <Heart className="w-3.5 h-3.5 fill-current" />
-                        {buzz.likes} Suka
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        {buzz.repliesCount} Balasan
-                      </span>
+                    <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-2 text-xs text-slate-400">
+                      <div className="overflow-x-auto scrollbar-none min-w-0 flex-1 pr-1">
+                        <QuickReactionBar
+                          buzzId={buzz.id}
+                          reactions={buzz.reactions}
+                          myReaction={buzz.myReaction}
+                        />
+                      </div>
+                      <button
+                        onClick={() => navigateTo('buzz-detail', { buzzId: buzz.id })}
+                        className="flex items-center gap-1 sm:gap-1.5 hover:text-[#00F0FF] text-slate-300 transition-colors bg-slate-900 border border-slate-800 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl font-semibold shrink-0 text-xs"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5 text-[#00F0FF]" />
+                        <span>{buzz.repliesCount} <span className="hidden xs:inline">Balasan</span></span>
+                      </button>
                     </div>
                   </div>
                 ))}

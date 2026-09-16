@@ -6,12 +6,15 @@ import {
   FilmItem,
   BuzzPost,
   BuzzReply,
+  ReactionType,
+  BuzzReactions,
   UserRating,
   MainCategory,
   SubCategory,
   UserSettings,
   UserTab,
   SettingsSubPage,
+  CriticSubmission,
 } from '../types';
 import {
   INITIAL_USERS,
@@ -22,6 +25,17 @@ import {
   INITIAL_RATINGS,
 } from '../data/mockData';
 import { ShareData } from '../components/Modals/SocialShareModal';
+import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
+import {
+  collection,
+  doc,
+  setDoc,
+  getDoc,
+  getDocs,
+  deleteDoc,
+  onSnapshot,
+} from 'firebase/firestore';
+import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 
 export type AppView =
   | 'home'
@@ -35,6 +49,7 @@ export type AppView =
   | 'write-article'
   | 'user-profile'
   | 'settings'
+  | 'search'
   | 'about-us'
   | 'privacy-policy'
   | 'terms-conditions'
@@ -48,19 +63,29 @@ interface AppContextType {
   isLoggedIn: boolean;
   loginModalOpen: boolean;
   setLoginModalOpen: (open: boolean) => void;
-  login: (roleKey?: string) => void;
-  logout: () => void;
-  switchRole: (role: UserRole) => void;
+  isComposeBuzzOpen: boolean;
+  setIsComposeBuzzOpen: (open: boolean) => void;
+  login: (roleKey?: string) => Promise<void>;
+  logout: () => Promise<void>;
+  switchRole: (role: UserRole) => Promise<void>;
   articles: Article[];
   films: FilmItem[];
   buzzList: BuzzPost[];
   ratings: UserRating[];
+  criticSubmissions: CriticSubmission[];
+  addCriticSubmission: (sub: Omit<CriticSubmission, 'id' | 'status' | 'date'>) => Promise<boolean>;
+  updateCriticSubmissionStatus: (id: string, status: 'approved' | 'rejected') => Promise<void>;
   watchlist: string[];
   toggleWatchlist: (filmId: string) => void;
   isFilmInWatchlist: (filmId: string) => boolean;
-  updateUserBio: (newBio: string) => void;
-  updateUserProfile: (updates: { name?: string; handle?: string; avatar?: string; bio?: string }) => void;
-  uploadProfilePhoto: (base64Data: string) => void;
+  savedArticles: string[];
+  toggleSaveArticle: (articleId: string) => void;
+  isArticleSaved: (articleId: string) => boolean;
+  toggleSaveFilm: (filmId: string) => void;
+  isFilmSaved: (filmId: string) => boolean;
+  updateUserBio: (newBio: string) => Promise<void>;
+  updateUserProfile: (updates: { name?: string; handle?: string; avatar?: string; bio?: string }) => Promise<void>;
+  uploadProfilePhoto: (base64Data: string) => Promise<void>;
   userSettings: UserSettings;
   updateUserSettings: (updates: Partial<UserSettings>) => void;
   activeUserTab: UserTab;
@@ -90,8 +115,11 @@ interface AppContextType {
       userTab?: UserTab;
       settingsTab?: SettingsSubPage;
       userId?: string;
+      buzzFeedTab?: 'for-you' | 'following' | 'saved' | 'liked' | 'trending';
+      searchQuery?: string;
     }
   ) => void;
+  goBack: () => void;
   // Follow / Social system
   followingIds: string[];
   followersIds: string[];
@@ -109,19 +137,27 @@ interface AppContextType {
   openShareModal: (data: ShareData) => void;
   closeShareModal: () => void;
   // Content creation
-  addArticle: (newArticle: Omit<Article, 'id' | 'publishedAt' | 'views' | 'likes' | 'commentsCount'>) => boolean;
-  deleteArticle: (id: string) => void;
+  addArticle: (newArticle: Omit<Article, 'id' | 'publishedAt' | 'views' | 'likes' | 'commentsCount'>) => Promise<boolean>;
+  deleteArticle: (id: string) => Promise<void>;
   addBuzzPost: (
     content: string,
     taggedFilmId?: string,
     skorSotoy?: number,
     taggedArticleId?: string
-  ) => void;
-  likeBuzzPost: (buzzId: string) => void;
-  addBuzzReply: (buzzId: string, content: string) => void;
-  likeBuzzReply: (buzzId: string, replyId: string) => void;
-  addFilmRating: (filmId: string, score: number, headline: string, reviewText: string) => void;
-  likeArticle: (articleId: string) => void;
+  ) => Promise<void>;
+  likeBuzzPost: (buzzId: string) => Promise<void>;
+  reactToBuzzPost: (buzzId: string, reaction: ReactionType) => Promise<void>;
+  addBuzzReply: (
+    buzzId: string,
+    content: string,
+    parentId?: string,
+    replyToUser?: { id: string; name: string; handle: string }
+  ) => Promise<void>;
+  likeBuzzReply: (buzzId: string, replyId: string) => Promise<void>;
+  addFilmRating: (filmId: string, score: number, headline: string, reviewText: string) => Promise<void>;
+  likeArticle: (articleId: string) => Promise<void>;
+  buzzFeedTab: 'for-you' | 'following' | 'saved' | 'liked' | 'trending';
+  setBuzzFeedTab: (tab: 'for-you' | 'following' | 'saved' | 'liked' | 'trending') => void;
   toastMessage: string | null;
   showToast: (msg: string) => void;
 }
@@ -129,63 +165,32 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User>(() => {
-    const saved = localStorage.getItem('sotoy_role');
-    if (saved && INITIAL_USERS[saved]) {
-      return INITIAL_USERS[saved];
-    }
-    return INITIAL_USERS.warga; // Default to Warga Sotoy
-  });
-
+  // Authentication & Session States
+  const [currentUser, setCurrentUser] = useState<User>(() => INITIAL_USERS.warga);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     const saved = localStorage.getItem('sotoy_is_logged_in');
     return saved !== null ? saved === 'true' : true;
   });
-
   const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [isComposeBuzzOpen, setIsComposeBuzzOpen] = useState(false);
 
+  // Firestore Realtime Collections States
   const [watchlist, setWatchlist] = useState<string[]>(() => {
     const saved = localStorage.getItem('sotoy_watchlist');
     return saved ? JSON.parse(saved) : ['film-1', 'film-3'];
   });
-
-  const [articles, setArticles] = useState<Article[]>(() => {
-    const saved = localStorage.getItem('sotoy_articles');
-    return saved ? JSON.parse(saved) : INITIAL_ARTICLES;
+  const [savedArticles, setSavedArticles] = useState<string[]>(() => {
+    const saved = localStorage.getItem('sotoy_saved_articles');
+    return saved ? JSON.parse(saved) : ['art-1', 'art-3'];
   });
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [films, setFilms] = useState<FilmItem[]>([]);
+  const [buzzList, setBuzzList] = useState<BuzzPost[]>([]);
+  const [ratings, setRatings] = useState<UserRating[]>([]);
+  const [criticSubmissions, setCriticSubmissions] = useState<CriticSubmission[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
 
-  const [films, setFilms] = useState<FilmItem[]>(() => {
-    const saved = localStorage.getItem('sotoy_films');
-    return saved ? JSON.parse(saved) : INITIAL_FILMS;
-  });
-
-  const [buzzList, setBuzzList] = useState<BuzzPost[]>(() => {
-    const saved = localStorage.getItem('sotoy_buzz');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved) as BuzzPost[];
-        return parsed.map(post => {
-          const matchInitial = INITIAL_BUZZ.find(ib => ib.id === post.id);
-          const hasReplies = Array.isArray(post.replies) && post.replies.length > 0;
-          const mergedReplies = hasReplies ? post.replies : (matchInitial?.replies || []);
-          return {
-            ...post,
-            replies: mergedReplies,
-            repliesCount: mergedReplies ? mergedReplies.length : (post.repliesCount || 0),
-          };
-        });
-      } catch (e) {
-        console.error('Failed to parse sotoy_buzz', e);
-      }
-    }
-    return INITIAL_BUZZ;
-  });
-
-  const [ratings, setRatings] = useState<UserRating[]>(() => {
-    const saved = localStorage.getItem('sotoy_ratings');
-    return saved ? JSON.parse(saved) : INITIAL_RATINGS;
-  });
-
+  // Local Preferences States
   const [activeUserTab, setActiveUserTab] = useState<UserTab>('watchlist');
   const [activeSettingsTab, setActiveSettingsTab] = useState<SettingsSubPage>('profile');
   const [userSettings, setUserSettings] = useState<UserSettings>(() => {
@@ -215,11 +220,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   });
 
-  const [allUsers, setAllUsers] = useState<User[]>(() => {
-    const saved = localStorage.getItem('sotoy_all_users');
-    return saved ? JSON.parse(saved) : ALL_USERS_DATABASE;
-  });
-
   const [followingIds, setFollowingIds] = useState<string[]>(() => {
     const saved = localStorage.getItem('sotoy_following_ids');
     return saved ? JSON.parse(saved) : ['u-2', 'u-4', 'u-6'];
@@ -233,6 +233,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [shareModalData, setShareModalData] = useState<ShareData | null>(null);
 
   const [currentView, setCurrentView] = useState<AppView>('home');
+  const [viewHistory, setViewHistory] = useState<AppView[]>(['home']);
+  const [buzzFeedTab, setBuzzFeedTab] = useState<'for-you' | 'following' | 'saved' | 'liked' | 'trending'>('for-you');
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [selectedFilmId, setSelectedFilmId] = useState<string | null>(null);
   const [selectedBuzzId, setSelectedBuzzId] = useState<string | null>(null);
@@ -245,7 +247,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [viewedUserId, setViewedUserId] = useState<string | null>(null);
   const viewedUser = (viewedUserId ? allUsers.find(u => u.id === viewedUserId) : null) || currentUser;
 
-  // Sync to local storage for realistic persistence
+  // Sync basic preferences and follow lists to local storage
   useEffect(() => {
     localStorage.setItem('sotoy_user_settings', JSON.stringify(userSettings));
   }, [userSettings]);
@@ -259,11 +261,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [followersIds]);
 
   useEffect(() => {
-    localStorage.setItem('sotoy_all_users', JSON.stringify(allUsers));
-  }, [allUsers]);
-
-  // Sync to local storage for realistic persistence
-  useEffect(() => {
     localStorage.setItem('sotoy_is_logged_in', String(isLoggedIn));
   }, [isLoggedIn]);
 
@@ -272,20 +269,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [watchlist]);
 
   useEffect(() => {
-    localStorage.setItem('sotoy_articles', JSON.stringify(articles));
-  }, [articles]);
-
-  useEffect(() => {
-    localStorage.setItem('sotoy_buzz', JSON.stringify(buzzList));
-  }, [buzzList]);
-
-  useEffect(() => {
-    localStorage.setItem('sotoy_films', JSON.stringify(films));
-  }, [films]);
-
-  useEffect(() => {
-    localStorage.setItem('sotoy_ratings', JSON.stringify(ratings));
-  }, [ratings]);
+    localStorage.setItem('sotoy_saved_articles', JSON.stringify(savedArticles));
+  }, [savedArticles]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -294,41 +279,353 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, 4000);
   };
 
-  const login = (roleKey?: string) => {
-    let target = INITIAL_USERS.warga;
-    if (roleKey === 'critic' || roleKey === 'si_paling_sotoy') target = INITIAL_USERS.critic;
-    else if (roleKey === 'writer' || roleKey === 'penulis_sotoy') target = INITIAL_USERS.writer;
-    else if (roleKey === 'admin') target = INITIAL_USERS.admin;
-    else if (roleKey === 'warga' || roleKey === 'warga_sotoy') target = INITIAL_USERS.warga;
+  // Bootstrap Firestore with Mock Data if empty
+  useEffect(() => {
+    const bootstrapData = async () => {
+      try {
+        const testSnap = await getDocs(collection(db, 'films'));
+        if (testSnap.empty) {
+          console.log('[Bootstrap] Initializing Firestore collections with mock data...');
+          
+          // Seed Films
+          for (const item of INITIAL_FILMS) {
+            try { await setDoc(doc(db, 'films', item.id), item); } catch (e) { /* ignore seed permission errors */ }
+          }
+          // Seed Articles
+          for (const item of INITIAL_ARTICLES) {
+            try { await setDoc(doc(db, 'articles', item.id), item); } catch (e) { /* ignore seed permission errors */ }
+          }
+          // Seed Buzz Posts
+          for (const item of INITIAL_BUZZ) {
+            try { await setDoc(doc(db, 'buzz', item.id), item); } catch (e) { /* ignore seed permission errors */ }
+          }
+          // Seed Ratings
+          for (const item of INITIAL_RATINGS) {
+            try { await setDoc(doc(db, 'ratings', item.id), item); } catch (e) { /* ignore seed permission errors */ }
+          }
+          // Seed Users database
+          for (const item of ALL_USERS_DATABASE) {
+            try { await setDoc(doc(db, 'users', item.id), item); } catch (e) { /* ignore seed permission errors */ }
+          }
+          console.log('[Bootstrap] Seeding completed.');
+        }
+      } catch (err) {
+        console.warn('[Bootstrap] Firestore seeding skipped:', err);
+      }
+    };
+    bootstrapData();
+  }, []);
 
-    setCurrentUser(target);
+  // Initialize Real-time Firestore Sync Subscriptions
+  useEffect(() => {
+    const unsubFilms = onSnapshot(
+      collection(db, 'films'),
+      (snapshot) => {
+        const items: FilmItem[] = [];
+        snapshot.forEach(doc => items.push(doc.data() as FilmItem));
+        if (items.length > 0) {
+          const existingIds = new Set(items.map(f => f.id));
+          const merged = [...items];
+          for (const init of INITIAL_FILMS) {
+            if (!existingIds.has(init.id)) {
+              merged.push(init);
+            }
+          }
+          setFilms(merged.sort((a, b) => (a.trendingRank || 99) - (b.trendingRank || 99)));
+        } else {
+          setFilms(INITIAL_FILMS);
+        }
+      },
+      (err) => {
+        console.warn('[Firestore] films subscription fallback to initial mock:', err.message);
+        setFilms(INITIAL_FILMS);
+      }
+    );
+
+    const unsubArticles = onSnapshot(
+      collection(db, 'articles'),
+      (snapshot) => {
+        const items: Article[] = [];
+        snapshot.forEach(doc => items.push(doc.data() as Article));
+        if (items.length > 0) {
+          setArticles(items.sort((a, b) => b.id.localeCompare(a.id)));
+        } else {
+          setArticles(INITIAL_ARTICLES);
+        }
+      },
+      (err) => {
+        console.warn('[Firestore] articles subscription fallback to initial mock:', err.message);
+        setArticles(INITIAL_ARTICLES);
+      }
+    );
+
+    const unsubBuzz = onSnapshot(
+      collection(db, 'buzz'),
+      (snapshot) => {
+        const items: BuzzPost[] = [];
+        snapshot.forEach(doc => items.push(doc.data() as BuzzPost));
+        if (items.length > 0) {
+          setBuzzList(items.sort((a, b) => b.id.localeCompare(a.id)));
+        } else {
+          setBuzzList(INITIAL_BUZZ);
+        }
+      },
+      (err) => {
+        console.warn('[Firestore] buzz subscription fallback to initial mock:', err.message);
+        setBuzzList(INITIAL_BUZZ);
+      }
+    );
+
+    const unsubRatings = onSnapshot(
+      collection(db, 'ratings'),
+      (snapshot) => {
+        const items: UserRating[] = [];
+        snapshot.forEach(doc => items.push(doc.data() as UserRating));
+        if (items.length > 0) {
+          setRatings(items.sort((a, b) => b.id.localeCompare(a.id)));
+        } else {
+          setRatings(INITIAL_RATINGS);
+        }
+      },
+      (err) => {
+        console.warn('[Firestore] ratings subscription fallback to initial mock:', err.message);
+        setRatings(INITIAL_RATINGS);
+      }
+    );
+
+    const unsubUsers = onSnapshot(
+      collection(db, 'users'),
+      (snapshot) => {
+        const items: User[] = [];
+        snapshot.forEach(doc => items.push(doc.data() as User));
+        if (items.length > 0) {
+          setAllUsers(items);
+        } else {
+          setAllUsers(ALL_USERS_DATABASE);
+        }
+      },
+      (err) => {
+        console.warn('[Firestore] users subscription fallback to initial mock:', err.message);
+        setAllUsers(ALL_USERS_DATABASE);
+      }
+    );
+
+    const unsubCriticSubmissions = onSnapshot(
+      collection(db, 'criticSubmissions'),
+      (snapshot) => {
+        const items: CriticSubmission[] = [];
+        snapshot.forEach(doc => items.push(doc.data() as CriticSubmission));
+        setCriticSubmissions(items.sort((a, b) => b.id.localeCompare(a.id)));
+      },
+      (err) => {
+        console.warn('[Firestore] criticSubmissions restricted or unavailable:', err.message);
+      }
+    );
+
+    return () => {
+      unsubFilms();
+      unsubArticles();
+      unsubBuzz();
+      unsubRatings();
+      unsubUsers();
+      unsubCriticSubmissions();
+    };
+  }, []);
+
+  // Initialize Firebase Auth & Real User profile sync
+  useEffect(() => {
+    const unsubAuth = onAuthStateChanged(auth, async (fbUser) => {
+      if (fbUser) {
+        const uid = fbUser.uid;
+        const userDocRef = doc(db, 'users', uid);
+        try {
+          const userSnap = await getDoc(userDocRef);
+          if (userSnap.exists()) {
+            setCurrentUser(userSnap.data() as User);
+          } else {
+            // First time user registration
+            const defaultUser: User = {
+              id: uid,
+              name: 'Warga Sotoy ' + uid.slice(0, 4),
+              handle: '@warga_' + uid.slice(0, 4).toLowerCase(),
+              avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+              role: 'warga_sotoy',
+              roleTitle: 'Warga Sotoy (Penonton Santai)',
+              bio: 'Cinephile baru mendarat di Sotoy Film!',
+              email: fbUser.email || `warga_${uid.slice(0, 4)}@sotoyfilm.id`,
+              totalReviews: 0,
+              totalBuzz: 0,
+              followers: [],
+              following: [],
+            };
+            try { await setDoc(userDocRef, defaultUser); } catch (e) { /* ignore write permission */ }
+            setCurrentUser(defaultUser);
+          }
+        } catch (err) {
+          console.warn('[Auth] Error getting user profile: ', err);
+        }
+      } else {
+        // Sign in anonymously if permitted, otherwise run as guest
+        try {
+          await signInAnonymously(auth);
+        } catch (err) {
+          console.warn('[Auth] Anonymous sign-in not enabled on Firebase project; running in client guest mode.');
+        }
+      }
+    });
+    return () => unsubAuth();
+  }, []);
+
+  // Login Simulator integrating actual Firestore synchronization
+  const login = async (roleKey?: string) => {
+    let targetRole: UserRole = 'warga_sotoy';
+    let name = 'Budi Cinephile';
+    let handle = '@budisuka_film';
+    let avatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
+    let roleTitle = 'Warga Sotoy (Penonton Santai)';
+    let bio = 'Nonton apa aja yang lagi rame. Nggak suka spoiler!';
+
+    if (roleKey === 'critic' || roleKey === 'si_paling_sotoy') {
+      targetRole = 'si_paling_sotoy';
+      name = 'Rian Sinematografer';
+      handle = '@riansinotoy';
+      avatar = 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=200&q=80';
+      roleTitle = 'Si Paling Sotoy (Kritikus & Kurator)';
+      bio = 'Menilai film dari sudut blocking kamera, color grade, dan pacing. 10+ tahun nonton festival.';
+    } else if (roleKey === 'writer' || roleKey === 'penulis_sotoy') {
+      targetRole = 'penulis_sotoy';
+      name = 'Dinda Redaksi';
+      handle = '@dindaredaksi';
+      avatar = 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&q=80';
+      roleTitle = 'Penulis Sotoy (Jurnalis Film & Pop-Culture)';
+      bio = 'Editor & penulis feature di Sotoy Film. Pecinta film noir dan anime retro 90-an.';
+    } else if (roleKey === 'admin') {
+      targetRole = 'admin';
+      name = 'Chief Admin Sotoy';
+      handle = '@adminsotoy';
+      avatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80';
+      roleTitle = 'Head Admin & Lead Editor';
+      bio = 'Menjaga ketertiban obrolan sotoy seantero jagat perfilman.';
+    }
+
+    const uid = auth.currentUser ? auth.currentUser.uid : (localStorage.getItem('sotoy_uid') || `user-${Date.now()}`);
+    localStorage.setItem('sotoy_uid', uid);
+
+    const updatedUser: User = {
+      id: uid,
+      name,
+      handle,
+      avatar,
+      role: targetRole,
+      roleTitle,
+      bio,
+      email: `${targetRole}_${uid.slice(0, 4)}@sotoyfilm.id`,
+      totalReviews: 12,
+      totalBuzz: 24,
+      followers: [],
+      following: [],
+    };
+
+    try {
+      await setDoc(doc(db, 'users', uid), updatedUser);
+    } catch (err) {
+      console.warn('[Firestore] User profile sync skipped:', err);
+    }
+
+    setCurrentUser(updatedUser);
     setIsLoggedIn(true);
     setLoginModalOpen(false);
     localStorage.setItem('sotoy_is_logged_in', 'true');
     localStorage.setItem('sotoy_role', roleKey || 'warga');
 
-    // Role-based login redirection:
-    // - warga_sotoy: Community Feed (Buzz Feed)
-    // - si_paling_sotoy: Film Database
-    // - penulis_sotoy & admin: Homepage (dengan tombol Tulis Artikel)
-    if (target.role === 'warga_sotoy') {
+    if (targetRole === 'warga_sotoy') {
       navigateTo('community-feed');
-      showToast(`Selamat datang, ${target.name}! Langsung diarahkan ke Buzz Feed.`);
-    } else if (target.role === 'si_paling_sotoy') {
+      showToast(`Selamat datang, ${name}! Langsung diarahkan ke Buzz Feed.`);
+    } else if (targetRole === 'si_paling_sotoy') {
       navigateTo('film-database');
-      showToast(`Selamat datang, ${target.name}! Langsung diarahkan ke Database Film.`);
+      showToast(`Selamat datang, ${name}! Langsung diarahkan ke Database Film.`);
     } else {
       navigateTo('home');
-      showToast(`Selamat datang, ${target.name}! Beranda terbuka dengan akses Menulis Artikel.`);
+      showToast(`Selamat datang, ${name}! Beranda terbuka dengan akses Menulis Artikel.`);
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
     setIsLoggedIn(false);
     localStorage.setItem('sotoy_is_logged_in', 'false');
-    // For visitors / unauthenticated users, land on Homepage
     navigateTo('home');
     showToast('Anda telah beralih ke mode Pengunjung (Visitor). Beranda ditampilkan.');
+  };
+
+  const switchRole = async (role: UserRole) => {
+    let targetRole: UserRole = 'warga_sotoy';
+    let name = 'Budi Cinephile';
+    let handle = '@budisuka_film';
+    let avatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
+    let roleTitle = 'Warga Sotoy (Penonton Santai)';
+    let bio = 'Nonton apa aja yang lagi rame. Nggak suka spoiler!';
+
+    if (role === 'si_paling_sotoy') {
+      targetRole = 'si_paling_sotoy';
+      name = 'Rian Sinematografer';
+      handle = '@riansinotoy';
+      avatar = 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=200&q=80';
+      roleTitle = 'Si Paling Sotoy (Kritikus & Kurator)';
+      bio = 'Menilai film dari sudut blocking kamera, color grade, dan pacing. 10+ tahun nonton festival.';
+    } else if (role === 'penulis_sotoy') {
+      targetRole = 'penulis_sotoy';
+      name = 'Dinda Redaksi';
+      handle = '@dindaredaksi';
+      avatar = 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&q=80';
+      roleTitle = 'Penulis Sotoy (Jurnalis Film & Pop-Culture)';
+      bio = 'Editor & penulis feature di Sotoy Film. Pecinta film noir dan anime retro 90-an.';
+    } else if (role === 'admin') {
+      targetRole = 'admin';
+      name = 'Chief Admin Sotoy';
+      handle = '@adminsotoy';
+      avatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80';
+      roleTitle = 'Head Admin & Lead Editor';
+      bio = 'Menjaga ketertiban obrolan sotoy seantero jagat perfilman.';
+    }
+
+    if (auth.currentUser) {
+      const uid = auth.currentUser.uid;
+      const updatedUser: User = {
+        id: uid,
+        name,
+        handle,
+        avatar,
+        role: targetRole,
+        roleTitle,
+        bio,
+        email: `${targetRole}_${uid.slice(0, 4)}@sotoyfilm.id`,
+        totalReviews: 12,
+        totalBuzz: 24,
+        followers: [],
+        following: [],
+      };
+
+      try {
+        await setDoc(doc(db, 'users', uid), updatedUser);
+        setCurrentUser(updatedUser);
+        setIsLoggedIn(true);
+        localStorage.setItem('sotoy_is_logged_in', 'true');
+        localStorage.setItem('sotoy_role', role === 'si_paling_sotoy' ? 'critic' : role === 'penulis_sotoy' ? 'writer' : role === 'admin' ? 'admin' : 'warga');
+
+        if (role === 'warga_sotoy') {
+          navigateTo('community-feed');
+          showToast(`Beralih ke peran: ${roleTitle} (Buzz Feed dibuka)`);
+        } else if (role === 'si_paling_sotoy') {
+          navigateTo('film-database');
+          showToast(`Beralih ke peran: ${roleTitle} (Database Film dibuka)`);
+        } else {
+          navigateTo('home');
+          showToast(`Beralih ke peran: ${roleTitle} (Beranda & Tombol Tulis Artikel aktif)`);
+        }
+      } catch (err) {
+        console.error('[Firestore] Error switching user role: ', err);
+      }
+    }
   };
 
   const toggleWatchlist = (filmId: string) => {
@@ -349,28 +646,72 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return watchlist.includes(filmId);
   };
 
-  const updateUserBio = (newBio: string) => {
-    setCurrentUser(prev => ({ ...prev, bio: newBio }));
-    showToast('Bio profil kamu berhasil diperbarui!');
+  const toggleSaveArticle = (articleId: string) => {
+    if (!isLoggedIn) {
+      setLoginModalOpen(true);
+      showToast('Silakan Log In terlebih dahulu untuk menyimpan artikel ke Perpustakaan!');
+      return;
+    }
+    setSavedArticles(prev => {
+      const exists = prev.includes(articleId);
+      const updated = exists ? prev.filter(id => id !== articleId) : [...prev, articleId];
+      showToast(exists ? 'Artikel dihapus dari Perpustakaan!' : 'Artikel berhasil disimpan ke Perpustakaan!');
+      return updated;
+    });
   };
 
-  const updateUserProfile = (updates: { name?: string; handle?: string; avatar?: string; bio?: string }) => {
-    setCurrentUser(prev => ({
-      ...prev,
-      name: updates.name?.trim() ? updates.name.trim() : prev.name,
-      handle: updates.handle?.trim() ? (updates.handle.startsWith('@') ? updates.handle.trim() : `@${updates.handle.trim()}`) : prev.handle,
-      avatar: updates.avatar?.trim() ? updates.avatar.trim() : prev.avatar,
-      bio: updates.bio !== undefined ? updates.bio : prev.bio,
-    }));
-    showToast('Profil pengguna berhasil disimpan!');
+  const isArticleSaved = (articleId: string) => {
+    return savedArticles.includes(articleId);
   };
 
-  const uploadProfilePhoto = (base64Data: string) => {
-    setCurrentUser(prev => ({
-      ...prev,
-      avatar: base64Data,
-    }));
-    showToast('Foto profil dari perangkat kamu berhasil diunggah!');
+  const toggleSaveFilm = (filmId: string) => {
+    toggleWatchlist(filmId);
+  };
+
+  const isFilmSaved = (filmId: string) => {
+    return isFilmInWatchlist(filmId);
+  };
+
+  const updateUserBio = async (newBio: string) => {
+    if (!auth.currentUser) return;
+    const updated = { ...currentUser, bio: newBio };
+    try {
+      await setDoc(doc(db, 'users', auth.currentUser.uid), updated);
+      setCurrentUser(updated);
+      showToast('Bio profil kamu berhasil diperbarui!');
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `users/${auth.currentUser.uid}`);
+    }
+  };
+
+  const updateUserProfile = async (updates: { name?: string; handle?: string; avatar?: string; bio?: string }) => {
+    if (!auth.currentUser) return;
+    const updated = {
+      ...currentUser,
+      name: updates.name?.trim() ? updates.name.trim() : currentUser.name,
+      handle: updates.handle?.trim() ? (updates.handle.startsWith('@') ? updates.handle.trim() : `@${updates.handle.trim()}`) : currentUser.handle,
+      avatar: updates.avatar?.trim() ? updates.avatar.trim() : currentUser.avatar,
+      bio: updates.bio !== undefined ? updates.bio : currentUser.bio,
+    };
+    try {
+      await setDoc(doc(db, 'users', auth.currentUser.uid), updated);
+      setCurrentUser(updated);
+      showToast('Profil pengguna berhasil disimpan!');
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `users/${auth.currentUser.uid}`);
+    }
+  };
+
+  const uploadProfilePhoto = async (base64Data: string) => {
+    if (!auth.currentUser) return;
+    const updated = { ...currentUser, avatar: base64Data };
+    try {
+      await setDoc(doc(db, 'users', auth.currentUser.uid), updated);
+      setCurrentUser(updated);
+      showToast('Foto profil dari perangkat kamu berhasil diunggah!');
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `users/${auth.currentUser.uid}`);
+    }
   };
 
   const updateUserSettings = (updates: Partial<UserSettings>) => {
@@ -481,29 +822,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setShareModalData(null);
   };
 
-  const switchRole = (role: UserRole) => {
-    let targetUser = INITIAL_USERS.warga;
-    if (role === 'si_paling_sotoy') targetUser = INITIAL_USERS.critic;
-    else if (role === 'penulis_sotoy') targetUser = INITIAL_USERS.writer;
-    else if (role === 'admin') targetUser = INITIAL_USERS.admin;
-
-    setCurrentUser(targetUser);
-    setIsLoggedIn(true);
-    localStorage.setItem('sotoy_is_logged_in', 'true');
-    localStorage.setItem('sotoy_role', role === 'si_paling_sotoy' ? 'critic' : role === 'penulis_sotoy' ? 'writer' : role === 'admin' ? 'admin' : 'warga');
-
-    if (role === 'warga_sotoy') {
-      navigateTo('community-feed');
-      showToast(`Beralih ke peran: ${targetUser.roleTitle} (Buzz Feed dibuka)`);
-    } else if (role === 'si_paling_sotoy') {
-      navigateTo('film-database');
-      showToast(`Beralih ke peran: ${targetUser.roleTitle} (Database Film dibuka)`);
-    } else {
-      navigateTo('home');
-      showToast(`Beralih ke peran: ${targetUser.roleTitle} (Beranda & Tombol Tulis Artikel aktif)`);
-    }
-  };
-
   const navigateTo = (
     view: AppView,
     options?: {
@@ -515,9 +833,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       userTab?: UserTab;
       settingsTab?: SettingsSubPage;
       userId?: string;
+      buzzFeedTab?: 'for-you' | 'following' | 'saved' | 'liked' | 'trending';
+      searchQuery?: string;
     }
   ) => {
+    setViewHistory(prev => {
+      if (prev[prev.length - 1] !== view) {
+        return [...prev, view];
+      }
+      return prev;
+    });
     setCurrentView(view);
+    if (options?.searchQuery !== undefined) setSearchQuery(options.searchQuery);
+    if (options?.buzzFeedTab !== undefined) setBuzzFeedTab(options.buzzFeedTab);
     if (options?.articleId !== undefined) setSelectedArticleId(options.articleId);
     if (options?.filmId !== undefined) setSelectedFilmId(options.filmId);
     if (options?.buzzId !== undefined) setSelectedBuzzId(options.buzzId);
@@ -526,7 +854,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (options?.userTab !== undefined) setActiveUserTab(options.userTab);
     if (options?.settingsTab !== undefined) setActiveSettingsTab(options.settingsTab);
     
-    // Visiting another user's profile or own profile
     if (options?.userId !== undefined) {
       setViewedUserId(options.userId);
     } else if (view === 'user-profile' && !viewedUserId) {
@@ -536,37 +863,65 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Only Penulis Sotoy and Admin can publish editorial articles
-  const addArticle = (newArticle: Omit<Article, 'id' | 'publishedAt' | 'views' | 'likes' | 'commentsCount'>): boolean => {
+  const goBack = () => {
+    setViewHistory(prev => {
+      if (prev.length > 1) {
+        const updated = prev.slice(0, -1);
+        const targetView = updated[updated.length - 1];
+        setCurrentView(targetView);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return updated;
+      } else {
+        setCurrentView('home');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return ['home'];
+      }
+    });
+  };
+
+  // Publish Article directly to Firestore
+  const addArticle = async (newArticle: Omit<Article, 'id' | 'publishedAt' | 'views' | 'likes' | 'commentsCount'>): Promise<boolean> => {
     if (currentUser.role !== 'penulis_sotoy' && currentUser.role !== 'admin') {
       showToast('Akses ditolak: Hanya Penulis Sotoy & Admin yang dapat mempublikasikan artikel!');
       return false;
     }
 
+    const articleId = `art-${Date.now()}`;
     const created: Article = {
       ...newArticle,
-      id: `art-${Date.now()}`,
+      id: articleId,
       publishedAt: 'Baru saja',
       views: 1,
       likes: 0,
       commentsCount: 0,
     };
 
-    setArticles(prev => [created, ...prev]);
-    showToast('Artikel berhasil dipublikasikan!');
-    return true;
+    try {
+      await setDoc(doc(db, 'articles', articleId), created);
+      showToast('Artikel berhasil dipublikasikan!');
+      return true;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `articles/${articleId}`);
+      return false;
+    }
   };
 
-  const deleteArticle = (id: string) => {
+  // Delete Article from Firestore
+  const deleteArticle = async (id: string) => {
     if (currentUser.role !== 'admin') {
       showToast('Hanya Admin yang dapat menghapus artikel.');
       return;
     }
-    setArticles(prev => prev.filter(a => a.id !== id));
-    showToast('Artikel berhasil dihapus oleh Admin.');
+    try {
+      await deleteDoc(doc(db, 'articles', id));
+      showToast('Artikel berhasil dihapus oleh Admin.');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `articles/${id}`);
+    }
   };
 
-  const addBuzzPost = (
+  // Add Buzz Post to Firestore
+  const addBuzzPost = async (
     content: string,
     taggedFilmId?: string,
     skorSotoy?: number,
@@ -604,12 +959,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
 
-    // Extract hashtags
     const matchedTags = content.match(/#[a-zA-Z0-9_]+/g) || [];
     const cleanTags = matchedTags.map(t => t.replace('#', ''));
 
+    const buzzId = `buzz-${Date.now()}`;
     const newBuzz: BuzzPost = {
-      id: `buzz-${Date.now()}`,
+      id: buzzId,
       author: {
         id: currentUser.id,
         name: currentUser.name,
@@ -626,29 +981,96 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       likedByMe: false,
       repliesCount: 0,
       tags: cleanTags.length > 0 ? cleanTags : ['SotoyFeed'],
+      replies: [],
     };
 
-    setBuzzList(prev => [newBuzz, ...prev]);
-    showToast('Buzz Sotoy kamu berhasil diposting!');
+    try {
+      await setDoc(doc(db, 'buzz', buzzId), newBuzz);
+      showToast('Buzz Sotoy kamu berhasil diposting!');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `buzz/${buzzId}`);
+    }
   };
 
-  const likeBuzzPost = (buzzId: string) => {
-    setBuzzList(prev =>
-      prev.map(b => {
-        if (b.id === buzzId) {
-          const isLiked = b.likedByMe;
-          return {
-            ...b,
-            likes: isLiked ? b.likes - 1 : b.likes + 1,
-            likedByMe: !isLiked,
-          };
-        }
-        return b;
-      })
-    );
+  // Quick Reactions for Buzz Post in Firestore
+  const reactToBuzzPost = async (buzzId: string, reaction: ReactionType) => {
+    if (!isLoggedIn) {
+      setLoginModalOpen(true);
+      showToast('Silakan masuk terlebih dahulu untuk memberikan reaksi!');
+      return;
+    }
+
+    const post = buzzList.find(b => b.id === buzzId);
+    if (!post) return;
+
+    const currentReactions: BuzzReactions = post.reactions || {
+      heart: post.likes || 0,
+      mindblown: 0,
+      fire: 0,
+      laugh: 0,
+      clap: 0,
+    };
+
+    const prevReaction = post.myReaction;
+    const updatedReactions = { ...currentReactions };
+
+    let newReaction: ReactionType | null = reaction;
+
+    if (prevReaction === reaction) {
+      // User tapped the same reaction -> toggle off
+      updatedReactions[reaction] = Math.max(0, (updatedReactions[reaction] || 0) - 1);
+      newReaction = null;
+    } else {
+      // If user had a previous reaction, decrement old one
+      if (prevReaction) {
+        updatedReactions[prevReaction] = Math.max(0, (updatedReactions[prevReaction] || 0) - 1);
+      }
+      // Increment new reaction
+      updatedReactions[reaction] = (updatedReactions[reaction] || 0) + 1;
+    }
+
+    // Compute total likes/reactions
+    const totalReactions = Object.values(updatedReactions).reduce((acc, count) => acc + (count || 0), 0);
+
+    const updatedPost: BuzzPost = {
+      ...post,
+      reactions: updatedReactions,
+      myReaction: newReaction,
+      likes: totalReactions,
+      likedByMe: newReaction === 'heart',
+    };
+
+    try {
+      await setDoc(doc(db, 'buzz', buzzId), updatedPost);
+      const emojiMap: Record<ReactionType, string> = {
+        heart: '❤️ Suka',
+        mindblown: '🤯 Mind Blown',
+        fire: '🔥 Hype',
+        laugh: '😂 Lucu',
+        clap: '👏 Mantap',
+      };
+      showToast(
+        newReaction
+          ? `Reaksi ${emojiMap[reaction]} dikirim!`
+          : 'Reaksi dihapus.'
+      );
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `buzz/${buzzId}`);
+    }
   };
 
-  const addBuzzReply = (buzzId: string, content: string) => {
+  // Like/Unlike Buzz Post in Firestore
+  const likeBuzzPost = async (buzzId: string) => {
+    await reactToBuzzPost(buzzId, 'heart');
+  };
+
+  // Add Reply to a Buzz Post in Firestore (Supports threaded replies & mentions)
+  const addBuzzReply = async (
+    buzzId: string,
+    content: string,
+    parentId?: string,
+    replyToUser?: { id: string; name: string; handle: string }
+  ) => {
     if (!content.trim()) return;
     if (!isLoggedIn) {
       setLoginModalOpen(true);
@@ -656,9 +1078,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
+    const post = buzzList.find(b => b.id === buzzId);
+    if (!post) return;
+
     const newReply: BuzzReply = {
       id: `reply-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       buzzId,
+      parentId,
+      replyToUser,
       author: {
         id: currentUser.id,
         name: currentUser.name,
@@ -672,51 +1099,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       likedByMe: false,
     };
 
-    setBuzzList(prev =>
-      prev.map(b => {
-        if (b.id === buzzId) {
-          const currentReplies = b.replies || [];
-          return {
-            ...b,
-            replies: [...currentReplies, newReply],
-            repliesCount: (b.repliesCount || currentReplies.length) + 1,
-          };
-        }
-        return b;
-      })
-    );
+    const currentReplies = post.replies || [];
+    const updatedReplies = [...currentReplies, newReply];
+    const updatedPost = {
+      ...post,
+      replies: updatedReplies,
+      repliesCount: updatedReplies.length,
+    };
 
-    showToast('Balasan kamu berhasil diposting!');
+    try {
+      await setDoc(doc(db, 'buzz', buzzId), updatedPost);
+      showToast('Balasan kamu berhasil diposting!');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `buzz/${buzzId}`);
+    }
   };
 
-  const likeBuzzReply = (buzzId: string, replyId: string) => {
-    setBuzzList(prev =>
-      prev.map(b => {
-        if (b.id === buzzId && b.replies) {
-          const updatedReplies = b.replies.map(r => {
-            if (r.id === replyId) {
-              const isLiked = r.likedByMe;
-              return {
-                ...r,
-                likes: isLiked ? r.likes - 1 : r.likes + 1,
-                likedByMe: !isLiked,
-              };
-            }
-            return r;
-          });
-          return {
-            ...b,
-            replies: updatedReplies,
-          };
-        }
-        return b;
-      })
-    );
+  // Like a Buzz Post Reply in Firestore
+  const likeBuzzReply = async (buzzId: string, replyId: string) => {
+    const post = buzzList.find(b => b.id === buzzId);
+    if (!post || !post.replies) return;
+
+    const updatedReplies = post.replies.map(r => {
+      if (r.id === replyId) {
+        const isLiked = r.likedByMe;
+        return {
+          ...r,
+          likes: isLiked ? r.likes - 1 : r.likes + 1,
+          likedByMe: !isLiked,
+        };
+      }
+      return r;
+    });
+
+    const updatedPost = {
+      ...post,
+      replies: updatedReplies,
+    };
+
+    try {
+      await setDoc(doc(db, 'buzz', buzzId), updatedPost);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `buzz/${buzzId}`);
+    }
   };
 
-  const addFilmRating = (filmId: string, score: number, headline: string, reviewText: string) => {
+  // Submit Rating & Review to Firestore
+  const addFilmRating = async (filmId: string, score: number, headline: string, reviewText: string) => {
+    const ratingId = `rate-${Date.now()}`;
     const newRating: UserRating = {
-      id: `rate-${Date.now()}`,
+      id: ratingId,
       filmId,
       userId: currentUser.id,
       userName: currentUser.name,
@@ -729,38 +1161,96 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       likes: 0,
     };
 
-    setRatings(prev => [newRating, ...prev]);
+    try {
+      await setDoc(doc(db, 'ratings', ratingId), newRating);
 
-    // Update film average score
-    setFilms(prev =>
-      prev.map(film => {
-        if (film.id === filmId) {
-          const currentTotal = film.skorSotoy * film.totalVotes;
-          const newVotes = film.totalVotes + 1;
-          const newAverage = Number(((currentTotal + score) / newVotes).toFixed(1));
-          return {
-            ...film,
-            skorSotoy: newAverage,
-            totalVotes: newVotes,
-          };
-        }
-        return film;
-      })
-    );
+      // Update average film score in Firestore
+      const film = films.find(f => f.id === filmId);
+      if (film) {
+        const currentTotal = film.skorSotoy * film.totalVotes;
+        const newVotes = film.totalVotes + 1;
+        const newAverage = Number(((currentTotal + score) / newVotes).toFixed(1));
+        const updatedFilm = {
+          ...film,
+          skorSotoy: newAverage,
+          totalVotes: newVotes,
+        };
+        await setDoc(doc(db, 'films', filmId), updatedFilm);
+      }
 
-    showToast(`Skor Sotoy ${score.toFixed(1)}/5.0 dan ulasan kamu berhasil dikirim!`);
+      showToast(`Skor Sotoy ${score.toFixed(1)}/5.0 dan ulasan kamu berhasil dikirim!`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `ratings/${ratingId}`);
+    }
   };
 
-  const likeArticle = (articleId: string) => {
-    setArticles(prev =>
-      prev.map(a => {
-        if (a.id === articleId) {
-          return { ...a, likes: a.likes + 1 };
+  // Like Editorial Article in Firestore
+  const likeArticle = async (articleId: string) => {
+    const article = articles.find(a => a.id === articleId);
+    if (!article) return;
+    const updatedArticle = {
+      ...article,
+      likes: article.likes + 1,
+    };
+    try {
+      await setDoc(doc(db, 'articles', articleId), updatedArticle);
+      showToast('Kamu menyukai artikel ini!');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `articles/${articleId}`);
+    }
+  };
+
+  // Submit Critic Application to Firestore
+  const addCriticSubmission = async (submission: Omit<CriticSubmission, 'id' | 'status' | 'date'>): Promise<boolean> => {
+    const submissionId = `sub-${Date.now()}`;
+    const created: CriticSubmission = {
+      ...submission,
+      id: submissionId,
+      status: 'pending',
+      date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
+    };
+
+    try {
+      await setDoc(doc(db, 'criticSubmissions', submissionId), created);
+      return true;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `criticSubmissions/${submissionId}`);
+      return false;
+    }
+  };
+
+  // Update Critic Application status in Firestore & change user role to 'si_paling_sotoy' on approval
+  const updateCriticSubmissionStatus = async (id: string, status: 'approved' | 'rejected') => {
+    const sub = criticSubmissions.find(s => s.id === id);
+    if (!sub) return;
+    const updated = {
+      ...sub,
+      status,
+    };
+
+    try {
+      await setDoc(doc(db, 'criticSubmissions', id), updated);
+      
+      if (status === 'approved') {
+        const userDocRef = doc(db, 'users', sub.userId);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data() as User;
+          const promotedUser: User = {
+            ...userData,
+            role: 'si_paling_sotoy',
+            roleTitle: 'Si Paling Sotoy (Kritikus & Kurator)',
+          };
+          await setDoc(userDocRef, promotedUser);
+          
+          if (currentUser.id === sub.userId) {
+            setCurrentUser(promotedUser);
+          }
         }
-        return a;
-      })
-    );
-    showToast('Kamu menyukai artikel ini!');
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `criticSubmissions/${id}`);
+    }
   };
 
   return (
@@ -770,6 +1260,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isLoggedIn,
         loginModalOpen,
         setLoginModalOpen,
+        isComposeBuzzOpen,
+        setIsComposeBuzzOpen,
         login,
         logout,
         switchRole,
@@ -777,9 +1269,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         films,
         buzzList,
         ratings,
+        criticSubmissions,
+        addCriticSubmission,
+        updateCriticSubmissionStatus,
         watchlist,
         toggleWatchlist,
         isFilmInWatchlist,
+        savedArticles,
+        toggleSaveArticle,
+        isArticleSaved,
+        toggleSaveFilm,
+        isFilmSaved,
         updateUserBio,
         updateUserProfile,
         uploadProfilePhoto,
@@ -801,6 +1301,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         searchQuery,
         setSearchQuery,
         navigateTo,
+        goBack,
         followingIds,
         followersIds,
         allUsers,
@@ -818,10 +1319,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteArticle,
         addBuzzPost,
         likeBuzzPost,
+        reactToBuzzPost,
         addBuzzReply,
         likeBuzzReply,
         addFilmRating,
         likeArticle,
+        buzzFeedTab,
+        setBuzzFeedTab,
         toastMessage,
         showToast,
       }}

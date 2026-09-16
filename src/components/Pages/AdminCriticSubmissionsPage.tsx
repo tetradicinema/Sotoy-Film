@@ -59,8 +59,7 @@ const mockSubmissions: Submission[] = [
 ];
 
 export const AdminCriticSubmissionsPage: React.FC = () => {
-  const { currentUser, showToast } = useApp();
-  const [submissions, setSubmissions] = useState<Submission[]>(mockSubmissions);
+  const { currentUser, showToast, criticSubmissions, updateCriticSubmissionStatus } = useApp();
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
 
   if (currentUser.role !== 'admin') {
@@ -75,21 +74,17 @@ export const AdminCriticSubmissionsPage: React.FC = () => {
     );
   }
 
-  const handleApprove = (id: string, userName: string) => {
-    setSubmissions(submissions.map(sub => 
-      sub.id === id ? { ...sub, status: 'approved' } : sub
-    ));
+  const handleApprove = async (id: string, userName: string) => {
+    await updateCriticSubmissionStatus(id, 'approved');
     showToast(`${userName} telah disetujui menjadi Kritikus (Si Paling Sotoy).`);
   };
 
-  const handleReject = (id: string, userName: string) => {
-    setSubmissions(submissions.map(sub => 
-      sub.id === id ? { ...sub, status: 'rejected' } : sub
-    ));
+  const handleReject = async (id: string, userName: string) => {
+    await updateCriticSubmissionStatus(id, 'rejected');
     showToast(`Pengajuan ${userName} telah ditolak.`);
   };
 
-  const filteredSubmissions = submissions.filter(sub => filter === 'all' || sub.status === filter);
+  const filteredSubmissions = criticSubmissions.filter(sub => filter === 'all' || sub.status === filter);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 lg:py-12">

@@ -16,6 +16,7 @@ import { ArticleDetailPage } from './components/Pages/ArticleDetailPage';
 import { WriteArticlePage } from './components/Pages/WriteArticlePage';
 import { UserPage } from './components/Pages/UserPage';
 import { SettingsPage } from './components/Pages/SettingsPage';
+import { SearchPage } from './components/Pages/SearchPage';
 import { AboutUsPage } from './components/Pages/AboutUsPage';
 import { PrivacyPolicyPage } from './components/Pages/PrivacyPolicyPage';
 import { TermsPage } from './components/Pages/TermsPage';
@@ -25,6 +26,7 @@ import { CriticCriteriaPage } from './components/Pages/CriticCriteriaPage';
 import { AdminCriticSubmissionsPage } from './components/Pages/AdminCriticSubmissionsPage';
 import { LoginModal } from './components/Modals/LoginModal';
 import { SocialShareModal } from './components/Modals/SocialShareModal';
+import { ComposeBuzzModal } from './components/Modals/ComposeBuzzModal';
 import { MobileBottomNav } from './components/Navigation/MobileBottomNav';
 import { Sparkles, CheckCircle, Info } from 'lucide-react';
 
@@ -51,6 +53,9 @@ const AppContent: React.FC = () => {
 
       {/* Social Media Share Modal */}
       <SocialShareModal />
+
+      {/* Compose Buzz Modal */}
+      <ComposeBuzzModal />
 
       {/* Main Navigation Bar */}
       <Navbar />
@@ -79,6 +84,7 @@ const AppContent: React.FC = () => {
         {currentView === 'write-article' && <WriteArticlePage />}
         {currentView === 'user-profile' && <UserPage />}
         {currentView === 'settings' && <SettingsPage />}
+        {currentView === 'search' && <SearchPage />}
         {currentView === 'about-us' && <AboutUsPage />}
         {currentView === 'privacy-policy' && <PrivacyPolicyPage />}
         {currentView === 'terms-conditions' && <TermsPage />}

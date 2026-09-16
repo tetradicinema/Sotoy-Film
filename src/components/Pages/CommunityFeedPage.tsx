@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   MessageSquare,
   Heart,
@@ -20,9 +20,22 @@ import {
   Calendar,
   UserPlus,
   Check,
+  Bookmark,
+  Menu,
+  MoreHorizontal,
+  Home,
+  Users,
+  Flame,
+  UserCheck,
+  Plus,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { BuzzPost, User } from '../../types';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
+import { QuickReactionBar } from '../Common/QuickReactionBar';
+import { BuzzFeedSidebar, BuzzFeedTab } from '../Navigation/BuzzFeedSidebar';
+import { MentionText } from '../Common/MentionText';
+import { MentionInput } from '../Common/MentionInput';
 
 export const CommunityFeedPage: React.FC = () => {
   const {
@@ -39,6 +52,11 @@ export const CommunityFeedPage: React.FC = () => {
     openShareModal,
     toggleFollowUser,
     isFollowing,
+    followingIds,
+    allUsers,
+    buzzFeedTab,
+    setBuzzFeedTab,
+    setIsComposeBuzzOpen,
   } = useApp();
 
   const [postContent, setPostContent] = useState('');
@@ -46,6 +64,30 @@ export const CommunityFeedPage: React.FC = () => {
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [skorMention, setSkorMention] = useState<number | undefined>(undefined);
   const [activeTagFilter, setActiveTagFilter] = useState<string>('all');
+
+  // Saved buzz bookmark state persisted in localStorage
+  const [savedBuzzIds, setSavedBuzzIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('sotoy_saved_buzz_ids');
+      return saved ? JSON.parse(saved) : ['buzz-1', 'buzz-3'];
+    } catch {
+      return ['buzz-1', 'buzz-3'];
+    }
+  });
+
+  const toggleSaveBuzz = (buzzId: string) => {
+    setSavedBuzzIds(prev => {
+      const exists = prev.includes(buzzId);
+      const updated = exists ? prev.filter(id => id !== buzzId) : [...prev, buzzId];
+      try {
+        localStorage.setItem('sotoy_saved_buzz_ids', JSON.stringify(updated));
+      } catch (err) {
+        console.warn('localStorage save failed:', err);
+      }
+      showToast(exists ? 'Buzz dihapus dari Saved' : 'Buzz disimpan ke Saved! 📌');
+      return updated;
+    });
+  };
 
   // Search dropdown state
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -91,11 +133,53 @@ export const CommunityFeedPage: React.FC = () => {
     setSearchQuery('');
   };
 
-  const allTags = ['all', 'Dune2', 'Shogun', 'GearAddict', 'ReviewSotoy', 'Filmmaking'];
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    set.add('all');
+    ['Dune2', 'Shogun', 'SiksaKubur', 'ReviewSotoy', 'Filmmaking', 'GearAddict'].forEach(t => set.add(t));
+    buzzList.forEach(p => {
+      p.tags?.forEach(t => {
+        if (t) set.add(t.replace(/^#/, ''));
+      });
+      const matches = p.content.match(/#([a-zA-Z0-9_\u00C0-\u024F]+)/g);
+      matches?.forEach(m => set.add(m.replace(/^#/, '')));
+    });
+    if (activeTagFilter !== 'all') {
+      set.add(activeTagFilter.replace(/^#/, ''));
+    }
+    return Array.from(set);
+  }, [buzzList, activeTagFilter]);
 
-  const filteredBuzz = activeTagFilter === 'all'
-    ? buzzList
-    : buzzList.filter(b => b.tags.some(t => t.toLowerCase() === activeTagFilter.toLowerCase()));
+  const filteredBuzz = useMemo(() => {
+    let list = buzzList;
+
+    // 1. Tab view filtering
+    if (buzzFeedTab === 'following') {
+      list = list.filter(b => followingIds.includes(b.author.id));
+    } else if (buzzFeedTab === 'saved') {
+      list = list.filter(b => savedBuzzIds.includes(b.id));
+    } else if (buzzFeedTab === 'liked') {
+      list = list.filter(b => b.likedByMe || (b.myReaction !== undefined && b.myReaction !== null));
+    } else if (buzzFeedTab === 'trending') {
+      list = [...list].sort((a, b) => {
+        const aScore = (a.reactions ? Object.values(a.reactions).reduce((s, v) => s + v, 0) : 0) + (a.repliesCount || 0) * 2;
+        const bScore = (b.reactions ? Object.values(b.reactions).reduce((s, v) => s + v, 0) : 0) + (b.repliesCount || 0) * 2;
+        return bScore - aScore;
+      });
+    }
+
+    // 2. Tag filtering
+    if (activeTagFilter !== 'all') {
+      const target = activeTagFilter.toLowerCase().replace(/^#/, '');
+      list = list.filter(b => {
+        const matchTag = b.tags?.some(t => t.toLowerCase().replace(/^#/, '') === target);
+        const matchContent = b.content.toLowerCase().includes(`#${target}`);
+        return matchTag || matchContent;
+      });
+    }
+
+    return list;
+  }, [buzzList, buzzFeedTab, followingIds, savedBuzzIds, activeTagFilter]);
 
   const handleShareBuzz = (post: typeof buzzList[0]) => {
     const postFilm = post.taggedFilm ? films.find(f => f.id === post.taggedFilm?.id) || post.taggedFilm : null;
@@ -129,33 +213,131 @@ export const CommunityFeedPage: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+    <div className="min-h-screen bg-[#0A0A0E] text-white py-4 sm:py-6">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 flex justify-center items-start gap-4 xl:gap-8">
         
-        {/* Header Title */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-[#FF2E7E] animate-pulse" />
-              <h1 className="font-display font-black text-2xl sm:text-3xl text-white tracking-tight">
-                Buzz Sotoy Feed
-              </h1>
+        {/* ========================================================================= */}
+        {/* DESKTOP SOTOY BUZZ SIDEBAR */}
+        {/* ========================================================================= */}
+        <BuzzFeedSidebar
+          activeTab={buzzFeedTab}
+          onSelectTab={setBuzzFeedTab}
+          savedCount={savedBuzzIds.length}
+          followingCount={followingIds.length}
+          onComposeClick={() => {
+            setIsComposeBuzzOpen(true);
+          }}
+          onSearchClick={() => {
+            navigateTo('search');
+          }}
+          className="hidden lg:flex"
+        />
+
+        {/* ========================================================================= */}
+        {/* CENTER FEED COLUMN */}
+        {/* ========================================================================= */}
+        <div className="w-full max-w-2xl flex-1 min-w-0 space-y-4">
+          
+          {/* Mobile & Tablet Sticky Feed Tabs (Clean, native 1-tap switcher) */}
+          <div className="lg:hidden sticky top-14 z-20 -mx-2 px-2 py-2 bg-[#0A0A0E]/95 backdrop-blur-md border-b border-slate-800/80">
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
+              {[
+                { id: 'for-you', label: 'Untukmu', icon: Flame },
+                { id: 'following', label: 'Mengikuti', icon: Users, badge: followingIds.length > 0 ? followingIds.length : null },
+                { id: 'trending', label: 'Populer', icon: Sparkles },
+                { id: 'saved', label: 'Tersimpan', icon: Bookmark, badge: savedBuzzIds.length > 0 ? savedBuzzIds.length : null },
+                { id: 'liked', label: 'Disukai', icon: Heart },
+              ].map((tab) => {
+                const Icon = tab.icon;
+                const isActive = buzzFeedTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    id={`mobile-buzz-tab-${tab.id}`}
+                    onClick={() => setBuzzFeedTab(tab.id as BuzzFeedTab)}
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all shrink-0 ${
+                      isActive
+                        ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25'
+                        : 'bg-slate-900/90 text-slate-400 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{tab.label}</span>
+                    {tab.badge ? (
+                      <span className="text-[10px] bg-black/40 text-white px-1.5 py-0.2 rounded-full font-mono">
+                        {tab.badge}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
             </div>
-            <p className="text-slate-400 text-xs mt-1">
-              Ruang diskusi publik pop-culture film & artikel. Tag film atau artikel favoritmu untuk menampilkan preview!
-            </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400 hidden sm:inline">Posting sebagai:</span>
-            <span className="bg-[#FF2E7E]/15 border border-[#FF2E7E]/30 text-[#FF2E7E] font-black text-xs px-2.5 py-1 rounded-full">
-              {currentUser.roleTitle.split(' ')[0]}
-            </span>
-          </div>
-        </div>
+          {/* Header Title Bar */}
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 sticky top-16 bg-[#0A0A0E]/95 backdrop-blur-md z-10 pt-1">
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="font-display font-black text-lg sm:text-2xl text-white tracking-tight flex items-center gap-2">
+                    {buzzFeedTab === 'for-you' && (
+                      <>
+                        <Flame className="w-5 h-5 text-[#FF2E7E] shrink-0" />
+                        <span>Feed Untukmu</span>
+                      </>
+                    )}
+                    {buzzFeedTab === 'following' && (
+                      <>
+                        <Users className="w-5 h-5 text-cyan-400 shrink-0" />
+                        <span>Mengikuti</span>
+                      </>
+                    )}
+                    {buzzFeedTab === 'saved' && (
+                      <>
+                        <Bookmark className="w-5 h-5 text-amber-400 shrink-0" />
+                        <span>Tersimpan</span>
+                      </>
+                    )}
+                    {buzzFeedTab === 'liked' && (
+                      <>
+                        <Heart className="w-5 h-5 text-rose-500 fill-rose-500 shrink-0" />
+                        <span>Disukai</span>
+                      </>
+                    )}
+                    {buzzFeedTab === 'trending' && (
+                      <>
+                        <Sparkles className="w-5 h-5 text-[#FFD000] shrink-0" />
+                        <span>Sedang Hangat</span>
+                      </>
+                    )}
+                  </h1>
+                </div>
+                <p className="text-slate-400 text-xs hidden sm:block mt-0.5">
+                  {buzzFeedTab === 'for-you' && 'Obrolan pop-culture film & ulasan terkini dari komunitas'}
+                  {buzzFeedTab === 'following' && 'Postingan dari kritikus & penonton yang kamu ikuti'}
+                  {buzzFeedTab === 'saved' && 'Koleksi buzz yang kamu bookmark untuk dibaca kembali'}
+                  {buzzFeedTab === 'liked' && 'Koleksi buzz yang telah kamu beri tanda suka'}
+                  {buzzFeedTab === 'trending' && 'Postingan dengan tanggapan dan diskusi paling ramai'}
+                </p>
+              </div>
+            </div>
 
-        {/* Global Page Ad Banner */}
-        <AdBannerSlot variant="leaderboard" />
+            <div className="flex items-center gap-2">
+              {activeTagFilter !== 'all' && (
+                <button
+                  onClick={() => setActiveTagFilter('all')}
+                  className="flex items-center gap-1 bg-[#FF2E7E]/15 border border-[#FF2E7E]/30 text-[#FF2E7E] text-xs font-bold px-2.5 py-1 rounded-full hover:bg-[#FF2E7E]/25 transition-colors"
+                  title="Hapus filter tag"
+                >
+                  <span>#{activeTagFilter}</span>
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Global Page Ad Banner */}
+          <AdBannerSlot variant="leaderboard" />
 
         {/* ========================================================================= */}
         {/* POST COMPOSER CARD WITH SEARCHABLE FILM/ARTICLE TAGGING */}
@@ -168,11 +350,11 @@ export const CommunityFeedPage: React.FC = () => {
               className="w-10 h-10 rounded-xl object-cover ring-2 ring-[#FF2E7E]/50 shrink-0"
             />
             <div className="flex-1 space-y-3">
-              <textarea
+              <MentionInput
                 id="buzz-composer-textarea"
                 value={postContent}
-                onChange={e => setPostContent(e.target.value)}
-                placeholder="Apa yang lagi kamu tonton atau pikirkan seputar film & artikel hari ini? (Sertakan #hashtag)"
+                onChange={setPostContent}
+                placeholder="Apa yang lagi kamu tonton atau pikirkan seputar film hari ini? Ketik '@' untuk mention warga lain..."
                 rows={3}
                 className="w-full bg-slate-900/80 border border-slate-800 rounded-2xl p-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] resize-none"
               />
@@ -412,7 +594,7 @@ export const CommunityFeedPage: React.FC = () => {
         {/* Tag Filters Bar */}
         <div className="flex items-center gap-2 overflow-x-auto py-1 scrollbar-none flex-nowrap">
           <Hash className="w-4 h-4 text-slate-500 shrink-0" />
-          {allTags.map(tag => (
+          {allTags.map((tag: string) => (
             <button
               key={tag}
               onClick={() => setActiveTagFilter(tag)}
@@ -431,7 +613,7 @@ export const CommunityFeedPage: React.FC = () => {
         {/* BUZZ POSTS STREAM WITH RICH PREVIEW CARDS */}
         {/* ========================================================================= */}
         <div className="space-y-4">
-          {filteredBuzz.map(post => {
+          {filteredBuzz.map((post: BuzzPost) => {
             // Find full film details if tagged
             const postFilm = post.taggedFilm
               ? films.find(f => f.id === post.taggedFilm?.id) || post.taggedFilm
@@ -446,51 +628,60 @@ export const CommunityFeedPage: React.FC = () => {
               <div
                 key={post.id}
                 id={`buzz-feed-card-${post.id}`}
-                className="bg-[#121324] border border-slate-800/80 hover:border-slate-700 rounded-3xl p-5 sm:p-6 shadow-xl transition-all space-y-4"
+                className="bg-[#121324] border border-slate-800/80 hover:border-slate-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl transition-all space-y-3.5 sm:space-y-4"
               >
                 {/* Post Author Info */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2.5">
                   <div
                     onClick={() => navigateTo('user-profile', { userId: post.author.id })}
-                    className="flex items-center gap-3 cursor-pointer group"
+                    className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group min-w-0 flex-1"
                     title={`Kunjungi profil ${post.author.name}`}
                   >
                     <img
                       src={post.author.avatar}
                       alt={post.author.name}
-                      className="w-10 h-10 rounded-xl object-cover ring-2 ring-transparent group-hover:ring-[#00F0FF] transition-all"
+                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover ring-2 ring-transparent group-hover:ring-[#00F0FF] transition-all shrink-0"
                     />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-white group-hover:text-[#00F0FF] transition-colors flex items-center gap-1.5">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-bold text-xs sm:text-sm text-white group-hover:text-[#00F0FF] transition-colors truncate max-w-[120px] xs:max-w-[180px] sm:max-w-none">
                           {post.author.name}
                         </span>
                         {post.author.role === 'si_paling_sotoy' && (
-                          <span className="bg-[#FFD000]/15 text-[#FFD000] border border-[#FFD000]/30 text-[9px] font-black uppercase px-2 py-0.5 rounded">
+                          <span className="bg-[#FFD000]/15 text-[#FFD000] border border-[#FFD000]/30 text-[9px] font-black uppercase px-1.5 py-0.5 rounded shrink-0">
                             CRITIC
                           </span>
                         )}
                         {post.author.role === 'penulis_sotoy' && (
-                          <span className="bg-[#FF2E7E]/15 text-[#FF2E7E] border border-[#FF2E7E]/30 text-[9px] font-black uppercase px-2 py-0.5 rounded">
+                          <span className="bg-[#FF2E7E]/15 text-[#FF2E7E] border border-[#FF2E7E]/30 text-[9px] font-black uppercase px-1.5 py-0.5 rounded shrink-0">
                             WRITER
                           </span>
                         )}
                         {post.author.role === 'admin' && (
-                          <span className="bg-purple-500/15 text-purple-300 border border-purple-500/30 text-[9px] font-black uppercase px-2 py-0.5 rounded">
+                          <span className="bg-purple-500/15 text-purple-300 border border-purple-500/30 text-[9px] font-black uppercase px-1.5 py-0.5 rounded shrink-0">
                             ADMIN
                           </span>
                         )}
                       </div>
-                      <span className="text-xs text-slate-400 group-hover:text-slate-300">
+                      <span className="text-[11px] sm:text-xs text-slate-400 group-hover:text-slate-300 block truncate">
                         {post.author.handle} • {post.createdAt}
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                    {/* Optional quick score badge */}
+                    {post.skorSotoyMention && (
+                      <div className="bg-[#FFD000]/15 border border-[#FFD000]/40 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-xl text-[#FFD000] text-[11px] sm:text-xs font-black flex items-center gap-1 shrink-0">
+                        <Star className="w-3 h-3 fill-current" />
+                        <span>{post.skorSotoyMention.toFixed(1)}</span>
+                      </div>
+                    )}
+
                     {/* Follow / Unfollow Button for any other user */}
                     {(!isLoggedIn || post.author.id !== currentUser.id) && (
                       <button
+                        id={`buzz-follow-btn-${post.id}`}
                         onClick={() => {
                           if (!isLoggedIn) {
                             setLoginModalOpen(true);
@@ -499,7 +690,7 @@ export const CommunityFeedPage: React.FC = () => {
                           }
                           toggleFollowUser(post.author.id);
                         }}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm ${
+                        className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1 sm:gap-1.5 shadow-sm shrink-0 ${
                           isLoggedIn && isFollowing(post.author.id)
                             ? 'bg-slate-800 text-slate-300 border border-slate-700 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/40'
                             : 'bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] text-white hover:brightness-110 active:scale-95'
@@ -512,37 +703,30 @@ export const CommunityFeedPage: React.FC = () => {
                       >
                         {isLoggedIn && isFollowing(post.author.id) ? (
                           <>
-                            <Check className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>Mengikuti</span>
+                            <Check className="w-3 h-3 text-emerald-400 shrink-0" />
+                            <span className="hidden xs:inline">Mengikuti</span>
+                            <span className="xs:hidden">Ikut</span>
                           </>
                         ) : (
                           <>
-                            <UserPlus className="w-3.5 h-3.5" />
+                            <UserPlus className="w-3 h-3 shrink-0" />
                             <span>+ Ikuti</span>
                           </>
                         )}
                       </button>
-                    )}
-
-                    {/* Optional quick score badge */}
-                    {post.skorSotoyMention && (
-                      <div className="bg-[#FFD000]/15 border border-[#FFD000]/40 px-3 py-1 rounded-xl text-[#FFD000] text-xs font-black flex items-center gap-1">
-                        <Star className="w-3.5 h-3.5 fill-current" />
-                        <span>{post.skorSotoyMention.toFixed(1)}</span>
-                      </div>
                     )}
                   </div>
                 </div>
 
                 {/* Content Text */}
                 <p className="text-slate-200 text-sm sm:text-base leading-relaxed whitespace-pre-line">
-                  {post.content}
+                  <MentionText content={post.content} />
                 </p>
 
                 {/* Hashtags */}
                 {post.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
-                    {post.tags.map((t, idx) => (
+                    {post.tags.map((t: string, idx: number) => (
                       <span
                         key={idx}
                         onClick={() => setActiveTagFilter(t)}
@@ -668,46 +852,249 @@ export const CommunityFeedPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Footer Controls: Like, Comment count, Share */}
-                <div className="flex items-center justify-between pt-3 border-t border-slate-800/80 text-xs text-slate-400">
-                  <div className="flex items-center gap-6">
-                    <button
-                      onClick={() => likeBuzzPost(post.id)}
-                      className={`flex items-center gap-1.5 transition-colors ${
-                        post.likedByMe ? 'text-[#FF2E7E] font-bold' : 'hover:text-[#FF2E7E]'
-                      }`}
-                    >
-                      <Heart className={`w-4 h-4 ${post.likedByMe ? 'fill-current' : ''}`} />
-                      <span>{post.likes} Suka</span>
-                    </button>
+                {/* Footer Controls: Quick Reaction Bar, Replies, Share */}
+                <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2 text-xs text-slate-400">
+                  <div className="overflow-x-auto scrollbar-none min-w-0 flex-1 pr-1">
+                    <QuickReactionBar
+                      buzzId={post.id}
+                      reactions={post.reactions}
+                      myReaction={post.myReaction}
+                    />
+                  </div>
 
+                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                     <button
                       id={`buzz-reply-trigger-${post.id}`}
                       onClick={() => navigateTo('buzz-detail', { buzzId: post.id })}
-                      className="flex items-center gap-1.5 hover:text-[#00F0FF] text-slate-300 transition-colors group cursor-pointer"
+                      className="flex items-center gap-1 sm:gap-1.5 hover:text-[#00F0FF] text-slate-300 transition-colors group cursor-pointer bg-slate-900/80 hover:bg-slate-800 border border-slate-800 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl text-xs shrink-0"
                       title="Buka halaman diskusi & balas buzz ini"
                     >
-                      <MessageSquare className="w-4 h-4 text-[#00F0FF] group-hover:scale-110 transition-transform" />
-                      <span className="font-medium">
-                        {(post.replies && post.replies.length > 0 ? post.replies.length : post.repliesCount) || 0} Balasan
+                      <MessageSquare className="w-3.5 h-3.5 text-[#00F0FF] group-hover:scale-110 transition-transform" />
+                      <span className="font-semibold">
+                        {(post.replies && post.replies.length > 0 ? post.replies.length : post.repliesCount) || 0} <span className="hidden xs:inline">Balasan</span>
+                      </span>
+                    </button>
+
+                    <button
+                      onClick={() => handleShareBuzz(post)}
+                      className="flex items-center gap-1 sm:gap-1.5 hover:text-[#00F0FF] transition-colors bg-slate-900/80 hover:bg-slate-800 border border-slate-800 p-1.5 sm:px-3 sm:py-1.5 rounded-xl text-slate-300 text-xs shrink-0"
+                      title="Bagikan Buzz ini ke Media Sosial"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline font-semibold">Bagikan</span>
+                    </button>
+
+                    <button
+                      id={`buzz-save-${post.id}`}
+                      onClick={() => toggleSaveBuzz(post.id)}
+                      className={`flex items-center gap-1 sm:gap-1.5 transition-colors border p-1.5 sm:px-3 sm:py-1.5 rounded-xl text-xs shrink-0 ${
+                        savedBuzzIds.includes(post.id)
+                          ? 'bg-white/20 border-white/40 text-white font-bold'
+                          : 'bg-slate-900/80 hover:bg-slate-800 border-slate-800 text-slate-300'
+                      }`}
+                      title={savedBuzzIds.includes(post.id) ? 'Hapus dari Tersimpan' : 'Simpan Buzz ini'}
+                    >
+                      <Bookmark className={`w-3.5 h-3.5 ${savedBuzzIds.includes(post.id) ? 'fill-current text-white' : ''}`} />
+                      <span className="hidden sm:inline font-semibold">
+                        {savedBuzzIds.includes(post.id) ? 'Disimpan' : 'Simpan'}
                       </span>
                     </button>
                   </div>
-
-                  <button
-                    onClick={() => handleShareBuzz(post)}
-                    className="flex items-center gap-1.5 hover:text-[#00F0FF] transition-colors"
-                    title="Bagikan Buzz ini ke Media Sosial"
-                  >
-                    <Share2 className="w-3.5 h-3.5" />
-                    <span>Bagikan</span>
-                  </button>
                 </div>
               </div>
             );
           })}
         </div>
+
+        {/* Empty States for Tabs */}
+        {filteredBuzz.length === 0 && (
+          <div className="bg-[#121324] border border-slate-800 rounded-3xl p-8 text-center space-y-4 shadow-xl">
+            <div className="w-14 h-14 rounded-2xl bg-white/10 mx-auto flex items-center justify-center text-slate-200">
+              {buzzFeedTab === 'following' ? (
+                <Users className="w-7 h-7 text-cyan-400" />
+              ) : buzzFeedTab === 'saved' ? (
+                <Bookmark className="w-7 h-7 text-amber-400" />
+              ) : buzzFeedTab === 'liked' ? (
+                <Heart className="w-7 h-7 text-[#FF2E7E]" />
+              ) : (
+                <MessageSquare className="w-7 h-7 text-slate-400" />
+              )}
+            </div>
+
+            <div>
+              <h3 className="font-bold text-white text-base">
+                {buzzFeedTab === 'following' && 'Belum ada buzz dari akun yang kamu ikuti'}
+                {buzzFeedTab === 'saved' && 'Belum ada buzz yang kamu simpan'}
+                {buzzFeedTab === 'liked' && 'Belum ada buzz yang kamu sukai'}
+                {buzzFeedTab === 'trending' && 'Belum ada postingan trending saat ini'}
+                {buzzFeedTab === 'for-you' && 'Belum ada buzz yang cocok dengan filter tag'}
+              </h3>
+              <p className="text-slate-400 text-xs mt-1 max-w-md mx-auto">
+                {buzzFeedTab === 'following' && 'Ikuti sesama kritikus, reviewer, dan penonton film agar buzz mereka muncul di sini!'}
+                {buzzFeedTab === 'saved' && 'Simpan ulasan menarik menggunakan tombol "Simpan" agar tersimpan rapi di daftar ini.'}
+                {buzzFeedTab === 'liked' && 'Berikan apresiasi like atau reaksi emoji pada ulasan yang kamu sukai.'}
+                {buzzFeedTab === 'trending' && 'Mulai diskusi seru atau berikan komentar pada buzz yang ada.'}
+                {buzzFeedTab === 'for-you' && 'Coba reset filter tag untuk melihat semua topik obrolan.'}
+              </p>
+            </div>
+
+            {buzzFeedTab === 'following' && (
+              <div className="pt-3 border-t border-slate-800/80 max-w-sm mx-auto space-y-2">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Rekomendasi Akun</span>
+                <div className="space-y-1.5">
+                  {allUsers.filter(u => u.id !== currentUser.id).slice(0, 3).map(u => (
+                    <div key={u.id} className="flex items-center justify-between p-2 rounded-xl bg-slate-900 border border-slate-800">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <img src={u.avatar} alt={u.name} className="w-8 h-8 rounded-lg object-cover" />
+                        <div className="text-left text-xs min-w-0">
+                          <div className="font-bold text-white truncate">{u.name}</div>
+                          <div className="text-[10px] text-slate-400 truncate">@{u.handle}</div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => toggleFollowUser(u.id)}
+                        className={`text-xs px-3 py-1 rounded-lg font-bold transition-colors ${
+                          isFollowing(u.id)
+                            ? 'bg-slate-800 text-slate-300'
+                            : 'bg-white text-slate-950 hover:bg-slate-200'
+                        }`}
+                      >
+                        {isFollowing(u.id) ? 'Following' : 'Follow'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {buzzFeedTab !== 'for-you' && (
+              <button
+                onClick={() => {
+                  setBuzzFeedTab('for-you');
+                  setActiveTagFilter('all');
+                }}
+                className="px-4 py-2 bg-white text-slate-950 font-bold text-xs rounded-xl hover:bg-slate-200 transition-colors inline-flex items-center gap-2"
+              >
+                <Home className="w-3.5 h-3.5" />
+                <span>Kembali ke Feed "For you"</span>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* RIGHT WIDGETS COLUMN (DESKTOP) */}
+      {/* ========================================================================= */}
+      <div className="hidden xl:flex flex-col gap-4 w-72 shrink-0 sticky top-20 select-none">
+        {/* Trending Tags & Topics */}
+        <div className="bg-[#121324]/90 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 shadow-xl space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-800/60">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-[#FFD000]" />
+              <span>Topik Hangat Hari Ini</span>
+            </h3>
+            {activeTagFilter !== 'all' && (
+              <button
+                onClick={() => setActiveTagFilter('all')}
+                className="text-[11px] text-[#FF2E7E] hover:underline font-semibold"
+              >
+                Reset
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-1.5">
+            {['ReviewSotoy', 'HororLokal', 'AgakLaen', 'Dune2', 'SiksaKubur', 'Filmmaking'].map((tag) => {
+              const isActive = activeTagFilter.toLowerCase() === tag.toLowerCase();
+              return (
+                <button
+                  key={tag}
+                  onClick={() => {
+                    setActiveTagFilter(tag);
+                    showToast(`Memfilter feed untuk #${tag}`);
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
+                    isActive
+                      ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/20'
+                      : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 hover:border-slate-700'
+                  }`}
+                >
+                  <Hash className="w-3 h-3 opacity-60" />
+                  <span>{tag}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Recommended Reviewers to Follow */}
+        <div className="bg-[#121324]/90 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 shadow-xl space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-800/60">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Kritikus Pilihan</span>
+            </h3>
+            <button
+              onClick={() => navigateTo('user-profile')}
+              className="text-[11px] text-slate-400 hover:text-white"
+            >
+              Semua
+            </button>
+          </div>
+
+          <div className="space-y-2.5">
+            {allUsers
+              .filter((u) => u.id !== currentUser.id)
+              .slice(0, 3)
+              .map((u) => {
+                const followed = isFollowing(u.id);
+                return (
+                  <div key={u.id} className="flex items-center justify-between gap-2">
+                    <div
+                      onClick={() => navigateTo('user-profile', { userId: u.id })}
+                      className="flex items-center gap-2 min-w-0 cursor-pointer group"
+                    >
+                      <img
+                        src={u.avatar}
+                        alt={u.name}
+                        className="w-8 h-8 rounded-full object-cover ring-1 ring-white/10 group-hover:ring-[#FF2E7E] transition-all shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-white truncate group-hover:text-[#FF2E7E] transition-colors">
+                          {u.name}
+                        </p>
+                        <p className="text-[10px] text-slate-400 truncate">@{u.handle}</p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => toggleFollowUser(u.id)}
+                      className={`text-xs px-2.5 py-1 rounded-lg font-bold transition-all shrink-0 ${
+                        followed
+                          ? 'bg-slate-800 text-slate-400 hover:bg-rose-900/30 hover:text-rose-400 border border-slate-700'
+                          : 'bg-white text-slate-950 hover:bg-slate-200'
+                      }`}
+                    >
+                      {followed ? 'Mengikuti' : 'Ikuti'}
+                    </button>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+
+        {/* Community Guidelines Glass Card */}
+        <div className="bg-[#121324]/60 border border-slate-800/60 rounded-2xl p-3.5 text-[11px] text-slate-400 space-y-1.5 leading-relaxed">
+          <p className="font-bold text-slate-300">💡 Etika Berdiskusi di Sotoy Buzz:</p>
+          <ul className="list-disc list-inside space-y-0.5 text-slate-400">
+            <li>Sertakan tagar <span className="text-[#FF2E7E] font-semibold">#spoiler</span> jika membahas plot twist.</li>
+            <li>Hargai perbedaan selera & kritik konstruktif film.</li>
+            <li>Tag film atau artikel terkait untuk mempermudah referensi penonton lain.</li>
+          </ul>
+        </div>
       </div>
     </div>
-  );
+  </div>
+);
 };

@@ -1,22 +1,21 @@
 import React from 'react';
-import { Home, Film, MessageSquare, Bookmark, User, LogIn } from 'lucide-react';
+import { Home, Film, MessageSquare, User, LogIn, Plus } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 export const MobileBottomNav: React.FC = () => {
   const {
     currentView,
     navigateTo,
-    watchlist,
     isLoggedIn,
     currentUser,
     setLoginModalOpen,
+    setIsComposeBuzzOpen,
     activeUserTab,
   } = useApp();
 
   const isHomeActive = currentView === 'home';
   const isFilmActive = currentView === 'film-database' || currentView === 'film-detail' || currentView === 'film-recommendations';
   const isBuzzActive = currentView === 'community-feed' || currentView === 'buzz-detail';
-  const isWatchlistActive = currentView === 'user-profile' && activeUserTab === 'watchlist';
   const isProfileActive = currentView === 'user-profile' && activeUserTab !== 'watchlist';
 
   return (
@@ -68,7 +67,29 @@ export const MobileBottomNav: React.FC = () => {
           </span>
         </button>
 
-        {/* 3. Buzz Community Feed */}
+        {/* 3. Tulis Buzz (Action Button) */}
+        <button
+          id="mobile-bottom-nav-compose"
+          onClick={() => {
+            if (!isLoggedIn) {
+              setLoginModalOpen(true);
+            } else {
+              setIsComposeBuzzOpen(true);
+            }
+          }}
+          className="flex flex-col items-center justify-center flex-1 py-1 px-1 transition-all duration-200 min-h-[44px] group"
+          title="Tulis Buzz Baru"
+          aria-label="Tulis Buzz Baru"
+        >
+          <div className="w-9 h-9 -mt-2 rounded-full bg-gradient-to-tr from-[#FF2E7E] to-[#FF8008] text-white flex items-center justify-center shadow-lg shadow-[#FF2E7E]/30 group-active:scale-95 transition-transform">
+            <Plus className="w-5 h-5 stroke-[2.5]" />
+          </div>
+          <span className="text-[10px] mt-0.5 tracking-tight font-black text-[#FF2E7E]">
+            Tulis
+          </span>
+        </button>
+
+        {/* 4. Buzz Community Feed */}
         <button
           id="mobile-bottom-nav-buzz"
           onClick={() => navigateTo('community-feed')}
@@ -87,38 +108,6 @@ export const MobileBottomNav: React.FC = () => {
           </div>
           <span className={`text-[10px] mt-1 tracking-tight font-bold ${isBuzzActive ? 'text-white' : 'text-slate-400'}`}>
             Buzz
-          </span>
-        </button>
-
-        {/* 4. Watchlist */}
-        <button
-          id="mobile-bottom-nav-watchlist"
-          onClick={() => {
-            if (!isLoggedIn) {
-              setLoginModalOpen(true);
-            } else {
-              navigateTo('user-profile', { userTab: 'watchlist' });
-            }
-          }}
-          className={`flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl transition-all duration-200 min-h-[44px] ${
-            isWatchlistActive
-              ? 'text-emerald-400'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <div className="relative">
-            <Bookmark className={`w-5 h-5 transition-transform ${isWatchlistActive ? 'scale-110 stroke-[2.5]' : 'stroke-2'}`} />
-            {watchlist.length > 0 && (
-              <span className="absolute -top-1.5 -right-2 bg-emerald-500 text-slate-950 font-black text-[9px] px-1 rounded-full min-w-[14px] h-[14px] flex items-center justify-center">
-                {watchlist.length}
-              </span>
-            )}
-            {isWatchlistActive && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#10B981]" />
-            )}
-          </div>
-          <span className={`text-[10px] mt-1 tracking-tight font-bold ${isWatchlistActive ? 'text-white' : 'text-slate-400'}`}>
-            Watchlist
           </span>
         </button>
 

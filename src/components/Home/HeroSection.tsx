@@ -35,6 +35,28 @@ export const HeroSection: React.FC = () => {
 
   const activeArticle = sliderArticles[currentSlide] || articles[0];
 
+  if (articles.length === 0 || !activeArticle) {
+    return (
+      <section id="home-hero-section" className="relative pt-6 pb-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-stretch">
+            <div className="lg:col-span-8 flex flex-col">
+              <div className="animate-pulse w-full flex-1 min-h-[420px] sm:min-h-[520px] rounded-2xl sm:rounded-3xl border border-slate-800 bg-[#121324] flex items-center justify-center">
+                <div className="text-center space-y-3">
+                  <div className="w-10 h-10 border-4 border-[#FF2E7E] border-t-transparent rounded-full animate-spin mx-auto" />
+                  <span className="text-slate-500 font-bold block">Memuat Ulasan Headline...</span>
+                </div>
+              </div>
+            </div>
+            <div className="lg:col-span-4 flex flex-col">
+              <div className="animate-pulse w-full flex-1 rounded-2xl sm:rounded-3xl border border-slate-800 bg-[#121324]" />
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   const handlePrevSlide = () => {
     setCurrentSlide(prev => (prev === 0 ? sliderArticles.length - 1 : prev - 1));
   };
