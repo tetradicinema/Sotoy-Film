@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   PenSquare,
   Sparkles,
@@ -10,6 +10,8 @@ import {
   Star,
   Send,
   HelpCircle,
+  Save,
+  RotateCcw,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { MainCategory, SubCategory } from '../../types';
@@ -18,14 +20,21 @@ export const WriteArticlePage: React.FC = () => {
   const {
     currentUser,
     isLoggedIn,
+    isWriter,
+    isAdmin,
+    articles,
+    selectedArticleId,
     setLoginModalOpen,
-    switchRole,
     addArticle,
+    updateArticle,
     navigateTo,
     showToast,
   } = useApp();
 
-  const isAuthorized = isLoggedIn && (currentUser.role === 'penulis_sotoy' || currentUser.role === 'admin');
+  const isAuthorized = isLoggedIn && (currentUser.role === 'penulis_sotoy' || currentUser.role === 'admin' || currentUser.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02' || isWriter || isAdmin);
+
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<MainCategory>('movies');
@@ -36,6 +45,7 @@ export const WriteArticlePage: React.FC = () => {
   const [tagsInput, setTagsInput] = useState('Film, Bioskop, Review');
   const [readTime, setReadTime] = useState('5 mnt baca');
   const [previewMode, setPreviewMode] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Subcategory mapping based on category
   const subCategoryOptions: Record<MainCategory, { id: SubCategory; label: string }[]> = {
@@ -66,9 +76,44 @@ export const WriteArticlePage: React.FC = () => {
     ],
   };
 
+  // Populate data if editing an existing article
+  useEffect(() => {
+    if (selectedArticleId) {
+      const found = articles.find(a => a.id === selectedArticleId);
+      if (found) {
+        setIsEditMode(true);
+        setEditingId(found.id);
+        setTitle(found.title);
+        setCategory(found.category);
+        setSubCategory(found.subCategory);
+        setExcerpt(found.excerpt);
+        setContent(found.content);
+        setCoverImage(found.coverImage);
+        setTagsInput(found.tags.join(', '));
+        setReadTime(found.readTime || '5 mnt baca');
+        return;
+      }
+    }
+    // Default reset for new article
+    setIsEditMode(false);
+    setEditingId(null);
+  }, [selectedArticleId, articles]);
+
   const handleCategoryChange = (newCat: MainCategory) => {
     setCategory(newCat);
     setSubCategory(subCategoryOptions[newCat][0].id);
+  };
+
+  const resetForm = () => {
+    setIsEditMode(false);
+    setEditingId(null);
+    setTitle('');
+    setExcerpt('');
+    setContent('');
+    setCoverImage('https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80');
+    setTagsInput('Film, Bioskop, Review');
+    setReadTime('5 mnt baca');
+    navigateTo('write-article', { articleId: null });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -88,26 +133,52 @@ export const WriteArticlePage: React.FC = () => {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
 
-    const success = await addArticle({
-      title,
-      slug,
-      excerpt: excerpt || title,
-      content,
-      coverImage,
-      category,
-      subCategory,
-      author: {
-        id: currentUser.id,
-        name: currentUser.name,
-        avatar: currentUser.avatar,
-        role: currentUser.role,
-      },
-      readTime,
-      tags: cleanTags.length > 0 ? cleanTags : ['SotoyFilm'],
-    });
+    setIsSubmitting(true);
 
-    if (success) {
-      navigateTo('category', { category, subCategory });
+    try {
+      if (isEditMode && editingId) {
+        const success = await updateArticle(editingId, {
+          title,
+          slug,
+          excerpt: excerpt || title,
+          content,
+          coverImage,
+          category,
+          subCategory,
+          readTime,
+          tags: cleanTags.length > 0 ? cleanTags : ['SotoyFilm'],
+        });
+
+        if (success) {
+          navigateTo('writer-dashboard');
+        }
+      } else {
+        const success = await addArticle({
+          title,
+          slug,
+          excerpt: excerpt || title,
+          content,
+          coverImage,
+          category,
+          subCategory,
+          author: {
+            id: currentUser.id,
+            name: currentUser.name,
+            avatar: currentUser.avatar,
+            role: currentUser.role,
+          },
+          readTime,
+          tags: cleanTags.length > 0 ? cleanTags : ['SotoyFilm'],
+        });
+
+        if (success) {
+          navigateTo('writer-dashboard');
+        }
+      }
+    } catch (err) {
+      showToast('Terjadi kesalahan saat memproses artikel.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -148,13 +219,9 @@ export const WriteArticlePage: React.FC = () => {
                 Masuk (Log In) Akun Penulis Sekarang
               </button>
             ) : (
-              <button
-                id="switch-to-writer-btn"
-                onClick={() => switchRole('penulis_sotoy')}
-                className="w-full bg-[#FF2E7E] hover:bg-[#ff156d] text-white font-black text-xs uppercase tracking-wider py-3 rounded-xl transition-all shadow-lg shadow-[#FF2E7E]/25"
-              >
-                Beralih ke Akun "Penulis Sotoy" Sekarang
-              </button>
+              <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl">
+                 <p className="text-[11px] text-slate-400">Hubungi Admin jika Anda adalah penulis resmi yang memerlukan akses ke panel editor.</p>
+              </div>
             )}
             <button
               onClick={() => navigateTo('home')}
@@ -172,21 +239,33 @@ export const WriteArticlePage: React.FC = () => {
     <div className="min-h-screen py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         
-        {/* Header */}
+        {/* Header Navigation */}
         <div className="flex items-center justify-between">
-          <button
-            onClick={() => navigateTo('home')}
-            className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Batal & Kembali</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigateTo('writer-dashboard')}
+              className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Kembali ke Dasbor Penulis</span>
+            </button>
+            {isEditMode && (
+              <button
+                type="button"
+                onClick={resetForm}
+                className="inline-flex items-center gap-1.5 text-xs text-[#FFD000] hover:underline bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20 cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Batal Edit / Buat Baru</span>
+              </button>
+            )}
+          </div>
 
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setPreviewMode(!previewMode)}
-              className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-colors"
+              className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <Eye className="w-4 h-4" />
               <span>{previewMode ? 'Mode Edit' : 'Live Preview'}</span>
@@ -200,11 +279,20 @@ export const WriteArticlePage: React.FC = () => {
               <PenSquare className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="font-display font-black text-2xl text-white">
-                Studio Editor Penulis Sotoy
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="font-display font-black text-2xl text-white">
+                  {isEditMode ? 'Sunting Artikel' : 'Studio Editor Penulis Sotoy'}
+                </h1>
+                {isEditMode && (
+                  <span className="px-2 py-0.5 rounded-md bg-[#FF2E7E]/20 border border-[#FF2E7E]/40 text-[#FF2E7E] text-[10px] font-black uppercase tracking-wider">
+                    Mode Edit
+                  </span>
+                )}
+              </div>
               <p className="text-slate-400 text-xs">
-                Publikasikan berita, review Skor Sotoy, kurasi daftar, atau modul studi perfilman.
+                {isEditMode
+                  ? 'Perbarui konten artikel Anda. Perubahan akan langsung disinkronkan ke pembaca.'
+                  : 'Publikasikan berita, review Skor Sotoy, kurasi daftar, atau modul studi perfilman.'}
               </p>
             </div>
           </div>
@@ -312,20 +400,18 @@ export const WriteArticlePage: React.FC = () => {
                 />
               </div>
 
-              {/* Skor Sotoy (if review) & Read Time */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                    Estimasi Waktu Baca
-                  </label>
-                  <input
-                    type="text"
-                    value={readTime}
-                    onChange={e => setReadTime(e.target.value)}
-                    placeholder="Contoh: 6 mnt baca"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
-                  />
-                </div>
+              {/* Read Time */}
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  Estimasi Waktu Baca
+                </label>
+                <input
+                  type="text"
+                  value={readTime}
+                  onChange={e => setReadTime(e.target.value)}
+                  placeholder="Contoh: 6 mnt baca"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
+                />
               </div>
 
               {/* Content Editor */}
@@ -339,7 +425,7 @@ export const WriteArticlePage: React.FC = () => {
                   onChange={e => setContent(e.target.value)}
                   placeholder="Tulis ulasan mendalam, breakdown teknis, atau poin-poin artikel..."
                   required
-                  rows={8}
+                  rows={10}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] resize-y"
                 />
               </div>
@@ -362,18 +448,19 @@ export const WriteArticlePage: React.FC = () => {
               <div className="pt-4 border-t border-slate-800 flex items-center justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => navigateTo('home')}
-                  className="px-5 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-300 text-xs font-bold"
+                  onClick={() => navigateTo('writer-dashboard')}
+                  className="px-5 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-300 text-xs font-bold cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   id="publish-article-submit-btn"
                   type="submit"
-                  className="bg-gradient-to-r from-[#FF2E7E] via-[#FFD000] to-[#00F0FF] hover:brightness-110 text-slate-950 font-black text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl flex items-center gap-2 shadow-lg shadow-[#FF2E7E]/30 transition-transform active:scale-95"
+                  disabled={isSubmitting}
+                  className="bg-gradient-to-r from-[#FF2E7E] via-[#FFD000] to-[#00F0FF] hover:brightness-110 text-slate-950 font-black text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl flex items-center gap-2 shadow-lg shadow-[#FF2E7E]/30 transition-transform active:scale-95 cursor-pointer disabled:opacity-50"
                 >
-                  <Send className="w-4 h-4" />
-                  <span>Terbitkan Artikel</span>
+                  {isEditMode ? <Save className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+                  <span>{isSubmitting ? 'Menyimpan...' : isEditMode ? 'Simpan Perubahan Artikel' : 'Terbitkan Artikel'}</span>
                 </button>
               </div>
             </form>

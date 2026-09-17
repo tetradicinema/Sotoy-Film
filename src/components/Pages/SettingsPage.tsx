@@ -32,6 +32,13 @@ import {
   Bookmark,
   Star,
   Send,
+  Heart,
+  Archive,
+  Clock,
+  Search,
+  PenSquare,
+  ExternalLink,
+  Undo2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { SettingsSubPage, UserSettings } from '../../types';
@@ -52,7 +59,11 @@ export const SettingsPage: React.FC = () => {
     ratings,
     watchlist,
     buzzList,
-    addBuzzPost,
+    films,
+    articles,
+    savedArticles,
+    toggleWatchlist,
+    toggleSaveArticle,
     showToast,
     logout,
     navigateTo,
@@ -75,8 +86,58 @@ export const SettingsPage: React.FC = () => {
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
 
-  // Quick buzz text in Activity subpage
-  const [quickBuzzText, setQuickBuzzText] = useState('');
+  // Activity Centre State
+  const [activityCategory, setActivityCategory] = useState<'all' | 'liked' | 'saved' | 'reviews' | 'buzz' | 'archived'>('all');
+  const [activitySearch, setActivitySearch] = useState('');
+  const [archivedActivities, setArchivedActivities] = useState<Array<{
+    id: string;
+    type: 'liked' | 'saved' | 'reviews' | 'buzz';
+    title: string;
+    subtitle: string;
+    date: string;
+    linkType?: 'film' | 'buzz' | 'article';
+    linkId?: string;
+    imageUrl?: string;
+    meta?: string;
+  }>>(() => {
+    try {
+      const saved = localStorage.getItem('sotoy_archived_activities');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const archiveItem = (item: {
+    id: string;
+    type: 'liked' | 'saved' | 'reviews' | 'buzz';
+    title: string;
+    subtitle: string;
+    date: string;
+    linkType?: 'film' | 'buzz' | 'article';
+    linkId?: string;
+    imageUrl?: string;
+    meta?: string;
+  }) => {
+    const updated = [item, ...archivedActivities.filter(a => a.id !== item.id)];
+    setArchivedActivities(updated);
+    localStorage.setItem('sotoy_archived_activities', JSON.stringify(updated));
+    showToast(`"${item.title}" dipindahkan ke Arsip Aktivitas.`);
+  };
+
+  const restoreArchivedItem = (id: string) => {
+    const updated = archivedActivities.filter(a => a.id !== id);
+    setArchivedActivities(updated);
+    localStorage.setItem('sotoy_archived_activities', JSON.stringify(updated));
+    showToast('Aktivitas dikembalikan dari arsip.');
+  };
+
+  const deleteArchivedItem = (id: string) => {
+    const updated = archivedActivities.filter(a => a.id !== id);
+    setArchivedActivities(updated);
+    localStorage.setItem('sotoy_archived_activities', JSON.stringify(updated));
+    showToast('Riwayat dihapus permanen.');
+  };
 
   // Preset Avatars
   const PRESET_AVATARS = [
@@ -124,7 +185,7 @@ export const SettingsPage: React.FC = () => {
       const base64 = event.target?.result as string;
       if (base64) {
         setAvatarPreview(base64);
-        uploadProfilePhoto(base64);
+        uploadProfilePhoto(base64, file.name, file.size, file.type);
       }
     };
     reader.readAsDataURL(file);
@@ -182,18 +243,12 @@ export const SettingsPage: React.FC = () => {
     updateUserSettings({ favoriteGenres: next });
   };
 
-  const handleQuickBuzzPost = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!quickBuzzText.trim()) return;
-    addBuzzPost(quickBuzzText);
-    setQuickBuzzText('');
-  };
-
-  const userReviewsCount = ratings.filter(r => r.userId === currentUser.id).length;
-  const userBuzzCount = buzzList.filter(b => b.author.id === currentUser.id).length;
-  const currentXP = 340 + userReviewsCount * 25 + userBuzzCount * 15 + watchlist.length * 10;
-  const targetXP = 1000;
-  const xpPercentage = Math.min(100, Math.round((currentXP / targetXP) * 100));
+  // User activities derived for Activity Centre
+  const userReviews = ratings.filter(r => r.userId === currentUser.id);
+  const userBuzzPosts = buzzList.filter(b => b.author.id === currentUser.id);
+  const likedBuzzPosts = buzzList.filter(b => !!b.myReaction);
+  const watchlistFilmItems = watchlist.map(id => films.find(f => f.id === id)).filter((f): f is typeof films[0] => Boolean(f));
+  const savedArticleItems = (savedArticles || []).map(id => articles.find(a => a.id === id)).filter((a): a is typeof articles[0] => Boolean(a));
 
   const navItems: { id: SettingsSubPage; label: string; icon: any; desc: string }[] = [
     {
@@ -204,9 +259,9 @@ export const SettingsPage: React.FC = () => {
     },
     {
       id: 'activity',
-      label: 'Pusat Aktivitas',
+      label: 'Riwayat Aktivitas',
       icon: Activity,
-      desc: 'Statistik XP, lencana & live log',
+      desc: 'Log postingan disukai, disimpan, ulasan & arsip',
     },
     {
       id: 'security',
@@ -507,178 +562,483 @@ export const SettingsPage: React.FC = () => {
             )}
 
             {/* =================================================================== */}
-            {/* SUBPAGE 2: PUSAT AKTIVITAS (ACTIVITY CENTRE INSIDE SETTINGS) */}
+            {/* SUBPAGE 2: PUSAT RIWAYAT AKTIVITAS (ACTIVITY CENTRE) */}
             {/* =================================================================== */}
-            {activeSettingsTab === 'activity' && (
-              <div id="settings-pane-activity" className="space-y-6 animate-in fade-in duration-200">
-                <div className="border-b border-slate-800 pb-4">
-                  <h2 className="text-lg font-display font-black text-white flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-[#00F0FF]" />
-                    <span>Pusat Aktivitas & Progres Kurasi (Activity Centre)</span>
-                  </h2>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Pantau tingkat ke-sotoy-an, XP sinema, lencana penghargaan, dan rekam jejak aktivitasmu.
-                  </p>
-                </div>
+            {activeSettingsTab === 'activity' && (() => {
+              // Assemble real activity items from user data
+              interface ActivityItem {
+                id: string;
+                type: 'liked' | 'saved' | 'reviews' | 'buzz' | 'archived';
+                categoryLabel: string;
+                title: string;
+                subtitle: string;
+                meta?: string;
+                date: string;
+                linkType?: 'film' | 'buzz' | 'article';
+                linkId?: string;
+                imageUrl?: string;
+                badgeColor: string;
+              }
 
-                {/* Level & XP Banner */}
-                <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-900 via-[#10192A] to-slate-900 border border-[#00F0FF]/30 space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-[#00F0FF]/15 border border-[#00F0FF]/40 flex items-center justify-center text-[#00F0FF] shrink-0">
-                        <Flame className="w-6 h-6" />
+              const allActivities: ActivityItem[] = [];
+
+              // 1. Liked items
+              likedBuzzPosts.forEach(b => {
+                const totalReactions = (b.reactions ? Object.values(b.reactions).reduce((acc: number, val) => acc + (typeof val === 'number' ? val : 0), 0) : 0) + (b.likes || 0);
+                allActivities.push({
+                  id: `liked-buzz-${b.id}`,
+                  type: 'liked',
+                  categoryLabel: 'Buzz Disukai',
+                  title: `Menyukai Buzz dari @${b.author.handle.replace('@', '')}`,
+                  subtitle: b.content,
+                  meta: `Reaksi: ${b.myReaction || '👍'} • ${totalReactions} total reaksi`,
+                  date: b.createdAt,
+                  linkType: 'buzz',
+                  linkId: b.id,
+                  imageUrl: b.author.avatar,
+                  badgeColor: 'text-pink-400 bg-pink-500/10 border-pink-500/30',
+                });
+              });
+
+              // 2. Saved items (Watchlist films & Saved articles)
+              watchlistFilmItems.forEach(f => {
+                allActivities.push({
+                  id: `saved-film-${f.id}`,
+                  type: 'saved',
+                  categoryLabel: 'Watchlist Film',
+                  title: `Menyimpan Film "${f.title}"`,
+                  subtitle: `${f.year} • Disutradarai ${f.director} • ${f.genres?.join(', ') || 'Sinema'}`,
+                  meta: `Skor Komunitas: ${f.skorSotoy}/5.0`,
+                  date: 'Tersimpan di Watchlist',
+                  linkType: 'film',
+                  linkId: f.id,
+                  imageUrl: f.poster,
+                  badgeColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+                });
+              });
+
+              savedArticleItems.forEach(a => {
+                allActivities.push({
+                  id: `saved-art-${a.id}`,
+                  type: 'saved',
+                  categoryLabel: 'Artikel Tersimpan',
+                  title: `Menyimpan Artikel "${a.title}"`,
+                  subtitle: `${a.readTime} baca • Oleh ${a.author.name}`,
+                  meta: a.category,
+                  date: a.publishedAt || 'Tersimpan',
+                  linkType: 'article',
+                  linkId: a.id,
+                  imageUrl: a.coverImage,
+                  badgeColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+                });
+              });
+
+              // 3. Reviews & Ratings
+              userReviews.forEach(r => {
+                const film = films.find(f => f.id === r.filmId);
+                allActivities.push({
+                  id: `review-${r.id}`,
+                  type: 'reviews',
+                  categoryLabel: 'Skor & Ulasan',
+                  title: `Memberikan Skor ${r.score}/5.0 pada "${film ? film.title : 'Film'}"`,
+                  subtitle: r.headline || r.reviewText || 'Ulasan penonton',
+                  meta: film ? `${film.year} • ${film.genres?.[0] || 'Sinema'}` : undefined,
+                  date: r.createdAt,
+                  linkType: 'film',
+                  linkId: r.filmId,
+                  imageUrl: film?.poster,
+                  badgeColor: 'text-[#FFD000] bg-amber-500/10 border-amber-500/30',
+                });
+              });
+
+              // 4. User Buzz Posts
+              userBuzzPosts.forEach(b => {
+                const totalReactions = (b.reactions ? Object.values(b.reactions).reduce((acc: number, val) => acc + (typeof val === 'number' ? val : 0), 0) : 0) + (b.likes || 0);
+                allActivities.push({
+                  id: `buzz-${b.id}`,
+                  type: 'buzz',
+                  categoryLabel: 'Postingan Buzz',
+                  title: 'Mempublikasikan Opini di Buzz Feed',
+                  subtitle: b.content,
+                  meta: `${b.repliesCount || 0} balasan • ${totalReactions} reaksi`,
+                  date: b.createdAt,
+                  linkType: 'buzz',
+                  linkId: b.id,
+                  imageUrl: currentUser.avatar,
+                  badgeColor: 'text-[#00F0FF] bg-cyan-500/10 border-cyan-500/30',
+                });
+              });
+
+              // Filter out items that are already in archivedActivities
+              const archivedIds = new Set(archivedActivities.map(a => a.id));
+              const activeList = allActivities.filter(a => !archivedIds.has(a.id));
+
+              // Categorize items
+              const displayList: ActivityItem[] = activityCategory === 'archived'
+                ? archivedActivities.map(a => ({
+                    ...a,
+                    type: 'archived' as const,
+                    categoryLabel: 'Diarsipkan',
+                    badgeColor: 'text-slate-400 bg-slate-800 border-slate-700',
+                  }))
+                : activityCategory === 'all'
+                ? activeList
+                : activeList.filter(a => a.type === activityCategory);
+
+              // Apply Search Filter
+              const filteredList = displayList.filter(item => {
+                if (!activitySearch.trim()) return true;
+                const q = activitySearch.toLowerCase();
+                return item.title.toLowerCase().includes(q) || item.subtitle.toLowerCase().includes(q);
+              });
+
+              return (
+                <div id="settings-pane-activity" className="space-y-6 animate-in fade-in duration-200">
+                  {/* Header */}
+                  <div className="border-b border-slate-800 pb-4">
+                    <h2 className="text-lg font-display font-black text-white flex items-center gap-2">
+                      <Activity className="w-5 h-5 text-[#00F0FF]" />
+                      <span>Pusat Riwayat Aktivitas (Activity Centre)</span>
+                    </h2>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Histori lengkap aktivitas akun: postingan yang kamu sukai, film & artikel tersimpan, ulasan yang ditulis, opini buzz, serta arsip.
+                    </p>
+                  </div>
+
+                  {/* Activity Summary Metrics */}
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                    <div
+                      onClick={() => setActivityCategory('liked')}
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                        activityCategory === 'liked'
+                          ? 'bg-pink-500/10 border-pink-500/50 shadow-sm'
+                          : 'bg-slate-900/70 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Disukai</span>
+                        <Heart className="w-3.5 h-3.5 text-pink-400" />
                       </div>
-                      <div>
-                        <div className="text-xs font-black uppercase tracking-wider text-[#00F0FF]">
-                          Level Kurator Sinema
-                        </div>
-                        <div className="text-base sm:text-lg font-display font-black text-white">
-                          Level 3: Cinephile Auteur
-                        </div>
-                      </div>
+                      <div className="text-xl font-black text-white mt-1.5 font-mono">{likedBuzzPosts.length}</div>
+                      <div className="text-[10px] text-pink-400 mt-0.5">Postingan & Reaksi</div>
                     </div>
 
-                    <div className="text-right">
-                      <div className="text-xs font-mono font-bold text-white">
-                        {currentXP} / {targetXP} XP
+                    <div
+                      onClick={() => setActivityCategory('saved')}
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                        activityCategory === 'saved'
+                          ? 'bg-emerald-500/10 border-emerald-500/50 shadow-sm'
+                          : 'bg-slate-900/70 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tersimpan</span>
+                        <Bookmark className="w-3.5 h-3.5 text-emerald-400" />
                       </div>
-                      <div className="text-[10px] text-slate-400">
-                        +{targetXP - currentXP} XP menuju Level 4 Master Critic
+                      <div className="text-xl font-black text-white mt-1.5 font-mono">
+                        {watchlistFilmItems.length + savedArticleItems.length}
                       </div>
+                      <div className="text-[10px] text-emerald-400 mt-0.5">Watchlist & Bacaan</div>
+                    </div>
+
+                    <div
+                      onClick={() => setActivityCategory('reviews')}
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                        activityCategory === 'reviews'
+                          ? 'bg-amber-500/10 border-amber-500/50 shadow-sm'
+                          : 'bg-slate-900/70 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ulasan</span>
+                        <Star className="w-3.5 h-3.5 text-amber-400" />
+                      </div>
+                      <div className="text-xl font-black text-white mt-1.5 font-mono">{userReviews.length}</div>
+                      <div className="text-[10px] text-amber-400 mt-0.5">Skor Film Ditulis</div>
+                    </div>
+
+                    <div
+                      onClick={() => setActivityCategory('buzz')}
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                        activityCategory === 'buzz'
+                          ? 'bg-cyan-500/10 border-cyan-500/50 shadow-sm'
+                          : 'bg-slate-900/70 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Buzz Opini</span>
+                        <MessageSquare className="w-3.5 h-3.5 text-[#00F0FF]" />
+                      </div>
+                      <div className="text-xl font-black text-white mt-1.5 font-mono">{userBuzzPosts.length}</div>
+                      <div className="text-[10px] text-cyan-400 mt-0.5">Thread Terkirim</div>
+                    </div>
+
+                    <div
+                      onClick={() => setActivityCategory('archived')}
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer col-span-2 sm:col-span-1 ${
+                        activityCategory === 'archived'
+                          ? 'bg-purple-500/10 border-purple-500/50 shadow-sm'
+                          : 'bg-slate-900/70 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Arsip</span>
+                        <Archive className="w-3.5 h-3.5 text-purple-400" />
+                      </div>
+                      <div className="text-xl font-black text-white mt-1.5 font-mono">{archivedActivities.length}</div>
+                      <div className="text-[10px] text-purple-400 mt-0.5">Riwayat Disimpan</div>
                     </div>
                   </div>
 
-                  {/* Progress Bar */}
-                  <div className="space-y-1.5">
-                    <div className="w-full bg-slate-800/80 rounded-full h-2.5 overflow-hidden p-0.5 border border-slate-700/50">
-                      <div
-                        className="bg-gradient-to-r from-[#00F0FF] to-[#FF2E7E] h-full rounded-full transition-all duration-500"
-                        style={{ width: `${xpPercentage}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-[10px] text-slate-400 font-mono">
-                      <span>Progres {xpPercentage}%</span>
-                      <span>1 Review = +25 XP • 1 Buzz = +15 XP</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Koleksi Lencana (Badges) */}
-                <div className="space-y-3">
-                  <div className="text-xs font-black uppercase text-slate-400 tracking-wider flex items-center gap-2">
-                    <Award className="w-4 h-4 text-[#FFD000]" />
-                    <span>Lencana Penghargaan Sinema</span>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="p-3 bg-slate-900 border border-amber-500/30 rounded-2xl flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-[#FFD000] flex items-center justify-center shrink-0">
-                        <Star className="w-4 h-4 fill-current" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-white truncate">Early Reviewer</div>
-                        <div className="text-[9px] text-amber-400 font-semibold">Terkunci (Terverifikasi)</div>
-                      </div>
-                    </div>
-
-                    <div className="p-3 bg-slate-900 border border-cyan-500/30 rounded-2xl flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-cyan-500/20 text-[#00F0FF] flex items-center justify-center shrink-0">
-                        <Film className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-white truncate">Optics Nerd</div>
-                        <div className="text-[9px] text-cyan-400 font-semibold">Aktif</div>
-                      </div>
-                    </div>
-
-                    <div className="p-3 bg-slate-900 border border-emerald-500/30 rounded-2xl flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                        <Bookmark className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-white truncate">Watchlist Hunter</div>
-                        <div className="text-[9px] text-emerald-400 font-semibold">{watchlist.length} Film Tersimpan</div>
-                      </div>
-                    </div>
-
-                    <div className="p-3 bg-slate-900 border border-pink-500/30 rounded-2xl flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-pink-500/20 text-[#FF2E7E] flex items-center justify-center shrink-0">
-                        <MessageSquare className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-white truncate">Teori Liar</div>
-                        <div className="text-[9px] text-pink-400 font-semibold">{userBuzzCount} Buzz Terkirim</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quick Buzz Composer inside Activity Centre */}
-                <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-2xl space-y-3">
-                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-[#00F0FF]" />
-                    <span>Kirim Opini Cepat ke Feed Komunitas</span>
-                  </div>
-                  <form onSubmit={handleQuickBuzzPost} className="space-y-2">
-                    <textarea
-                      value={quickBuzzText}
-                      onChange={e => setQuickBuzzText(e.target.value)}
-                      rows={2}
-                      placeholder="Tulis teori sinema atau pendapat film barumu hari ini... (#SotoyFilm)"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF] resize-none"
-                    />
-                    <div className="flex justify-end">
+                  {/* Filter & Search Controls */}
+                  <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between pt-2">
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none flex-nowrap">
                       <button
-                        type="submit"
-                        className="px-3 py-1.5 rounded-lg bg-[#FF2E7E] hover:bg-pink-600 text-white font-bold text-xs flex items-center gap-1.5 transition-colors"
+                        onClick={() => setActivityCategory('all')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                          activityCategory === 'all'
+                            ? 'bg-[#00F0FF] text-black shadow-md shadow-cyan-500/20'
+                            : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                        }`}
                       >
-                        <Send className="w-3 h-3" />
-                        <span>Posting Opini (+15 XP)</span>
+                        Semua ({activeList.length})
+                      </button>
+
+                      <button
+                        onClick={() => setActivityCategory('liked')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shrink-0 ${
+                          activityCategory === 'liked'
+                            ? 'bg-pink-600 text-white shadow-md shadow-pink-500/20'
+                            : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                        }`}
+                      >
+                        <Heart className="w-3 h-3" />
+                        <span>Disukai ({likedBuzzPosts.length})</span>
+                      </button>
+
+                      <button
+                        onClick={() => setActivityCategory('saved')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shrink-0 ${
+                          activityCategory === 'saved'
+                            ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20'
+                            : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                        }`}
+                      >
+                        <Bookmark className="w-3 h-3" />
+                        <span>Disimpan ({watchlistFilmItems.length + savedArticleItems.length})</span>
+                      </button>
+
+                      <button
+                        onClick={() => setActivityCategory('reviews')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shrink-0 ${
+                          activityCategory === 'reviews'
+                            ? 'bg-amber-600 text-white shadow-md shadow-amber-500/20'
+                            : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                        }`}
+                      >
+                        <Star className="w-3 h-3" />
+                        <span>Ulasan ({userReviews.length})</span>
+                      </button>
+
+                      <button
+                        onClick={() => setActivityCategory('buzz')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shrink-0 ${
+                          activityCategory === 'buzz'
+                            ? 'bg-cyan-600 text-white shadow-md shadow-cyan-500/20'
+                            : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                        }`}
+                      >
+                        <MessageSquare className="w-3 h-3" />
+                        <span>Buzz ({userBuzzPosts.length})</span>
+                      </button>
+
+                      <button
+                        onClick={() => setActivityCategory('archived')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shrink-0 ${
+                          activityCategory === 'archived'
+                            ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20'
+                            : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                        }`}
+                      >
+                        <Archive className="w-3 h-3" />
+                        <span>Arsip ({archivedActivities.length})</span>
                       </button>
                     </div>
-                  </form>
-                </div>
 
-                {/* Live Activity Log */}
-                <div className="space-y-3">
-                  <div className="text-xs font-black uppercase text-slate-400 tracking-wider">
-                    Riwayat Aktivitas Terkini (Live Activity Log)
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="p-3 bg-slate-900/60 border border-slate-800/80 rounded-xl flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-3">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                        <span className="text-slate-200">
-                          Menyimpan <strong className="text-white">{watchlist.length} film</strong> ke Watchlist pribadi
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-slate-500 font-mono">Baru saja</span>
-                    </div>
-
-                    <div className="p-3 bg-slate-900/60 border border-slate-800/80 rounded-xl flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-3">
-                        <span className="w-2 h-2 rounded-full bg-amber-400" />
-                        <span className="text-slate-200">
-                          Memberikan Skor Sotoy & ulasan pada <strong className="text-white">{userReviewsCount} film</strong>
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-slate-500 font-mono">Hari ini</span>
-                    </div>
-
-                    <div className="p-3 bg-slate-900/60 border border-slate-800/80 rounded-xl flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-3">
-                        <span className="w-2 h-2 rounded-full bg-[#FF2E7E]" />
-                        <span className="text-slate-200">
-                          Mempublikasikan <strong className="text-white">{userBuzzCount} postingan diskusi</strong> di Buzz feed
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-slate-500 font-mono">Kemarin</span>
+                    {/* Search Input */}
+                    <div className="relative min-w-[200px]">
+                      <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={activitySearch}
+                        onChange={e => setActivitySearch(e.target.value)}
+                        placeholder="Cari aktivitas..."
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF]"
+                      />
                     </div>
                   </div>
+
+                  {/* Activity Items List */}
+                  <div className="space-y-3">
+                    {filteredList.length === 0 ? (
+                      <div className="p-8 rounded-2xl bg-slate-900/40 border border-slate-800 text-center space-y-3">
+                        <div className="w-12 h-12 rounded-2xl bg-slate-800/80 text-slate-500 mx-auto flex items-center justify-center">
+                          <Activity className="w-6 h-6" />
+                        </div>
+                        <div className="space-y-1 max-w-sm mx-auto">
+                          <h4 className="text-sm font-bold text-white">
+                            {activityCategory === 'archived'
+                              ? 'Tidak ada riwayat di arsip'
+                              : activitySearch
+                              ? 'Tidak ada aktivitas yang sesuai dengan kata kunci'
+                              : 'Belum ada riwayat aktivitas'}
+                          </h4>
+                          <p className="text-xs text-slate-400">
+                            {activityCategory === 'archived'
+                              ? 'Aktivitas yang kamu arsipkan atau simpan riwayatnya akan tampil di sini.'
+                              : 'Ketika kamu menyukai postingan buzz, menyimpan watchlist film, menulis ulasan, atau memposting opini, semuanya akan tercatat rapi di sini.'}
+                          </p>
+                        </div>
+                        {activityCategory !== 'all' && (
+                          <button
+                            onClick={() => {
+                              setActivityCategory('all');
+                              setActivitySearch('');
+                            }}
+                            className="text-xs font-bold text-[#00F0FF] hover:underline"
+                          >
+                            Tampilkan Semua Aktivitas
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      filteredList.map(item => (
+                        <div
+                          key={item.id}
+                          className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 hover:border-slate-700/80 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
+                        >
+                          <div className="flex items-start gap-3.5 min-w-0">
+                            {/* Thumbnail or Icon */}
+                            {item.imageUrl ? (
+                              <img
+                                src={item.imageUrl}
+                                alt={item.title}
+                                className="w-11 h-14 sm:w-12 sm:h-12 rounded-xl object-cover border border-slate-800 shrink-0"
+                              />
+                            ) : (
+                              <div className="w-11 h-11 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-center shrink-0">
+                                {item.type === 'liked' && <Heart className="w-5 h-5 text-pink-400" />}
+                                {item.type === 'saved' && <Bookmark className="w-5 h-5 text-emerald-400" />}
+                                {item.type === 'reviews' && <Star className="w-5 h-5 text-amber-400" />}
+                                {item.type === 'buzz' && <MessageSquare className="w-5 h-5 text-cyan-400" />}
+                                {item.type === 'archived' && <Archive className="w-5 h-5 text-purple-400" />}
+                              </div>
+                            )}
+
+                            <div className="min-w-0 space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${item.badgeColor}`}>
+                                  {item.categoryLabel}
+                                </span>
+                                <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  <span>{item.date}</span>
+                                </span>
+                              </div>
+
+                              <h4 className="text-xs sm:text-sm font-bold text-white group-hover:text-[#00F0FF] transition-colors truncate">
+                                {item.title}
+                              </h4>
+
+                              <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                                {item.subtitle}
+                              </p>
+
+                              {item.meta && (
+                                <div className="text-[10px] text-slate-500 font-mono">
+                                  {item.meta}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                            {item.linkType === 'film' && item.linkId && (
+                              <button
+                                onClick={() => navigateTo('film-detail', { filmId: item.linkId })}
+                                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-[#00F0FF] hover:text-black text-slate-300 text-xs font-bold transition-all flex items-center gap-1.5"
+                              >
+                                <span>Buka Film</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </button>
+                            )}
+
+                            {item.linkType === 'article' && item.linkId && (
+                              <button
+                                onClick={() => navigateTo('article-detail', { articleId: item.linkId })}
+                                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-purple-500 hover:text-white text-slate-300 text-xs font-bold transition-all flex items-center gap-1.5"
+                              >
+                                <span>Baca Artikel</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </button>
+                            )}
+
+                            {item.linkType === 'buzz' && (
+                              <button
+                                onClick={() => navigateTo('community-feed')}
+                                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-[#FF2E7E] hover:text-white text-slate-300 text-xs font-bold transition-all flex items-center gap-1.5"
+                              >
+                                <span>Lihat Buzz</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </button>
+                            )}
+
+                            {item.type === 'archived' ? (
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={() => restoreArchivedItem(item.id)}
+                                  className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-400 text-xs font-bold transition-colors flex items-center gap-1"
+                                  title="Kembalikan dari Arsip"
+                                >
+                                  <Undo2 className="w-3.5 h-3.5" />
+                                  <span className="hidden sm:inline">Pulihkan</span>
+                                </button>
+                                <button
+                                  onClick={() => deleteArchivedItem(item.id)}
+                                  className="p-1.5 rounded-xl bg-slate-800 hover:bg-red-600 hover:text-white text-slate-400 transition-colors"
+                                  title="Hapus Permanen"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => archiveItem({
+                                  id: item.id,
+                                  type: item.type as 'liked' | 'saved' | 'reviews' | 'buzz',
+                                  title: item.title,
+                                  subtitle: item.subtitle,
+                                  date: item.date,
+                                  linkType: item.linkType,
+                                  linkId: item.linkId,
+                                  imageUrl: item.imageUrl,
+                                  meta: item.meta,
+                                })}
+                                className="p-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                                title="Pindahkan ke Arsip"
+                              >
+                                <Archive className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* =================================================================== */}
             {/* SUBPAGE 3: KEAMANAN & AKUN (GANTI EMAIL, SANDI, 2FA) */}

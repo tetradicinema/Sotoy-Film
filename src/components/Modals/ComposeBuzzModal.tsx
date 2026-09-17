@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Film, FileText, Send, Sparkles, Star, Tag, Search, Check } from 'lucide-react';
+import { X, Film, FileText, Send, Sparkles, Star, Tag, Search, Check, User as UserIcon } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { MentionInput } from '../Common/MentionInput';
 
@@ -104,11 +104,17 @@ export const ComposeBuzzModal: React.FC = () => {
         {/* Content Body */}
         <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
           <div className="flex items-start gap-3">
-            <img
-              src={currentUser.avatar}
-              alt={currentUser.name}
-              className="w-10 h-10 rounded-full object-cover ring-2 ring-[#00F0FF]/30 shrink-0 mt-1"
-            />
+            {isLoggedIn ? (
+              <img
+                src={currentUser.avatar}
+                alt={currentUser.name}
+                className="w-10 h-10 rounded-full object-cover ring-2 ring-[#00F0FF]/30 shrink-0 mt-1"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 ring-2 ring-slate-700 shrink-0 mt-1">
+                <UserIcon className="w-5 h-5" />
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <MentionInput
                 id="modal-buzz-content-textarea"

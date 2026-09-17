@@ -28,6 +28,7 @@ import {
   Flame,
   UserCheck,
   Plus,
+  User as UserIcon,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { BuzzPost, User } from '../../types';
@@ -344,11 +345,17 @@ export const CommunityFeedPage: React.FC = () => {
         {/* ========================================================================= */}
         <div id="buzz-composer-card" className="bg-[#121324] border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4">
           <div className="flex items-start gap-3">
-            <img
-              src={currentUser.avatar}
-              alt={currentUser.name}
-              className="w-10 h-10 rounded-xl object-cover ring-2 ring-[#FF2E7E]/50 shrink-0"
-            />
+            {isLoggedIn ? (
+              <img
+                src={currentUser.avatar}
+                alt={currentUser.name}
+                className="w-10 h-10 rounded-xl object-cover ring-2 ring-[#FF2E7E]/50 shrink-0"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-slate-500 ring-2 ring-slate-700 shrink-0">
+                <UserIcon className="w-5 h-5" />
+              </div>
+            )}
             <div className="flex-1 space-y-3">
               <MentionInput
                 id="buzz-composer-textarea"

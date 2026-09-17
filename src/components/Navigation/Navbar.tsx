@@ -37,9 +37,10 @@ export const Navbar: React.FC = () => {
   const {
     currentUser,
     isLoggedIn,
+    isAdmin,
+    isWriter,
     setLoginModalOpen,
     logout,
-    switchRole,
     currentView,
     activeCategory,
     activeSubCategory,
@@ -137,10 +138,10 @@ export const Navbar: React.FC = () => {
   };
 
   const handleWriteArticleClick = () => {
-    if (currentUser.role === 'penulis_sotoy' || currentUser.role === 'admin') {
+    if (currentUser.role === 'penulis_sotoy' || currentUser.role === 'admin' || currentUser.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02' || isWriter) {
       navigateTo('write-article');
     } else {
-      showToast('Peran Anda saat ini tidak memiliki izin menulis artikel resmi. Ganti peran ke "Penulis Sotoy" di menu profil atas!');
+      showToast('Peran Anda saat ini tidak memiliki izin menulis artikel resmi.');
     }
   };
 
@@ -177,71 +178,6 @@ export const Navbar: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-50 bg-[#0D0E15]/95 backdrop-blur-md border-b border-slate-800/80">
-      {/* Top micro-bar: Role Switcher & Announcement */}
-      <div className="bg-[#121324] px-4 py-1.5 border-b border-slate-800/50 text-xs hidden md:flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1 font-bold text-[#FFD000] uppercase tracking-wider text-[10px]">
-            <Star className="w-3 h-3 fill-current text-[#FFD000]" />
-            Platform Pop-Culture & Film Terbuka
-          </span>
-          <span className="text-slate-500">|</span>
-          <span className="text-slate-400 text-[11px]">
-            Beri penilaian film favoritmu dengan sistem <strong>Skor Sotoy (Bintang 1-5)</strong>
-          </span>
-        </div>
-
-        {/* Quick Role Switcher */}
-        <div className="flex items-center gap-2">
-          <span className="text-slate-400 text-[11px] font-medium">Uji Peran Akun:</span>
-          <div className="flex items-center bg-slate-900 rounded-lg p-0.5 border border-slate-800">
-            <button
-              id="role-switch-warga"
-              onClick={() => switchRole('warga_sotoy')}
-              className={`px-2 py-0.5 text-[11px] font-bold rounded transition-colors ${
-                currentUser.role === 'warga_sotoy'
-                  ? 'bg-cyan-500 text-slate-950 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Warga Sotoy
-            </button>
-            <button
-              id="role-switch-critic"
-              onClick={() => switchRole('si_paling_sotoy')}
-              className={`px-2 py-0.5 text-[11px] font-bold rounded transition-colors ${
-                currentUser.role === 'si_paling_sotoy'
-                  ? 'bg-[#FFD000] text-slate-950 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Si Paling Sotoy (Critic)
-            </button>
-            <button
-              id="role-switch-writer"
-              onClick={() => switchRole('penulis_sotoy')}
-              className={`px-2 py-0.5 text-[11px] font-bold rounded transition-colors ${
-                currentUser.role === 'penulis_sotoy'
-                  ? 'bg-[#FF2E7E] text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Penulis Sotoy (Writer)
-            </button>
-            <button
-              id="role-switch-admin"
-              onClick={() => switchRole('admin')}
-              className={`px-2 py-0.5 text-[11px] font-bold rounded transition-colors ${
-                currentUser.role === 'admin'
-                  ? 'bg-purple-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Admin
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* Main Navbar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-4">
@@ -541,11 +477,11 @@ export const Navbar: React.FC = () => {
                       <button
                         id="menu-profile-btn"
                         onClick={() => {
-                          navigateTo('user-profile');
+                          navigateTo('user-profile', { userId: currentUser.id, userTab: 'buzz' });
                           setRoleDropdownOpen(false);
                         }}
                         className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
-                          currentView === 'user-profile' && activeUserTab !== 'watchlist'
+                          currentView === 'user-profile' && activeUserTab === 'buzz'
                             ? 'bg-cyan-500/20 text-[#00F0FF] border border-cyan-500/40 font-bold'
                             : 'hover:bg-slate-800/80 text-slate-200'
                         }`}
@@ -560,7 +496,7 @@ export const Navbar: React.FC = () => {
                       <button
                         id="menu-watchlist-btn"
                         onClick={() => {
-                          navigateTo('user-profile', { userTab: 'watchlist' });
+                          navigateTo('user-profile', { userId: currentUser.id, userTab: 'watchlist' });
                           setRoleDropdownOpen(false);
                         }}
                         className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
@@ -581,7 +517,7 @@ export const Navbar: React.FC = () => {
                       <button
                         id="menu-reviews-btn"
                         onClick={() => {
-                          navigateTo('user-profile', { userTab: 'reviews' });
+                          navigateTo('user-profile', { userId: currentUser.id, userTab: 'reviews' });
                           setRoleDropdownOpen(false);
                         }}
                         className="w-full text-left p-2 rounded-xl text-xs flex items-center justify-between hover:bg-slate-800 text-slate-200 transition-colors"
@@ -630,90 +566,95 @@ export const Navbar: React.FC = () => {
                         </button>
                       )}
 
-                      {currentUser.role === 'admin' && (
-                        <button
-                          onClick={() => {
-                            navigateTo('admin-critic-submissions');
-                            setRoleDropdownOpen(false);
-                          }}
-                          className="w-full text-left p-2 rounded-xl text-xs flex items-center justify-between border border-dashed border-red-500/30 hover:bg-red-500/10 text-red-400 font-bold transition-colors"
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <ShieldCheck className="w-4 h-4 text-red-400" />
-                            <span>Admin Dashboard</span>
+                      {(currentUser.role === 'penulis_sotoy' || currentUser.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02' || isWriter) && (
+                        <div className="pt-1.5 border-t border-slate-800/50 mt-1.5 space-y-1">
+                          <div className="text-[9px] font-black uppercase tracking-widest text-[#FF2E7E] px-1 mb-1 flex items-center justify-between">
+                            <span>Ruang Penulis</span>
+                            <span className="bg-[#FF2E7E] text-white px-1.5 py-0.2 rounded text-[8px] font-black">PENULIS</span>
                           </div>
-                          <span>→</span>
-                        </button>
+                          <button
+                            id="menu-writer-dashboard-btn"
+                            onClick={() => {
+                              navigateTo('writer-dashboard');
+                              setRoleDropdownOpen(false);
+                            }}
+                            className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
+                              currentView === 'writer-dashboard'
+                                ? 'bg-pink-500/20 text-pink-300 border border-pink-500/50 font-bold'
+                                : 'hover:bg-pink-500/10 text-pink-400 font-bold border border-pink-500/30'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <PenSquare className="w-4 h-4 text-[#FF2E7E]" />
+                              <span>Dasbor Penulis & Workspace</span>
+                            </div>
+                            <span className="text-xs text-pink-400">→</span>
+                          </button>
+                          <button
+                            id="menu-write-article-btn"
+                            onClick={() => {
+                              navigateTo('write-article');
+                              setRoleDropdownOpen(false);
+                            }}
+                            className="w-full text-left p-2 rounded-xl text-xs flex items-center justify-between hover:bg-slate-800 text-slate-200 transition-colors"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <BookOpen className="w-4 h-4 text-emerald-400" />
+                              <span>+ Tulis Artikel Baru</span>
+                            </div>
+                            <span className="text-xs text-slate-400">→</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {(currentUser.role === 'admin' || currentUser.id === 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' || currentUser.id === 'I34eqzOmvsSdS2Rf7jpfxw1ZKeu1' || currentUser.email === 'eksposurmedia@gmail.com') && (
+                        <div className="pt-1.5 border-t border-slate-800/50 mt-1.5 space-y-1">
+                          <div className="text-[9px] font-black uppercase tracking-widest text-amber-500/80 px-1 mb-1 flex items-center justify-between">
+                            <span>Akses Admin Panel</span>
+                            <span className="bg-amber-500 text-slate-950 px-1.5 py-0.2 rounded text-[8px] font-black">ADMIN</span>
+                          </div>
+                          <button
+                            id="menu-admin-dashboard-btn"
+                            onClick={() => {
+                              navigateTo('admin-dashboard');
+                              setRoleDropdownOpen(false);
+                            }}
+                            className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
+                              currentView === 'admin-dashboard'
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50 font-bold'
+                                : 'hover:bg-amber-500/10 text-amber-400 font-bold border border-amber-500/30'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <ShieldCheck className="w-4 h-4 text-amber-400" />
+                              <span>Dasbor Admin & Berkas</span>
+                            </div>
+                            <span className="text-xs text-amber-400">→</span>
+                          </button>
+                          <button
+                            id="menu-admin-critics-btn"
+                            onClick={() => {
+                              navigateTo('admin-critic-submissions');
+                              setRoleDropdownOpen(false);
+                            }}
+                            className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
+                              currentView === 'admin-critic-submissions'
+                                ? 'bg-red-500/20 text-red-300 border border-red-500/50 font-bold'
+                                : 'hover:bg-red-500/10 text-red-400 font-bold border border-red-500/30'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <ShieldCheck className="w-4 h-4 text-red-400" />
+                              <span>Verifikasi Kritikus Film</span>
+                            </div>
+                            <span className="text-xs text-red-400">→</span>
+                          </button>
+                        </div>
                       )}
                     </div>
                   )}
 
-                  {/* Section 3: Role Switcher Simulator (if logged in) */}
-                  {isLoggedIn && (
-                    <div className="py-2.5 border-b border-slate-800">
-                      <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2 px-1">
-                        Ganti Peran (Role Simulator)
-                      </div>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        <button
-                          onClick={() => {
-                            switchRole('warga_sotoy');
-                            setRoleDropdownOpen(false);
-                          }}
-                          className={`text-left p-1.5 rounded-lg text-[11px] transition-colors ${
-                            currentUser.role === 'warga_sotoy'
-                              ? 'bg-cyan-500/20 text-[#00F0FF] border border-cyan-500/40 font-bold'
-                              : 'hover:bg-slate-800 text-slate-300'
-                          }`}
-                        >
-                          Warga Sotoy
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            switchRole('si_paling_sotoy');
-                            setRoleDropdownOpen(false);
-                          }}
-                          className={`text-left p-1.5 rounded-lg text-[11px] transition-colors ${
-                            currentUser.role === 'si_paling_sotoy'
-                              ? 'bg-amber-500/20 text-[#FFD000] border border-amber-500/40 font-bold'
-                              : 'hover:bg-slate-800 text-slate-300'
-                          }`}
-                        >
-                          Si Paling Sotoy
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            switchRole('penulis_sotoy');
-                            setRoleDropdownOpen(false);
-                          }}
-                          className={`text-left p-1.5 rounded-lg text-[11px] transition-colors ${
-                            currentUser.role === 'penulis_sotoy'
-                              ? 'bg-pink-500/20 text-[#FF2E7E] border border-pink-500/40 font-bold'
-                              : 'hover:bg-slate-800 text-slate-300'
-                          }`}
-                        >
-                          Penulis Sotoy
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            switchRole('admin');
-                            setRoleDropdownOpen(false);
-                          }}
-                          className={`text-left p-1.5 rounded-lg text-[11px] transition-colors ${
-                            currentUser.role === 'admin'
-                              ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold'
-                              : 'hover:bg-slate-800 text-slate-300'
-                          }`}
-                        >
-                          Admin Sotoy
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
+                  {/* Section 3: Role Switcher Simulator (if logged in) removed */}
                   {/* Section 4: Logout Option */}
                   {isLoggedIn && (
                     <div className="pt-2">

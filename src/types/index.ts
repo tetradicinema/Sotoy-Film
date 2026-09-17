@@ -11,15 +11,19 @@ export interface User {
   roleTitle: string;
   bio: string;
   email?: string;
+  createdAt?: string;
   totalReviews: number;
   totalBuzz: number;
   followers?: string[]; // Array of user IDs
   following?: string[]; // Array of user IDs
   followersCount?: number;
   followingCount?: number;
+  hasFinishedOnboarding?: boolean;
+  watchlist?: string[]; // Saved film IDs
+  savedArticles?: string[]; // Saved article IDs
 }
 
-export type UserTab = 'watchlist' | 'reviews' | 'buzz' | 'articles' | 'activity' | 'community' | 'settings';
+export type UserTab = 'buzz' | 'reviews' | 'watchlist' | 'articles' | 'community' | 'activity' | 'settings' | 'admin' | 'writer';
 
 export type SettingsSubPage =
   | 'profile'
@@ -242,3 +246,14 @@ export interface CriticSubmission {
   date: string;
   status: 'pending' | 'approved' | 'rejected';
 }
+
+export interface UploadedFile {
+  id: string;
+  userId: string;
+  url: string;
+  name: string;
+  size: number;
+  type: string;
+  uploadedAt: string;
+}
+

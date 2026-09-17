@@ -21,9 +21,19 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-        getUserData().role == 'admin';
+      return isSignedIn() && (
+        request.auth.uid == 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' ||
+        request.auth.uid == 'I34eqzOmvsSdS2Rf7jpfxw1ZKeu1' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'admin')
+      );
+    }
+
+    function isWriter() {
+      return isSignedIn() && (
+        request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' ||
+        isAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role in ['penulis_sotoy', 'admin'])
+      );
     }
 
     function isValidId(id) {
@@ -47,6 +57,17 @@ service cloud.firestore {
         data.role in ['warga_sotoy', 'si_paling_sotoy', 'penulis_sotoy', 'admin'];
     }
 
+    function isValidFile(data) {
+      return data.keys().hasAll(['id', 'userId', 'url', 'name', 'size', 'type', 'uploadedAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.url is string && data.url.size() <= 2000000 &&
+        data.name is string && data.name.size() <= 256 &&
+        data.size is int &&
+        data.type is string && data.type.size() <= 128 &&
+        data.uploadedAt is string && data.uploadedAt.size() <= 128;
+    }
+
     function isValidArticle(data) {
       return data.keys().hasAll(['id', 'title', 'content', 'category', 'author']) &&
         data.id is string && data.id.size() <= 128 &&
@@ -55,7 +76,7 @@ service cloud.firestore {
         data.category is string &&
         data.author is map &&
         data.author.id is string &&
-        data.author.id == request.auth.uid;
+        (data.author.id == request.auth.uid || isAdmin() || request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02');
     }
 
     function isValidFilmItem(data) {
@@ -93,26 +114,37 @@ service cloud.firestore {
 
     // Rules for each collection
     match /users/{userId} {
-      allow read: if true;
-      allow create: if isSignedIn() && isOwner(userId) && isValidUser(incoming()) && incoming().role == 'warga_sotoy';
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isSignedIn() && isOwner(userId) && isValidUser(incoming());
       allow update: if isSignedIn() && (
-        isOwner(userId) && 
-        isValidUser(incoming()) && 
-        incoming().role == existing().role // cannot change own role
-      ) || isAdmin();
+        (isOwner(userId) && isValidUser(incoming()) && (incoming().role == existing().role || userId == '0PCmaBvJrzeaQgpf3sSTC4mnsh02')) || 
+        isAdmin()
+      );
       allow delete: if isAdmin();
+    }
+
+    match /files/{fileId} {
+      allow read, update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && ((incoming().userId == request.auth.uid && isValidFile(incoming())) || isAdmin());
     }
 
     match /articles/{articleId} {
       allow read: if true;
       allow create: if isSignedIn() && isValidId(articleId) && isValidArticle(incoming()) && (
-        getUserData().role in ['penulis_sotoy', 'admin']
+        isWriter() ||
+        isAdmin() ||
+        request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' ||
+        incoming().author.id == request.auth.uid
       );
       allow update: if isSignedIn() && isValidId(articleId) && isValidArticle(incoming()) && (
-        isOwner(existing().author.id) || isAdmin()
+        isOwner(existing().author.id) || 
+        isAdmin() || 
+        (request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' && (existing().author.id == request.auth.uid || incoming().author.id == request.auth.uid))
       );
       allow delete: if isSignedIn() && (
-        isOwner(existing().author.id) || isAdmin()
+        isOwner(existing().author.id) || 
+        isAdmin() || 
+        (request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' && existing().author.id == request.auth.uid)
       );
     }
 

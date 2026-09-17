@@ -16,6 +16,7 @@ import {
   Quote,
   X,
   AtSign,
+  User as UserIcon,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
@@ -433,17 +434,23 @@ export const BuzzDetailPage: React.FC = () => {
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <img
-                    src={currentUser.avatar}
-                    alt={currentUser.name}
-                    className="w-9 h-9 rounded-xl object-cover ring-2 ring-slate-700 shrink-0"
-                  />
+                  {isLoggedIn ? (
+                    <img
+                      src={currentUser.avatar}
+                      alt={currentUser.name}
+                      className="w-9 h-9 rounded-xl object-cover ring-2 ring-slate-700 shrink-0"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-slate-500 ring-2 ring-slate-700 shrink-0">
+                      <UserIcon className="w-4 h-4" />
+                    </div>
+                  )}
                   <div className="min-w-0">
                     <span className="text-xs font-bold text-white block truncate">
-                      Membalas sebagai {currentUser.name}
+                      {isLoggedIn ? `Membalas sebagai ${currentUser.name}` : 'Tamu Cinephile'}
                     </span>
                     <span className="text-[10px] text-[#00F0FF] font-mono">
-                      {currentUser.handle} • {currentUser.roleTitle}
+                      {isLoggedIn ? `${currentUser.handle} • ${currentUser.roleTitle}` : 'Silakan masuk untuk membalas'}
                     </span>
                   </div>
                 </div>

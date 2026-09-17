@@ -9,6 +9,7 @@ import {
   ArrowRight,
   TrendingUp,
   Share2,
+  User as UserIcon,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { AdBannerSlot } from './AdBannerSlot';
@@ -89,13 +90,24 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
         {/* Fast Quick-Post Box for Live Feed */}
         <form onSubmit={handleQuickBuzzSubmit} className="mb-4 bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
           <div className="flex items-center gap-2 mb-2">
-            <img
-              src={currentUser.avatar}
-              alt={currentUser.name}
-              className="w-6 h-6 rounded-full object-cover"
-            />
-            <span className="text-xs font-bold text-white">{currentUser.name}</span>
-            <span className="text-[10px] text-slate-400 font-medium">({currentUser.roleTitle.split(' ')[0]})</span>
+            {isLoggedIn ? (
+              <>
+                <img
+                  src={currentUser.avatar}
+                  alt={currentUser.name}
+                  className="w-6 h-6 rounded-full object-cover"
+                />
+                <span className="text-xs font-bold text-white">{currentUser.name}</span>
+                <span className="text-[10px] text-slate-400 font-medium">({currentUser.roleTitle.split(' ')[0]})</span>
+              </>
+            ) : (
+              <>
+                <div className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 shrink-0">
+                  <UserIcon className="w-3.5 h-3.5" />
+                </div>
+                <span className="text-xs font-bold text-slate-400">Tamu Cinephile</span>
+              </>
+            )}
           </div>
 
           <textarea

@@ -24,6 +24,8 @@ import { BusinessInquiriesPage } from './components/Pages/BusinessInquiriesPage'
 import { CriticSubmissionPage } from './components/Pages/CriticSubmissionPage';
 import { CriticCriteriaPage } from './components/Pages/CriticCriteriaPage';
 import { AdminCriticSubmissionsPage } from './components/Pages/AdminCriticSubmissionsPage';
+import { AdminDashboard } from './components/Admin/AdminDashboard';
+import { OnboardingPage } from './components/Pages/OnboardingPage';
 import { LoginModal } from './components/Modals/LoginModal';
 import { SocialShareModal } from './components/Modals/SocialShareModal';
 import { ComposeBuzzModal } from './components/Modals/ComposeBuzzModal';
@@ -58,13 +60,14 @@ const AppContent: React.FC = () => {
       <ComposeBuzzModal />
 
       {/* Main Navigation Bar */}
-      <Navbar />
+      {currentView !== 'onboarding' && <Navbar />}
 
       {/* Mobile Fixed Bottom Navigation Dock */}
-      <MobileBottomNav />
+      {currentView !== 'onboarding' && <MobileBottomNav />}
 
       {/* Main View Router */}
       <main className="flex-1">
+        {currentView === 'onboarding' && <OnboardingPage />}
         {currentView === 'home' && (
           <>
             <HeroSection />
@@ -92,10 +95,11 @@ const AppContent: React.FC = () => {
         {currentView === 'critic-submission' && <CriticSubmissionPage />}
         {currentView === 'critic-criteria' && <CriticCriteriaPage />}
         {currentView === 'admin-critic-submissions' && <AdminCriticSubmissionsPage />}
+        {currentView === 'admin-dashboard' && <AdminDashboard />}
       </main>
 
       {/* Footer */}
-      <Footer />
+      {currentView !== 'onboarding' && <Footer />}
     </div>
   );
 };

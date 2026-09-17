@@ -115,7 +115,7 @@ export const MobileBottomNav: React.FC = () => {
         {isLoggedIn ? (
           <button
             id="mobile-bottom-nav-profile"
-            onClick={() => navigateTo('user-profile', { userTab: 'activity' })}
+            onClick={() => navigateTo('user-profile', { userId: currentUser.id, userTab: 'buzz' })}
             className={`flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl transition-all duration-200 min-h-[44px] ${
               isProfileActive
                 ? 'text-white'

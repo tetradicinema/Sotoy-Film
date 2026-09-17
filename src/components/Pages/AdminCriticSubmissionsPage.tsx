@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useApp } from '../../context/AppContext';
+import { useApp, isUserAdmin } from '../../context/AppContext';
 import { ShieldCheck, CheckCircle2, XCircle, Search, ExternalLink, Filter } from 'lucide-react';
 
 interface Submission {
@@ -59,10 +59,10 @@ const mockSubmissions: Submission[] = [
 ];
 
 export const AdminCriticSubmissionsPage: React.FC = () => {
-  const { currentUser, showToast, criticSubmissions, updateCriticSubmissionStatus } = useApp();
+  const { currentUser, showToast, criticSubmissions, updateCriticSubmissionStatus, isAdmin } = useApp();
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
 
-  if (currentUser.role !== 'admin') {
+  if (!isAdmin && !isUserAdmin(currentUser)) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] text-center px-4">
         <div>

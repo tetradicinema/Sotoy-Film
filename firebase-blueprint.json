@@ -117,12 +117,31 @@
         "status": { "type": "string", "enum": ["pending", "approved", "rejected"] }
       },
       "required": ["id", "userId", "userName", "userEmail", "status"]
+    },
+    "UploadedFile": {
+      "title": "UploadedFile",
+      "description": "Uploaded media file metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "url": { "type": "string" },
+        "name": { "type": "string" },
+        "size": { "type": "integer" },
+        "type": { "type": "string" },
+        "uploadedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "url", "name", "size", "type", "uploadedAt"]
     }
   },
   "firestore": {
     "/users/{userId}": {
       "schema": "User",
       "description": "Profiles of the users"
+    },
+    "/files/{fileId}": {
+      "schema": "UploadedFile",
+      "description": "Metadata for user uploaded files and media"
     },
     "/articles/{articleId}": {
       "schema": "Article",

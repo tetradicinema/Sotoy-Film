@@ -15,6 +15,7 @@ import {
   UserTab,
   SettingsSubPage,
   CriticSubmission,
+  UploadedFile,
 } from '../types';
 import {
   INITIAL_USERS,
@@ -25,7 +26,7 @@ import {
   INITIAL_RATINGS,
 } from '../data/mockData';
 import { ShareData } from '../components/Modals/SocialShareModal';
-import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
+import { db, auth, storage, handleFirestoreError, OperationType } from '../lib/firebase';
 import {
   collection,
   doc,
@@ -34,8 +35,38 @@ import {
   getDocs,
   deleteDoc,
   onSnapshot,
+  query,
+  where,
 } from 'firebase/firestore';
-import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { 
+  onAuthStateChanged, 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  signOut,
+  GoogleAuthProvider,
+  signInWithPopup
+} from 'firebase/auth';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+
+export const ADMIN_UIDS = ['CsG2CY2TaIZmG7yuPfzAxmRYrlY2', 'I34eqzOmvsSdS2Rf7jpfxw1ZKeu1'];
+export const ADMIN_EMAILS = ['eksposurmedia@gmail.com'];
+export const WRITER_UIDS = ['0PCmaBvJrzeaQgpf3sSTC4mnsh02'];
+
+export const isUserAdmin = (user?: Partial<User> | null, fbUid?: string, fbEmail?: string): boolean => {
+  if (user?.role === 'admin') return true;
+  if (user?.id && ADMIN_UIDS.includes(user.id)) return true;
+  if (fbUid && ADMIN_UIDS.includes(fbUid)) return true;
+  if (user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())) return true;
+  if (fbEmail && ADMIN_EMAILS.includes(fbEmail.toLowerCase())) return true;
+  return false;
+};
+
+export const isUserWriter = (user?: Partial<User> | null, fbUid?: string): boolean => {
+  if (user?.role === 'penulis_sotoy') return true;
+  if (user?.id && WRITER_UIDS.includes(user.id)) return true;
+  if (fbUid && WRITER_UIDS.includes(fbUid)) return true;
+  return false;
+};
 
 export type AppView =
   | 'home'
@@ -56,18 +87,24 @@ export type AppView =
   | 'business-inquiries'
   | 'critic-submission'
   | 'critic-criteria'
-  | 'admin-critic-submissions';
+  | 'admin-critic-submissions'
+  | 'admin-dashboard'
+  | 'writer-dashboard'
+  | 'onboarding';
 
 interface AppContextType {
   currentUser: User;
   isLoggedIn: boolean;
+  isAdmin: boolean;
+  isWriter: boolean;
   loginModalOpen: boolean;
   setLoginModalOpen: (open: boolean) => void;
   isComposeBuzzOpen: boolean;
   setIsComposeBuzzOpen: (open: boolean) => void;
-  login: (roleKey?: string) => Promise<void>;
   logout: () => Promise<void>;
-  switchRole: (role: UserRole) => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<boolean>;
+  signUpWithEmail: (email: string, password: string, name: string, handle: string) => Promise<boolean>;
+  signInWithGoogle: () => Promise<boolean>;
   articles: Article[];
   films: FilmItem[];
   buzzList: BuzzPost[];
@@ -85,7 +122,8 @@ interface AppContextType {
   isFilmSaved: (filmId: string) => boolean;
   updateUserBio: (newBio: string) => Promise<void>;
   updateUserProfile: (updates: { name?: string; handle?: string; avatar?: string; bio?: string }) => Promise<void>;
-  uploadProfilePhoto: (base64Data: string) => Promise<void>;
+  uploadProfilePhoto: (base64Data: string, fileName?: string, fileSize?: number, fileType?: string) => Promise<void>;
+  files: UploadedFile[];
   userSettings: UserSettings;
   updateUserSettings: (updates: Partial<UserSettings>) => void;
   activeUserTab: UserTab;
@@ -138,6 +176,7 @@ interface AppContextType {
   closeShareModal: () => void;
   // Content creation
   addArticle: (newArticle: Omit<Article, 'id' | 'publishedAt' | 'views' | 'likes' | 'commentsCount'>) => Promise<boolean>;
+  updateArticle: (id: string, updatedFields: Partial<Article>) => Promise<boolean>;
   deleteArticle: (id: string) => Promise<void>;
   addBuzzPost: (
     content: string,
@@ -160,6 +199,7 @@ interface AppContextType {
   setBuzzFeedTab: (tab: 'for-you' | 'following' | 'saved' | 'liked' | 'trending') => void;
   toastMessage: string | null;
   showToast: (msg: string) => void;
+  finishOnboarding: (updates: { name: string; handle: string; bio: string; avatar?: string; favoriteGenres?: string[] }) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -169,7 +209,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [currentUser, setCurrentUser] = useState<User>(() => INITIAL_USERS.warga);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     const saved = localStorage.getItem('sotoy_is_logged_in');
-    return saved !== null ? saved === 'true' : true;
+    return saved !== null ? saved === 'true' : false;
   });
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [isComposeBuzzOpen, setIsComposeBuzzOpen] = useState(false);
@@ -177,11 +217,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Firestore Realtime Collections States
   const [watchlist, setWatchlist] = useState<string[]>(() => {
     const saved = localStorage.getItem('sotoy_watchlist');
-    return saved ? JSON.parse(saved) : ['film-1', 'film-3'];
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      // Clean legacy mock defaults if user never added them explicitly
+      if (Array.isArray(parsed) && parsed.length === 2 && parsed.includes('film-1') && parsed.includes('film-3')) {
+        localStorage.setItem('sotoy_watchlist', JSON.stringify([]));
+        return [];
+      }
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
   });
   const [savedArticles, setSavedArticles] = useState<string[]>(() => {
     const saved = localStorage.getItem('sotoy_saved_articles');
-    return saved ? JSON.parse(saved) : ['art-1', 'art-3'];
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length === 2 && parsed.includes('art-1') && parsed.includes('art-3')) {
+        localStorage.setItem('sotoy_saved_articles', JSON.stringify([]));
+        return [];
+      }
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
   });
   const [articles, setArticles] = useState<Article[]>([]);
   const [films, setFilms] = useState<FilmItem[]>([]);
@@ -189,9 +250,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [ratings, setRatings] = useState<UserRating[]>([]);
   const [criticSubmissions, setCriticSubmissions] = useState<CriticSubmission[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [files, setFiles] = useState<UploadedFile[]>([]);
 
   // Local Preferences States
-  const [activeUserTab, setActiveUserTab] = useState<UserTab>('watchlist');
+  const [activeUserTab, setActiveUserTab] = useState<UserTab>('buzz');
   const [activeSettingsTab, setActiveSettingsTab] = useState<SettingsSubPage>('profile');
   const [userSettings, setUserSettings] = useState<UserSettings>(() => {
     const saved = localStorage.getItem('sotoy_user_settings');
@@ -222,12 +284,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [followingIds, setFollowingIds] = useState<string[]>(() => {
     const saved = localStorage.getItem('sotoy_following_ids');
-    return saved ? JSON.parse(saved) : ['u-2', 'u-4', 'u-6'];
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      // Clean legacy mock defaults
+      if (Array.isArray(parsed) && parsed.some(id => ['u-2', 'u-4', 'u-6'].includes(id))) {
+        localStorage.setItem('sotoy_following_ids', JSON.stringify([]));
+        return [];
+      }
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
   });
 
   const [followersIds, setFollowersIds] = useState<string[]>(() => {
     const saved = localStorage.getItem('sotoy_followers_ids');
-    return saved ? JSON.parse(saved) : ['u-2', 'u-3', 'u-5'];
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      // Clean legacy mock defaults
+      if (Array.isArray(parsed) && parsed.some(id => ['u-2', 'u-3', 'u-5'].includes(id))) {
+        localStorage.setItem('sotoy_followers_ids', JSON.stringify([]));
+        return [];
+      }
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
   });
 
   const [shareModalData, setShareModalData] = useState<ShareData | null>(null);
@@ -410,223 +494,179 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     );
 
-    const unsubCriticSubmissions = onSnapshot(
-      collection(db, 'criticSubmissions'),
-      (snapshot) => {
-        const items: CriticSubmission[] = [];
-        snapshot.forEach(doc => items.push(doc.data() as CriticSubmission));
-        setCriticSubmissions(items.sort((a, b) => b.id.localeCompare(a.id)));
-      },
-      (err) => {
-        console.warn('[Firestore] criticSubmissions restricted or unavailable:', err.message);
-      }
-    );
-
     return () => {
       unsubFilms();
       unsubArticles();
       unsubBuzz();
       unsubRatings();
       unsubUsers();
-      unsubCriticSubmissions();
     };
   }, []);
 
   // Initialize Firebase Auth & Real User profile sync
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, async (fbUser) => {
-      if (fbUser) {
+      if (fbUser && !fbUser.isAnonymous) {
         const uid = fbUser.uid;
         const userDocRef = doc(db, 'users', uid);
         try {
           const userSnap = await getDoc(userDocRef);
           if (userSnap.exists()) {
-            setCurrentUser(userSnap.data() as User);
+            const data = userSnap.data() as User;
+            const isAdminRole = isUserAdmin(data, uid, fbUser.email || undefined);
+            const isWriterRole = !isAdminRole && isUserWriter(data, uid);
+            if (isAdminRole && data.role !== 'admin') {
+              data.role = 'admin';
+              data.roleTitle = 'Head Admin & Lead Editor';
+            } else if (isWriterRole && data.role !== 'penulis_sotoy') {
+              data.role = 'penulis_sotoy';
+              data.roleTitle = 'Penulis Sotoy (Jurnalis Film & Pop-Culture)';
+            }
+            
+            // Clean up any legacy mock names/handles from previous tests
+            if (data.name === 'Chief Admin Sotoy' && fbUser.displayName) {
+              data.name = fbUser.displayName;
+              data.handle = '@' + (fbUser.displayName.toLowerCase().replace(/[^a-z0-9_]/g, '') || 'warga_' + uid.slice(0, 4));
+              data.role = 'warga_sotoy';
+              data.roleTitle = 'Warga Sotoy (Penonton Santai)';
+              try { await setDoc(userDocRef, data, { merge: true }); } catch (e) {}
+            }
+
+            // Clean mock IDs if present in followers/following
+            const cleanFollowing = Array.isArray(data.following) ? data.following.filter(id => !['u-2', 'u-4', 'u-6'].includes(id)) : [];
+            const cleanFollowers = Array.isArray(data.followers) ? data.followers.filter(id => !['u-2', 'u-3', 'u-5'].includes(id)) : [];
+            
+            setFollowingIds(cleanFollowing);
+            setFollowersIds(cleanFollowers);
+            localStorage.setItem('sotoy_following_ids', JSON.stringify(cleanFollowing));
+            localStorage.setItem('sotoy_followers_ids', JSON.stringify(cleanFollowers));
+
+            // Clean legacy mock watchlist if user hasn't modified it
+            setWatchlist(prev => {
+              if (prev.length === 2 && prev.includes('film-1') && prev.includes('film-3')) {
+                localStorage.setItem('sotoy_watchlist', JSON.stringify([]));
+                return [];
+              }
+              return prev;
+            });
+
+            setSavedArticles(prev => {
+              if (prev.length === 2 && prev.includes('art-1') && prev.includes('art-3')) {
+                localStorage.setItem('sotoy_saved_articles', JSON.stringify([]));
+                return [];
+              }
+              return prev;
+            });
+
+            setCurrentUser(data);
+
+            // Redirect to onboarding if not finished
+            if (data.hasFinishedOnboarding === false && currentView !== 'onboarding') {
+              setCurrentView('onboarding');
+            }
           } else {
-            // First time user registration
+            // First time user registration - start completely fresh as a clean new account
+            const isAdminRole = isUserAdmin(null, uid, fbUser.email || undefined);
+            const isWriterRole = !isAdminRole && isUserWriter(null, uid);
             const defaultUser: User = {
               id: uid,
-              name: 'Warga Sotoy ' + uid.slice(0, 4),
-              handle: '@warga_' + uid.slice(0, 4).toLowerCase(),
-              avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-              role: 'warga_sotoy',
-              roleTitle: 'Warga Sotoy (Penonton Santai)',
-              bio: 'Cinephile baru mendarat di Sotoy Film!',
-              email: fbUser.email || `warga_${uid.slice(0, 4)}@sotoyfilm.id`,
+              name: fbUser.displayName || (isAdminRole ? 'Admin Utama' : isWriterRole ? 'Penulis Sotoy' : 'Warga Baru'),
+              handle: '@' + (fbUser.displayName ? fbUser.displayName.toLowerCase().replace(/[^a-z0-9_]/g, '') : (fbUser.email ? fbUser.email.split('@')[0] : 'user_' + uid.slice(0, 4))),
+              avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+              role: isAdminRole ? 'admin' : (isWriterRole ? 'penulis_sotoy' : 'warga_sotoy'),
+              roleTitle: isAdminRole ? 'Head Admin & Lead Editor' : (isWriterRole ? 'Penulis Sotoy (Jurnalis Film & Pop-Culture)' : 'Warga Sotoy (Penonton Santai)'),
+              bio: isAdminRole ? 'Menjaga ketertiban obrolan sotoy seantero jagat perfilman.' : (isWriterRole ? 'Menulis kabar terbaru, ulasan mendalam, dan kurasi film di Sotoy Film.' : 'Cinephile baru mendarat di Sotoy Film!'),
+              email: fbUser.email || `user_${uid.slice(0, 4)}@sotoyfilm.id`,
+              createdAt: new Date().toISOString(),
               totalReviews: 0,
               totalBuzz: 0,
               followers: [],
               following: [],
+              followersCount: 0,
+              followingCount: 0,
+              hasFinishedOnboarding: true,
             };
             try { await setDoc(userDocRef, defaultUser); } catch (e) { /* ignore write permission */ }
             setCurrentUser(defaultUser);
+            setFollowingIds([]);
+            setFollowersIds([]);
+            setWatchlist([]);
+            setSavedArticles([]);
+            localStorage.setItem('sotoy_watchlist', JSON.stringify([]));
+            localStorage.setItem('sotoy_saved_articles', JSON.stringify([]));
+            localStorage.setItem('sotoy_following_ids', JSON.stringify([]));
+            localStorage.setItem('sotoy_followers_ids', JSON.stringify([]));
           }
+          setIsLoggedIn(true);
         } catch (err) {
           console.warn('[Auth] Error getting user profile: ', err);
         }
       } else {
-        // Sign in anonymously if permitted, otherwise run as guest
-        try {
-          await signInAnonymously(auth);
-        } catch (err) {
-          console.warn('[Auth] Anonymous sign-in not enabled on Firebase project; running in client guest mode.');
-        }
+        // Visitor / Not logged in
+        setIsLoggedIn(false);
+        setCurrentUser(INITIAL_USERS.warga);
+        setFollowingIds([]);
+        setFollowersIds([]);
+        setWatchlist([]);
+        setSavedArticles([]);
       }
     });
     return () => unsubAuth();
   }, []);
 
-  // Login Simulator integrating actual Firestore synchronization
-  const login = async (roleKey?: string) => {
-    let targetRole: UserRole = 'warga_sotoy';
-    let name = 'Budi Cinephile';
-    let handle = '@budisuka_film';
-    let avatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
-    let roleTitle = 'Warga Sotoy (Penonton Santai)';
-    let bio = 'Nonton apa aja yang lagi rame. Nggak suka spoiler!';
+  // Real-time listener for files and critic submissions based on user role
+  useEffect(() => {
+    let unsubFiles = () => {};
+    let unsubCritic = () => {};
 
-    if (roleKey === 'critic' || roleKey === 'si_paling_sotoy') {
-      targetRole = 'si_paling_sotoy';
-      name = 'Rian Sinematografer';
-      handle = '@riansinotoy';
-      avatar = 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=200&q=80';
-      roleTitle = 'Si Paling Sotoy (Kritikus & Kurator)';
-      bio = 'Menilai film dari sudut blocking kamera, color grade, dan pacing. 10+ tahun nonton festival.';
-    } else if (roleKey === 'writer' || roleKey === 'penulis_sotoy') {
-      targetRole = 'penulis_sotoy';
-      name = 'Dinda Redaksi';
-      handle = '@dindaredaksi';
-      avatar = 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&q=80';
-      roleTitle = 'Penulis Sotoy (Jurnalis Film & Pop-Culture)';
-      bio = 'Editor & penulis feature di Sotoy Film. Pecinta film noir dan anime retro 90-an.';
-    } else if (roleKey === 'admin') {
-      targetRole = 'admin';
-      name = 'Chief Admin Sotoy';
-      handle = '@adminsotoy';
-      avatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80';
-      roleTitle = 'Head Admin & Lead Editor';
-      bio = 'Menjaga ketertiban obrolan sotoy seantero jagat perfilman.';
-    }
+    if (isLoggedIn && currentUser?.id) {
+      const isAdminUser = isUserAdmin(currentUser);
+      // Admin queries all files, regular users query only their own files
+      const filesQuery = isAdminUser
+        ? collection(db, 'files')
+        : query(collection(db, 'files'), where('userId', '==', currentUser.id));
 
-    const uid = auth.currentUser ? auth.currentUser.uid : (localStorage.getItem('sotoy_uid') || `user-${Date.now()}`);
-    localStorage.setItem('sotoy_uid', uid);
-
-    const updatedUser: User = {
-      id: uid,
-      name,
-      handle,
-      avatar,
-      role: targetRole,
-      roleTitle,
-      bio,
-      email: `${targetRole}_${uid.slice(0, 4)}@sotoyfilm.id`,
-      totalReviews: 12,
-      totalBuzz: 24,
-      followers: [],
-      following: [],
-    };
-
-    try {
-      await setDoc(doc(db, 'users', uid), updatedUser);
-    } catch (err) {
-      console.warn('[Firestore] User profile sync skipped:', err);
-    }
-
-    setCurrentUser(updatedUser);
-    setIsLoggedIn(true);
-    setLoginModalOpen(false);
-    localStorage.setItem('sotoy_is_logged_in', 'true');
-    localStorage.setItem('sotoy_role', roleKey || 'warga');
-
-    if (targetRole === 'warga_sotoy') {
-      navigateTo('community-feed');
-      showToast(`Selamat datang, ${name}! Langsung diarahkan ke Buzz Feed.`);
-    } else if (targetRole === 'si_paling_sotoy') {
-      navigateTo('film-database');
-      showToast(`Selamat datang, ${name}! Langsung diarahkan ke Database Film.`);
-    } else {
-      navigateTo('home');
-      showToast(`Selamat datang, ${name}! Beranda terbuka dengan akses Menulis Artikel.`);
-    }
-  };
-
-  const logout = async () => {
-    setIsLoggedIn(false);
-    localStorage.setItem('sotoy_is_logged_in', 'false');
-    navigateTo('home');
-    showToast('Anda telah beralih ke mode Pengunjung (Visitor). Beranda ditampilkan.');
-  };
-
-  const switchRole = async (role: UserRole) => {
-    let targetRole: UserRole = 'warga_sotoy';
-    let name = 'Budi Cinephile';
-    let handle = '@budisuka_film';
-    let avatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
-    let roleTitle = 'Warga Sotoy (Penonton Santai)';
-    let bio = 'Nonton apa aja yang lagi rame. Nggak suka spoiler!';
-
-    if (role === 'si_paling_sotoy') {
-      targetRole = 'si_paling_sotoy';
-      name = 'Rian Sinematografer';
-      handle = '@riansinotoy';
-      avatar = 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=200&q=80';
-      roleTitle = 'Si Paling Sotoy (Kritikus & Kurator)';
-      bio = 'Menilai film dari sudut blocking kamera, color grade, dan pacing. 10+ tahun nonton festival.';
-    } else if (role === 'penulis_sotoy') {
-      targetRole = 'penulis_sotoy';
-      name = 'Dinda Redaksi';
-      handle = '@dindaredaksi';
-      avatar = 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&q=80';
-      roleTitle = 'Penulis Sotoy (Jurnalis Film & Pop-Culture)';
-      bio = 'Editor & penulis feature di Sotoy Film. Pecinta film noir dan anime retro 90-an.';
-    } else if (role === 'admin') {
-      targetRole = 'admin';
-      name = 'Chief Admin Sotoy';
-      handle = '@adminsotoy';
-      avatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80';
-      roleTitle = 'Head Admin & Lead Editor';
-      bio = 'Menjaga ketertiban obrolan sotoy seantero jagat perfilman.';
-    }
-
-    if (auth.currentUser) {
-      const uid = auth.currentUser.uid;
-      const updatedUser: User = {
-        id: uid,
-        name,
-        handle,
-        avatar,
-        role: targetRole,
-        roleTitle,
-        bio,
-        email: `${targetRole}_${uid.slice(0, 4)}@sotoyfilm.id`,
-        totalReviews: 12,
-        totalBuzz: 24,
-        followers: [],
-        following: [],
-      };
-
-      try {
-        await setDoc(doc(db, 'users', uid), updatedUser);
-        setCurrentUser(updatedUser);
-        setIsLoggedIn(true);
-        localStorage.setItem('sotoy_is_logged_in', 'true');
-        localStorage.setItem('sotoy_role', role === 'si_paling_sotoy' ? 'critic' : role === 'penulis_sotoy' ? 'writer' : role === 'admin' ? 'admin' : 'warga');
-
-        if (role === 'warga_sotoy') {
-          navigateTo('community-feed');
-          showToast(`Beralih ke peran: ${roleTitle} (Buzz Feed dibuka)`);
-        } else if (role === 'si_paling_sotoy') {
-          navigateTo('film-database');
-          showToast(`Beralih ke peran: ${roleTitle} (Database Film dibuka)`);
-        } else {
-          navigateTo('home');
-          showToast(`Beralih ke peran: ${roleTitle} (Beranda & Tombol Tulis Artikel aktif)`);
+      unsubFiles = onSnapshot(
+        filesQuery,
+        (snapshot) => {
+          const items: UploadedFile[] = [];
+          snapshot.forEach((doc) => {
+            items.push(doc.data() as UploadedFile);
+          });
+          setFiles(items.sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt)));
+        },
+        (err) => {
+          console.warn('[Firestore] files subscription restricted/unavailable:', err.message);
         }
-      } catch (err) {
-        console.error('[Firestore] Error switching user role: ', err);
-      }
+      );
+
+      // Admin queries all critic submissions, regular users query only their own submissions
+      const criticQuery = isAdminUser
+        ? collection(db, 'criticSubmissions')
+        : query(collection(db, 'criticSubmissions'), where('userId', '==', currentUser.id));
+
+      unsubCritic = onSnapshot(
+        criticQuery,
+        (snapshot) => {
+          const items: CriticSubmission[] = [];
+          snapshot.forEach((doc) => {
+            items.push(doc.data() as CriticSubmission);
+          });
+          setCriticSubmissions(items.sort((a, b) => b.id.localeCompare(a.id)));
+        },
+        (err) => {
+          console.warn('[Firestore] criticSubmissions subscription restricted/unavailable:', err.message);
+        }
+      );
+    } else {
+      setFiles([]);
+      setCriticSubmissions([]);
     }
-  };
+    return () => {
+      unsubFiles();
+      unsubCritic();
+    };
+  }, [isLoggedIn, currentUser?.id, currentUser?.role, currentUser?.email]);
 
   const toggleWatchlist = (filmId: string) => {
     if (!isLoggedIn) {
@@ -702,15 +742,289 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const uploadProfilePhoto = async (base64Data: string) => {
+  const finishOnboarding = async (updates: {
+    name: string;
+    handle: string;
+    bio: string;
+    avatar?: string;
+    favoriteGenres?: string[];
+  }) => {
+    const cleanHandle = updates.handle.trim().startsWith('@') ? updates.handle.trim() : `@${updates.handle.trim()}`;
+    const cleanName = updates.name.trim();
+    const cleanBio = updates.bio.trim();
+    const cleanAvatar = updates.avatar || currentUser.avatar;
+
+    const updatedUser: User = {
+      ...currentUser,
+      name: cleanName,
+      handle: cleanHandle,
+      bio: cleanBio,
+      avatar: cleanAvatar,
+      hasFinishedOnboarding: true,
+    };
+
+    if (updates.favoriteGenres && updates.favoriteGenres.length > 0) {
+      updateUserSettings({ favoriteGenres: updates.favoriteGenres });
+    }
+
+    if (auth.currentUser) {
+      const uid = auth.currentUser.uid;
+      const userDocRef = doc(db, 'users', uid);
+      try {
+        await setDoc(userDocRef, updatedUser, { merge: true });
+      } catch (err) {
+        console.warn('[Onboarding] Error saving to Firestore, continuing with local state:', err);
+      }
+    }
+
+    setCurrentUser(updatedUser);
+    localStorage.setItem('sotoy_current_user', JSON.stringify(updatedUser));
+    showToast('Profil kamu sudah siap! Selamat datang di Sotoy Film. 🎬');
+    setCurrentView('home');
+  };
+
+  const uploadProfilePhoto = async (
+    base64Data: string,
+    fileName?: string,
+    fileSize?: number,
+    fileType?: string
+  ) => {
     if (!auth.currentUser) return;
-    const updated = { ...currentUser, avatar: base64Data };
     try {
+      showToast('Sedang mengunggah foto profil ke Firebase Storage...');
+      const actualName = fileName || `profile_photo_${Date.now()}.jpg`;
+      const actualSize = fileSize || Math.round((base64Data.length * 3) / 4);
+      const actualType = fileType || 'image/jpeg';
+
+      const storagePath = `profile_photos/${auth.currentUser.uid}/${Date.now()}_${actualName}`;
+      const storageRef = ref(storage, storagePath);
+      
+      // Upload using data_url format
+      await uploadString(storageRef, base64Data, 'data_url');
+      const downloadURL = await getDownloadURL(storageRef);
+      
+      // Create a tracking record in the 'files' Firestore collection
+      const fileId = doc(collection(db, 'files')).id;
+      const fileRecord: UploadedFile = {
+        id: fileId,
+        userId: auth.currentUser.uid,
+        url: downloadURL,
+        name: actualName,
+        size: actualSize,
+        type: actualType,
+        uploadedAt: new Date().toISOString()
+      };
+      await setDoc(doc(db, 'files', fileId), fileRecord);
+
+      const updated = { ...currentUser, avatar: downloadURL };
       await setDoc(doc(db, 'users', auth.currentUser.uid), updated);
       setCurrentUser(updated);
-      showToast('Foto profil dari perangkat kamu berhasil diunggah!');
+      showToast('Foto profil berhasil diunggah ke Firebase Storage & terindeks di database! 🎉');
     } catch (err) {
+      console.error('[Storage] Error uploading profile photo: ', err);
+      showToast('Gagal mengunggah foto profil ke Firebase Storage.');
       handleFirestoreError(err, OperationType.UPDATE, `users/${auth.currentUser.uid}`);
+    }
+  };
+
+  const signInWithEmail = async (email: string, password: string): Promise<boolean> => {
+    try {
+      showToast('Menghubungkan ke Firebase Auth...');
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      if (userCredential.user) {
+        // Fetch profile
+        const userDocRef = doc(db, 'users', userCredential.user.uid);
+        const userSnap = await getDoc(userDocRef);
+        if (userSnap.exists()) {
+          setCurrentUser(userSnap.data() as User);
+        }
+        setIsLoggedIn(true);
+        localStorage.setItem('sotoy_is_logged_in', 'true');
+        showToast('Login berhasil! Selamat datang kembali. 🎉');
+        setLoginModalOpen(false);
+        return true;
+      }
+      return false;
+    } catch (err: any) {
+      console.error('[Auth] Sign-in error: ', err);
+      let errMsg = 'Gagal masuk. Mohon periksa email dan password Anda.';
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+        errMsg = 'Email atau password salah. Pastikan Anda sudah terdaftar.';
+      } else if (err.code === 'auth/invalid-email') {
+        errMsg = 'Format email tidak valid.';
+      }
+      showToast(errMsg);
+      return false;
+    }
+  };
+
+  const signUpWithEmail = async (
+    email: string,
+    password: string,
+    name: string,
+    handle: string
+  ): Promise<boolean> => {
+    try {
+      showToast('Membuat akun di Firebase Auth...');
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      if (userCredential.user) {
+        const uid = userCredential.user.uid;
+        
+        const isAdminUID = isUserAdmin(null, uid, email);
+        const isWriterUID = !isAdminUID && isUserWriter(null, uid);
+        const role: UserRole = isAdminUID ? 'admin' : (isWriterUID ? 'penulis_sotoy' : 'warga_sotoy');
+        const roleTitle = isAdminUID ? 'Head Admin & Lead Editor' : (isWriterUID ? 'Penulis Sotoy (Jurnalis Film & Pop-Culture)' : 'Warga Sotoy (Penonton Santai)');
+        const bio = isAdminUID ? 'Menjaga ketertiban obrolan sotoy seantero jagat perfilman.' : (isWriterUID ? 'Menulis kabar terbaru, ulasan mendalam, dan kurasi film di Sotoy Film.' : 'Cinephile baru mendarat di Sotoy Film!');
+        const avatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
+        
+        const newUser: User = {
+          id: uid,
+          name: name.trim(),
+          handle: handle.trim().startsWith('@') ? handle.trim() : `@${handle.trim()}`,
+          avatar,
+          role,
+          roleTitle,
+          bio,
+          email: email.trim(),
+          createdAt: new Date().toISOString(),
+          totalReviews: 0,
+          totalBuzz: 0,
+          followers: [],
+          following: [],
+          hasFinishedOnboarding: false,
+        };
+
+        const userDocRef = doc(db, 'users', uid);
+        await setDoc(userDocRef, newUser);
+        setCurrentUser(newUser);
+        setIsLoggedIn(true);
+        localStorage.setItem('sotoy_is_logged_in', 'true');
+        showToast('Akun berhasil dibuat! Mari lengkapi profilmu. 🎬');
+        setLoginModalOpen(false);
+        setCurrentView('onboarding');
+        return true;
+      }
+      return false;
+    } catch (err: any) {
+      console.error('[Auth] Sign-up error: ', err);
+      let errMsg = 'Gagal mendaftar. Mohon coba lagi.';
+      if (err.code === 'auth/email-already-in-use') {
+        errMsg = 'Email sudah terdaftar. Silakan login.';
+      } else if (err.code === 'auth/weak-password') {
+        errMsg = 'Password terlalu lemah (minimal 6 karakter).';
+      } else if (err.code === 'auth/invalid-email') {
+        errMsg = 'Format email tidak valid.';
+      } else if (err.code === 'auth/admin-restricted-operation') {
+        errMsg = 'Pendaftaran dibatasi! Aktifkan "Enable create (sign-up)" di Firebase Console -> Authentication -> Settings -> User Actions.';
+      }
+      showToast(errMsg);
+      return false;
+    }
+  };
+
+  const signInWithGoogle = async (): Promise<boolean> => {
+    try {
+      showToast('Menghubungkan ke Google...');
+      const provider = new GoogleAuthProvider();
+      const userCredential = await signInWithPopup(auth, provider);
+      if (userCredential.user) {
+        const uid = userCredential.user.uid;
+        const userDocRef = doc(db, 'users', uid);
+        const userSnap = await getDoc(userDocRef);
+        
+        if (userSnap.exists()) {
+          const existingData = userSnap.data() as User;
+          setCurrentUser(existingData);
+          const cleanFollowing = Array.isArray(existingData.following) ? existingData.following.filter(id => !['u-2', 'u-4', 'u-6'].includes(id)) : [];
+          const cleanFollowers = Array.isArray(existingData.followers) ? existingData.followers.filter(id => !['u-2', 'u-3', 'u-5'].includes(id)) : [];
+          setFollowingIds(cleanFollowing);
+          setFollowersIds(cleanFollowers);
+          localStorage.setItem('sotoy_following_ids', JSON.stringify(cleanFollowing));
+          localStorage.setItem('sotoy_followers_ids', JSON.stringify(cleanFollowers));
+
+          if (existingData.hasFinishedOnboarding === false) {
+            setCurrentView('onboarding');
+          }
+        } else {
+          // First-time signup with Google! Clean, fresh new account
+          const isAdminRole = isUserAdmin(null, uid, userCredential.user.email || undefined);
+          const isWriterRole = !isAdminRole && isUserWriter(null, uid);
+          const cleanHandle = '@' + (userCredential.user.displayName ? userCredential.user.displayName.toLowerCase().replace(/[^a-z0-9_]/g, '') : (userCredential.user.email ? userCredential.user.email.split('@')[0] : 'user_' + uid.slice(0, 4)));
+          const newUser: User = {
+            id: uid,
+            name: userCredential.user.displayName || (isAdminRole ? 'Admin Utama' : isWriterRole ? 'Penulis Sotoy' : 'Warga Baru'),
+            handle: cleanHandle,
+            avatar: userCredential.user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+            role: isAdminRole ? 'admin' : (isWriterRole ? 'penulis_sotoy' : 'warga_sotoy'),
+            roleTitle: isAdminRole ? 'Head Admin & Lead Editor' : (isWriterRole ? 'Penulis Sotoy (Jurnalis Film & Pop-Culture)' : 'Warga Sotoy (Penonton Santai)'),
+            bio: isAdminRole ? 'Menjaga ketertiban obrolan sotoy seantero jagat perfilman.' : (isWriterRole ? 'Menulis kabar terbaru, ulasan mendalam, dan kurasi film di Sotoy Film.' : 'Cinephile baru mendarat di Sotoy Film!'),
+            email: userCredential.user.email || '',
+            createdAt: new Date().toISOString(),
+            totalReviews: 0,
+            totalBuzz: 0,
+            followers: [],
+            following: [],
+            followersCount: 0,
+            followingCount: 0,
+            hasFinishedOnboarding: false,
+          };
+          try {
+            await setDoc(userDocRef, newUser);
+          } catch (e) {
+            console.warn('[Auth] Firestore setDoc fallback:', e);
+          }
+          setCurrentUser(newUser);
+          setFollowingIds([]);
+          setFollowersIds([]);
+          setWatchlist([]);
+          setSavedArticles([]);
+          localStorage.setItem('sotoy_watchlist', JSON.stringify([]));
+          localStorage.setItem('sotoy_saved_articles', JSON.stringify([]));
+          localStorage.setItem('sotoy_following_ids', JSON.stringify([]));
+          localStorage.setItem('sotoy_followers_ids', JSON.stringify([]));
+          setCurrentView('onboarding');
+        }
+        setIsLoggedIn(true);
+        localStorage.setItem('sotoy_is_logged_in', 'true');
+        showToast('Berhasil masuk dengan Google! 🎉');
+        setLoginModalOpen(false);
+        return true;
+      }
+      return false;
+    } catch (err: any) {
+      console.error('[Auth] Google sign-in error: ', err);
+      let errMsg = 'Gagal masuk dengan Google. Mohon coba lagi.';
+      if (err.code === 'auth/popup-blocked') {
+        errMsg = 'Popup diblokir oleh browser. Harap aktifkan popup untuk situs ini.';
+      } else if (err.code === 'auth/admin-restricted-operation') {
+        errMsg = 'Pendaftaran dibatasi! Silakan aktifkan opsi pembuatan user / Sign-Up di Firebase Console.';
+      }
+      showToast(errMsg);
+      return false;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      showToast('Sedang keluar...');
+      await signOut(auth);
+      setIsLoggedIn(false);
+      localStorage.setItem('sotoy_is_logged_in', 'false');
+      setCurrentUser(INITIAL_USERS.warga);
+      setFollowingIds([]);
+      setFollowersIds([]);
+      setWatchlist([]);
+      setSavedArticles([]);
+      localStorage.setItem('sotoy_following_ids', JSON.stringify([]));
+      localStorage.setItem('sotoy_followers_ids', JSON.stringify([]));
+      localStorage.setItem('sotoy_watchlist', JSON.stringify([]));
+      localStorage.setItem('sotoy_saved_articles', JSON.stringify([]));
+      showToast('Sampai jumpa lagi, Cinephile! 👋');
+      navigateTo('home');
+      setLoginModalOpen(false);
+    } catch (err) {
+      console.error('[Auth] Logout error: ', err);
+      showToast('Gagal keluar. Mohon coba lagi.');
     }
   };
 
@@ -856,7 +1170,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     
     if (options?.userId !== undefined) {
       setViewedUserId(options.userId);
-    } else if (view === 'user-profile' && !viewedUserId) {
+    } else if (view === 'user-profile') {
       setViewedUserId(currentUser.id);
     }
 
@@ -881,7 +1195,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Publish Article directly to Firestore
   const addArticle = async (newArticle: Omit<Article, 'id' | 'publishedAt' | 'views' | 'likes' | 'commentsCount'>): Promise<boolean> => {
-    if (currentUser.role !== 'penulis_sotoy' && currentUser.role !== 'admin') {
+    const isPermitted = currentUser.role === 'penulis_sotoy' || currentUser.role === 'admin' || isUserWriter(currentUser) || isUserAdmin(currentUser);
+    if (!isPermitted) {
       showToast('Akses ditolak: Hanya Penulis Sotoy & Admin yang dapat mempublikasikan artikel!');
       return false;
     }
@@ -890,7 +1205,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const created: Article = {
       ...newArticle,
       id: articleId,
-      publishedAt: 'Baru saja',
+      publishedAt: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
       views: 1,
       likes: 0,
       commentsCount: 0,
@@ -906,15 +1221,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Update Article in Firestore
+  const updateArticle = async (id: string, updatedFields: Partial<Article>): Promise<boolean> => {
+    const targetArticle = articles.find(a => a.id === id);
+    const isAuthor = targetArticle?.author?.id === currentUser.id;
+    const isPermitted = isAuthor || currentUser.role === 'admin' || isUserAdmin(currentUser) || isUserWriter(currentUser);
+    if (!isPermitted) {
+      showToast('Hanya Penulis pemilik artikel atau Admin yang dapat menyunting artikel.');
+      return false;
+    }
+    try {
+      await updateDoc(doc(db, 'articles', id), updatedFields);
+      showToast('Artikel berhasil diperbarui!');
+      return true;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `articles/${id}`);
+      return false;
+    }
+  };
+
   // Delete Article from Firestore
   const deleteArticle = async (id: string) => {
-    if (currentUser.role !== 'admin') {
-      showToast('Hanya Admin yang dapat menghapus artikel.');
+    const targetArticle = articles.find(a => a.id === id);
+    const isAuthor = targetArticle?.author?.id === currentUser.id;
+    const isPermitted = isAuthor || currentUser.role === 'admin' || isUserAdmin(currentUser) || isUserWriter(currentUser);
+    if (!isPermitted) {
+      showToast('Hanya Penulis pemilik artikel atau Admin yang dapat menghapus artikel.');
       return;
     }
     try {
       await deleteDoc(doc(db, 'articles', id));
-      showToast('Artikel berhasil dihapus oleh Admin.');
+      showToast('Artikel berhasil dihapus.');
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `articles/${id}`);
     }
@@ -1253,18 +1590,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const isAdmin = isLoggedIn && isUserAdmin(currentUser);
+  const isWriter = isLoggedIn && (isUserWriter(currentUser) || currentUser.role === 'penulis_sotoy' || isAdmin || currentUser.role === 'admin');
+
   return (
     <AppContext.Provider
       value={{
         currentUser,
         isLoggedIn,
+        isAdmin,
+        isWriter,
         loginModalOpen,
         setLoginModalOpen,
         isComposeBuzzOpen,
         setIsComposeBuzzOpen,
-        login,
         logout,
-        switchRole,
+        signInWithEmail,
+        signUpWithEmail,
+        signInWithGoogle,
         articles,
         films,
         buzzList,
@@ -1283,6 +1626,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateUserBio,
         updateUserProfile,
         uploadProfilePhoto,
+        files,
         userSettings,
         updateUserSettings,
         activeUserTab,
@@ -1316,6 +1660,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         openShareModal,
         closeShareModal,
         addArticle,
+        updateArticle,
         deleteArticle,
         addBuzzPost,
         likeBuzzPost,
@@ -1328,6 +1673,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setBuzzFeedTab,
         toastMessage,
         showToast,
+        finishOnboarding,
       }}
     >
       {children}
