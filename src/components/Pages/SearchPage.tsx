@@ -45,7 +45,7 @@ export const SearchPage: React.FC = () => {
     searchQuery,
     setSearchQuery,
     films,
-    articles,
+    publishedArticles,
     buzzList,
     allUsers,
     navigateTo,
@@ -148,7 +148,7 @@ export const SearchPage: React.FC = () => {
     });
 
     // 2. Articles
-    const articleResults = articles.filter(article => {
+    const articleResults = publishedArticles.filter(article => {
       const matchTitle = article.title.toLowerCase().includes(q);
       const matchAuthor = article.author.name.toLowerCase().includes(q);
       const matchCategory = article.category.toLowerCase().includes(q);
@@ -194,7 +194,7 @@ export const SearchPage: React.FC = () => {
       matchingBuzz: buzzResults,
       matchingUsers: userResults,
     };
-  }, [localQuery, films, articles, buzzList, allUsers]);
+  }, [localQuery, films, publishedArticles, buzzList, allUsers]);
 
   const totalResults =
     matchingFilms.length + matchingArticles.length + matchingBuzz.length + matchingUsers.length;

@@ -20,7 +20,7 @@ import { EditorialSidebar } from '../Common/EditorialSidebar';
 
 export const HomeCategorySection: React.FC = () => {
   const {
-    articles,
+    publishedArticles,
     films,
     currentUser,
     navigateTo,
@@ -31,8 +31,8 @@ export const HomeCategorySection: React.FC = () => {
 
   // Filter articles based on tab
   const filteredArticles = selectedCategoryTab === 'all'
-    ? articles
-    : articles.filter(a => a.category === selectedCategoryTab);
+    ? publishedArticles
+    : publishedArticles.filter(a => a.category === selectedCategoryTab);
 
   return (
     <section id="category-articles-section" className="py-8">

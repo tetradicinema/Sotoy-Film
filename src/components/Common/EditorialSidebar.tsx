@@ -12,6 +12,7 @@ import {
   User as UserIcon,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { getRoleStyle } from '../../utils/roleStyles';
 import { AdBannerSlot } from './AdBannerSlot';
 import { QuickReactionBar } from './QuickReactionBar';
 
@@ -167,9 +168,9 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                     </div>
                   </div>
                 </div>
-                {post.author.role === 'si_paling_sotoy' && (
-                  <span className="text-[9px] bg-[#FFD000]/20 text-[#FFD000] font-black px-1.5 py-0.5 rounded border border-[#FFD000]/30">
-                    CRITIC
+                {post.author.role && (
+                  <span className={`text-[8px] sm:text-[9px] ${getRoleStyle(post.author.role).badge} font-black px-1.5 py-0.5 rounded border`}>
+                    {getRoleStyle(post.author.role).name.split(' ').pop()?.toUpperCase()}
                   </span>
                 )}
               </div>

@@ -22,6 +22,7 @@ import {
 import { collection, getDocs, query, limit } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useApp } from '../../context/AppContext';
+import { getRoleStyle } from '../../utils/roleStyles';
 import { FilmItem, Article, BuzzPost, User } from '../../types';
 
 interface GlobalSearchBarProps {
@@ -1189,14 +1190,8 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                           visibleFlattenedList[selectedIndex]?.type === 'user' &&
                           visibleFlattenedList[selectedIndex]?.data.id === user.id;
 
-                        const roleBadgeColor =
-                          user.role === 'admin'
-                            ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
-                            : user.role === 'penulis_sotoy'
-                            ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
-                            : user.role === 'si_paling_sotoy'
-                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                            : 'bg-slate-800 text-slate-300 border-slate-700';
+                        const roleStyle = getRoleStyle(user.role);
+                        const roleBadgeColor = roleStyle.badge;
 
                         return (
                           <div

@@ -28,9 +28,11 @@ import {
   Heart,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { getRoleStyle } from '../../utils/roleStyles';
 import { MainCategory, SubCategory, UserRole, UserTab } from '../../types';
 import { useTranslation } from '../../i18n';
 import { GlobalSearchBar } from './GlobalSearchBar';
+import { NotificationBell } from '../Common/NotificationBell';
 
 export const Navbar: React.FC = () => {
   const { t } = useTranslation();
@@ -39,6 +41,7 @@ export const Navbar: React.FC = () => {
     isLoggedIn,
     isAdmin,
     isWriter,
+    isCritic,
     setLoginModalOpen,
     logout,
     currentView,
@@ -145,36 +148,7 @@ export const Navbar: React.FC = () => {
     }
   };
 
-  const getRoleBadgeStyle = (role: UserRole) => {
-    switch (role) {
-      case 'warga_sotoy':
-        return {
-          bg: 'bg-cyan-500/15 border-cyan-500/40 text-[#00F0FF]',
-          tag: 'Warga Sotoy',
-          badgeText: 'Umum',
-        };
-      case 'si_paling_sotoy':
-        return {
-          bg: 'bg-amber-500/15 border-amber-500/40 text-[#FFD000]',
-          tag: 'Si Paling Sotoy',
-          badgeText: 'Critic',
-        };
-      case 'penulis_sotoy':
-        return {
-          bg: 'bg-pink-500/15 border-pink-500/40 text-[#FF2E7E]',
-          tag: 'Penulis Sotoy',
-          badgeText: 'Writer',
-        };
-      case 'admin':
-        return {
-          bg: 'bg-purple-500/15 border-purple-500/40 text-purple-300',
-          tag: 'Admin Sotoy',
-          badgeText: 'Lead Admin',
-        };
-    }
-  };
-
-  const currentBadge = getRoleBadgeStyle(currentUser.role);
+  const roleStyle = getRoleStyle(currentUser.role);
 
   return (
     <header className="sticky top-0 z-50 bg-[#0D0E15]/95 backdrop-blur-md border-b border-slate-800/80">
@@ -314,6 +288,11 @@ export const Navbar: React.FC = () => {
               />
             </div>
 
+            {/* Global Notification Bell */}
+            {isLoggedIn && (
+              <NotificationBell mode="global" />
+            )}
+
             {/* Unified Menu Trigger: Circular Profile Photo Avatar Button */}
             <div className="relative" ref={userMenuRef}>
               <button
@@ -358,8 +337,8 @@ export const Navbar: React.FC = () => {
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-bold text-white truncate">{currentUser.name}</div>
                         <div className="text-xs text-slate-400 truncate">{currentUser.handle}</div>
-                        <div className="mt-1 inline-block text-[10px] font-bold px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[#00F0FF]">
-                          {currentUser.roleTitle}
+                        <div className={`mt-1 inline-block text-[10px] font-bold px-2 py-0.5 rounded border ${roleStyle.badge}`}>
+                          {roleStyle.name.toUpperCase()}
                         </div>
                       </div>
                     </div>
@@ -566,11 +545,38 @@ export const Navbar: React.FC = () => {
                         </button>
                       )}
 
+                      {(currentUser.role === 'si_paling_sotoy' || isCritic) && (
+                        <div className="pt-1.5 border-t border-slate-800/50 mt-1.5 space-y-1">
+                          <div className={`text-[9px] font-black uppercase tracking-widest ${getRoleStyle('si_paling_sotoy').text} px-1 mb-1 flex items-center justify-between`}>
+                            <span>Ruang Kritikus</span>
+                            <span className="bg-[#FFD000] text-slate-950 px-1.5 py-0.2 rounded text-[8px] font-black">TOP CRITIC</span>
+                          </div>
+                          <button
+                            id="menu-critic-dashboard-btn"
+                            onClick={() => {
+                              navigateTo('critic-dashboard');
+                              setRoleDropdownOpen(false);
+                            }}
+                            className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
+                              currentView === 'critic-dashboard'
+                                ? 'bg-amber-500/20 text-[#FFD000] border border-amber-500/50 font-bold'
+                                : 'hover:bg-amber-500/10 text-[#FFD000] font-bold border border-amber-500/30'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <Award className="w-4 h-4 text-[#FFD000]" />
+                              <span>Dasbor Kritikus & Workspace</span>
+                            </div>
+                            <span className="text-xs text-[#FFD000]">→</span>
+                          </button>
+                        </div>
+                      )}
+
                       {(currentUser.role === 'penulis_sotoy' || currentUser.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02' || isWriter) && (
                         <div className="pt-1.5 border-t border-slate-800/50 mt-1.5 space-y-1">
-                          <div className="text-[9px] font-black uppercase tracking-widest text-[#FF2E7E] px-1 mb-1 flex items-center justify-between">
+                          <div className={`text-[9px] font-black uppercase tracking-widest ${getRoleStyle('penulis_sotoy').text} px-1 mb-1 flex items-center justify-between`}>
                             <span>Ruang Penulis</span>
-                            <span className="bg-[#FF2E7E] text-white px-1.5 py-0.2 rounded text-[8px] font-black">PENULIS</span>
+                            <span className="bg-[#FF2E7E] text-white px-1.5 py-0.2 rounded text-[8px] font-black">WRITER</span>
                           </div>
                           <button
                             id="menu-writer-dashboard-btn"
@@ -580,15 +586,15 @@ export const Navbar: React.FC = () => {
                             }}
                             className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
                               currentView === 'writer-dashboard'
-                                ? 'bg-pink-500/20 text-pink-300 border border-pink-500/50 font-bold'
-                                : 'hover:bg-pink-500/10 text-pink-400 font-bold border border-pink-500/30'
+                                ? 'bg-pink-500/20 text-[#FF2E7E] border border-pink-500/50 font-bold'
+                                : 'hover:bg-pink-500/10 text-[#FF2E7E] font-bold border border-pink-500/30'
                             }`}
                           >
                             <div className="flex items-center gap-2.5">
                               <PenSquare className="w-4 h-4 text-[#FF2E7E]" />
                               <span>Dasbor Penulis & Workspace</span>
                             </div>
-                            <span className="text-xs text-pink-400">→</span>
+                            <span className="text-xs text-[#FF2E7E]">→</span>
                           </button>
                           <button
                             id="menu-write-article-btn"
@@ -607,11 +613,11 @@ export const Navbar: React.FC = () => {
                         </div>
                       )}
 
-                      {(currentUser.role === 'admin' || currentUser.id === 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' || currentUser.id === 'I34eqzOmvsSdS2Rf7jpfxw1ZKeu1' || currentUser.email === 'eksposurmedia@gmail.com') && (
+                      {(currentUser.role === 'admin' || isAdmin) && (
                         <div className="pt-1.5 border-t border-slate-800/50 mt-1.5 space-y-1">
-                          <div className="text-[9px] font-black uppercase tracking-widest text-amber-500/80 px-1 mb-1 flex items-center justify-between">
+                          <div className={`text-[9px] font-black uppercase tracking-widest ${getRoleStyle('admin').text} px-1 mb-1 flex items-center justify-between`}>
                             <span>Akses Admin Panel</span>
-                            <span className="bg-amber-500 text-slate-950 px-1.5 py-0.2 rounded text-[8px] font-black">ADMIN</span>
+                            <span className="bg-purple-600 text-white px-1.5 py-0.2 rounded text-[8px] font-black">ADMIN</span>
                           </div>
                           <button
                             id="menu-admin-dashboard-btn"
@@ -621,15 +627,15 @@ export const Navbar: React.FC = () => {
                             }}
                             className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
                               currentView === 'admin-dashboard'
-                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50 font-bold'
-                                : 'hover:bg-amber-500/10 text-amber-400 font-bold border border-amber-500/30'
+                                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/50 font-bold'
+                                : 'hover:bg-purple-500/10 text-purple-300 font-bold border border-purple-500/30'
                             }`}
                           >
                             <div className="flex items-center gap-2.5">
-                              <ShieldCheck className="w-4 h-4 text-amber-400" />
+                              <ShieldCheck className="w-4 h-4 text-purple-400" />
                               <span>Dasbor Admin & Berkas</span>
                             </div>
-                            <span className="text-xs text-amber-400">→</span>
+                            <span className="text-xs text-purple-300">→</span>
                           </button>
                           <button
                             id="menu-admin-critics-btn"

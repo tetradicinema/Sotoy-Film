@@ -25,6 +25,8 @@ import { CriticSubmissionPage } from './components/Pages/CriticSubmissionPage';
 import { CriticCriteriaPage } from './components/Pages/CriticCriteriaPage';
 import { AdminCriticSubmissionsPage } from './components/Pages/AdminCriticSubmissionsPage';
 import { AdminDashboard } from './components/Admin/AdminDashboard';
+import { WriterDashboard } from './components/Writer/WriterDashboard';
+import { CriticDashboard } from './components/Critic/CriticDashboard';
 import { OnboardingPage } from './components/Pages/OnboardingPage';
 import { LoginModal } from './components/Modals/LoginModal';
 import { SocialShareModal } from './components/Modals/SocialShareModal';
@@ -96,6 +98,8 @@ const AppContent: React.FC = () => {
         {currentView === 'critic-criteria' && <CriticCriteriaPage />}
         {currentView === 'admin-critic-submissions' && <AdminCriticSubmissionsPage />}
         {currentView === 'admin-dashboard' && <AdminDashboard />}
+        {currentView === 'writer-dashboard' && <WriterDashboard />}
+        {currentView === 'critic-dashboard' && <CriticDashboard />}
       </main>
 
       {/* Footer */}

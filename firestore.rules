@@ -36,6 +36,14 @@ service cloud.firestore {
       );
     }
 
+    function isCritic() {
+      return isSignedIn() && (
+        request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' ||
+        isAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role in ['si_paling_sotoy', 'admin'])
+      );
+    }
+
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
@@ -112,15 +120,34 @@ service cloud.firestore {
         data.status in ['pending', 'approved', 'rejected'];
     }
 
+    function isValidNotification(data) {
+      return data.keys().hasAll(['id', 'userId', 'type', 'title', 'message', 'targetView', 'isRead', 'createdAt', 'sender']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.type in ['comment', 'like', 'mention', 'reply', 'editor_request', 'follow'] &&
+        data.title is string && data.title.size() <= 200 &&
+        data.message is string && data.message.size() <= 1000 &&
+        data.targetView is string && data.targetView.size() <= 128 &&
+        data.isRead is bool &&
+        data.createdAt is string &&
+        data.sender is map &&
+        data.sender.id is string;
+    }
+
     // Rules for each collection
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
+      allow read: if true;
       allow create: if isSignedIn() && isOwner(userId) && isValidUser(incoming());
       allow update: if isSignedIn() && (
         (isOwner(userId) && isValidUser(incoming()) && (incoming().role == existing().role || userId == '0PCmaBvJrzeaQgpf3sSTC4mnsh02')) || 
         isAdmin()
       );
       allow delete: if isAdmin();
+    }
+
+    match /article_presence/{presenceId} {
+      allow read: if true;
+      allow create, update, delete: if true;
     }
 
     match /files/{fileId} {
@@ -169,9 +196,10 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidId(ratingId) && isValidUserRating(incoming());
       allow update: if isSignedIn() && isValidId(ratingId) && (
         (isOwner(existing().userId) && isValidUserRating(incoming())) ||
-        (incoming().diff(existing()).affectedKeys().hasOnly(['likes']))
+        (incoming().diff(existing()).affectedKeys().hasOnly(['likes'])) ||
+        (isCritic() && isOwner(existing().userId))
       );
-      allow delete: if isSignedIn() && (isOwner(existing().userId) || isAdmin());
+      allow delete: if isSignedIn() && (isOwner(existing().userId) || isAdmin() || (isCritic() && isOwner(existing().userId)));
     }
 
     match /criticSubmissions/{submissionId} {
@@ -182,6 +210,16 @@ service cloud.firestore {
         isAdmin()
       );
       allow delete: if isAdmin();
+    }
+
+    match /notifications/{notificationId} {
+      allow read, list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(notificationId) && isValidNotification(incoming()) && (incoming().sender.id == request.auth.uid || isAdmin());
+      allow update: if isSignedIn() && isValidId(notificationId) && (
+        (resource.data.userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['isRead'])) ||
+        isAdmin()
+      );
+      allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
     }
   }
 }

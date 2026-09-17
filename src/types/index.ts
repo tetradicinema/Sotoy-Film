@@ -94,6 +94,13 @@ export interface Article {
   commentsCount: number;
   tags: string[];
   relatedFilmId?: string; // Links directly to a film discussed in this article
+  status?: 'published' | 'draft' | 'scheduled';
+  scheduledAt?: string; // ISO date string e.g. "2026-09-25T14:30"
+  seoTitle?: string;
+  metaDescription?: string;
+  ogImage?: string;
+  seoKeywords?: string;
+  dailyViews?: Record<string, number>;
 }
 
 export interface CastMember {
@@ -150,6 +157,9 @@ export interface UserRating {
   reviewText: string;
   createdAt: string;
   likes: number;
+  views?: number;
+  commentsCount?: number;
+  featured?: boolean;
 }
 
 export interface BuzzReply {
@@ -255,5 +265,27 @@ export interface UploadedFile {
   size: number;
   type: string;
   uploadedAt: string;
+}
+
+export type NotificationType = 'comment' | 'like' | 'mention' | 'reply' | 'editor_request' | 'follow';
+
+export interface NotificationSender {
+  id: string;
+  name: string;
+  avatar: string;
+  handle: string;
+}
+
+export interface NotificationItem {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  targetView: string;
+  targetId?: string;
+  isRead: boolean;
+  createdAt: string;
+  sender: NotificationSender;
 }
 

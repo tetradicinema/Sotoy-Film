@@ -11,6 +11,7 @@ export const MobileBottomNav: React.FC = () => {
     setLoginModalOpen,
     setIsComposeBuzzOpen,
     activeUserTab,
+    unreadNotificationsCount,
   } = useApp();
 
   const isHomeActive = currentView === 'home';
@@ -132,6 +133,11 @@ export const MobileBottomNav: React.FC = () => {
                     : 'ring-1 ring-slate-700'
                 }`}
               />
+              {unreadNotificationsCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] px-1 bg-[#FF2E7E] text-white text-[8px] font-black rounded-full flex items-center justify-center border border-slate-900 shadow-md">
+                  {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                </span>
+              )}
               {isProfileActive && (
                 <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#00F0FF] shadow-[0_0_8px_#00F0FF]" />
               )}

@@ -31,6 +31,7 @@ import {
   User as UserIcon,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { getRoleStyle } from '../../utils/roleStyles';
 import { BuzzPost, User } from '../../types';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { QuickReactionBar } from '../Common/QuickReactionBar';
@@ -569,7 +570,7 @@ export const CommunityFeedPage: React.FC = () => {
                   <div className="flex items-center gap-1 bg-slate-900 px-2.5 py-1.5 rounded-xl border border-slate-700 text-xs">
                     <Star className="w-3.5 h-3.5 text-[#FFD000] fill-current" />
                     <select
-                      value={skorMention || ''}
+                      value={skorMention !== undefined ? String(skorMention) : ''}
                       onChange={e => setSkorMention(e.target.value ? parseFloat(e.target.value) : undefined)}
                       className="bg-transparent text-slate-300 text-xs focus:outline-none cursor-pointer"
                     >
@@ -651,22 +652,12 @@ export const CommunityFeedPage: React.FC = () => {
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-bold text-xs sm:text-sm text-white group-hover:text-[#00F0FF] transition-colors truncate max-w-[120px] xs:max-w-[180px] sm:max-w-none">
+                        <span className={`font-bold text-xs sm:text-sm text-white group-hover:${getRoleStyle('warga_sotoy').text} transition-colors truncate max-w-[120px] xs:max-w-[180px] sm:max-w-none`}>
                           {post.author.name}
                         </span>
-                        {post.author.role === 'si_paling_sotoy' && (
-                          <span className="bg-[#FFD000]/15 text-[#FFD000] border border-[#FFD000]/30 text-[9px] font-black uppercase px-1.5 py-0.5 rounded shrink-0">
-                            CRITIC
-                          </span>
-                        )}
-                        {post.author.role === 'penulis_sotoy' && (
-                          <span className="bg-[#FF2E7E]/15 text-[#FF2E7E] border border-[#FF2E7E]/30 text-[9px] font-black uppercase px-1.5 py-0.5 rounded shrink-0">
-                            WRITER
-                          </span>
-                        )}
-                        {post.author.role === 'admin' && (
-                          <span className="bg-purple-500/15 text-purple-300 border border-purple-500/30 text-[9px] font-black uppercase px-1.5 py-0.5 rounded shrink-0">
-                            ADMIN
+                        {post.author.role && (
+                          <span className={`${getRoleStyle(post.author.role).badge} text-[9px] font-black uppercase px-1.5 py-0.5 rounded shrink-0`}>
+                            {getRoleStyle(post.author.role).name.split(' ').pop()?.toUpperCase()}
                           </span>
                         )}
                       </div>

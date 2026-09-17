@@ -6,7 +6,7 @@ import { motion } from 'motion/react';
 export const OnboardingPage: React.FC = () => {
   const { currentUser, finishOnboarding, uploadProfilePhoto } = useApp();
   const [name, setName] = useState(currentUser.name || '');
-  const [handle, setHandle] = useState(currentUser.handle?.replace('@', '') || '');
+  const [handle, setHandle] = useState((currentUser.handle || '').replace('@', ''));
   const [bio, setBio] = useState(currentUser.bio || '');
   const [selectedAvatar, setSelectedAvatar] = useState(currentUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80');
   const [selectedGenres, setSelectedGenres] = useState<string[]>(['Sci-Fi', 'Neo-Noir', 'Drama & Auteur']);

@@ -48,6 +48,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { getRoleStyle } from '../../utils/roleStyles';
 import { QuickReactionBar } from '../Common/QuickReactionBar';
 import { User, UserTab, UserSettings } from '../../types';
 import { StarRating } from '../Common/StarRating';
@@ -253,40 +254,14 @@ export const UserPage: React.FC = () => {
   };
 
   const getRoleTheme = () => {
-    switch (targetUser.role) {
-      case 'warga_sotoy':
-        return {
-          border: 'border-cyan-500/40',
-          badgeBg: 'bg-cyan-500/20 text-[#00F0FF] border-cyan-500/50',
-          accent: '#00F0FF',
-          roleName: 'Warga Sotoy',
-          badgeText: 'Penonton Umum',
-        };
-      case 'si_paling_sotoy':
-        return {
-          border: 'border-amber-500/40',
-          badgeBg: 'bg-amber-500/20 text-[#FFD000] border-amber-500/50',
-          accent: '#FFD000',
-          roleName: 'Si Paling Sotoy',
-          badgeText: 'Kritikus Terverifikasi',
-        };
-      case 'penulis_sotoy':
-        return {
-          border: 'border-pink-500/40',
-          badgeBg: 'bg-pink-500/20 text-[#FF2E7E] border-pink-500/50',
-          accent: '#FF2E7E',
-          roleName: 'Penulis Sotoy',
-          badgeText: 'Jurnalis & Redaksi',
-        };
-      case 'admin':
-        return {
-          border: 'border-purple-500/40',
-          badgeBg: 'bg-purple-500/20 text-purple-300 border-purple-500/50',
-          accent: '#a855f7',
-          roleName: 'Admin Sotoy',
-          badgeText: 'Pengelola Platform',
-        };
-    }
+    const style = getRoleStyle(targetUser.role);
+    return {
+      border: style.border,
+      badgeBg: style.badge,
+      accent: style.color,
+      roleName: style.name,
+      badgeText: targetUser.role === 'si_paling_sotoy' ? 'Top Critic' : style.name.split(' ').pop() || 'Warga',
+    };
   };
 
   const roleTheme = getRoleTheme();
@@ -786,7 +761,7 @@ export const UserPage: React.FC = () => {
                         max="5"
                         step="0.1"
                         placeholder="Skor"
-                        value={newBuzzScore ?? ''}
+                        value={newBuzzScore !== undefined ? String(newBuzzScore) : ''}
                         onChange={e => setNewBuzzScore(e.target.value ? parseFloat(e.target.value) : undefined)}
                         className="w-12 bg-transparent text-white text-xs focus:outline-none"
                       />

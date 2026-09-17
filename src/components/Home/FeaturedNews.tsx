@@ -3,11 +3,11 @@ import { Sparkles, MessageCircle, Clock, ArrowUpRight, Flame } from 'lucide-reac
 import { useApp } from '../../context/AppContext';
 
 export const FeaturedNews: React.FC = () => {
-  const { articles, navigateTo } = useApp();
+  const { publishedArticles, navigateTo } = useApp();
 
   // Pick articles with featured: true that are not heroSlider, plus others
-  const featuredArticles = articles.filter(a => a.featured && !a.heroSlider).slice(0, 3);
-  const secondaryNews = articles.filter(a => a.subCategory === 'news' && !a.heroSlider).slice(0, 3);
+  const featuredArticles = publishedArticles.filter(a => a.featured && !a.heroSlider).slice(0, 3);
+  const secondaryNews = publishedArticles.filter(a => a.subCategory === 'news' && !a.heroSlider).slice(0, 3);
 
   return (
     <section id="featured-news-section" className="py-8">

@@ -27,6 +27,7 @@ import {
   Info,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { getRoleStyle } from '../../utils/roleStyles';
 import { FilmItem } from '../../types';
 import { RateFilmModal } from '../Modals/RateFilmModal';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
@@ -711,15 +712,10 @@ export const FilmDetailPage: React.FC = () => {
                           />
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="font-bold text-sm text-white">{rev.userName}</span>
-                              {rev.userRole === 'si_paling_sotoy' && (
-                                <span className="bg-[#FFD000]/20 text-[#FFD000] border border-[#FFD000]/40 text-[9px] font-black uppercase px-2 py-0.5 rounded">
-                                  CRITIC
-                                </span>
-                              )}
-                              {rev.userRole === 'warga_sotoy' && (
-                                <span className="bg-cyan-500/15 text-[#00F0FF] border border-cyan-500/30 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded">
-                                  WARGA
+                              <span className={`font-bold text-sm text-white group-hover:${getRoleStyle('warga_sotoy').text} transition-colors`}>{rev.userName}</span>
+                              {rev.userRole && (
+                                <span className={`${getRoleStyle(rev.userRole).badge} text-[9px] font-black uppercase px-2 py-0.5 rounded`}>
+                                  {getRoleStyle(rev.userRole).name.split(' ').pop()?.toUpperCase()}
                                 </span>
                               )}
                             </div>

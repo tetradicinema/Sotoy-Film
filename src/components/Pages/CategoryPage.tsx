@@ -20,7 +20,7 @@ export const CategoryPage: React.FC = () => {
   const {
     activeCategory,
     activeSubCategory,
-    articles,
+    publishedArticles,
     navigateTo,
   } = useApp();
 
@@ -98,7 +98,7 @@ export const CategoryPage: React.FC = () => {
   const Icon = meta.icon;
 
   // Filter articles by category and active subcategory
-  const filteredArticles = articles.filter(a => {
+  const filteredArticles = publishedArticles.filter(a => {
     if (a.category !== currentCategory) return false;
     if (activeSubCategory && a.subCategory !== activeSubCategory) return false;
     return true;
@@ -166,12 +166,12 @@ export const CategoryPage: React.FC = () => {
                     : 'bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800'
                 }`}
               >
-                Semua ({articles.filter(a => a.category === currentCategory).length})
+                Semua ({publishedArticles.filter(a => a.category === currentCategory).length})
               </button>
 
               {meta.allSubCategories.map(sub => {
                 const isCurrent = activeSubCategory === sub.id;
-                const count = articles.filter(
+                const count = publishedArticles.filter(
                   a => a.category === currentCategory && a.subCategory === sub.id
                 ).length;
 

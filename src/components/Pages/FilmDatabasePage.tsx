@@ -30,7 +30,8 @@ import {
   ArrowUpDown,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { FilmItem, UserRating } from '../../types';
+import { getRoleStyle } from '../../utils/roleStyles';
+import { FilmItem, UserRating, UserRole } from '../../types';
 import { StarRating } from '../Common/StarRating';
 import { RateFilmModal } from '../Modals/RateFilmModal';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
@@ -1348,12 +1349,17 @@ export const FilmDatabasePage: React.FC = () => {
                           className="w-9 h-9 rounded-xl object-cover ring-1 ring-white/10"
                         />
 
-                        <div>
-                          <div className="text-xs font-bold text-white line-clamp-1">
-                            {user.name}
+                         <div>
+                          <div className="flex items-center gap-1.5">
+                            <div className="text-xs font-bold text-white line-clamp-1">
+                              {user.name}
+                            </div>
+                            <span className={`${getRoleStyle(user.role as UserRole).badge} text-[8px] font-black uppercase px-1 rounded`}>
+                              {getRoleStyle(user.role as UserRole).name.split(' ').pop()?.toUpperCase()}
+                            </span>
                           </div>
                           <div className="text-[10px] text-slate-400">
-                            {user.roleTitle} • {user.totalReviews} ulasan
+                            {getRoleStyle(user.role as UserRole).name} • {user.totalReviews} ulasan
                           </div>
                         </div>
                       </div>

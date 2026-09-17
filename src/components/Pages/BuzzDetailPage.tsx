@@ -19,6 +19,7 @@ import {
   User as UserIcon,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { getRoleStyle } from '../../utils/roleStyles';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { QuickReactionBar } from '../Common/QuickReactionBar';
 import { MentionText } from '../Common/MentionText';
@@ -209,18 +210,12 @@ export const BuzzDetailPage: React.FC = () => {
                   <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                     <button
                       onClick={() => navigateTo('user-profile', { userId: buzz.author.id })}
-                      className="font-bold text-sm sm:text-lg text-white hover:text-[#00F0FF] transition-colors truncate max-w-[130px] xs:max-w-[200px] sm:max-w-none text-left"
+                      className={`font-bold text-sm sm:text-lg text-white hover:${getRoleStyle(buzz.author.role || 'warga_sotoy').text} transition-colors truncate max-w-[130px] xs:max-w-[200px] sm:max-w-none text-left`}
                     >
                       {buzz.author.name}
                     </button>
-                    <span className="text-[9px] sm:text-[10px] uppercase font-black px-1.5 sm:px-2 py-0.5 rounded-full bg-[#00F0FF]/15 text-[#00F0FF] border border-[#00F0FF]/30 shrink-0">
-                      {buzz.author.role === 'si_paling_sotoy'
-                        ? 'Si Paling Sotoy'
-                        : buzz.author.role === 'penulis_sotoy'
-                        ? 'Penulis Sotoy'
-                        : buzz.author.role === 'admin'
-                        ? 'Admin'
-                        : 'Warga Sotoy'}
+                    <span className={`text-[9px] sm:text-[10px] uppercase font-black px-1.5 sm:px-2 py-0.5 rounded-full ${getRoleStyle(buzz.author.role || 'warga_sotoy').badge} shrink-0`}>
+                      {getRoleStyle(buzz.author.role || 'warga_sotoy').name}
                     </span>
                   </div>
 
@@ -586,14 +581,8 @@ export const BuzzDetailPage: React.FC = () => {
                                   >
                                     {reply.author.name}
                                   </button>
-                                  <span className="text-[9px] uppercase font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-                                    {reply.author.role === 'si_paling_sotoy'
-                                      ? 'Kritikus'
-                                      : reply.author.role === 'penulis_sotoy'
-                                      ? 'Redaksi'
-                                      : reply.author.role === 'admin'
-                                      ? 'Admin'
-                                      : 'Warga'}
+                                  <span className={`text-[9px] uppercase font-black px-2 py-0.5 rounded ${getRoleStyle(reply.author.role || 'warga_sotoy').badge}`}>
+                                    {getRoleStyle(reply.author.role || 'warga_sotoy').name.split(' ').pop()?.toUpperCase()}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-2 text-[11px] text-slate-400">

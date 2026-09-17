@@ -132,9 +132,45 @@
         "uploadedAt": { "type": "string" }
       },
       "required": ["id", "userId", "url", "name", "size", "type", "uploadedAt"]
+    },
+    "ArticlePresence": {
+      "title": "ArticlePresence",
+      "description": "Realtime active co-editing presence",
+      "type": "object",
+      "properties": {
+        "articleId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userAvatar": { "type": "string" },
+        "roleTitle": { "type": "string" },
+        "lastActive": { "type": "number" }
+      },
+      "required": ["articleId", "userId", "userName", "lastActive"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "In-app notifications for users and writers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["comment", "like", "mention", "reply", "editor_request", "follow"] },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "targetView": { "type": "string" },
+        "targetId": { "type": "string" },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "sender": { "type": "object" }
+      },
+      "required": ["id", "userId", "type", "title", "message", "targetView", "isRead", "createdAt", "sender"]
     }
   },
   "firestore": {
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications"
+    },
     "/users/{userId}": {
       "schema": "User",
       "description": "Profiles of the users"
@@ -146,6 +182,10 @@
     "/articles/{articleId}": {
       "schema": "Article",
       "description": "Articles published on the website"
+    },
+    "/article_presence/{presenceId}": {
+      "schema": "ArticlePresence",
+      "description": "Active co-editing presence tracking"
     },
     "/films/{filmId}": {
       "schema": "FilmItem",

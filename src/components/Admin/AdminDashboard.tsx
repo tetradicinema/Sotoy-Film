@@ -22,6 +22,7 @@ import {
   Info
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { getRoleStyle } from '../../utils/roleStyles';
 import { User, UploadedFile } from '../../types';
 
 export const AdminDashboard: React.FC = () => {
@@ -279,19 +280,9 @@ export const AdminDashboard: React.FC = () => {
                           <span className="font-bold text-xs text-white truncate max-w-[150px] sm:max-w-[200px]">
                             {user.name}
                           </span>
-                          {user.role === 'admin' ? (
-                            <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                              Admin
-                            </span>
-                          ) : user.role === 'si_paling_sotoy' ? (
-                            <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-                              Kritikus
-                            </span>
-                          ) : (
-                            <span className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">
-                              {user.role === 'penulis_sotoy' ? 'Penulis' : 'Warga'}
-                            </span>
-                          )}
+                          <span className={`text-[8px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded ${getRoleStyle(user.role).badge}`}>
+                            {getRoleStyle(user.role).name.split(' ').pop()}
+                          </span>
                         </div>
                         <div className="text-[10px] text-slate-400 truncate mt-0.5">
                           {user.handle || `@user_${user.id.slice(0, 5)}`}

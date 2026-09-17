@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   User as UserIcon,
   Shield,
@@ -70,14 +70,26 @@ export const SettingsPage: React.FC = () => {
   } = useApp();
 
   // Profile Form state
-  const [name, setName] = useState(currentUser.name);
-  const [handle, setHandle] = useState(currentUser.handle);
-  const [bio, setBio] = useState(currentUser.bio);
-  const [avatarPreview, setAvatarPreview] = useState(currentUser.avatar);
+  const [name, setName] = useState(currentUser.name || '');
+  const [handle, setHandle] = useState(currentUser.handle || '');
+  const [bio, setBio] = useState(currentUser.bio || '');
+  const [avatarPreview, setAvatarPreview] = useState(currentUser.avatar || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Security Form state
   const [currentEmail, setCurrentEmail] = useState(currentUser.email || 'budi.cinephile@sotoyfilm.id');
+
+  useEffect(() => {
+    if (currentUser) {
+      setName(currentUser.name || '');
+      setHandle(currentUser.handle || '');
+      setBio(currentUser.bio || '');
+      setAvatarPreview(currentUser.avatar || '');
+      if (currentUser.email) {
+        setCurrentEmail(currentUser.email);
+      }
+    }
+  }, [currentUser]);
   const [newEmail, setNewEmail] = useState('');
   const [confirmEmail, setConfirmEmail] = useState('');
   const [oldPassword, setOldPassword] = useState('');

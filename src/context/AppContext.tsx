@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import {
   User,
   UserRole,
@@ -16,6 +16,7 @@ import {
   SettingsSubPage,
   CriticSubmission,
   UploadedFile,
+  NotificationItem,
 } from '../types';
 import {
   INITIAL_USERS,
@@ -34,6 +35,7 @@ import {
   getDoc,
   getDocs,
   deleteDoc,
+  updateDoc,
   onSnapshot,
   query,
   where,
@@ -51,6 +53,7 @@ import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 export const ADMIN_UIDS = ['CsG2CY2TaIZmG7yuPfzAxmRYrlY2', 'I34eqzOmvsSdS2Rf7jpfxw1ZKeu1'];
 export const ADMIN_EMAILS = ['eksposurmedia@gmail.com'];
 export const WRITER_UIDS = ['0PCmaBvJrzeaQgpf3sSTC4mnsh02'];
+export const CRITIC_UIDS = ['Jm0raI2h47TJG9ZtZAR1HLVcjSj2'];
 
 export const isUserAdmin = (user?: Partial<User> | null, fbUid?: string, fbEmail?: string): boolean => {
   if (user?.role === 'admin') return true;
@@ -65,6 +68,13 @@ export const isUserWriter = (user?: Partial<User> | null, fbUid?: string): boole
   if (user?.role === 'penulis_sotoy') return true;
   if (user?.id && WRITER_UIDS.includes(user.id)) return true;
   if (fbUid && WRITER_UIDS.includes(fbUid)) return true;
+  return false;
+};
+
+export const isUserCritic = (user?: Partial<User> | null, fbUid?: string): boolean => {
+  if (user?.role === 'si_paling_sotoy') return true;
+  if (user?.id && CRITIC_UIDS.includes(user.id)) return true;
+  if (fbUid && CRITIC_UIDS.includes(fbUid)) return true;
   return false;
 };
 
@@ -90,6 +100,7 @@ export type AppView =
   | 'admin-critic-submissions'
   | 'admin-dashboard'
   | 'writer-dashboard'
+  | 'critic-dashboard'
   | 'onboarding';
 
 interface AppContextType {
@@ -97,6 +108,7 @@ interface AppContextType {
   isLoggedIn: boolean;
   isAdmin: boolean;
   isWriter: boolean;
+  isCritic: boolean;
   loginModalOpen: boolean;
   setLoginModalOpen: (open: boolean) => void;
   isComposeBuzzOpen: boolean;
@@ -106,6 +118,7 @@ interface AppContextType {
   signUpWithEmail: (email: string, password: string, name: string, handle: string) => Promise<boolean>;
   signInWithGoogle: () => Promise<boolean>;
   articles: Article[];
+  publishedArticles: Article[];
   films: FilmItem[];
   buzzList: BuzzPost[];
   ratings: UserRating[];
@@ -194,12 +207,22 @@ interface AppContextType {
   ) => Promise<void>;
   likeBuzzReply: (buzzId: string, replyId: string) => Promise<void>;
   addFilmRating: (filmId: string, score: number, headline: string, reviewText: string) => Promise<void>;
+  updateFilmRating: (ratingId: string, updates: Partial<UserRating>) => Promise<void>;
+  deleteFilmRating: (ratingId: string) => Promise<void>;
   likeArticle: (articleId: string) => Promise<void>;
   buzzFeedTab: 'for-you' | 'following' | 'saved' | 'liked' | 'trending';
   setBuzzFeedTab: (tab: 'for-you' | 'following' | 'saved' | 'liked' | 'trending') => void;
   toastMessage: string | null;
   showToast: (msg: string) => void;
   finishOnboarding: (updates: { name: string; handle: string; bio: string; avatar?: string; favoriteGenres?: string[] }) => Promise<void>;
+  // Notifications system
+  notifications: NotificationItem[];
+  unreadNotificationsCount: number;
+  sendNotification: (notif: Omit<NotificationItem, 'id' | 'isRead' | 'createdAt'>) => Promise<void>;
+  markNotificationAsRead: (id: string) => Promise<void>;
+  markAllNotificationsAsRead: () => Promise<void>;
+  deleteNotification: (id: string) => Promise<void>;
+  checkAndSendMentions: (text: string, title: string, targetView: string, targetId?: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -503,6 +526,127 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
+  // Compute public articles excluding drafts and unreleased scheduled articles
+  const publishedArticles = useMemo(() => {
+    return articles.filter(a => {
+      if (a.status === 'draft') return false;
+      if (a.status === 'scheduled') {
+        if (!a.scheduledAt) return false;
+        const schedTime = new Date(a.scheduledAt).getTime();
+        return !isNaN(schedTime) && schedTime <= Date.now();
+      }
+      return true;
+    });
+  }, [articles]);
+
+  // Notifications State & Realtime Listener
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+  useEffect(() => {
+    if (!currentUser?.id) {
+      setNotifications([]);
+      return;
+    }
+
+    const notifQuery = query(
+      collection(db, 'notifications'),
+      where('userId', '==', currentUser.id)
+    );
+
+    const unsubNotifs = onSnapshot(
+      notifQuery,
+      (snapshot) => {
+        const items: NotificationItem[] = [];
+        snapshot.forEach(doc => items.push(doc.data() as NotificationItem));
+        items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setNotifications(items);
+      },
+      (err) => {
+        console.warn('[Firestore] notifications subscription notice:', err.message);
+      }
+    );
+
+    return () => unsubNotifs();
+  }, [currentUser?.id]);
+
+  const unreadNotificationsCount = useMemo(() => {
+    return notifications.filter(n => !n.isRead).length;
+  }, [notifications]);
+
+  const sendNotification = async (notifData: Omit<NotificationItem, 'id' | 'isRead' | 'createdAt'>) => {
+    if (!notifData.userId || notifData.userId === currentUser.id) return;
+    const id = `notif-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const newNotif: NotificationItem = {
+      ...notifData,
+      id,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    };
+    try {
+      await setDoc(doc(db, 'notifications', id), newNotif);
+    } catch (err) {
+      console.warn('Error saving notification to Firestore:', err);
+    }
+  };
+
+  const markNotificationAsRead = async (id: string) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+    try {
+      await updateDoc(doc(db, 'notifications', id), { isRead: true });
+    } catch (err) {
+      console.warn('Error marking notification read in Firestore:', err);
+    }
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    const unread = notifications.filter(n => !n.isRead);
+    if (unread.length === 0) return;
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    try {
+      await Promise.all(
+        unread.map(n => updateDoc(doc(db, 'notifications', n.id), { isRead: true }))
+      );
+    } catch (err) {
+      console.warn('Error marking all notifications read:', err);
+    }
+  };
+
+  const deleteNotification = async (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+    try {
+      await deleteDoc(doc(db, 'notifications', id));
+    } catch (err) {
+      console.warn('Error deleting notification:', err);
+    }
+  };
+
+  const checkAndSendMentions = async (text: string, title: string, targetView: string, targetId?: string) => {
+    if (!text) return;
+    const mentions = text.match(/@([a-zA-Z0-9_]+)/g);
+    if (!mentions) return;
+    const uniqueHandles = Array.from(new Set(mentions.map(m => m.slice(1).toLowerCase())));
+
+    for (const handle of uniqueHandles) {
+      const foundUser = allUsers.find(u => u.handle.toLowerCase().replace('@', '') === handle);
+      if (foundUser && foundUser.id !== currentUser.id) {
+        await sendNotification({
+          userId: foundUser.id,
+          type: 'mention',
+          title,
+          message: `${currentUser.name} (@${currentUser.handle.replace('@', '')}) menyebut Anda: "${text.length > 60 ? text.slice(0, 60) + '...' : text}"`,
+          targetView,
+          targetId,
+          sender: {
+            id: currentUser.id,
+            name: currentUser.name,
+            avatar: currentUser.avatar,
+            handle: currentUser.handle,
+          },
+        });
+      }
+    }
+  };
+
   // Initialize Firebase Auth & Real User profile sync
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, async (fbUser) => {
@@ -515,12 +659,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const data = userSnap.data() as User;
             const isAdminRole = isUserAdmin(data, uid, fbUser.email || undefined);
             const isWriterRole = !isAdminRole && isUserWriter(data, uid);
+            const isCriticRole = !isAdminRole && !isWriterRole && isUserCritic(data, uid);
+            
             if (isAdminRole && data.role !== 'admin') {
               data.role = 'admin';
               data.roleTitle = 'Head Admin & Lead Editor';
             } else if (isWriterRole && data.role !== 'penulis_sotoy') {
               data.role = 'penulis_sotoy';
               data.roleTitle = 'Penulis Sotoy (Jurnalis Film & Pop-Culture)';
+            } else if (isCriticRole && data.role !== 'si_paling_sotoy') {
+              data.role = 'si_paling_sotoy';
+              data.roleTitle = 'Si Paling Sotoy (Kritikus Film)';
             }
             
             // Clean up any legacy mock names/handles from previous tests
@@ -568,14 +717,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             // First time user registration - start completely fresh as a clean new account
             const isAdminRole = isUserAdmin(null, uid, fbUser.email || undefined);
             const isWriterRole = !isAdminRole && isUserWriter(null, uid);
+            const isCriticRole = !isAdminRole && !isWriterRole && isUserCritic(null, uid);
+            
+            const role: UserRole = isAdminRole ? 'admin' : (isWriterRole ? 'penulis_sotoy' : (isCriticRole ? 'si_paling_sotoy' : 'warga_sotoy'));
+            const roleTitle = isAdminRole 
+              ? 'Head Admin & Lead Editor' 
+              : (isWriterRole 
+                ? 'Penulis Sotoy (Jurnalis Film & Pop-Culture)' 
+                : (isCriticRole ? 'Si Paling Sotoy (Kritikus Film)' : 'Warga Sotoy (Penonton Santai)'));
+            const bio = isAdminRole 
+              ? 'Menjaga ketertiban obrolan sotoy seantero jagat perfilman.' 
+              : (isWriterRole 
+                ? 'Menulis kabar terbaru, ulasan mendalam, dan kurasi film di Sotoy Film.' 
+                : (isCriticRole ? 'Kritikus film kawakan yang hobinya menilai setiap pixel di layar.' : 'Cinephile baru mendarat di Sotoy Film!'));
+
             const defaultUser: User = {
               id: uid,
-              name: fbUser.displayName || (isAdminRole ? 'Admin Utama' : isWriterRole ? 'Penulis Sotoy' : 'Warga Baru'),
+              name: fbUser.displayName || (isAdminRole ? 'Admin Utama' : isWriterRole ? 'Penulis Sotoy' : isCriticRole ? 'Si Paling Sotoy' : 'Warga Baru'),
               handle: '@' + (fbUser.displayName ? fbUser.displayName.toLowerCase().replace(/[^a-z0-9_]/g, '') : (fbUser.email ? fbUser.email.split('@')[0] : 'user_' + uid.slice(0, 4))),
               avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-              role: isAdminRole ? 'admin' : (isWriterRole ? 'penulis_sotoy' : 'warga_sotoy'),
-              roleTitle: isAdminRole ? 'Head Admin & Lead Editor' : (isWriterRole ? 'Penulis Sotoy (Jurnalis Film & Pop-Culture)' : 'Warga Sotoy (Penonton Santai)'),
-              bio: isAdminRole ? 'Menjaga ketertiban obrolan sotoy seantero jagat perfilman.' : (isWriterRole ? 'Menulis kabar terbaru, ulasan mendalam, dan kurasi film di Sotoy Film.' : 'Cinephile baru mendarat di Sotoy Film!'),
+              role,
+              roleTitle,
+              bio,
               email: fbUser.email || `user_${uid.slice(0, 4)}@sotoyfilm.id`,
               createdAt: new Date().toISOString(),
               totalReviews: 0,
@@ -872,9 +1035,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         
         const isAdminUID = isUserAdmin(null, uid, email);
         const isWriterUID = !isAdminUID && isUserWriter(null, uid);
-        const role: UserRole = isAdminUID ? 'admin' : (isWriterUID ? 'penulis_sotoy' : 'warga_sotoy');
-        const roleTitle = isAdminUID ? 'Head Admin & Lead Editor' : (isWriterUID ? 'Penulis Sotoy (Jurnalis Film & Pop-Culture)' : 'Warga Sotoy (Penonton Santai)');
-        const bio = isAdminUID ? 'Menjaga ketertiban obrolan sotoy seantero jagat perfilman.' : (isWriterUID ? 'Menulis kabar terbaru, ulasan mendalam, dan kurasi film di Sotoy Film.' : 'Cinephile baru mendarat di Sotoy Film!');
+        const isCriticUID = !isAdminUID && !isWriterUID && isUserCritic(null, uid);
+        const role: UserRole = isAdminUID ? 'admin' : (isWriterUID ? 'penulis_sotoy' : (isCriticUID ? 'si_paling_sotoy' : 'warga_sotoy'));
+        const roleTitle = isAdminUID 
+          ? 'Head Admin & Lead Editor' 
+          : (isWriterUID 
+            ? 'Penulis Sotoy (Jurnalis Film & Pop-Culture)' 
+            : (isCriticUID ? 'Si Paling Sotoy (Kritikus Film)' : 'Warga Sotoy (Penonton Santai)'));
+        const bio = isAdminUID 
+          ? 'Menjaga ketertiban obrolan sotoy seantero jagat perfilman.' 
+          : (isWriterUID 
+            ? 'Menulis kabar terbaru, ulasan mendalam, dan kurasi film di Sotoy Film.' 
+            : (isCriticUID ? 'Kritikus film kawakan yang hobinya menilai setiap pixel di layar.' : 'Cinephile baru mendarat di Sotoy Film!'));
         const avatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
         
         const newUser: User = {
@@ -949,15 +1121,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // First-time signup with Google! Clean, fresh new account
           const isAdminRole = isUserAdmin(null, uid, userCredential.user.email || undefined);
           const isWriterRole = !isAdminRole && isUserWriter(null, uid);
+          const isCriticRole = !isAdminRole && !isWriterRole && isUserCritic(null, uid);
+          
           const cleanHandle = '@' + (userCredential.user.displayName ? userCredential.user.displayName.toLowerCase().replace(/[^a-z0-9_]/g, '') : (userCredential.user.email ? userCredential.user.email.split('@')[0] : 'user_' + uid.slice(0, 4)));
           const newUser: User = {
             id: uid,
-            name: userCredential.user.displayName || (isAdminRole ? 'Admin Utama' : isWriterRole ? 'Penulis Sotoy' : 'Warga Baru'),
+            name: userCredential.user.displayName || (isAdminRole ? 'Admin Utama' : isWriterRole ? 'Penulis Sotoy' : isCriticRole ? 'Si Paling Sotoy' : 'Warga Baru'),
             handle: cleanHandle,
             avatar: userCredential.user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-            role: isAdminRole ? 'admin' : (isWriterRole ? 'penulis_sotoy' : 'warga_sotoy'),
-            roleTitle: isAdminRole ? 'Head Admin & Lead Editor' : (isWriterRole ? 'Penulis Sotoy (Jurnalis Film & Pop-Culture)' : 'Warga Sotoy (Penonton Santai)'),
-            bio: isAdminRole ? 'Menjaga ketertiban obrolan sotoy seantero jagat perfilman.' : (isWriterRole ? 'Menulis kabar terbaru, ulasan mendalam, dan kurasi film di Sotoy Film.' : 'Cinephile baru mendarat di Sotoy Film!'),
+            role: isAdminRole ? 'admin' : (isWriterRole ? 'penulis_sotoy' : (isCriticRole ? 'si_paling_sotoy' : 'warga_sotoy')),
+            roleTitle: isAdminRole 
+              ? 'Head Admin & Lead Editor' 
+              : (isWriterRole 
+                ? 'Penulis Sotoy (Jurnalis Film & Pop-Culture)' 
+                : (isCriticRole ? 'Si Paling Sotoy (Kritikus Film)' : 'Warga Sotoy (Penonton Santai)')),
+            bio: isAdminRole 
+              ? 'Menjaga ketertiban obrolan sotoy seantero jagat perfilman.' 
+              : (isWriterRole 
+                ? 'Menulis kabar terbaru, ulasan mendalam, dan kurasi film di Sotoy Film.' 
+                : (isCriticRole ? 'Kritikus film kawakan yang hobinya menilai setiap pixel di layar.' : 'Cinephile baru mendarat di Sotoy Film!')),
             email: userCredential.user.email || '',
             createdAt: new Date().toISOString(),
             totalReviews: 0,
@@ -1193,7 +1375,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  // Publish Article directly to Firestore
+  // Publish or Save Draft Article directly to Firestore
   const addArticle = async (newArticle: Omit<Article, 'id' | 'publishedAt' | 'views' | 'likes' | 'commentsCount'>): Promise<boolean> => {
     const isPermitted = currentUser.role === 'penulis_sotoy' || currentUser.role === 'admin' || isUserWriter(currentUser) || isUserAdmin(currentUser);
     if (!isPermitted) {
@@ -1202,10 +1384,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const articleId = `art-${Date.now()}`;
+    const status = newArticle.status || 'published';
     const created: Article = {
       ...newArticle,
       id: articleId,
-      publishedAt: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
+      status,
+      publishedAt: (newArticle as any).publishedAt || new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
       views: 1,
       likes: 0,
       commentsCount: 0,
@@ -1213,7 +1397,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     try {
       await setDoc(doc(db, 'articles', articleId), created);
-      showToast('Artikel berhasil dipublikasikan!');
+      const toastMsg = status === 'draft' 
+        ? 'Draf artikel berhasil disimpan!' 
+        : status === 'scheduled' 
+        ? 'Artikel berhasil dijadwalkan untuk terbit!' 
+        : 'Artikel berhasil dipublikasikan!';
+      showToast(toastMsg);
       return true;
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, `articles/${articleId}`);
@@ -1232,7 +1421,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     try {
       await updateDoc(doc(db, 'articles', id), updatedFields);
-      showToast('Artikel berhasil diperbarui!');
+      const toastMsg = updatedFields.status === 'draft'
+        ? 'Draf artikel berhasil disimpan!'
+        : updatedFields.status === 'scheduled'
+        ? 'Jadwal terbit artikel berhasil diperbarui!'
+        : 'Artikel berhasil diperbarui!';
+      showToast(toastMsg);
       return true;
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `articles/${id}`);
@@ -1494,8 +1688,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       score: Math.min(5, Math.max(0.5, Number(score.toFixed(1)))),
       headline,
       reviewText,
-      createdAt: 'Baru saja',
+      createdAt: new Date().toISOString(),
       likes: 0,
+      views: 0,
+      commentsCount: 0,
+      featured: false,
     };
 
     try {
@@ -1518,6 +1715,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       showToast(`Skor Sotoy ${score.toFixed(1)}/5.0 dan ulasan kamu berhasil dikirim!`);
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, `ratings/${ratingId}`);
+    }
+  };
+
+  const updateFilmRating = async (ratingId: string, updates: Partial<UserRating>) => {
+    const rating = ratings.find(r => r.id === ratingId);
+    if (!rating) return;
+    const updated = { ...rating, ...updates };
+    try {
+      await setDoc(doc(db, 'ratings', ratingId), updated);
+      showToast('Ulasan film kamu berhasil diperbarui!');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `ratings/${ratingId}`);
+    }
+  };
+
+  const deleteFilmRating = async (ratingId: string) => {
+    try {
+      await deleteDoc(doc(db, 'ratings', ratingId));
+      showToast('Ulasan film kamu telah dihapus.');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `ratings/${ratingId}`);
     }
   };
 
@@ -1592,6 +1810,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const isAdmin = isLoggedIn && isUserAdmin(currentUser);
   const isWriter = isLoggedIn && (isUserWriter(currentUser) || currentUser.role === 'penulis_sotoy' || isAdmin || currentUser.role === 'admin');
+  const isCritic = isLoggedIn && (isUserCritic(currentUser) || currentUser.role === 'si_paling_sotoy' || isAdmin);
 
   return (
     <AppContext.Provider
@@ -1600,6 +1819,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isLoggedIn,
         isAdmin,
         isWriter,
+        isCritic,
         loginModalOpen,
         setLoginModalOpen,
         isComposeBuzzOpen,
@@ -1609,6 +1829,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         signUpWithEmail,
         signInWithGoogle,
         articles,
+        publishedArticles,
         films,
         buzzList,
         ratings,
@@ -1668,12 +1889,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addBuzzReply,
         likeBuzzReply,
         addFilmRating,
+        updateFilmRating,
+        deleteFilmRating,
         likeArticle,
         buzzFeedTab,
         setBuzzFeedTab,
         toastMessage,
         showToast,
         finishOnboarding,
+        notifications,
+        unreadNotificationsCount,
+        sendNotification,
+        markNotificationAsRead,
+        markAllNotificationsAsRead,
+        deleteNotification,
+        checkAndSendMentions,
       }}
     >
       {children}

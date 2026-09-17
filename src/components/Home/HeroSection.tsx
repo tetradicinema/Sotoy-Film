@@ -17,10 +17,10 @@ import { StarRating } from '../Common/StarRating';
 import { GEAR_ADDICT_ITEMS } from '../../data/mockData';
 
 export const HeroSection: React.FC = () => {
-  const { articles, films, navigateTo, currentUser, isLoggedIn } = useApp();
+  const { publishedArticles, films, navigateTo, currentUser, isLoggedIn } = useApp();
 
   // Filter hero slider articles
-  const sliderArticles = articles.filter(a => a.heroSlider);
+  const sliderArticles = publishedArticles.filter(a => a.heroSlider);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [activeTab, setActiveTab] = useState<'trending' | 'to-watch' | 'gear-addict'>('trending');
 
@@ -33,9 +33,9 @@ export const HeroSection: React.FC = () => {
     return () => clearInterval(interval);
   }, [sliderArticles.length]);
 
-  const activeArticle = sliderArticles[currentSlide] || articles[0];
+  const activeArticle = sliderArticles[currentSlide] || publishedArticles[0];
 
-  if (articles.length === 0 || !activeArticle) {
+  if (publishedArticles.length === 0 || !activeArticle) {
     return (
       <section id="home-hero-section" className="relative pt-6 pb-4">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
