@@ -881,8 +881,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let unsubCritic = () => {};
 
     if (isLoggedIn && currentUser?.id) {
-      const isAdminUser = isUserAdmin(currentUser);
-      // Admin queries all files, regular users query only their own files
+      const isAdminUser = isUserAdmin(currentUser) || isUserWriter(currentUser) || currentUser.role === 'penulis_sotoy' || currentUser.role === 'admin';
+      // Admin and Writer query all files, regular users query only their own files
       const filesQuery = isAdminUser
         ? collection(db, 'files')
         : query(collection(db, 'files'), where('userId', '==', currentUser.id));

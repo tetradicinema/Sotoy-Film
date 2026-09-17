@@ -46,6 +46,7 @@ export type UserTab = 'buzz' | 'reviews' | 'watchlist' | 'articles' | 'community
 export type SettingsSubPage =
   | 'profile'
   | 'activity'
+  | 'my-content'
   | 'security'
   | 'privacy'
   | 'preferences'

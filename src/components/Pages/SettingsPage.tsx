@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { SettingsSubPage, UserSettings } from '../../types';
+import { CMSArticleWorkspace } from './CMSArticleWorkspace';
 
 export const SettingsPage: React.FC = () => {
   const {
@@ -67,6 +68,8 @@ export const SettingsPage: React.FC = () => {
     showToast,
     logout,
     navigateTo,
+    isAdmin,
+    isWriter,
   } = useApp();
 
   // Profile Form state
@@ -252,6 +255,8 @@ export const SettingsPage: React.FC = () => {
   const watchlistFilmItems = watchlist.map(id => films.find(f => f.id === id)).filter((f): f is typeof films[0] => Boolean(f));
   const savedArticleItems = (savedArticles || []).map(id => articles.find(a => a.id === id)).filter((a): a is typeof articles[0] => Boolean(a));
 
+  const isWriterOrAdmin = currentUser.role === 'penulis_sotoy' || currentUser.role === 'admin' || isWriter || isAdmin;
+
   const navItems: { id: SettingsSubPage; label: string; icon: any; desc: string }[] = [
     {
       id: 'profile',
@@ -265,6 +270,12 @@ export const SettingsPage: React.FC = () => {
       icon: Activity,
       desc: 'Log postingan disukai, disimpan, ulasan & arsip',
     },
+    ...(isWriterOrAdmin ? [{
+      id: 'my-content' as SettingsSubPage,
+      label: 'My Content Workspace',
+      icon: PenSquare,
+      desc: 'Kelola artikel tulisan, draf & statistik keterbacaan',
+    }] : []),
     {
       id: 'security',
       label: 'Keamanan & Akun',
@@ -1009,6 +1020,19 @@ export const SettingsPage: React.FC = () => {
                 </div>
               );
             })()}
+
+            {/* =================================================================== */}
+            {/* SUBPAGE: MY CONTENT WORKSPACE (MINI-CMS FOR WRITERS & ADMINS) */}
+            {/* =================================================================== */}
+            {activeSettingsTab === 'my-content' && (
+              <div id="settings-pane-my-content" className="animate-in fade-in duration-200">
+                <CMSArticleWorkspace 
+                  mode={isAdmin || currentUser.role === 'admin' ? 'admin' : 'writer'}
+                  title="My Content Workspace"
+                  subtitle="Mini-CMS untuk mengelola artikel tulisan Anda, sunting draf, dan statistik pembaca."
+                />
+              </div>
+            )}
 
             {/* =================================================================== */}
             {/* SUBPAGE 3: KEAMANAN & AKUN (GANTI EMAIL, SANDI, 2FA) */}

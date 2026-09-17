@@ -60,6 +60,8 @@ import { WriterDashboard } from '../Writer/WriterDashboard';
 export const UserPage: React.FC = () => {
   const {
     currentUser,
+    isAdmin,
+    isWriter,
     isLoggedIn,
     setLoginModalOpen,
     logout,
@@ -647,8 +649,8 @@ export const UserPage: React.FC = () => {
             <span>Komunitas Cinephile</span>
           </button>
 
-          {/* TAB 6: WRITER WORKSPACE (FOR PENULIS SOTOY & ADMIN) */}
-          {isOwnProfile && (currentUser.role === 'penulis_sotoy' || currentUser.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02' || currentUser.role === 'admin') && (
+          {/* TAB 6: CMS ARTIKEL & WORKSPACE (UNTUK PENULIS SOTOY & ADMIN) */}
+          {isOwnProfile && (currentUser.role === 'penulis_sotoy' || currentUser.role === 'admin' || isWriter || isAdmin || currentUser.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02') && (
             <button
               id="user-tab-writer-dashboard"
               onClick={() => setActiveUserTab('writer')}
@@ -659,15 +661,15 @@ export const UserPage: React.FC = () => {
               }`}
             >
               <PenSquare className="w-4 h-4 text-[#FF2E7E]" />
-              <span>Workspace Penulis</span>
+              <span>CMS Artikel & Workspace</span>
               <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#FF2E7E] text-white">
-                Penulis Sotoy
+                {currentUser.role === 'admin' || isAdmin ? 'CMS Redaksi' : 'Penulis Sotoy'}
               </span>
             </button>
           )}
 
           {/* TAB 7: ADMIN DASHBOARD VIEW (ONLY FOR ADMIN USER) */}
-          {isOwnProfile && (currentUser.role === 'admin' || currentUser.id === 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' || currentUser.email === 'eksposurmedia@gmail.com') && (
+          {isOwnProfile && (currentUser.role === 'admin' || isAdmin || currentUser.id === 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' || currentUser.email === 'eksposurmedia@gmail.com') && (
             <button
               id="user-tab-admin-dashboard"
               onClick={() => setActiveUserTab('admin')}

@@ -142,7 +142,8 @@ service cloud.firestore {
       allow create: if isSignedIn() && isOwner(userId) && isValidUser(incoming());
       allow update: if isSignedIn() && (
         (isOwner(userId) && isValidUser(incoming()) && (incoming().role == existing().role || userId == '0PCmaBvJrzeaQgpf3sSTC4mnsh02')) || 
-        isAdmin()
+        isAdmin() ||
+        isWriter()
       );
       allow delete: if isAdmin();
     }
@@ -153,8 +154,8 @@ service cloud.firestore {
     }
 
     match /files/{fileId} {
-      allow read, update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && ((incoming().userId == request.auth.uid && isValidFile(incoming())) || isAdmin());
+      allow read, update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin() || isWriter());
+      allow create: if isSignedIn() && ((incoming().userId == request.auth.uid && isValidFile(incoming())) || isAdmin() || isWriter());
     }
 
     match /articles/{articleId} {
@@ -169,12 +170,14 @@ service cloud.firestore {
       allow update: if isSignedIn() && isValidId(articleId) && isValidArticle(incoming()) && (
         isOwner(existing().author.id) || 
         isAdmin() || 
+        isWriter() ||
         (request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' && (existing().author.id == request.auth.uid || incoming().author.id == request.auth.uid)) ||
         (request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' && (existing().author.id == request.auth.uid || incoming().author.id == request.auth.uid))
       );
       allow delete: if isSignedIn() && (
         isOwner(existing().author.id) || 
         isAdmin() || 
+        isWriter() ||
         (request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' && existing().author.id == request.auth.uid) ||
         (request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' && existing().author.id == request.auth.uid)
       );
@@ -182,7 +185,7 @@ service cloud.firestore {
 
     match /films/{filmId} {
       allow read: if true;
-      allow create, update, delete: if isAdmin() && isValidId(filmId) && isValidFilmItem(incoming());
+      allow create, update, delete: if (isAdmin() || isWriter()) && isValidId(filmId) && isValidFilmItem(incoming());
     }
 
     match /buzz/{buzzId} {
@@ -193,7 +196,7 @@ service cloud.firestore {
         // Allowing simple like increments by other users
         (incoming().diff(existing()).affectedKeys().hasOnly(['likes']))
       );
-      allow delete: if isSignedIn() && (isOwner(existing().author.id) || isAdmin());
+      allow delete: if isSignedIn() && (isOwner(existing().author.id) || isAdmin() || isWriter());
     }
 
     match /ratings/{ratingId} {
@@ -204,33 +207,35 @@ service cloud.firestore {
         (incoming().diff(existing()).affectedKeys().hasOnly(['likes'])) ||
         (isCritic() && isOwner(existing().userId))
       );
-      allow delete: if isSignedIn() && (isOwner(existing().userId) || isAdmin() || (isCritic() && isOwner(existing().userId)));
+      allow delete: if isSignedIn() && (isOwner(existing().userId) || isAdmin() || isWriter() || (isCritic() && isOwner(existing().userId)));
     }
 
     match /criticSubmissions/{submissionId} {
-      allow read: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin());
+      allow read: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin() || isWriter());
       allow create: if isSignedIn() && isValidId(submissionId) && isValidCriticSubmission(incoming()) && incoming().status == 'pending';
       allow update: if isSignedIn() && isValidId(submissionId) && (
         (isOwner(existing().userId) && isValidCriticSubmission(incoming()) && incoming().status == existing().status) || // owner can edit motivation but not change status
-        isAdmin()
+        isAdmin() ||
+        isWriter()
       );
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || isWriter();
     }
 
     match /reports/{reportId} {
-      allow read: if isAdmin();
+      allow read: if isAdmin() || isWriter();
       allow create: if isSignedIn();
-      allow update, delete: if isAdmin();
+      allow update, delete: if isAdmin() || isWriter();
     }
 
     match /notifications/{notificationId} {
-      allow read, list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && isValidId(notificationId) && isValidNotification(incoming()) && (incoming().sender.id == request.auth.uid || isAdmin());
+      allow read, list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin() || isWriter());
+      allow create: if isSignedIn() && isValidId(notificationId) && isValidNotification(incoming()) && (incoming().sender.id == request.auth.uid || isAdmin() || isWriter());
       allow update: if isSignedIn() && isValidId(notificationId) && (
         (resource.data.userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['isRead'])) ||
-        isAdmin()
+        isAdmin() ||
+        isWriter()
       );
-      allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin() || isWriter());
     }
   }
 }

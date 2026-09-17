@@ -26,6 +26,7 @@ import {
   Home,
   Users,
   Heart,
+  FileText,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
@@ -294,8 +295,8 @@ export const Navbar: React.FC = () => {
               <NotificationBell mode="global" />
             )}
 
-            {/* ADMIN MODE Pill Button (Ungu #7928CA) */}
-            {isAdmin && (
+            {/* ADMIN MODE Pill Button for Admin (Ungu #7928CA) */}
+            {(isAdmin || currentUser.role === 'admin') ? (
               <button
                 id="navbar-admin-mode-pill"
                 onClick={() => navigateTo('admin-dashboard')}
@@ -313,7 +314,25 @@ export const Navbar: React.FC = () => {
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">ADMIN MODE</span>
               </button>
-            )}
+            ) : (isWriter || currentUser.role === 'penulis_sotoy' || currentUser.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02') ? (
+              <button
+                id="navbar-writer-mode-pill"
+                onClick={() => navigateTo('writer-dashboard')}
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-black tracking-wider transition-all duration-200 border shadow-sm ${
+                  currentView === 'writer-dashboard'
+                    ? 'bg-pink-600 text-white border-pink-500 shadow-pink-900/50 ring-2 ring-pink-400/40'
+                    : 'bg-pink-500/20 text-pink-300 border-pink-500/60 hover:bg-pink-600 hover:text-white'
+                }`}
+                title="Dasbor CMS Penulis"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-pink-400"></span>
+                </span>
+                <PenSquare className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">DASBOR PENULIS</span>
+              </button>
+            ) : null}
 
             {/* Unified Menu Trigger: Circular Profile Photo Avatar Button */}
             <div className="relative" ref={userMenuRef}>
@@ -594,29 +613,45 @@ export const Navbar: React.FC = () => {
                         </div>
                       )}
 
-                      {(currentUser.role === 'penulis_sotoy' || currentUser.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02' || isWriter) && (
+                      {(currentUser.role === 'penulis_sotoy' || currentUser.role === 'admin' || isWriter || isAdmin || currentUser.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02') && (
                         <div className="pt-1.5 border-t border-slate-800/50 mt-1.5 space-y-1">
-                          <div className={`text-[9px] font-black uppercase tracking-widest ${getRoleBadgeStyle('penulis_sotoy').text} px-1 mb-1 flex items-center justify-between`}>
-                            <span>Ruang Penulis</span>
-                            <RoleBadge role="penulis_sotoy" size="xs" showTooltip={false} />
+                          <div className={`text-[9px] font-black uppercase tracking-widest ${getRoleBadgeStyle(currentUser.role === 'admin' ? 'admin' : 'penulis_sotoy').text} px-1 mb-1 flex items-center justify-between`}>
+                            <span>CMS Artikel & Redaksi</span>
+                            <RoleBadge role={currentUser.role === 'admin' ? 'admin' : 'penulis_sotoy'} size="xs" showTooltip={false} />
                           </div>
+                          {(currentUser.role === 'admin' || currentUser.role === 'penulis_sotoy') && (
+                            <button
+                              id="menu-writer-dashboard-btn"
+                              onClick={() => {
+                                navigateTo('writer-dashboard');
+                                setRoleDropdownOpen(false);
+                              }}
+                              className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
+                                currentView === 'writer-dashboard'
+                                  ? 'bg-pink-500/20 text-[#FF2E7E] border border-pink-500/50 font-bold'
+                                  : 'hover:bg-pink-500/10 text-[#FF2E7E] font-bold border border-pink-500/30'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <PenSquare className="w-4 h-4 text-[#FF2E7E]" />
+                                <span>My Workspace (CMS)</span>
+                              </div>
+                              <span className="text-xs text-[#FF2E7E]">→</span>
+                            </button>
+                          )}
                           <button
-                            id="menu-writer-dashboard-btn"
+                            id="menu-my-content-settings-btn"
                             onClick={() => {
-                              navigateTo('writer-dashboard');
+                              navigateTo('settings', { settingsTab: 'my-content' });
                               setRoleDropdownOpen(false);
                             }}
-                            className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
-                              currentView === 'writer-dashboard'
-                                ? 'bg-pink-500/20 text-[#FF2E7E] border border-pink-500/50 font-bold'
-                                : 'hover:bg-pink-500/10 text-[#FF2E7E] font-bold border border-pink-500/30'
-                            }`}
+                            className="w-full text-left p-2 rounded-xl text-xs flex items-center justify-between hover:bg-slate-800 text-slate-200 transition-colors"
                           >
                             <div className="flex items-center gap-2.5">
-                              <PenSquare className="w-4 h-4 text-[#FF2E7E]" />
-                              <span>Dasbor Penulis & Workspace</span>
+                              <FileText className="w-4 h-4 text-pink-400" />
+                              <span>My Content (Settings)</span>
                             </div>
-                            <span className="text-xs text-[#FF2E7E]">→</span>
+                            <span className="text-xs text-slate-400">→</span>
                           </button>
                           <button
                             id="menu-write-article-btn"

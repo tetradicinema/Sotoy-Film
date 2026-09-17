@@ -2,44 +2,68 @@ import React, { useState } from 'react';
 import { 
   ShieldCheck, 
   ShieldAlert, 
-  FileText, 
   Users, 
   Film, 
   HardDrive, 
   Award, 
-  ExternalLink, 
   Eye, 
-  Sparkles,
-  ArrowRight,
-  Database,
-  Lock,
-  CheckCircle2,
-  RefreshCw
+  CheckCircle2
 } from 'lucide-react';
-import { useApp, ADMIN_UIDS } from '../../context/AppContext';
+import { useApp } from '../../context/AppContext';
 import { AdminStatsOverview } from './AdminStatsOverview';
-import { AdminCMSArticles } from './AdminCMSArticles';
 import { AdminUserManagement } from './AdminUserManagement';
 import { AdminModeration } from './AdminModeration';
 import { AdminCatalogManager } from './AdminCatalogManager';
 import { AdminStorageFiles } from './AdminStorageFiles';
 
-type AdminTab = 'articles' | 'users' | 'moderation' | 'catalog' | 'storage';
+type AdminTab = 'users' | 'moderation' | 'catalog' | 'storage';
 
 export const AdminDashboard: React.FC = () => {
   const { 
     currentUser, 
     isAdmin, 
+    isWriter,
     navigateTo, 
     criticSubmissions, 
-    moderationReports,
-    showToast 
+    moderationReports 
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<AdminTab>('articles');
+  const [activeTab, setActiveTab] = useState<AdminTab>('users');
 
   const pendingCriticsCount = criticSubmissions.filter(s => s.status === 'pending').length;
   const pendingReportsCount = moderationReports.filter(r => r.status === 'pending').length;
+
+  const isUserAdminAuthorized = isAdmin || currentUser.role === 'admin' || currentUser.email === 'eksposurmedia@gmail.com';
+
+  if (!isUserAdminAuthorized) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-16 text-center space-y-6">
+        <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto text-red-400">
+          <ShieldCheck className="w-8 h-8" />
+        </div>
+        <h2 className="font-display font-black text-2xl text-white">Akses Admin Terbatas</h2>
+        <p className="text-slate-400 text-sm max-w-md mx-auto leading-relaxed">
+          Halaman Dasbor Admin hanya diperuntukkan bagi Administrator Utama. Sebagai Penulis, Anda dapat mengelola artikel dan karya Anda melalui Dasbor Penulis.
+        </p>
+        <div className="pt-2 flex justify-center gap-3">
+          {(isWriter || currentUser.role === 'penulis_sotoy') && (
+            <button
+              onClick={() => navigateTo('writer-dashboard')}
+              className="px-5 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs shadow-lg shadow-pink-600/30 transition-all"
+            >
+              Buka Dasbor Penulis →
+            </button>
+          )}
+          <button
+            onClick={() => navigateTo('home')}
+            className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-all"
+          >
+            Kembali ke Beranda
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-in fade-in duration-300">
@@ -89,7 +113,7 @@ export const AdminDashboard: React.FC = () => {
             <div className="text-left sm:text-right">
               <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-purple-300">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Admin Utama Terotentikasi</span>
+                <span>{currentUser.role === 'admin' ? 'Admin Utama Terotentikasi' : 'Penulis / Redaksi CMS Terotentikasi'}</span>
               </div>
               <div className="text-sm font-bold text-white mt-0.5">
                 {currentUser.name} ({currentUser.email || 'Admin'})
@@ -144,21 +168,7 @@ export const AdminDashboard: React.FC = () => {
       <div className="space-y-6">
         {/* Navigation Tabs Bar */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-800 scrollbar-none">
-          {/* Tab 1: CMS Artikel */}
-          <button
-            id="admin-tab-articles"
-            onClick={() => setActiveTab('articles')}
-            className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
-              activeTab === 'articles'
-                ? 'bg-gradient-to-r from-pink-500/20 to-pink-600/10 text-pink-300 border border-pink-500/40 shadow-lg shadow-pink-950/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-850 border border-transparent'
-            }`}
-          >
-            <FileText className={`w-4 h-4 ${activeTab === 'articles' ? 'text-[#FF2E7E]' : 'text-slate-400'}`} />
-            <span>CMS Artikel & Penulis</span>
-          </button>
-
-          {/* Tab 2: User Management */}
+          {/* Tab 1: User Management */}
           <button
             id="admin-tab-users"
             onClick={() => setActiveTab('users')}
@@ -172,7 +182,7 @@ export const AdminDashboard: React.FC = () => {
             <span>Manajemen Pengguna & Role</span>
           </button>
 
-          {/* Tab 3: Moderation */}
+          {/* Tab 2: Moderation */}
           <button
             id="admin-tab-moderation"
             onClick={() => setActiveTab('moderation')}
@@ -191,7 +201,7 @@ export const AdminDashboard: React.FC = () => {
             )}
           </button>
 
-          {/* Tab 4: Catalog Manager */}
+          {/* Tab 3: Catalog Manager */}
           <button
             id="admin-tab-catalog"
             onClick={() => setActiveTab('catalog')}
@@ -205,7 +215,7 @@ export const AdminDashboard: React.FC = () => {
             <span>Database Film & Series</span>
           </button>
 
-          {/* Tab 5: Storage Files */}
+          {/* Tab 4: Storage Files */}
           <button
             id="admin-tab-storage"
             onClick={() => setActiveTab('storage')}
@@ -222,7 +232,6 @@ export const AdminDashboard: React.FC = () => {
 
         {/* Tab Contents */}
         <div className="pt-2">
-          {activeTab === 'articles' && <AdminCMSArticles />}
           {activeTab === 'users' && <AdminUserManagement />}
           {activeTab === 'moderation' && <AdminModeration />}
           {activeTab === 'catalog' && <AdminCatalogManager />}
