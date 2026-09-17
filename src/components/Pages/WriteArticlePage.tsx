@@ -34,6 +34,7 @@ import { useApp } from '../../context/AppContext';
 import { MainCategory, SubCategory, FilmItem } from '../../types';
 import { db } from '../../lib/firebase';
 import { doc, setDoc, deleteDoc, onSnapshot, collection } from 'firebase/firestore';
+import { RichTextEditor } from '../CMS/RichTextEditor';
 
 interface CoEditor {
   userId: string;
@@ -1071,14 +1072,11 @@ export const WriteArticlePage: React.FC = () => {
                 <label className="block text-xs font-bold text-slate-300 mb-1.5">
                   Isi Konten Artikel (Mendukung Markdown ### Heading) <span className="text-[#FF2E7E]">*</span>
                 </label>
-                <textarea
+                <RichTextEditor
                   id="write-content-textarea"
                   value={content}
-                  onChange={e => setContent(e.target.value)}
+                  onChange={setContent}
                   placeholder="Tulis ulasan mendalam, breakdown teknis, atau poin-poin artikel..."
-                  required
-                  rows={10}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] resize-y"
                 />
               </div>
 

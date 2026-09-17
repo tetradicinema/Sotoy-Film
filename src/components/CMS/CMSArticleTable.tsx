@@ -19,6 +19,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { Article, MainCategory, SubCategory, UserRole } from '../../types';
 import { RoleBadge } from '../Common/RoleBadge';
+import { RichTextEditor } from './RichTextEditor';
 
 const SUBCATEGORIES_BY_CAT: Record<MainCategory, { value: SubCategory; label: string }[]> = {
   movies: [
@@ -106,6 +107,7 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
     authorId: string;
     tags: string;
     isFeatured: boolean;
+    content: string;
   }>({
     title: '',
     slug: '',
@@ -116,6 +118,7 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
     authorId: '',
     tags: '',
     isFeatured: false,
+    content: '',
   });
 
   // Available authors list for Admin re-assign dropdown
@@ -221,6 +224,7 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
       authorId: article.author?.id || article.authorId || currentUser.id,
       tags: article.tags ? article.tags.join(', ') : '',
       isFeatured: !!article.featured,
+      content: article.content || '',
     });
   };
 
@@ -252,6 +256,7 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
       scheduledAt: quickForm.status === 'scheduled' ? quickForm.scheduledAt : undefined,
       tags: parsedTags,
       featured: quickForm.isFeatured,
+      content: quickForm.content,
     };
 
     if (isAdminView) {
@@ -746,6 +751,18 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
                                 </label>
                               </div>
                             </div>
+                          </div>
+
+                          {/* Quick Edit WYSIWYG Editor */}
+                          <div className="space-y-1.5 bg-slate-900/50 p-4 rounded-2xl border border-slate-800">
+                            <label className="block text-slate-300 font-bold text-[10px] uppercase tracking-wider">
+                              Isi Konten Artikel (Quick Edit WYSIWYG & Markdown)
+                            </label>
+                            <RichTextEditor
+                              value={quickForm.content}
+                              onChange={(val) => setQuickForm(prev => ({ ...prev, content: val }))}
+                              placeholder="Tulis atau perbarui konten artikel Anda..."
+                            />
                           </div>
 
                           {/* INLINE BUTTON ACTIONS */}

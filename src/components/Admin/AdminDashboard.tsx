@@ -13,6 +13,7 @@ import { useApp } from '../../context/AppContext';
 import { AdminStatsOverview } from './AdminStatsOverview';
 import { AdminUserManagement } from './AdminUserManagement';
 import { AdminModeration } from './AdminModeration';
+import { CMSAnalyticsCard } from '../CMS/CMSAnalyticsCard';
 import { AdminCatalogManager } from './AdminCatalogManager';
 import { AdminStorageFiles } from './AdminStorageFiles';
 
@@ -163,6 +164,9 @@ export const AdminDashboard: React.FC = () => {
 
       {/* 2. METRIK UTAMA PLATFORM (STATISTICS OVERVIEW - 4 KARTU) */}
       <AdminStatsOverview />
+
+      {/* CMS Editorial Real-time Analytics Card */}
+      <CMSAnalyticsCard mode="admin" />
 
       {/* 3. MODUL MANAGEMENT UTAMA (TABS INTERFACE) */}
       <div className="space-y-6">

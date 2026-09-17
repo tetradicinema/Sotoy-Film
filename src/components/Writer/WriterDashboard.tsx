@@ -25,6 +25,7 @@ import { useApp } from '../../context/AppContext';
 import { Article, MainCategory } from '../../types';
 import { NotificationBell } from '../Common/NotificationBell';
 import { CMSArticleWorkspace } from '../Pages/CMSArticleWorkspace';
+import { CMSAnalyticsCard } from '../CMS/CMSAnalyticsCard';
 
 export const WriterDashboard: React.FC = () => {
   const {
@@ -276,6 +277,9 @@ export const WriterDashboard: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* CMS Analytics Real-time Card */}
+        <CMSAnalyticsCard mode="writer" />
 
         {/* Writer Stats Summary Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
