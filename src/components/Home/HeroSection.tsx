@@ -13,7 +13,52 @@ import {
   PenSquare,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
 import { StarRating } from '../Common/StarRating';
+
+const HeroActiveAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }> = ({ authorId, defaultAuthor }) => {
+  const author = useDynamicArticleAuthor(authorId, defaultAuthor);
+  const { navigateTo } = useApp();
+
+  if (author.loading) {
+    return (
+      <div className="flex items-center gap-2 animate-pulse">
+        <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-slate-800 shrink-0" />
+        <div className="h-3 w-20 bg-slate-800 rounded" />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onClick={(e) => {
+        e.stopPropagation();
+        navigateTo('user-profile', { userId: author.id });
+      }}
+      className="flex items-center gap-2 group/author cursor-pointer hover:opacity-90 transition-all"
+      title={`Kunjungi profil ${author.displayName || author.name}`}
+    >
+      <img
+        src={author.avatarURL || author.avatar}
+        alt={author.displayName || author.name}
+        className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover ring-1 ring-[#FFD000] group-hover/author:ring-[#00F0FF] transition-all"
+      />
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className="font-semibold text-white group-hover/author:text-[#00F0FF] transition-colors truncate max-w-[120px] sm:max-w-none">
+          {author.displayName || author.name}
+        </span>
+        {author.customBadge && (
+          <span className="bg-[#FFD000]/20 text-[#FFD000] text-[9px] font-black px-1.5 py-0.2 rounded border border-[#FFD000]/30 uppercase tracking-wider">
+            {author.customBadge}
+          </span>
+        )}
+        <span className="text-[10px] text-slate-400 font-normal">
+          ({author.articleCount} {author.articleCount === 1 ? 'artikel' : 'artikel'})
+        </span>
+      </div>
+    </div>
+  );
+};
 import { GEAR_ADDICT_ITEMS } from '../../data/mockData';
 
 export const HeroSection: React.FC = () => {
@@ -158,16 +203,7 @@ export const HeroSection: React.FC = () => {
               <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-8 z-10 flex flex-col justify-end">
                 {/* Author info & Read time */}
                 <div className="flex items-center flex-wrap gap-2 mb-2 sm:mb-3 text-xs text-slate-300">
-                  <div className="flex items-center gap-2">
-                    <img
-                      src={activeArticle.author.avatar}
-                      alt={activeArticle.author.name}
-                      className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover ring-1 ring-[#FFD000]"
-                    />
-                    <span className="font-semibold text-white truncate max-w-[120px] sm:max-w-none">
-                      {activeArticle.author.name}
-                    </span>
-                  </div>
+                  <HeroActiveAuthorBadge authorId={activeArticle.authorId} defaultAuthor={activeArticle.author} />
                   <span className="bg-[#FF2E7E]/20 text-[#FF2E7E] text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded border border-[#FF2E7E]/30 uppercase shrink-0">
                     Penulis
                   </span>
@@ -331,12 +367,13 @@ export const HeroSection: React.FC = () => {
                             {film.year} • {film.genres.slice(0, 2).join(', ')}
                           </p>
                           <div className="mt-1 flex items-center gap-1.5">
-                            <Star className="w-3 h-3 fill-current text-[#FFD000]" />
-                            <span className="text-[11px] font-black text-[#FFD000]">
-                              {film.skorSotoy.toFixed(1)}
+                            <span className="text-[10px] font-black text-[#00F0FF] bg-[#00F0FF]/15 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                              <Star className="w-2.5 h-2.5 fill-current" />
+                              <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
+                              <span className="text-[8px] font-bold">Critics</span>
                             </span>
-                            <span className="text-[10px] text-slate-500">
-                              ({film.totalVotes} vote)
+                            <span className="text-[10px] text-slate-400">
+                              ★ {film.skorSotoy.toFixed(1)}
                             </span>
                           </div>
                         </div>
@@ -389,8 +426,9 @@ export const HeroSection: React.FC = () => {
                                 {w.platform}
                               </span>
                             ))}
-                            <span className="text-[10px] font-bold text-[#FFD000] ml-auto">
-                              ★ {film.skorSotoy.toFixed(1)}
+                            <span className="text-[10px] font-black text-[#00F0FF] ml-auto flex items-center gap-0.5">
+                              <Star className="w-2.5 h-2.5 fill-current" />
+                              <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
                             </span>
                           </div>
                         </div>

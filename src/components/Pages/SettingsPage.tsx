@@ -151,16 +151,6 @@ export const SettingsPage: React.FC = () => {
     showToast('Riwayat dihapus permanen.');
   };
 
-  // Preset Avatars
-  const PRESET_AVATARS = [
-    { label: 'Director Auteur', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80' },
-    { label: 'Cinematographer', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80' },
-    { label: 'Neo-Noir Lead', url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80' },
-    { label: 'Sci-Fi Explorer', url: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=300&q=80' },
-    { label: 'Screenwriter', url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=300&q=80' },
-    { label: 'Gear Specialist', url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80' },
-  ];
-
   // All Available Genres
   const ALL_GENRES = [
     'Sci-Fi',
@@ -476,48 +466,16 @@ export const SettingsPage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => {
-                            setAvatarPreview(PRESET_AVATARS[0].url);
-                            uploadProfilePhoto(PRESET_AVATARS[0].url);
+                            const defaultUrl = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80';
+                            setAvatarPreview(defaultUrl);
+                            uploadProfilePhoto(defaultUrl);
                           }}
                           className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs flex items-center gap-1.5 transition-colors"
                         >
                           <RefreshCw className="w-3.5 h-3.5" />
-                          <span>Reset ke Default</span>
+                          <span>Reset Foto Default</span>
                         </button>
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Preset Avatars Fallback */}
-                  <div className="pt-3 border-t border-slate-800 space-y-2">
-                    <div className="text-[11px] font-medium text-slate-400">
-                      Atau pilih dari Preset Karakter Sinema Sotoy:
-                    </div>
-                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                      {PRESET_AVATARS.map((preset, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => {
-                            setAvatarPreview(preset.url);
-                            uploadProfilePhoto(preset.url);
-                          }}
-                          className={`p-1.5 rounded-xl border flex flex-col items-center gap-1.5 transition-all ${
-                            avatarPreview === preset.url
-                              ? 'bg-cyan-500/20 border-[#00F0FF] ring-1 ring-[#00F0FF]'
-                              : 'bg-slate-800/60 border-slate-700/60 hover:border-slate-500'
-                          }`}
-                        >
-                          <img
-                            src={preset.url}
-                            alt={preset.label}
-                            className="w-10 h-10 rounded-lg object-cover"
-                          />
-                          <span className="text-[9px] font-bold text-slate-300 truncate w-full text-center">
-                            {preset.label}
-                          </span>
-                        </button>
-                      ))}
                     </div>
                   </div>
                 </div>

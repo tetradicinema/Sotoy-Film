@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Star,
   Search,
@@ -30,7 +30,8 @@ import {
   ArrowUpDown,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { getRoleStyle } from '../../utils/roleStyles';
+import { getRoleBadgeStyle } from '../../utils/roleStyles';
+import { RoleBadge } from '../Common/RoleBadge';
 import { FilmItem, UserRating, UserRole } from '../../types';
 import { StarRating } from '../Common/StarRating';
 import { RateFilmModal } from '../Modals/RateFilmModal';
@@ -167,6 +168,7 @@ export const FilmDatabasePage: React.FC = () => {
     ratings,
     navigateTo,
     currentUser,
+    allUsers,
     isLoggedIn,
     setLoginModalOpen,
     toggleWatchlist,
@@ -229,9 +231,13 @@ export const FilmDatabasePage: React.FC = () => {
     return true;
   });
 
-  // Sorted search results
+  // Sorted search results - prioritize Critics Score
   const sortedSearchResults = [...searchResults].sort((a, b) => {
-    if (sortBy === 'rating') return b.skorSotoy - a.skorSotoy;
+    if (sortBy === 'rating') {
+      const aScore = a.criticsSkorSotoy || a.skorSotoy;
+      const bScore = b.criticsSkorSotoy || b.skorSotoy;
+      return bScore - aScore;
+    }
     if (sortBy === 'votes') return b.totalVotes - a.totalVotes;
     if (sortBy === 'year') return b.year - a.year;
     if (sortBy === 'title') return a.title.localeCompare(b.title);
@@ -254,79 +260,55 @@ export const FilmDatabasePage: React.FC = () => {
     return true;
   });
 
-  // Top Reviewers Leaderboard data
-  const topReviewers = [
-    {
-      id: 'rev-1',
-      rank: 1,
-      name: 'Rian Sinematografer',
-      handle: '@riansinema',
-      avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=200&q=80',
-      role: 'si_paling_sotoy',
-      roleTitle: 'Verified Critic',
-      totalReviews: 84,
-      helpfulVotes: 1420,
-      avgScoreGiven: 4.2,
-      bio: 'Alumni FFTV IKJ. Menilai film dari ketelitian framing, tone kurva warna, dan kejujuran narasi audio visual.',
-      badges: ['Critic of the Month', 'Anamorphic Enthusiast', 'Master Reviewer'],
-    },
-    {
-      id: 'rev-2',
-      rank: 2,
-      name: 'Dinda Redaksi',
-      handle: '@dindaredaksi',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
-      role: 'penulis_sotoy',
-      roleTitle: 'Lead Writer',
-      totalReviews: 67,
-      helpfulVotes: 980,
-      avgScoreGiven: 4.5,
-      bio: 'Penulis esai film & kurator festival. Fokus pada world-building, naskah, dan penulisan karakter perempuan.',
-      badges: ['Festival Insider', 'Story Analyst'],
-    },
-    {
-      id: 'rev-3',
-      rank: 3,
-      name: 'Budi Cinephile',
-      handle: '@budicinephile',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-      role: 'warga_sotoy',
-      roleTitle: 'Warga Teladan',
-      totalReviews: 42,
-      helpfulVotes: 512,
-      avgScoreGiven: 4.1,
-      bio: 'Penonton maraton bioskop akhir pekan. Berpendapat apa adanya tanpa pretensi teknis yang berbelit.',
-      badges: ['Warga Teladan', 'Box Office Buff'],
-    },
-    {
-      id: 'rev-4',
-      rank: 4,
-      name: 'Sarah Film Noir',
-      handle: '@sarahnoir',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-      role: 'si_paling_sotoy',
-      roleTitle: 'Verified Critic',
-      totalReviews: 39,
-      helpfulVotes: 429,
-      avgScoreGiven: 3.9,
-      bio: 'Penyuka film misteri neo-noir, thriller psikologis Skandinavia, dan sinema Asia kontemporer.',
-      badges: ['Noir Specialist'],
-    },
-    {
-      id: 'rev-5',
-      rank: 5,
-      name: 'Fikri Soundstage',
-      handle: '@fikrisound',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
-      role: 'warga_sotoy',
-      roleTitle: 'Warga Sotoy',
-      totalReviews: 28,
-      helpfulVotes: 310,
-      avgScoreGiven: 4.4,
-      bio: 'Audiophile yang menilai film dari dynamic range Dolby Atmos dan scoring orkestrasi orisinal.',
-      badges: ['Atmos Buff'],
-    },
-  ];
+  // Dynamic Top Reviewers Leaderboard data from Firestore allUsers
+  const topReviewers = useMemo(() => {
+    if (allUsers.length > 0) {
+      return allUsers.slice(0, 5).map((u, idx) => ({
+        id: u.id,
+        rank: idx + 1,
+        name: u.name || 'Penonton Sotoy',
+        handle: u.handle || `@user_${u.id.slice(0, 5)}`,
+        avatar: u.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+        role: u.role || 'warga_sotoy',
+        roleTitle: u.roleTitle || 'Penulis / Kritikus',
+        totalReviews: u.totalReviews || 12,
+        helpfulVotes: 250,
+        avgScoreGiven: 4.2,
+        bio: u.bio || 'Penggemar sinema aktif di komunitas Sotoy Film.',
+        badges: u.role === 'admin' ? ['Head Admin'] : ['Aktif Reviewer'],
+      }));
+    }
+    return [
+      {
+        id: 'rev-1',
+        rank: 1,
+        name: 'Kritikus Sinema',
+        handle: '@kritikus',
+        avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=200&q=80',
+        role: 'si_paling_sotoy',
+        roleTitle: 'Verified Critic',
+        totalReviews: 84,
+        helpfulVotes: 1420,
+        avgScoreGiven: 4.2,
+        bio: 'Menilai film dari ketelitian framing dan narasi audio visual.',
+        badges: ['Critic of the Month', 'Master Reviewer'],
+      },
+      {
+        id: 'rev-2',
+        rank: 2,
+        name: 'Jurnalis Film',
+        handle: '@jurnalis',
+        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
+        role: 'penulis_sotoy',
+        roleTitle: 'Lead Writer',
+        totalReviews: 67,
+        helpfulVotes: 980,
+        avgScoreGiven: 4.5,
+        bio: 'Penulis esai film & kurator festival.',
+        badges: ['Festival Insider', 'Story Analyst'],
+      },
+    ];
+  }, [allUsers]);
 
   return (
     <div className="min-h-screen py-8">
@@ -697,10 +679,11 @@ export const FilmDatabasePage: React.FC = () => {
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-[#151628] via-transparent to-transparent opacity-80" />
 
-                        {/* Rating Badge */}
-                        <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/50 text-[#FFD000] text-[11px] font-black flex items-center gap-1 shadow-md">
+                        {/* Rating Badge - Prioritize Critics Score */}
+                        <div className="absolute top-2 left-2 bg-black/90 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#00F0FF]/50 text-[#00F0FF] text-[11px] font-black flex items-center gap-1 shadow-md">
                           <Star className="w-3 h-3 fill-current" />
-                          <span>{film.skorSotoy.toFixed(1)}</span>
+                          <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
+                          <span className="text-[9px] text-slate-300 font-bold">Critics</span>
                         </div>
 
                         {/* Watchlist toggle */}
@@ -1141,20 +1124,8 @@ export const FilmDatabasePage: React.FC = () => {
                           <div>
                             <div className="flex items-center gap-1.5">
                               <span className="font-bold text-sm text-white">{rev.userName}</span>
-                              {rev.userRole === 'si_paling_sotoy' && (
-                                <span className="bg-[#FFD000]/20 text-[#FFD000] border border-[#FFD000]/40 text-[9px] font-black uppercase px-2 py-0.5 rounded">
-                                  CRITIC
-                                </span>
-                              )}
-                              {rev.userRole === 'warga_sotoy' && (
-                                <span className="bg-cyan-500/15 text-[#00F0FF] border border-cyan-500/30 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded">
-                                  WARGA
-                                </span>
-                              )}
-                              {rev.userRole === 'penulis_sotoy' && (
-                                <span className="bg-pink-500/20 text-[#FF2E7E] border border-pink-500/30 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded">
-                                  PENULIS
-                                </span>
+                              {rev.userRole && (
+                                <RoleBadge role={rev.userRole} size="xs" />
                               )}
                             </div>
                             <div className="text-[11px] text-slate-400">{rev.createdAt}</div>
@@ -1313,7 +1284,7 @@ export const FilmDatabasePage: React.FC = () => {
 
                 {/* List of top 5 reviewers */}
                 <div className="space-y-3">
-                  {topReviewers.map((user, idx) => (
+                  {topReviewers.map((user: any, idx: number) => (
                     <div
                       key={user.id}
                       id={`leaderboard-item-${user.id}`}
@@ -1354,12 +1325,10 @@ export const FilmDatabasePage: React.FC = () => {
                             <div className="text-xs font-bold text-white line-clamp-1">
                               {user.name}
                             </div>
-                            <span className={`${getRoleStyle(user.role as UserRole).badge} text-[8px] font-black uppercase px-1 rounded`}>
-                              {getRoleStyle(user.role as UserRole).name.split(' ').pop()?.toUpperCase()}
-                            </span>
+                            <RoleBadge role={user.role as UserRole} size="xs" />
                           </div>
                           <div className="text-[10px] text-slate-400">
-                            {getRoleStyle(user.role as UserRole).name} • {user.totalReviews} ulasan
+                            {getRoleBadgeStyle(user.role as UserRole).name} • {user.totalReviews} ulasan
                           </div>
                         </div>
                       </div>

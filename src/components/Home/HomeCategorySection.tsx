@@ -13,10 +13,132 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { MainCategory } from '../../types';
+import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
+import { MainCategory, Article } from '../../types';
 import { StarRating } from '../Common/StarRating';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { EditorialSidebar } from '../Common/EditorialSidebar';
+
+interface HomeCategoryArticleItemProps {
+  article: Article;
+  navigateTo: (view: any, params?: any) => void;
+  openShareModal: (data: any) => void;
+}
+
+const HomeCategoryArticleItem: React.FC<HomeCategoryArticleItemProps> = ({ article, navigateTo, openShareModal }) => {
+  const author = useDynamicArticleAuthor(article.authorId, article.author);
+
+  return (
+    <article
+      id={`cat-article-item-${article.id}`}
+      onClick={() => navigateTo('article-detail', { articleId: article.id })}
+      className="bg-[#121324] border border-slate-800/80 hover:border-[#00F0FF]/50 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row gap-5 group cursor-pointer transition-all duration-300 shadow-md hover:shadow-xl"
+    >
+      {/* Article Thumbnail */}
+      <div className="sm:w-56 h-40 rounded-xl overflow-hidden shrink-0 relative">
+        <img
+          src={article.coverImage}
+          alt={article.title}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+        />
+        <div className="absolute top-2 left-2 bg-black/70 backdrop-blur text-white text-[10px] font-black uppercase px-2 py-0.5 rounded">
+          {article.category}
+        </div>
+        <div className="absolute bottom-2 left-2 bg-black/80 backdrop-blur-md text-pink-400 text-[11px] font-bold px-2 py-0.5 rounded shadow border border-pink-500/30 flex items-center gap-1">
+          <Heart className="w-3 h-3 fill-current" />
+          <span>{article.likes}</span>
+        </div>
+      </div>
+
+      {/* Article Content */}
+      <div className="flex-1 flex flex-col justify-between min-w-0">
+        <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[11px] font-bold text-[#FF2E7E] uppercase tracking-wider">
+              {article.subCategory}
+            </span>
+            <span className="text-slate-600">•</span>
+            <span className="text-[11px] text-slate-400">{article.publishedAt}</span>
+            <span className="text-slate-600">•</span>
+            <span className="text-[11px] text-slate-400">{article.readTime}</span>
+          </div>
+
+          <h3 className="font-display font-black text-base sm:text-lg text-white group-hover:text-[#00F0FF] transition-colors leading-snug mb-2">
+            {article.title}
+          </h3>
+
+          <p className="text-slate-400 text-xs line-clamp-2 leading-relaxed">
+            {article.excerpt}
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-800/80 text-xs text-slate-400">
+          {author.loading ? (
+            <div className="flex items-center gap-2 animate-pulse">
+              <div className="w-5 h-5 rounded-full bg-slate-800 shrink-0" />
+              <div className="h-3 w-24 bg-slate-800 rounded" />
+            </div>
+          ) : (
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+                navigateTo('user-profile', { userId: author.id });
+              }}
+              className="flex items-center gap-2 cursor-pointer group/author hover:text-[#00F0FF] transition-colors"
+              title={`Kunjungi profil ${author.displayName || author.name}`}
+            >
+              <img
+                src={author.avatarURL || author.avatar}
+                alt={author.displayName || author.name}
+                className="w-5 h-5 rounded-full object-cover border border-slate-700 group-hover/author:border-[#00F0FF] transition-colors"
+              />
+              <span className="text-slate-300 font-medium group-hover/author:text-[#00F0FF] transition-colors">
+                {author.displayName || author.name}
+              </span>
+              {author.customBadge && (
+                <span className="bg-[#00F0FF]/15 text-[#00F0FF] text-[9px] font-black px-1.5 py-0.2 rounded border border-[#00F0FF]/30 uppercase tracking-wider">
+                  {author.customBadge}
+                </span>
+              )}
+              <span className="text-[10px] text-slate-400">
+                • {author.articleCount} {author.articleCount === 1 ? 'artikel' : 'artikel'}
+              </span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            <button
+              id={`share-article-btn-${article.id}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                openShareModal({
+                  title: article.title,
+                  url: window.location.href,
+                  text: article.excerpt,
+                  tags: article.tags,
+                  image: article.coverImage,
+                  imageUrl: article.coverImage,
+                  type: 'article',
+                  category: article.category,
+                  authorName: author.displayName || author.name,
+                  authorAvatar: author.avatarURL || author.avatar,
+                  meta: `${article.category.toUpperCase()} • ${author.displayName || author.name} (${article.readTime})`,
+                });
+              }}
+              className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-[#00F0FF] transition-colors"
+              title="Bagikan Artikel ke Instagram Stories & Feed"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+            </button>
+            <span className="text-[#FF2E7E] font-bold text-[11px] group-hover:translate-x-1 transition-transform">
+              Baca Pembahasan →
+            </span>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+};
 
 export const HomeCategorySection: React.FC = () => {
   const {
@@ -127,91 +249,13 @@ export const HomeCategorySection: React.FC = () => {
 
             {/* Articles List with rich layout */}
             <div className="space-y-4">
-              {filteredArticles.slice(0, 7).map((article, idx) => (
-                <article
+              {filteredArticles.slice(0, 7).map((article) => (
+                <HomeCategoryArticleItem
                   key={article.id}
-                  id={`cat-article-item-${article.id}`}
-                  onClick={() => navigateTo('article-detail', { articleId: article.id })}
-                  className="bg-[#121324] border border-slate-800/80 hover:border-[#00F0FF]/50 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row gap-5 group cursor-pointer transition-all duration-300 shadow-md hover:shadow-xl"
-                >
-                  {/* Article Thumbnail */}
-                  <div className="sm:w-56 h-40 rounded-xl overflow-hidden shrink-0 relative">
-                    <img
-                      src={article.coverImage}
-                      alt={article.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute top-2 left-2 bg-black/70 backdrop-blur text-white text-[10px] font-black uppercase px-2 py-0.5 rounded">
-                      {article.category}
-                    </div>
-                    <div className="absolute bottom-2 left-2 bg-black/80 backdrop-blur-md text-pink-400 text-[11px] font-bold px-2 py-0.5 rounded shadow border border-pink-500/30 flex items-center gap-1">
-                      <Heart className="w-3 h-3 fill-current" />
-                      <span>{article.likes}</span>
-                    </div>
-                  </div>
-
-                  {/* Article Content */}
-                  <div className="flex-1 flex flex-col justify-between min-w-0">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className="text-[11px] font-bold text-[#FF2E7E] uppercase tracking-wider">
-                          {article.subCategory}
-                        </span>
-                        <span className="text-slate-600">•</span>
-                        <span className="text-[11px] text-slate-400">{article.publishedAt}</span>
-                        <span className="text-slate-600">•</span>
-                        <span className="text-[11px] text-slate-400">{article.readTime}</span>
-                      </div>
-
-                      <h3 className="font-display font-black text-base sm:text-lg text-white group-hover:text-[#00F0FF] transition-colors leading-snug mb-2">
-                        {article.title}
-                      </h3>
-
-                      <p className="text-slate-400 text-xs line-clamp-2 leading-relaxed">
-                        {article.excerpt}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-800/80 text-xs text-slate-400">
-                      <div className="flex items-center gap-2">
-                        <img
-                          src={article.author.avatar}
-                          alt={article.author.name}
-                          className="w-5 h-5 rounded-full object-cover"
-                        />
-                        <span className="text-slate-300 font-medium">{article.author.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          id={`share-article-btn-${article.id}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openShareModal({
-                              title: article.title,
-                              url: window.location.href,
-                              text: article.excerpt,
-                              tags: article.tags,
-                              image: article.coverImage,
-                              imageUrl: article.coverImage,
-                              type: 'article',
-                              category: article.category,
-                              authorName: article.author.name,
-                              authorAvatar: article.author.avatar,
-                              meta: `${article.category.toUpperCase()} • ${article.author.name} (${article.readTime})`,
-                            });
-                          }}
-                          className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-[#00F0FF] transition-colors"
-                          title="Bagikan Artikel ke Instagram Stories & Feed"
-                        >
-                          <Share2 className="w-3.5 h-3.5" />
-                        </button>
-                        <span className="text-[#FF2E7E] font-bold text-[11px] group-hover:translate-x-1 transition-transform">
-                          Baca Pembahasan →
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </article>
+                  article={article}
+                  navigateTo={navigateTo}
+                  openShareModal={openShareModal}
+                />
               ))}
             </div>
 

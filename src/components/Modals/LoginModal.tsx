@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { X, LogIn, Star, PenSquare, Shield, User as UserIcon, Sparkles, Mail, Lock, UserPlus, AlertTriangle, Chrome, ArrowUpRight } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { INITIAL_USERS } from '../../data/mockData';
 import { UserRole } from '../../types';
 
 export const LoginModal: React.FC = () => {

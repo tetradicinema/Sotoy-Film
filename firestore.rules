@@ -23,6 +23,7 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && (
         request.auth.uid == 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' ||
+        request.auth.uid == 'QkNGf1ZfhsMyUEk90a6Iz8ZplZS2' ||
         request.auth.uid == 'I34eqzOmvsSdS2Rf7jpfxw1ZKeu1' ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'admin')
       );
@@ -31,6 +32,7 @@ service cloud.firestore {
     function isWriter() {
       return isSignedIn() && (
         request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' ||
+        request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' ||
         isAdmin() ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role in ['penulis_sotoy', 'admin'])
       );
@@ -84,7 +86,7 @@ service cloud.firestore {
         data.category is string &&
         data.author is map &&
         data.author.id is string &&
-        (data.author.id == request.auth.uid || isAdmin() || request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02');
+        (data.author.id == request.auth.uid || isAdmin() || request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' || request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2');
     }
 
     function isValidFilmItem(data) {
@@ -161,17 +163,20 @@ service cloud.firestore {
         isWriter() ||
         isAdmin() ||
         request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' ||
+        request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' ||
         incoming().author.id == request.auth.uid
       );
       allow update: if isSignedIn() && isValidId(articleId) && isValidArticle(incoming()) && (
         isOwner(existing().author.id) || 
         isAdmin() || 
-        (request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' && (existing().author.id == request.auth.uid || incoming().author.id == request.auth.uid))
+        (request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' && (existing().author.id == request.auth.uid || incoming().author.id == request.auth.uid)) ||
+        (request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' && (existing().author.id == request.auth.uid || incoming().author.id == request.auth.uid))
       );
       allow delete: if isSignedIn() && (
         isOwner(existing().author.id) || 
         isAdmin() || 
-        (request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' && existing().author.id == request.auth.uid)
+        (request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' && existing().author.id == request.auth.uid) ||
+        (request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' && existing().author.id == request.auth.uid)
       );
     }
 
@@ -210,6 +215,12 @@ service cloud.firestore {
         isAdmin()
       );
       allow delete: if isAdmin();
+    }
+
+    match /reports/{reportId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
     }
 
     match /notifications/{notificationId} {

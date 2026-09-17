@@ -165,7 +165,10 @@ export const WriteArticlePage: React.FC = () => {
         setCoverImage(found.coverImage || '');
         setTagsInput((found.tags || []).join(', '));
         setReadTime(found.readTime || '5 mnt baca');
-        setArticleStatus(found.status || 'published');
+        const validStatus: 'published' | 'draft' | 'scheduled' = 
+          found.status === 'scheduled' ? 'scheduled' : 
+          found.status === 'draft' || found.status === 'trash' ? 'draft' : 'published';
+        setArticleStatus(validStatus);
         if (found.status === 'scheduled') {
           setPublishOption('scheduled');
           setScheduledAtDate(found.scheduledAt || '');

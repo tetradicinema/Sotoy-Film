@@ -1,6 +1,124 @@
 import React from 'react';
 import { Sparkles, MessageCircle, Clock, ArrowUpRight, Flame } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
+import { Article } from '../../types';
+
+interface FeaturedNewsCardProps {
+  article: Article;
+  navigateTo: (view: any, params?: any) => void;
+}
+
+const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo }) => {
+  const author = useDynamicArticleAuthor(article.authorId, article.author);
+
+  return (
+    <article
+      id={`featured-news-card-${article.id}`}
+      onClick={() => navigateTo('article-detail', { articleId: article.id })}
+      className="bg-[#121324] border border-slate-800/80 rounded-3xl overflow-hidden group hover:border-[#FF2E7E]/60 transition-all duration-300 flex flex-col cursor-pointer shadow-lg hover:shadow-2xl hover:shadow-[#FF2E7E]/10"
+    >
+      {/* Card Cover Image */}
+      <div className="relative h-48 w-full overflow-hidden">
+        <img
+          src={article.coverImage}
+          alt={article.title}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#121324] via-transparent to-transparent" />
+
+        {/* Badges */}
+        <div className="absolute top-3 left-3 flex items-center gap-1.5">
+          <span className="bg-[#FF2E7E] text-white text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full tracking-wider">
+            {article.category}
+          </span>
+          <span className="bg-slate-900/80 backdrop-blur text-slate-300 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full">
+            {article.subCategory}
+          </span>
+        </div>
+
+        {/* Likes indicator */}
+        <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-pink-500/30 text-pink-400 text-xs font-bold flex items-center gap-1">
+          <span>♥ {article.likes}</span>
+        </div>
+      </div>
+
+      {/* Card Body */}
+      <div className="p-5 flex-1 flex flex-col justify-between">
+        <div>
+          {/* Dynamic Author Bar with Skeleton Loading */}
+          {author.loading ? (
+            <div className="flex items-center gap-2 mb-2.5 animate-pulse">
+              <div className="w-5 h-5 rounded-full bg-slate-800 shrink-0" />
+              <div className="h-3 w-20 bg-slate-800 rounded" />
+              <div className="h-3 w-14 bg-slate-800/60 rounded" />
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-2 mb-2.5">
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigateTo('user-profile', { userId: author.id });
+                }}
+                className="flex items-center gap-2 text-slate-400 text-xs group/author cursor-pointer hover:text-[#00F0FF] transition-colors"
+                title={`Kunjungi profil ${author.displayName || author.name}`}
+              >
+                <img
+                  src={author.avatarURL || author.avatar}
+                  alt={author.displayName || author.name}
+                  className="w-5 h-5 rounded-full object-cover border border-slate-700 group-hover/author:border-[#00F0FF] transition-colors"
+                />
+                <span className="text-white font-medium group-hover/author:text-[#00F0FF] transition-colors truncate max-w-[110px] sm:max-w-none">
+                  {author.displayName || author.name}
+                </span>
+                {author.customBadge && (
+                  <span className="bg-[#FF2E7E]/20 text-[#FF2E7E] text-[9px] font-black px-1.5 py-0.2 rounded border border-[#FF2E7E]/30 uppercase tracking-wider shrink-0">
+                    {author.customBadge}
+                  </span>
+                )}
+              </div>
+
+              <span className="text-[10px] font-semibold text-slate-400 bg-slate-900/80 px-2 py-0.5 rounded-full border border-slate-800 shrink-0">
+                {author.articleCount} {author.articleCount === 1 ? 'artikel' : 'artikel'}
+              </span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 text-slate-400 text-xs mb-2">
+            <span className="flex items-center gap-1 text-[11px]">
+              <Clock className="w-3 h-3 text-[#00F0FF]" />
+              {article.readTime}
+            </span>
+            <span>•</span>
+            <span className="text-[11px] text-slate-400">{article.publishedAt}</span>
+          </div>
+
+          <h3 className="font-display font-bold text-base sm:text-lg text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-2 leading-snug mb-2">
+            {article.title}
+          </h3>
+
+          <p className="text-slate-400 text-xs line-clamp-2 leading-relaxed mb-4">
+            {article.excerpt}
+          </p>
+        </div>
+
+        {/* Footer Meta */}
+        <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1">
+              <MessageCircle className="w-3.5 h-3.5 text-slate-500" />
+              {article.commentsCount}
+            </span>
+            <span>{article.views.toLocaleString()} views</span>
+          </div>
+          <span className="text-[#00F0FF] font-bold group-hover:translate-x-1 transition-transform flex items-center gap-0.5">
+            Baca →
+          </span>
+        </div>
+      </div>
+    </article>
+  );
+};
 
 export const FeaturedNews: React.FC = () => {
   const { publishedArticles, navigateTo } = useApp();
@@ -46,74 +164,8 @@ export const FeaturedNews: React.FC = () => {
 
         {/* 3-Column Grid for Featured Stories */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {featuredArticles.map((article, idx) => (
-            <article
-              key={article.id}
-              id={`featured-news-card-${article.id}`}
-              onClick={() => navigateTo('article-detail', { articleId: article.id })}
-              className="bg-[#121324] border border-slate-800/80 rounded-3xl overflow-hidden group hover:border-[#FF2E7E]/60 transition-all duration-300 flex flex-col cursor-pointer shadow-lg hover:shadow-2xl hover:shadow-[#FF2E7E]/10"
-            >
-              {/* Card Cover Image */}
-              <div className="relative h-48 w-full overflow-hidden">
-                <img
-                  src={article.coverImage}
-                  alt={article.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#121324] via-transparent to-transparent" />
-
-                {/* Badges */}
-                <div className="absolute top-3 left-3 flex items-center gap-1.5">
-                  <span className="bg-[#FF2E7E] text-white text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full tracking-wider">
-                    {article.category}
-                  </span>
-                  <span className="bg-slate-900/80 backdrop-blur text-slate-300 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full">
-                    {article.subCategory}
-                  </span>
-                </div>
-
-                {/* Likes indicator */}
-                <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-pink-500/30 text-pink-400 text-xs font-bold flex items-center gap-1">
-                  <span>♥ {article.likes}</span>
-                </div>
-              </div>
-
-              {/* Card Body */}
-              <div className="p-5 flex-1 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center gap-2 text-slate-400 text-xs mb-2">
-                    <span className="text-white font-medium">{article.author.name}</span>
-                    <span>•</span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {article.readTime}
-                    </span>
-                  </div>
-
-                  <h3 className="font-display font-bold text-base sm:text-lg text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-2 leading-snug mb-2">
-                    {article.title}
-                  </h3>
-
-                  <p className="text-slate-400 text-xs line-clamp-2 leading-relaxed mb-4">
-                    {article.excerpt}
-                  </p>
-                </div>
-
-                {/* Footer Meta */}
-                <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-                  <div className="flex items-center gap-3">
-                    <span className="flex items-center gap-1">
-                      <MessageCircle className="w-3.5 h-3.5 text-slate-500" />
-                      {article.commentsCount}
-                    </span>
-                    <span>{article.views.toLocaleString()} views</span>
-                  </div>
-                  <span className="text-[#00F0FF] font-bold group-hover:translate-x-1 transition-transform flex items-center gap-0.5">
-                    Baca →
-                  </span>
-                </div>
-              </div>
-            </article>
+          {featuredArticles.map((article) => (
+            <FeaturedNewsCard key={article.id} article={article} navigateTo={navigateTo} />
           ))}
         </div>
       </div>

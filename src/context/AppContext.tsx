@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import {
   User,
   UserRole,
@@ -17,15 +17,34 @@ import {
   CriticSubmission,
   UploadedFile,
   NotificationItem,
+  ModerationReport,
 } from '../types';
 import {
-  INITIAL_USERS,
-  ALL_USERS_DATABASE,
+  DEFAULT_FALLBACK_AUTHOR,
   INITIAL_ARTICLES,
   INITIAL_FILMS,
   INITIAL_BUZZ,
   INITIAL_RATINGS,
 } from '../data/mockData';
+
+export const GUEST_USER: User = {
+  id: 'guest',
+  name: 'Tamu Sotoy',
+  handle: '@tamu',
+  avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+  role: 'warga_sotoy',
+  roleTitle: 'Pengunjung',
+  bio: 'Pengunjung Sotoy Film',
+  email: '',
+  createdAt: new Date().toISOString(),
+  totalReviews: 0,
+  totalBuzz: 0,
+  followers: [],
+  following: [],
+  followersCount: 0,
+  followingCount: 0,
+  hasFinishedOnboarding: true,
+};
 import { ShareData } from '../components/Modals/SocialShareModal';
 import { db, auth, storage, handleFirestoreError, OperationType } from '../lib/firebase';
 import {
@@ -50,9 +69,14 @@ import {
 } from 'firebase/auth';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 
-export const ADMIN_UIDS = ['CsG2CY2TaIZmG7yuPfzAxmRYrlY2', 'I34eqzOmvsSdS2Rf7jpfxw1ZKeu1'];
-export const ADMIN_EMAILS = ['eksposurmedia@gmail.com'];
-export const WRITER_UIDS = ['0PCmaBvJrzeaQgpf3sSTC4mnsh02'];
+export const ADMIN_UIDS = [
+  'QkNGf1ZfhsMyUEk90a6Iz8ZplZS2', // User ID Admin 1
+  'CsG2CY2TaIZmG7yuPfzAxmRYrlY2', // User ID Admin 2
+];
+export const ADMIN_EMAILS = ['eksposurmedia@gmail.com', 'admin1@sotoyfilm.id', 'admin2@sotoyfilm.id'];
+export const WRITER_UIDS = [
+  '0PCmaBvJrzeaQgpf3sSTC4mnsh02', // User ID Penulis Sotoy
+];
 export const CRITIC_UIDS = ['Jm0raI2h47TJG9ZtZAR1HLVcjSj2'];
 
 export const isUserAdmin = (user?: Partial<User> | null, fbUid?: string, fbEmail?: string): boolean => {
@@ -223,13 +247,31 @@ interface AppContextType {
   markAllNotificationsAsRead: () => Promise<void>;
   deleteNotification: (id: string) => Promise<void>;
   checkAndSendMentions: (text: string, title: string, targetView: string, targetId?: string) => Promise<void>;
+  // Admin Control Center Management
+  updateUserRole: (userId: string, newRole: UserRole) => Promise<boolean>;
+  toggleUserSuspension: (userId: string, isSuspended: boolean) => Promise<boolean>;
+  bulkUpdateArticles: (articleIds: string[], updates: Partial<Article>) => Promise<boolean>;
+  bulkDeleteArticles: (articleIds: string[]) => Promise<boolean>;
+  bulkReassignAuthor: (articleIds: string[], targetAuthor: { id: string; name: string; avatar: string; role: UserRole }) => Promise<boolean>;
+  migrateAllOldArticlesToTargetAuthor: (customAuthorId?: string) => Promise<{ success: boolean; count: number }>;
+  addFilm: (film: Omit<FilmItem, 'id'>) => Promise<boolean>;
+  updateFilm: (id: string, updates: Partial<FilmItem>) => Promise<boolean>;
+  deleteFilm: (id: string) => Promise<boolean>;
+  deleteBuzzPost: (buzzId: string) => Promise<boolean>;
+  deleteBuzzReply: (buzzId: string, replyId: string) => Promise<boolean>;
+  moderationReports: ModerationReport[];
+  reportContent: (report: Omit<ModerationReport, 'id' | 'createdAt' | 'status'>) => Promise<boolean>;
+  resolveReport: (reportId: string, action: 'dismiss' | 'take_down', targetInfo?: { targetType: 'buzz' | 'reply' | 'review'; targetId: string; parentBuzzId?: string }) => Promise<boolean>;
+  // Dynamic user profile cache
+  userProfilesCache: Record<string, any>;
+  cacheUserProfile: (userId: string, profile: any) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Authentication & Session States
-  const [currentUser, setCurrentUser] = useState<User>(() => INITIAL_USERS.warga);
+  const [currentUser, setCurrentUser] = useState<User>(() => GUEST_USER);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     const saved = localStorage.getItem('sotoy_is_logged_in');
     return saved !== null ? saved === 'true' : false;
@@ -274,6 +316,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [criticSubmissions, setCriticSubmissions] = useState<CriticSubmission[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [userProfilesCache, setUserProfilesCache] = useState<Record<string, any>>({});
+
+  const cacheUserProfile = useCallback((userId: string, profile: any) => {
+    setUserProfilesCache(prev => {
+      if (prev[userId] && JSON.stringify(prev[userId]) === JSON.stringify(profile)) {
+        return prev;
+      }
+      return { ...prev, [userId]: profile };
+    });
+  }, []);
 
   // Local Preferences States
   const [activeUserTab, setActiveUserTab] = useState<UserTab>('buzz');
@@ -410,10 +462,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           for (const item of INITIAL_RATINGS) {
             try { await setDoc(doc(db, 'ratings', item.id), item); } catch (e) { /* ignore seed permission errors */ }
           }
-          // Seed Users database
-          for (const item of ALL_USERS_DATABASE) {
-            try { await setDoc(doc(db, 'users', item.id), item); } catch (e) { /* ignore seed permission errors */ }
-          }
+          // Seed Users database skipped (dynamic Firestore users collection only)
           console.log('[Bootstrap] Seeding completed.');
         }
       } catch (err) {
@@ -506,14 +555,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const items: User[] = [];
         snapshot.forEach(doc => items.push(doc.data() as User));
         if (items.length > 0) {
-          setAllUsers(items);
+          const mapped = items.map(u => {
+            if (u.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02' || WRITER_UIDS.includes(u.id)) {
+              return { 
+                ...u, 
+                role: 'penulis_sotoy' as UserRole, 
+                roleTitle: u.roleTitle && u.roleTitle.includes('Penulis') ? u.roleTitle : 'Penulis Sotoy (Jurnalis Film & Pop-Culture)' 
+              };
+            }
+            if (ADMIN_UIDS.includes(u.id)) {
+              return { 
+                ...u, 
+                role: 'admin' as UserRole, 
+                roleTitle: u.roleTitle && u.roleTitle.includes('Admin') ? u.roleTitle : 'Head Admin & Lead Editor' 
+              };
+            }
+            return u;
+          });
+          setAllUsers(mapped);
+          setUserProfilesCache(prev => {
+            const nextCache = { ...prev };
+            mapped.forEach(u => {
+              nextCache[u.id] = u;
+            });
+            return nextCache;
+          });
         } else {
-          setAllUsers(ALL_USERS_DATABASE);
+          setAllUsers([]);
         }
       },
       (err) => {
-        console.warn('[Firestore] users subscription fallback to initial mock:', err.message);
-        setAllUsers(ALL_USERS_DATABASE);
+        console.warn('[Firestore] users subscription fallback notice:', err.message);
+        setAllUsers([]);
       }
     );
 
@@ -526,9 +599,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
+  // Dynamically resolve article author profiles directly from Firestore users collection
+  const resolvedArticles = useMemo(() => {
+    return articles.map(article => {
+      const user = allUsers.find(u => u.id === article.authorId || u.id === article.author?.id);
+      if (user) {
+        return {
+          ...article,
+          authorId: user.id,
+          author: {
+            id: user.id,
+            name: user.name || 'Tim Redaksi',
+            avatar: user.avatar || DEFAULT_FALLBACK_AUTHOR.avatar,
+            role: user.role || 'penulis_sotoy',
+          },
+        };
+      }
+      return {
+        ...article,
+        authorId: article.authorId || DEFAULT_FALLBACK_AUTHOR.id,
+        author: {
+          id: article.authorId || DEFAULT_FALLBACK_AUTHOR.id,
+          name: (article.author?.name && !article.author.name.includes('Dinda') && !article.author.name.includes('Chief Admin'))
+            ? article.author.name
+            : 'Tim Redaksi',
+          avatar: article.author?.avatar || DEFAULT_FALLBACK_AUTHOR.avatar,
+          role: article.author?.role || DEFAULT_FALLBACK_AUTHOR.role,
+        },
+      };
+    });
+  }, [articles, allUsers]);
+
   // Compute public articles excluding drafts and unreleased scheduled articles
   const publishedArticles = useMemo(() => {
-    return articles.filter(a => {
+    return resolvedArticles.filter(a => {
       if (a.status === 'draft') return false;
       if (a.status === 'scheduled') {
         if (!a.scheduledAt) return false;
@@ -537,7 +641,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return true;
     });
-  }, [articles]);
+  }, [resolvedArticles]);
 
   // Notifications State & Realtime Listener
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -661,24 +765,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const isWriterRole = !isAdminRole && isUserWriter(data, uid);
             const isCriticRole = !isAdminRole && !isWriterRole && isUserCritic(data, uid);
             
-            if (isAdminRole && data.role !== 'admin') {
+            if (isAdminRole) {
               data.role = 'admin';
               data.roleTitle = 'Head Admin & Lead Editor';
-            } else if (isWriterRole && data.role !== 'penulis_sotoy') {
+              try { await updateDoc(userDocRef, { role: 'admin', roleTitle: 'Head Admin & Lead Editor' }); } catch (e) {}
+            } else if (isWriterRole || uid === '0PCmaBvJrzeaQgpf3sSTC4mnsh02') {
               data.role = 'penulis_sotoy';
               data.roleTitle = 'Penulis Sotoy (Jurnalis Film & Pop-Culture)';
-            } else if (isCriticRole && data.role !== 'si_paling_sotoy') {
+              try { await updateDoc(userDocRef, { role: 'penulis_sotoy', roleTitle: 'Penulis Sotoy (Jurnalis Film & Pop-Culture)' }); } catch (e) {}
+            } else if (isCriticRole) {
               data.role = 'si_paling_sotoy';
               data.roleTitle = 'Si Paling Sotoy (Kritikus Film)';
-            }
-            
-            // Clean up any legacy mock names/handles from previous tests
-            if (data.name === 'Chief Admin Sotoy' && fbUser.displayName) {
-              data.name = fbUser.displayName;
-              data.handle = '@' + (fbUser.displayName.toLowerCase().replace(/[^a-z0-9_]/g, '') || 'warga_' + uid.slice(0, 4));
-              data.role = 'warga_sotoy';
-              data.roleTitle = 'Warga Sotoy (Penonton Santai)';
-              try { await setDoc(userDocRef, data, { merge: true }); } catch (e) {}
+              try { await updateDoc(userDocRef, { role: 'si_paling_sotoy', roleTitle: 'Si Paling Sotoy (Kritikus Film)' }); } catch (e) {}
             }
 
             // Clean mock IDs if present in followers/following
@@ -767,7 +865,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } else {
         // Visitor / Not logged in
         setIsLoggedIn(false);
-        setCurrentUser(INITIAL_USERS.warga);
+        setCurrentUser(GUEST_USER);
         setFollowingIds([]);
         setFollowersIds([]);
         setWatchlist([]);
@@ -1192,7 +1290,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await signOut(auth);
       setIsLoggedIn(false);
       localStorage.setItem('sotoy_is_logged_in', 'false');
-      setCurrentUser(INITIAL_USERS.warga);
+      setCurrentUser(GUEST_USER);
       setFollowingIds([]);
       setFollowersIds([]);
       setWatchlist([]);
@@ -1808,6 +1906,317 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // --- ADMIN CONTROL CENTER METHODS ---
+  const [moderationReports, setModerationReports] = useState<ModerationReport[]>([
+    {
+      id: 'rep-1',
+      targetType: 'buzz',
+      targetId: 'buzz-2',
+      targetContent: 'Film ini overrated parah! Yang suka pasti selera sampah dan gak ngerti sinema sama sekali.',
+      targetAuthorName: 'Warga Kritis 99',
+      targetAuthorId: 'u-user-toxic',
+      reporterId: 'u-1',
+      reporterName: 'Sotoy Enthusiast',
+      reason: 'Bahasa kasar, menyerang personal warga lain (Toxic & Harassment)',
+      createdAt: '1 jam yang lalu',
+      status: 'pending',
+    },
+    {
+      id: 'rep-2',
+      targetType: 'reply',
+      targetId: 'rep-reply-1',
+      targetContent: 'Beli tiket nonton murah dan link streaming bajakan gratis klik link bio saya ya!',
+      targetAuthorName: 'BotPromoTiket',
+      targetAuthorId: 'u-bot-spam',
+      reporterId: 'u-3',
+      reporterName: 'Cinephile Nusantara',
+      reason: 'Spam komersial & link ilegal',
+      createdAt: '3 jam yang lalu',
+      status: 'pending',
+    }
+  ]);
+
+  // Realtime subscription for reports
+  useEffect(() => {
+    const unsubReports = onSnapshot(
+      collection(db, 'reports'),
+      (snapshot) => {
+        const items: ModerationReport[] = [];
+        snapshot.forEach(doc => items.push(doc.data() as ModerationReport));
+        if (items.length > 0) {
+          setModerationReports(items.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+        }
+      },
+      (err) => {
+        console.warn('[Firestore] reports subscription fallback:', err.message);
+      }
+    );
+    return () => unsubReports();
+  }, []);
+
+  const updateUserRole = async (userId: string, newRole: UserRole): Promise<boolean> => {
+    try {
+      const roleTitles: Record<UserRole, string> = {
+        warga_sotoy: 'Warga Sotoy (Penonton Santai)',
+        si_paling_sotoy: 'Si Paling Sotoy (Kritikus Film)',
+        penulis_sotoy: 'Penulis Sotoy (Jurnalis Film & Pop-Culture)',
+        admin: 'Admin Sotoy (Pengelola Platform)',
+      };
+      const title = roleTitles[newRole] || 'Warga Sotoy';
+      
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, {
+        role: newRole,
+        roleTitle: title,
+      });
+
+      setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole, roleTitle: title } : u));
+      if (currentUser.id === userId) {
+        setCurrentUser(prev => ({ ...prev, role: newRole, roleTitle: title }));
+      }
+      showToast(`Role pengguna berhasil diubah menjadi "${newRole.replace('_', ' ').toUpperCase()}".`);
+      return true;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
+      return false;
+    }
+  };
+
+  const toggleUserSuspension = async (userId: string, isSuspended: boolean): Promise<boolean> => {
+    try {
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, {
+        isSuspended,
+        suspendedAt: isSuspended ? new Date().toISOString() : null,
+      });
+      setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, isSuspended, suspendedAt: isSuspended ? new Date().toISOString() : undefined } : u));
+      showToast(isSuspended ? 'Akun pengguna berhasil dibekukan (SUSPENDED).' : 'Akun pengguna berhasil diaktifkan kembali.');
+      return true;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
+      return false;
+    }
+  };
+
+  const bulkUpdateArticles = async (articleIds: string[], updates: Partial<Article>): Promise<boolean> => {
+    try {
+      await Promise.all(
+        articleIds.map(id => updateDoc(doc(db, 'articles', id), updates))
+      );
+      setArticles(prev => prev.map(a => articleIds.includes(a.id) ? { ...a, ...updates } : a));
+      showToast(`${articleIds.length} artikel berhasil diperbarui secara massal.`);
+      return true;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `articles/bulk`);
+      return false;
+    }
+  };
+
+  const bulkDeleteArticles = async (articleIds: string[]): Promise<boolean> => {
+    try {
+      await Promise.all(
+        articleIds.map(id => deleteDoc(doc(db, 'articles', id)))
+      );
+      setArticles(prev => prev.filter(a => !articleIds.includes(a.id)));
+      showToast(`${articleIds.length} artikel berhasil dihapus dari database.`);
+      return true;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `articles/bulk`);
+      return false;
+    }
+  };
+
+  const bulkReassignAuthor = async (
+    articleIds: string[],
+    targetAuthor: { id: string; name: string; avatar: string; role: UserRole }
+  ): Promise<boolean> => {
+    try {
+      await Promise.all(
+        articleIds.map(id => updateDoc(doc(db, 'articles', id), { 
+          author: targetAuthor,
+          authorId: targetAuthor.id 
+        }))
+      );
+      setArticles(prev => prev.map(a => articleIds.includes(a.id) ? { ...a, author: targetAuthor, authorId: targetAuthor.id } : a));
+      showToast(`Kepemilikan ${articleIds.length} artikel berhasil dipindahkan ke ${targetAuthor.name}.`);
+      return true;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `articles/bulk-reassign`);
+      return false;
+    }
+  };
+
+  const migrateAllOldArticlesToTargetAuthor = async (
+    customAuthorId?: string
+  ): Promise<{ success: boolean; count: number }> => {
+    try {
+      const targetUid = customAuthorId || (currentUser?.id !== 'guest' ? currentUser.id : 'QkNGf1ZfhsMyUEk90a6Iz8ZplZS2');
+      const targetUser = allUsers.find(u => u.id === targetUid) || currentUser;
+      
+      const authorPayload = {
+        id: targetUser.id || targetUid,
+        name: targetUser.name || 'Admin Utama',
+        avatar: targetUser.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+        role: targetUser.role || ('admin' as UserRole),
+      };
+
+      const articlesSnap = await getDocs(collection(db, 'articles'));
+      let count = 0;
+      const batchUpdates: Promise<void>[] = [];
+
+      articlesSnap.forEach(docSnap => {
+        const data = docSnap.data() as Article;
+        const needsMigration = 
+          !data.authorId || 
+          data.authorId === 'system-redaksi' ||
+          data.authorId === '0PCmaBvJrzeaQgpf3sSTC4mnsh02' ||
+          !data.author ||
+          (data.author?.name && (data.author.name.includes('Dinda') || data.author.name.includes('Chief Admin')));
+
+        if (needsMigration) {
+          count++;
+          batchUpdates.push(
+            updateDoc(doc(db, 'articles', docSnap.id), {
+              authorId: authorPayload.id,
+              author: authorPayload,
+            })
+          );
+        }
+      });
+
+      if (batchUpdates.length > 0) {
+        await Promise.all(batchUpdates);
+        showToast(`Migrasi Berhasil: ${count} artikel lama di Firestore diperbarui ke akun ${authorPayload.name}.`);
+      } else {
+        showToast(`Semua artikel di Firestore sudah terhubung ke akun pengguna asli.`);
+      }
+
+      return { success: true, count };
+    } catch (err) {
+      console.error('[Migration Error]', err);
+      showToast('Gagal menjalankan migrasi artikel: ' + (err as Error).message);
+      return { success: false, count: 0 };
+    }
+  };
+
+  const addFilm = async (filmData: Omit<FilmItem, 'id'>): Promise<boolean> => {
+    const filmId = `film-${Date.now()}`;
+    const newFilm: FilmItem = {
+      ...filmData,
+      id: filmId,
+    };
+    try {
+      await setDoc(doc(db, 'films', filmId), newFilm);
+      setFilms(prev => [newFilm, ...prev]);
+      showToast(`Film "${newFilm.title}" berhasil ditambahkan ke database.`);
+      return true;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `films/${filmId}`);
+      return false;
+    }
+  };
+
+  const updateFilm = async (id: string, updates: Partial<FilmItem>): Promise<boolean> => {
+    try {
+      await updateDoc(doc(db, 'films', id), updates);
+      setFilms(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
+      showToast('Metadata film berhasil diperbarui.');
+      return true;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `films/${id}`);
+      return false;
+    }
+  };
+
+  const deleteFilm = async (id: string): Promise<boolean> => {
+    try {
+      await deleteDoc(doc(db, 'films', id));
+      setFilms(prev => prev.filter(f => f.id !== id));
+      showToast('Film berhasil dihapus dari katalog.');
+      return true;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `films/${id}`);
+      return false;
+    }
+  };
+
+  const deleteBuzzPost = async (buzzId: string): Promise<boolean> => {
+    try {
+      await deleteDoc(doc(db, 'buzz', buzzId));
+      setBuzzList(prev => prev.filter(b => b.id !== buzzId));
+      showToast('Post obrolan warga berhasil dihapus.');
+      return true;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `buzz/${buzzId}`);
+      return false;
+    }
+  };
+
+  const deleteBuzzReply = async (buzzId: string, replyId: string): Promise<boolean> => {
+    const post = buzzList.find(b => b.id === buzzId);
+    if (!post) return false;
+    const filteredReplies = (post.replies || []).filter(r => r.id !== replyId);
+    try {
+      await updateDoc(doc(db, 'buzz', buzzId), {
+        replies: filteredReplies,
+        repliesCount: Math.max(0, (post.repliesCount || 1) - 1),
+      });
+      setBuzzList(prev => prev.map(b => b.id === buzzId ? { ...b, replies: filteredReplies, repliesCount: Math.max(0, (b.repliesCount || 1) - 1) } : b));
+      showToast('Balasan komentar berhasil dihapus.');
+      return true;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `buzz/${buzzId}`);
+      return false;
+    }
+  };
+
+  const reportContent = async (report: Omit<ModerationReport, 'id' | 'createdAt' | 'status'>): Promise<boolean> => {
+    const reportId = `rep-${Date.now()}`;
+    const newReport: ModerationReport = {
+      ...report,
+      id: reportId,
+      createdAt: 'Baru saja',
+      status: 'pending',
+    };
+    try {
+      await setDoc(doc(db, 'reports', reportId), newReport);
+      setModerationReports(prev => [newReport, ...prev]);
+      showToast('Laporan berhasil dikirim ke tim admin.');
+      return true;
+    } catch (e) {
+      setModerationReports(prev => [newReport, ...prev]);
+      showToast('Laporan berhasil dikirim ke tim admin.');
+      return true;
+    }
+  };
+
+  const resolveReport = async (
+    reportId: string,
+    action: 'dismiss' | 'take_down',
+    targetInfo?: { targetType: 'buzz' | 'reply' | 'review'; targetId: string; parentBuzzId?: string }
+  ): Promise<boolean> => {
+    try {
+      if (action === 'take_down' && targetInfo) {
+        if (targetInfo.targetType === 'buzz') {
+          await deleteBuzzPost(targetInfo.targetId);
+        } else if (targetInfo.targetType === 'reply' && targetInfo.parentBuzzId) {
+          await deleteBuzzReply(targetInfo.parentBuzzId, targetInfo.targetId);
+        } else if (targetInfo.targetType === 'review') {
+          await deleteFilmRating(targetInfo.targetId);
+        }
+      }
+      const newStatus = action === 'dismiss' ? 'dismissed' : 'resolved';
+      try {
+        await updateDoc(doc(db, 'reports', reportId), { status: newStatus });
+      } catch (e) { /* silent catch */ }
+      setModerationReports(prev => prev.map(r => r.id === reportId ? { ...r, status: newStatus } : r));
+      showToast(action === 'dismiss' ? 'Laporan ditolak / ditandai bersih.' : 'Konten berhasil dihapus dan laporan dituntaskan.');
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+
   const isAdmin = isLoggedIn && isUserAdmin(currentUser);
   const isWriter = isLoggedIn && (isUserWriter(currentUser) || currentUser.role === 'penulis_sotoy' || isAdmin || currentUser.role === 'admin');
   const isCritic = isLoggedIn && (isUserCritic(currentUser) || currentUser.role === 'si_paling_sotoy' || isAdmin);
@@ -1828,7 +2237,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         signInWithEmail,
         signUpWithEmail,
         signInWithGoogle,
-        articles,
+        articles: resolvedArticles,
         publishedArticles,
         films,
         buzzList,
@@ -1904,6 +2313,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         markAllNotificationsAsRead,
         deleteNotification,
         checkAndSendMentions,
+        updateUserRole,
+        toggleUserSuspension,
+        bulkUpdateArticles,
+        bulkDeleteArticles,
+        bulkReassignAuthor,
+        migrateAllOldArticlesToTargetAuthor,
+        addFilm,
+        updateFilm,
+        deleteFilm,
+        deleteBuzzPost,
+        deleteBuzzReply,
+        moderationReports,
+        reportContent,
+        resolveReport,
+        userProfilesCache,
+        cacheUserProfile,
       }}
     >
       {children}

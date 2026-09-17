@@ -13,14 +13,6 @@ export const OnboardingPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const presetAvatars = [
-    { label: 'Director Auteur', url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80' },
-    { label: 'Cinematographer', url: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=200&q=80' },
-    { label: 'Neo-Noir Lead', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80' },
-    { label: 'Sci-Fi Explorer', url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&q=80' },
-    { label: 'Screenwriter', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80' },
-  ];
-
   const availableGenres = [
     'Sci-Fi',
     'Psychological Thriller',
@@ -131,36 +123,12 @@ export const OnboardingPage: React.FC = () => {
                     className="hidden"
                   />
                 </div>
-                <p className="mt-3 text-[11px] font-bold text-slate-400">
-                  Unggah foto sendiri atau pilih salah satu avatar sinematik:
+                <p className="mt-3 text-xs font-bold text-slate-300">
+                  Foto Profil Akun
                 </p>
-              </div>
-
-              {/* Preset Avatars Grid */}
-              <div className="grid grid-cols-5 gap-2 sm:gap-3 mt-4 pt-4 border-t border-slate-800/80">
-                {presetAvatars.map((item, idx) => {
-                  const isSelected = selectedAvatar === item.url;
-                  return (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setSelectedAvatar(item.url)}
-                      className={`relative rounded-xl overflow-hidden aspect-square border-2 transition-all p-0.5 group ${
-                        isSelected
-                          ? 'border-[#FFD000] ring-2 ring-[#FFD000]/30 scale-105'
-                          : 'border-slate-800 hover:border-slate-600 opacity-70 hover:opacity-100'
-                      }`}
-                      title={item.label}
-                    >
-                      <img src={item.url} alt={item.label} className="w-full h-full object-cover rounded-lg" referrerPolicy="no-referrer" />
-                      {isSelected && (
-                        <div className="absolute inset-0 bg-[#FFD000]/20 flex items-center justify-center">
-                          <Check className="w-4 h-4 text-white drop-shadow-md" />
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Ketuk ikon kamera untuk mengunggah foto profil dari perangkatmu.
+                </p>
               </div>
             </div>
 

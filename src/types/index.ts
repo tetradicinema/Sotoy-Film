@@ -9,6 +9,8 @@ export interface User {
   avatar: string;
   role: UserRole;
   roleTitle: string;
+  customBadge?: string; // e.g. "Verified Critic", "Top Writer", "Redaktur Khusus"
+  roleBadge?: string;
   bio: string;
   email?: string;
   createdAt?: string;
@@ -21,6 +23,22 @@ export interface User {
   hasFinishedOnboarding?: boolean;
   watchlist?: string[]; // Saved film IDs
   savedArticles?: string[]; // Saved article IDs
+  isSuspended?: boolean;
+  suspendedAt?: string;
+}
+
+export interface ModerationReport {
+  id: string;
+  targetType: 'buzz' | 'reply' | 'review';
+  targetId: string;
+  targetContent: string;
+  targetAuthorName: string;
+  targetAuthorId: string;
+  reporterId: string;
+  reporterName: string;
+  reason: string;
+  createdAt: string;
+  status: 'pending' | 'resolved' | 'dismissed';
 }
 
 export type UserTab = 'buzz' | 'reviews' | 'watchlist' | 'articles' | 'community' | 'activity' | 'settings' | 'admin' | 'writer';
@@ -78,6 +96,7 @@ export interface Article {
   coverImage: string;
   category: MainCategory;
   subCategory: SubCategory;
+  authorId?: string;
   author: {
     id: string;
     name: string;
@@ -94,7 +113,7 @@ export interface Article {
   commentsCount: number;
   tags: string[];
   relatedFilmId?: string; // Links directly to a film discussed in this article
-  status?: 'published' | 'draft' | 'scheduled';
+  status?: 'published' | 'draft' | 'scheduled' | 'trash';
   scheduledAt?: string; // ISO date string e.g. "2026-09-25T14:30"
   seoTitle?: string;
   metaDescription?: string;

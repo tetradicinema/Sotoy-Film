@@ -28,7 +28,8 @@ import {
   Heart,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { getRoleStyle } from '../../utils/roleStyles';
+import { getRoleBadgeStyle } from '../../utils/roleStyles';
+import { RoleBadge } from '../Common/RoleBadge';
 import { MainCategory, SubCategory, UserRole, UserTab } from '../../types';
 import { useTranslation } from '../../i18n';
 import { GlobalSearchBar } from './GlobalSearchBar';
@@ -148,7 +149,7 @@ export const Navbar: React.FC = () => {
     }
   };
 
-  const roleStyle = getRoleStyle(currentUser.role);
+  const roleStyle = getRoleBadgeStyle(currentUser.role);
 
   return (
     <header className="sticky top-0 z-50 bg-[#0D0E15]/95 backdrop-blur-md border-b border-slate-800/80">
@@ -293,6 +294,27 @@ export const Navbar: React.FC = () => {
               <NotificationBell mode="global" />
             )}
 
+            {/* ADMIN MODE Pill Button (Ungu #7928CA) */}
+            {isAdmin && (
+              <button
+                id="navbar-admin-mode-pill"
+                onClick={() => navigateTo('admin-dashboard')}
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-black tracking-wider transition-all duration-200 border shadow-sm ${
+                  currentView === 'admin-dashboard'
+                    ? 'bg-[#7928CA] text-white border-[#7928CA] shadow-purple-900/50 ring-2 ring-purple-400/40'
+                    : 'bg-[#7928CA]/20 text-purple-300 border-[#7928CA]/60 hover:bg-[#7928CA] hover:text-white'
+                }`}
+                title="Sotoy Admin Control Center"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-300"></span>
+                </span>
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">ADMIN MODE</span>
+              </button>
+            )}
+
             {/* Unified Menu Trigger: Circular Profile Photo Avatar Button */}
             <div className="relative" ref={userMenuRef}>
               <button
@@ -337,8 +359,8 @@ export const Navbar: React.FC = () => {
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-bold text-white truncate">{currentUser.name}</div>
                         <div className="text-xs text-slate-400 truncate">{currentUser.handle}</div>
-                        <div className={`mt-1 inline-block text-[10px] font-bold px-2 py-0.5 rounded border ${roleStyle.badge}`}>
-                          {roleStyle.name.toUpperCase()}
+                        <div className="mt-1">
+                          <RoleBadge role={currentUser.role} size="sm" />
                         </div>
                       </div>
                     </div>
@@ -547,9 +569,9 @@ export const Navbar: React.FC = () => {
 
                       {(currentUser.role === 'si_paling_sotoy' || isCritic) && (
                         <div className="pt-1.5 border-t border-slate-800/50 mt-1.5 space-y-1">
-                          <div className={`text-[9px] font-black uppercase tracking-widest ${getRoleStyle('si_paling_sotoy').text} px-1 mb-1 flex items-center justify-between`}>
+                          <div className={`text-[9px] font-black uppercase tracking-widest ${getRoleBadgeStyle('si_paling_sotoy').text} px-1 mb-1 flex items-center justify-between`}>
                             <span>Ruang Kritikus</span>
-                            <span className="bg-[#FFD000] text-slate-950 px-1.5 py-0.2 rounded text-[8px] font-black">TOP CRITIC</span>
+                            <RoleBadge role="si_paling_sotoy" size="xs" showTooltip={false} />
                           </div>
                           <button
                             id="menu-critic-dashboard-btn"
@@ -574,9 +596,9 @@ export const Navbar: React.FC = () => {
 
                       {(currentUser.role === 'penulis_sotoy' || currentUser.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02' || isWriter) && (
                         <div className="pt-1.5 border-t border-slate-800/50 mt-1.5 space-y-1">
-                          <div className={`text-[9px] font-black uppercase tracking-widest ${getRoleStyle('penulis_sotoy').text} px-1 mb-1 flex items-center justify-between`}>
+                          <div className={`text-[9px] font-black uppercase tracking-widest ${getRoleBadgeStyle('penulis_sotoy').text} px-1 mb-1 flex items-center justify-between`}>
                             <span>Ruang Penulis</span>
-                            <span className="bg-[#FF2E7E] text-white px-1.5 py-0.2 rounded text-[8px] font-black">WRITER</span>
+                            <RoleBadge role="penulis_sotoy" size="xs" showTooltip={false} />
                           </div>
                           <button
                             id="menu-writer-dashboard-btn"
@@ -615,9 +637,9 @@ export const Navbar: React.FC = () => {
 
                       {(currentUser.role === 'admin' || isAdmin) && (
                         <div className="pt-1.5 border-t border-slate-800/50 mt-1.5 space-y-1">
-                          <div className={`text-[9px] font-black uppercase tracking-widest ${getRoleStyle('admin').text} px-1 mb-1 flex items-center justify-between`}>
+                          <div className={`text-[9px] font-black uppercase tracking-widest ${getRoleBadgeStyle('admin').text} px-1 mb-1 flex items-center justify-between`}>
                             <span>Akses Admin Panel</span>
-                            <span className="bg-purple-600 text-white px-1.5 py-0.2 rounded text-[8px] font-black">ADMIN</span>
+                            <RoleBadge role="admin" size="xs" showTooltip={false} />
                           </div>
                           <button
                             id="menu-admin-dashboard-btn"
@@ -633,7 +655,7 @@ export const Navbar: React.FC = () => {
                           >
                             <div className="flex items-center gap-2.5">
                               <ShieldCheck className="w-4 h-4 text-purple-400" />
-                              <span>Dasbor Admin & Berkas</span>
+                              <span>Sotoy Admin Control Center</span>
                             </div>
                             <span className="text-xs text-purple-300">→</span>
                           </button>

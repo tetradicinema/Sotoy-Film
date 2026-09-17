@@ -31,7 +31,8 @@ import {
   User as UserIcon,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { getRoleStyle } from '../../utils/roleStyles';
+import { getRoleBadgeStyle } from '../../utils/roleStyles';
+import { RoleBadge } from '../Common/RoleBadge';
 import { BuzzPost, User } from '../../types';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { QuickReactionBar } from '../Common/QuickReactionBar';
@@ -652,13 +653,11 @@ export const CommunityFeedPage: React.FC = () => {
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`font-bold text-xs sm:text-sm text-white group-hover:${getRoleStyle('warga_sotoy').text} transition-colors truncate max-w-[120px] xs:max-w-[180px] sm:max-w-none`}>
+                        <span className={`font-bold text-xs sm:text-sm text-white group-hover:${getRoleBadgeStyle(post.author.role || 'warga_sotoy').text} transition-colors truncate max-w-[120px] xs:max-w-[180px] sm:max-w-none`}>
                           {post.author.name}
                         </span>
                         {post.author.role && (
-                          <span className={`${getRoleStyle(post.author.role).badge} text-[9px] font-black uppercase px-1.5 py-0.5 rounded shrink-0`}>
-                            {getRoleStyle(post.author.role).name.split(' ').pop()?.toUpperCase()}
-                          </span>
+                          <RoleBadge role={post.author.role} size="xs" />
                         )}
                       </div>
                       <span className="text-[11px] sm:text-xs text-slate-400 group-hover:text-slate-300 block truncate">

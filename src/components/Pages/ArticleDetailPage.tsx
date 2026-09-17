@@ -19,8 +19,10 @@ import {
   Check,
   Plus,
   UserPlus,
+  Edit3,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
 import { StarRating } from '../Common/StarRating';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { EditorialSidebar } from '../Common/EditorialSidebar';
@@ -33,6 +35,8 @@ export const ArticleDetailPage: React.FC = () => {
     films,
     currentUser,
     isLoggedIn,
+    isAdmin,
+    isWriter,
     setLoginModalOpen,
     likeArticle,
     toggleWatchlist,
@@ -47,19 +51,20 @@ export const ArticleDetailPage: React.FC = () => {
   } = useApp();
 
   const article = articles.find(a => a.id === selectedArticleId) || articles[0];
+  const author = useDynamicArticleAuthor(article?.authorId || article?.author?.id, article?.author);
   const [commentText, setCommentText] = useState('');
   const [rateModalOpen, setRateModalOpen] = useState(false);
   const [comments, setComments] = useState<{ name: string; avatar: string; text: string; time: string }[]>([
     {
-      name: 'Rian Sinematografer',
+      name: 'Penggemar Sinema',
       avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=200&q=80',
-      text: 'Analisis yang tajam! Komposisi warna monokromatik di Giedi Prime memang jadi benchmark baru sinematografi digital.',
+      text: 'Analisis yang sangat tajam! Penulisan ulasannya mendalam.',
       time: '1 jam lalu',
     },
     {
-      name: 'Budi Cinephile',
+      name: 'Warga Sotoy',
       avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-      text: 'Setuju banget sama Skor Sotoy 4.9 ini. Pengalaman audio Dolby Atmos-nya bikin merinding.',
+      text: 'Setuju banget sama poin artikel ini. Ulasannya sangat menarik.',
       time: '3 jam lalu',
     },
   ]);
@@ -191,64 +196,95 @@ export const ArticleDetailPage: React.FC = () => {
 
           {/* Author & Meta bar */}
           <div className="flex items-center justify-between flex-wrap gap-4 py-4 border-y border-slate-800">
-            <div className="flex items-center gap-3">
-              <img
-                onClick={() => navigateTo('user-profile', { userId: article.author.id })}
-                src={article.author.avatar}
-                alt={article.author.name}
-                className="w-10 h-10 rounded-full object-cover ring-2 ring-[#FFD000] cursor-pointer hover:scale-105 transition-transform"
-                title={`Kunjungi profil ${article.author.name}`}
-              />
-              <div>
-                <div className="text-sm font-bold text-white flex items-center gap-1.5 flex-wrap">
-                  <span
-                    onClick={() => navigateTo('user-profile', { userId: article.author.id })}
-                    className="cursor-pointer hover:text-[#00F0FF] transition-colors"
-                    title={`Kunjungi profil ${article.author.name}`}
-                  >
-                    {article.author.name}
-                  </span>
-                  <span className="bg-[#FF2E7E]/20 text-[#FF2E7E] text-[10px] font-bold px-2 py-0.5 rounded uppercase">
-                    Penulis Sotoy
-                  </span>
-                  {(!isLoggedIn || article.author.id !== currentUser.id) && (
-                    <button
-                      onClick={() => {
-                        if (!isLoggedIn) {
-                          setLoginModalOpen(true);
-                          showToast(`Silakan masuk untuk mengikuti ${article.author.name}!`);
-                          return;
-                        }
-                        toggleFollowUser(article.author.id);
-                      }}
-                      className={`ml-1 px-2.5 py-0.5 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 ${
-                        isLoggedIn && isFollowing(article.author.id)
-                          ? 'bg-slate-800 text-slate-300 border border-slate-700 hover:bg-red-500/20 hover:text-red-400'
-                          : 'bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] text-white shadow-sm hover:brightness-110 active:scale-95'
-                      }`}
-                      title={isLoggedIn && isFollowing(article.author.id) ? 'Klik untuk batal ikuti' : 'Ikuti Penulis ini'}
-                    >
-                      {isLoggedIn && isFollowing(article.author.id) ? (
-                        <>
-                          <Check className="w-2.5 h-2.5 text-emerald-400" />
-                          <span>Mengikuti</span>
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus className="w-2.5 h-2.5" />
-                          <span>+ Ikuti Penulis</span>
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-                <div className="text-xs text-slate-400">
-                  Diterbitkan {article.publishedAt} • {article.readTime}
+            {author.loading ? (
+              <div className="flex items-center gap-3 animate-pulse">
+                <div className="w-10 h-10 rounded-full bg-slate-800 shrink-0" />
+                <div className="space-y-1.5">
+                  <div className="h-4 w-32 bg-slate-800 rounded" />
+                  <div className="h-3 w-24 bg-slate-800/60 rounded" />
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <img
+                  onClick={() => navigateTo('user-profile', { userId: author.id })}
+                  src={author.avatarURL || author.avatar}
+                  alt={author.displayName || author.name}
+                  className="w-10 h-10 rounded-full object-cover ring-2 ring-[#FFD000] cursor-pointer hover:scale-105 transition-transform"
+                  title={`Kunjungi profil ${author.displayName || author.name}`}
+                />
+                <div>
+                  <div className="text-sm font-bold text-white flex items-center gap-1.5 flex-wrap">
+                    <span
+                      onClick={() => navigateTo('user-profile', { userId: author.id })}
+                      className="cursor-pointer hover:text-[#00F0FF] transition-colors"
+                      title={`Kunjungi profil ${author.displayName || author.name}`}
+                    >
+                      {author.displayName || author.name}
+                    </span>
+
+                    {author.customBadge && (
+                      <span className="bg-[#FF2E7E]/20 text-[#FF2E7E] text-[10px] font-bold px-2 py-0.5 rounded uppercase border border-[#FF2E7E]/30">
+                        {author.customBadge}
+                      </span>
+                    )}
+
+                    <span className="text-[11px] text-slate-400 font-normal bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+                      {author.articleCount} {author.articleCount === 1 ? 'artikel' : 'artikel'}
+                    </span>
+
+                    {(!isLoggedIn || author.id !== currentUser.id) && (
+                      <button
+                        onClick={() => {
+                          if (!isLoggedIn) {
+                            setLoginModalOpen(true);
+                            showToast(`Silakan masuk untuk mengikuti ${author.displayName || author.name}!`);
+                            return;
+                          }
+                          toggleFollowUser(author.id);
+                        }}
+                        className={`ml-1 px-2.5 py-0.5 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 ${
+                          isLoggedIn && isFollowing(author.id)
+                            ? 'bg-slate-800 text-slate-300 border border-slate-700 hover:bg-red-500/20 hover:text-red-400'
+                            : 'bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] text-white shadow-sm hover:brightness-110 active:scale-95'
+                        }`}
+                        title={isLoggedIn && isFollowing(author.id) ? 'Klik untuk batal ikuti' : 'Ikuti Penulis ini'}
+                      >
+                        {isLoggedIn && isFollowing(author.id) ? (
+                          <>
+                            <Check className="w-2.5 h-2.5 text-emerald-400" />
+                            <span>Mengikuti</span>
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus className="w-2.5 h-2.5" />
+                            <span>+ Ikuti Penulis</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                  <div className="text-xs text-slate-400 mt-0.5">
+                    Diterbitkan {article.publishedAt} • {article.readTime}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center gap-2.5 flex-wrap text-xs text-slate-400">
+              {/* Edit in CMS button for Admin & Author */}
+              {isLoggedIn && (isAdmin || isWriter || currentUser.role === 'admin' || currentUser.role === 'penulis_sotoy' || currentUser.id === article.author.id || currentUser.id === article.authorId || currentUser.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02') && (
+                <button
+                  id="article-edit-cms-btn"
+                  onClick={() => navigateTo('write-article', { articleId: article.id })}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-bold transition-all bg-gradient-to-r from-pink-600/80 to-purple-600/80 hover:brightness-110 text-white border border-pink-400/40 shadow-md shadow-pink-950/30"
+                  title="Buka dan Sunting Artikel ini di CMS Editor"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Sunting di CMS</span>
+                </button>
+              )}
+
               <button
                 id="article-save-library-btn"
                 onClick={() => toggleSaveArticle(article.id)}

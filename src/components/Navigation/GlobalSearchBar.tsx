@@ -22,7 +22,8 @@ import {
 import { collection, getDocs, query, limit } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useApp } from '../../context/AppContext';
-import { getRoleStyle } from '../../utils/roleStyles';
+import { getRoleBadgeStyle } from '../../utils/roleStyles';
+import { RoleBadge } from '../Common/RoleBadge';
 import { FilmItem, Article, BuzzPost, User } from '../../types';
 
 interface GlobalSearchBarProps {
@@ -1190,9 +1191,6 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                           visibleFlattenedList[selectedIndex]?.type === 'user' &&
                           visibleFlattenedList[selectedIndex]?.data.id === user.id;
 
-                        const roleStyle = getRoleStyle(user.role);
-                        const roleBadgeColor = roleStyle.badge;
-
                         return (
                           <div
                             key={user.id}
@@ -1217,9 +1215,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                                 <h5 className="font-display font-bold text-xs sm:text-sm text-white truncate">
                                   <HighlightText text={user.name} query={searchQuery} />
                                 </h5>
-                                <span className={`text-[9px] uppercase font-black px-1.5 py-0.2 rounded border ${roleBadgeColor}`}>
-                                  {user.roleTitle}
-                                </span>
+                                <RoleBadge role={user.role} size="xs" />
                               </div>
 
                               <div className="text-[11px] text-slate-400 truncate mt-0.5">

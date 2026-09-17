@@ -47,8 +47,9 @@ import {
   Search,
   Loader2,
 } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
-import { getRoleStyle } from '../../utils/roleStyles';
+import { useApp, GUEST_USER } from '../../context/AppContext';
+import { getRoleBadgeStyle } from '../../utils/roleStyles';
+import { RoleBadge } from '../Common/RoleBadge';
 import { QuickReactionBar } from '../Common/QuickReactionBar';
 import { User, UserTab, UserSettings } from '../../types';
 import { StarRating } from '../Common/StarRating';
@@ -131,18 +132,21 @@ export const UserPage: React.FC = () => {
   const targetUser: User = (viewedUserId && viewedUserId !== currentUser.id)
     ? (fetchedUser || allUsers.find(u => u.id === viewedUserId) || {
         id: viewedUserId,
-        name: 'Cinephile Sotoy',
-        handle: `@warga_${viewedUserId.slice(0, 5)}`,
+        name: 'Pengguna Sotoy',
+        handle: `@user_${viewedUserId.slice(0, 5)}`,
         avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
         role: 'warga_sotoy',
-        roleTitle: 'Warga Sotoy (Penonton Santai)',
-        bio: 'Penggemar sinema aktif di komunitas Sotoy Film.',
+        roleTitle: 'Warga Sotoy',
+        bio: 'Penggemar sinema di komunitas Sotoy Film.',
         totalReviews: 0,
         totalBuzz: 0,
         followers: [],
         following: [],
+        followersCount: 0,
+        followingCount: 0,
+        hasFinishedOnboarding: true,
       })
-    : (isLoggedIn ? currentUser : (allUsers[1] || allUsers[0] || currentUser));
+    : (isLoggedIn ? currentUser : GUEST_USER);
 
   const isOwnProfile = isLoggedIn && currentUser.id === targetUser.id;
 
@@ -254,7 +258,7 @@ export const UserPage: React.FC = () => {
   };
 
   const getRoleTheme = () => {
-    const style = getRoleStyle(targetUser.role);
+    const style = getRoleBadgeStyle(targetUser.role);
     return {
       border: style.border,
       badgeBg: style.badge,
@@ -444,9 +448,7 @@ export const UserPage: React.FC = () => {
                     <h1 className="font-display font-black text-2xl sm:text-3xl text-white">
                       {targetUser.name}
                     </h1>
-                    <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${roleTheme.badgeBg}`}>
-                      {roleTheme.roleName}
-                    </span>
+                    <RoleBadge role={targetUser.role} size="md" />
                   </div>
                   <div className="text-slate-400 text-xs font-medium flex items-center gap-2">
                     <span>{targetUser.handle}</span>

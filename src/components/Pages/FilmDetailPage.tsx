@@ -3,6 +3,7 @@ import {
   Star,
   Clock,
   User,
+  Users,
   Heart,
   Calendar,
   Share2,
@@ -27,7 +28,55 @@ import {
   Info,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { getRoleStyle } from '../../utils/roleStyles';
+import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
+
+const RelatedArticleAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }> = ({ authorId, defaultAuthor }) => {
+  const author = useDynamicArticleAuthor(authorId, defaultAuthor);
+  const { navigateTo } = useApp();
+
+  if (author.loading) {
+    return (
+      <div className="flex items-center gap-2 mb-2 animate-pulse">
+        <div className="w-5 h-5 rounded-full bg-slate-800 shrink-0" />
+        <div className="h-3 w-20 bg-slate-800 rounded" />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onClick={(e) => {
+        e.stopPropagation();
+        navigateTo('user-profile', { userId: author.id });
+      }}
+      className="flex items-center gap-2 mb-2 group/author cursor-pointer hover:text-[#00F0FF] transition-colors"
+      title={`Kunjungi profil ${author.displayName || author.name}`}
+    >
+      <img
+        src={author.avatarURL || author.avatar}
+        alt={author.displayName || author.name}
+        className="w-5 h-5 rounded-full object-cover border border-slate-700 group-hover/author:border-[#00F0FF] transition-colors"
+      />
+      <span className="text-[11px] font-bold text-slate-300 group-hover/author:text-[#00F0FF] transition-colors">
+        {author.displayName || author.name}
+      </span>
+      {author.customBadge ? (
+        <span className="bg-pink-500/20 text-[#FF2E7E] text-[9px] font-black px-1.5 py-0.2 rounded border border-pink-500/30 uppercase">
+          {author.customBadge}
+        </span>
+      ) : (
+        <span className="bg-pink-500/20 text-[#FF2E7E] text-[9px] font-black px-1.5 py-0.2 rounded">
+          PENULIS
+        </span>
+      )}
+      <span className="text-[10px] text-slate-400 font-normal">
+        • {author.articleCount} {author.articleCount === 1 ? 'artikel' : 'artikel'}
+      </span>
+    </div>
+  );
+};
+import { getRoleBadgeStyle } from '../../utils/roleStyles';
+import { RoleBadge } from '../Common/RoleBadge';
 import { FilmItem } from '../../types';
 import { RateFilmModal } from '../Modals/RateFilmModal';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
@@ -50,6 +99,7 @@ export const FilmDetailPage: React.FC = () => {
   const [ratingModalOpen, setRatingModalOpen] = useState(false);
   const [selectedStill, setSelectedStill] = useState<string | null>(null);
   const [isPlayingTrailer, setIsPlayingTrailer] = useState(false);
+  const [reviewFilter, setReviewFilter] = useState<'all' | 'critics' | 'community'>('all');
 
   const film: FilmItem = films.find(f => f.id === selectedFilmId) || films[0];
 
@@ -65,6 +115,15 @@ export const FilmDetailPage: React.FC = () => {
   }
 
   const filmReviews = ratings.filter(r => r.filmId === film.id);
+  const criticsReviews = filmReviews.filter(r => r.userRole === 'si_paling_sotoy');
+  const communityReviews = filmReviews.filter(r => r.userRole !== 'si_paling_sotoy');
+  const displayedReviews =
+    reviewFilter === 'critics'
+      ? criticsReviews
+      : reviewFilter === 'community'
+      ? communityReviews
+      : filmReviews;
+
   const isInWatchlist = isFilmInWatchlist(film.id);
 
   // Cast with photos fallback
@@ -255,31 +314,43 @@ export const FilmDetailPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Skor Sotoy Bar */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 bg-slate-900/95 p-3.5 sm:p-4 rounded-2xl border border-slate-800 max-w-2xl">
-                <div className="flex items-center justify-between sm:justify-start gap-3">
+              {/* Skor Sotoy Bar - Prioritize Critics Score */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 bg-slate-900/95 p-3.5 sm:p-4 rounded-2xl border border-slate-800 max-w-2xl shadow-xl">
+                <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-4">
+                  {/* 1. Skor Critics - PRIORITAS UTAMA */}
                   <div className="flex items-center gap-2.5">
-                    <div className="font-display font-black text-2xl sm:text-3xl text-[#FFD000]">
-                      ★ {film.skorSotoy.toFixed(1)}
+                    <div className="font-display font-black text-2xl sm:text-3xl text-[#00F0FF] drop-shadow-[0_0_12px_rgba(0,240,255,0.3)]">
+                      ★ {film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}
                     </div>
                     <div className="text-left">
-                      <div className="text-[11px] sm:text-xs font-bold text-white uppercase tracking-wider">
-                        Skor Komunitas
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[11px] sm:text-xs font-black text-white uppercase tracking-wider">
+                          Skor Critics
+                        </span>
+                        <span className="bg-[#00F0FF]/20 text-[#00F0FF] border border-[#00F0FF]/40 text-[9px] font-black uppercase px-1.5 py-0.2 rounded-full">
+                          Utama
+                        </span>
                       </div>
                       <div className="text-[10px] text-slate-400">
-                        {film.totalVotes.toLocaleString()} votes penonton
+                        Dewan Kritikus Sotoy
                       </div>
                     </div>
                   </div>
 
-                  <div className="h-6 w-px bg-slate-800 block" />
+                  <div className="h-7 w-px bg-slate-800 block" />
 
-                  <div className="text-left">
-                    <div className="text-xs sm:text-sm font-black text-[#00F0FF]">
-                      ★ {film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}
+                  {/* 2. Skor Komunitas - SEKUNDER */}
+                  <div className="flex items-center gap-2">
+                    <div className="font-display font-black text-lg sm:text-xl text-[#FFD000]">
+                      ★ {film.skorSotoy.toFixed(1)}
                     </div>
-                    <div className="text-[10px] text-slate-400">
-                      Skor Critics
+                    <div className="text-left">
+                      <div className="text-[10px] sm:text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+                        Komunitas
+                      </div>
+                      <div className="text-[9px] text-slate-400">
+                        {film.totalVotes.toLocaleString()} votes
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -625,17 +696,7 @@ export const FilmDetailPage: React.FC = () => {
                       <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                         <div>
                           {/* Author */}
-                          <div className="flex items-center gap-2 mb-2">
-                            <img
-                              src={art.author.avatar}
-                              alt={art.author.name}
-                              className="w-5 h-5 rounded-full object-cover"
-                            />
-                            <span className="text-[11px] font-bold text-slate-300">{art.author.name}</span>
-                            <span className="bg-pink-500/20 text-[#FF2E7E] text-[9px] font-black px-1.5 py-0.2 rounded">
-                              PENULIS
-                            </span>
-                          </div>
+                          <RelatedArticleAuthorBadge authorId={art.authorId} defaultAuthor={art.author} />
 
                           <h3 className="font-display font-bold text-sm text-white group-hover:text-[#00F0FF] transition-colors line-clamp-2">
                             {art.title}
@@ -669,10 +730,10 @@ export const FilmDetailPage: React.FC = () => {
                 <div>
                   <h2 className="font-display font-black text-xl sm:text-2xl text-white flex items-center gap-2.5">
                     <Star className="w-5 h-5 text-[#FFD000] fill-current" />
-                    <span>Ulasan Skor Sotoy Komunitas ({filmReviews.length})</span>
+                    <span>Ulasan Skor & Opini ({filmReviews.length})</span>
                   </h2>
                   <p className="text-slate-400 text-xs mt-1">
-                    Opini dan penilaian jujur penonton film {film.title}
+                    Opini dan penilaian jujur dari Dewan Kritikus Si Paling Sotoy & Komunitas Penonton
                   </p>
                 </div>
 
@@ -692,13 +753,69 @@ export const FilmDetailPage: React.FC = () => {
                 </button>
               </div>
 
-              {filmReviews.length === 0 ? (
+              {/* Review Filter Tabs (Kritikus vs Komunitas) */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-slate-800/80">
+                <button
+                  id="review-filter-all"
+                  onClick={() => setReviewFilter('all')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                    reviewFilter === 'all'
+                      ? 'bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] text-white shadow-md'
+                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  <span>Semua Ulasan</span>
+                  <span className="bg-black/30 px-1.5 py-0.2 rounded-full text-[10px]">
+                    {filmReviews.length}
+                  </span>
+                </button>
+
+                <button
+                  id="review-filter-critics"
+                  onClick={() => setReviewFilter('critics')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                    reviewFilter === 'critics'
+                      ? 'bg-[#00F0FF] text-slate-950 shadow-md shadow-[#00F0FF]/30 font-black'
+                      : 'bg-slate-900 text-slate-400 hover:text-[#00F0FF] border border-slate-800'
+                  }`}
+                >
+                  <Star className="w-3 h-3 fill-current" />
+                  <span>Ulasan Kritikus (Si Paling Sotoy)</span>
+                  <span className="bg-black/20 px-1.5 py-0.2 rounded-full text-[10px]">
+                    {criticsReviews.length}
+                  </span>
+                </button>
+
+                <button
+                  id="review-filter-community"
+                  onClick={() => setReviewFilter('community')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                    reviewFilter === 'community'
+                      ? 'bg-[#FFD000] text-slate-950 shadow-md shadow-[#FFD000]/30 font-black'
+                      : 'bg-slate-900 text-slate-400 hover:text-[#FFD000] border border-slate-800'
+                  }`}
+                >
+                  <Users className="w-3 h-3" />
+                  <span>Komunitas Sotoy</span>
+                  <span className="bg-black/20 px-1.5 py-0.2 rounded-full text-[10px]">
+                    {communityReviews.length}
+                  </span>
+                </button>
+              </div>
+
+              {displayedReviews.length === 0 ? (
                 <div className="text-center py-10 bg-slate-900/50 rounded-2xl border border-slate-800">
-                  <p className="text-slate-300 text-sm">Belum ada ulasan untuk film ini. Jadilah yang pertama memberikan Skor Sotoy!</p>
+                  <p className="text-slate-300 text-sm">
+                    {reviewFilter === 'critics'
+                      ? 'Belum ada ulasan dari Dewan Kritikus untuk film ini.'
+                      : reviewFilter === 'community'
+                      ? 'Belum ada ulasan dari penonton komunitas untuk film ini.'
+                      : 'Belum ada ulasan untuk film ini. Jadilah yang pertama memberikan Skor Sotoy!'}
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {filmReviews.map(rev => (
+                  {displayedReviews.map(rev => (
                     <div
                       key={rev.id}
                       className="bg-[#151628] border border-slate-800 rounded-2xl p-5 space-y-3"
@@ -712,11 +829,9 @@ export const FilmDetailPage: React.FC = () => {
                           />
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className={`font-bold text-sm text-white group-hover:${getRoleStyle('warga_sotoy').text} transition-colors`}>{rev.userName}</span>
+                              <span className={`font-bold text-sm text-white group-hover:${getRoleBadgeStyle(rev.userRole || 'warga_sotoy').text} transition-colors`}>{rev.userName}</span>
                               {rev.userRole && (
-                                <span className={`${getRoleStyle(rev.userRole).badge} text-[9px] font-black uppercase px-2 py-0.5 rounded`}>
-                                  {getRoleStyle(rev.userRole).name.split(' ').pop()?.toUpperCase()}
-                                </span>
+                                <RoleBadge role={rev.userRole} size="xs" />
                               )}
                             </div>
                             <span className="text-[11px] text-slate-400">{rev.createdAt}</span>
@@ -762,7 +877,7 @@ export const FilmDetailPage: React.FC = () => {
                               rating: rev.score,
                               reviewerName: rev.userName,
                               reviewerAvatar: rev.userAvatar,
-                              reviewerRole: rev.userRole === 'si_paling_sotoy' ? 'Si Paling Sotoy (Kritikus)' : 'Warga Sotoy (Penonton)',
+                              reviewerRole: rev.userRole ? getRoleBadgeStyle(rev.userRole).fullTitle : 'Warga Sotoy (Penonton Santai)',
                               meta: `${film.title} (${film.year}) • Skor: ${rev.score.toFixed(1)}/5.0`,
                             });
                           }}
