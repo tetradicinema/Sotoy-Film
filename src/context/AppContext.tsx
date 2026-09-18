@@ -237,7 +237,8 @@ interface AppContextType {
   buzzFeedTab: 'for-you' | 'following' | 'saved' | 'liked' | 'trending';
   setBuzzFeedTab: (tab: 'for-you' | 'following' | 'saved' | 'liked' | 'trending') => void;
   toastMessage: string | null;
-  showToast: (msg: string) => void;
+  toastType: 'success' | 'error' | 'info';
+  showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
   finishOnboarding: (updates: { name: string; handle: string; bio: string; avatar?: string; favoriteGenres?: string[] }) => Promise<void>;
   // Notifications system
   notifications: NotificationItem[];
@@ -401,6 +402,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeSubCategory, setActiveSubCategory] = useState<SubCategory | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
 
   // User Profile Visiting state
   const [viewedUserId, setViewedUserId] = useState<string | null>(null);
@@ -431,7 +433,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('sotoy_saved_articles', JSON.stringify(savedArticles));
   }, [savedArticles]);
 
-  const showToast = (msg: string) => {
+  const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToastType(type);
     setToastMessage(msg);
     setTimeout(() => {
       setToastMessage(null);

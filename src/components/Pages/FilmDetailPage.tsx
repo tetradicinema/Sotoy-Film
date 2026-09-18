@@ -29,6 +29,8 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
+import { SEOHead } from '../SEO/SEOHead';
+import { generateMovieSchema, generateBreadcrumbSchema } from '../../utils/schemaHelpers';
 
 const RelatedArticleAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }> = ({ authorId, defaultAuthor }) => {
   const author = useDynamicArticleAuthor(authorId, defaultAuthor);
@@ -203,8 +205,46 @@ export const FilmDetailPage: React.FC = () => {
       : 'https://www.youtube.com/embed/yNNf28kM8L0?autoplay=1'
   );
 
+  // Prepare SEO Metadata & Structured Schemas
+  const seoUrl = `https://sotoyfilm.my.id/film/${film.id}`;
+  const breadcrumbSchema = generateBreadcrumbSchema([
+    { name: 'Home', item: 'https://sotoyfilm.my.id' },
+    { name: 'Film Database', item: 'https://sotoyfilm.my.id/film-database' },
+    { name: film.title, item: seoUrl },
+  ]);
+
+  const movieSchema = generateMovieSchema({
+    title: film.title,
+    originalTitle: film.originalTitle,
+    image: film.poster,
+    description: film.synopsis,
+    director: film.director,
+    writer: film.writer,
+    actorNames: film.cast,
+    genre: film.genres,
+    year: film.year,
+    skorSotoy: film.skorSotoy,
+    totalVotes: film.totalVotes || 0,
+    reviews: filmReviews.slice(0, 5).map(r => ({
+      authorName: r.userName,
+      reviewHeadline: r.headline || 'Ulasan Sotoy',
+      reviewBody: r.reviewText,
+      reviewRating: r.score,
+      createdAt: r.createdAt,
+    })),
+  });
+
   return (
     <div className="min-h-screen py-6 sm:py-8">
+      <SEOHead
+        title={`${film.title} (${film.year}) - Ulasan & Skor Sotoy`}
+        description={film.synopsis.slice(0, 160) + '...'}
+        image={film.poster}
+        url={seoUrl}
+        type="video.movie"
+        keywords={[film.title, film.director, 'skor sotoy', 'ulasan film', ...(film.genres || [])]}
+        schema={[breadcrumbSchema, movieSchema]}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         
         {/* ========================================================================= */}

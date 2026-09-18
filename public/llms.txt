@@ -1,0 +1,26 @@
+# Sotoy Film Ecosystem
+
+Sotoy Film (https://sotoyfilm.my.id) is a premier community-driven film criticism and cinematic catalog platform in Indonesia.
+
+## Content Architecture
+
+- **Home**: Latest reviews, trending news, and community buzz.
+- **Film Database**: Exhaustive catalog of movies, series, and anime with "Skor Sotoy" (decimal ratings).
+- **Article Categories**:
+  - **Movies**: Reviews of local and international theatrical films.
+  - **Series**: Deep dives into streaming and broadcast serials.
+  - **Anime**: Specialized Japanese animation culture coverage.
+  - **Cinema Gear**: Professional evaluations of cameras, lenses, and production tools.
+  - **Film Studies**: Educational content for aspiring filmmakers.
+
+## Key Feeds
+
+- XML Sitemap: https://sotoyfilm.my.id/sitemap.xml
+- Robots Directive: https://sotoyfilm.my.id/robots.txt
+
+## Discovery Endpoints
+
+- Film Directory: `/film-database`
+- Editorial Articles: `/article/{slug}`
+- Detailed Film Pages: `/film/{id}`
+- Community Feed: `/community-feed`

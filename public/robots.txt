@@ -1,0 +1,21 @@
+User-agent: *
+Allow: /
+Allow: /category/*
+Allow: /article/*
+Allow: /film/*
+Allow: /film-database
+Allow: /film-recommendations
+Allow: /community-feed
+
+# Disallow administrative and private views
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /workspace
+Disallow: /workspace/*
+Disallow: /settings
+Disallow: /settings/*
+Disallow: /onboarding
+Disallow: /onboarding/*
+Disallow: /api/*
+
+Sitemap: https://sotoyfilm.my.id/sitemap.xml

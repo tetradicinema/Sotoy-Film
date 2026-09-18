@@ -272,9 +272,9 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
     const success = await updateArticle(id, updates);
     if (success !== false) {
       setQuickEditingId(null);
-      showToast(`Artikel "${quickForm.title}" berhasil diperbarui via Quick Edit!`);
+      showToast(`Artikel "${quickForm.title}" berhasil diperbarui via Quick Edit!`, 'success');
     } else {
-      showToast('Gagal memperbarui artikel.');
+      showToast('Gagal memperbarui artikel via Quick Edit.', 'error');
     }
   };
 
@@ -293,62 +293,78 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
     if (bulkActionSelect === 'publish') {
       const success = await bulkUpdateArticles(selectedIds, { status: 'published' });
       if (success !== false) {
-        showToast(`${selectedIds.length} artikel berhasil diterbitkan.`);
+        showToast(`${selectedIds.length} artikel berhasil diterbitkan.`, 'success');
         setSelectedIds([]);
         setBulkActionSelect('');
+      } else {
+        showToast('Gagal menerbitkan artikel.', 'error');
       }
     } else if (bulkActionSelect === 'draft') {
       const success = await bulkUpdateArticles(selectedIds, { status: 'draft' });
       if (success !== false) {
-        showToast(`${selectedIds.length} artikel diubah ke draf.`);
+        showToast(`${selectedIds.length} artikel diubah ke draf.`, 'success');
         setSelectedIds([]);
         setBulkActionSelect('');
+      } else {
+        showToast('Gagal mengubah status artikel ke draf.', 'error');
       }
     } else if (bulkActionSelect === 'trash') {
       const success = await bulkUpdateArticles(selectedIds, { status: 'trash' });
       if (success !== false) {
-        showToast(`${selectedIds.length} artikel dipindahkan ke Tempat Sampah.`);
+        showToast(`${selectedIds.length} artikel dipindahkan ke Tempat Sampah.`, 'success');
         setSelectedIds([]);
         setBulkActionSelect('');
+      } else {
+        showToast('Gagal memindahkan artikel ke Sampah.', 'error');
       }
     } else if (bulkActionSelect === 'cat_movies') {
       const success = await bulkUpdateArticles(selectedIds, { category: 'movies', subCategory: 'reviews' });
       if (success !== false) {
-        showToast(`${selectedIds.length} artikel dipindahkan ke kategori Movies.`);
+        showToast(`${selectedIds.length} artikel dipindahkan ke kategori Movies.`, 'success');
         setSelectedIds([]);
         setBulkActionSelect('');
+      } else {
+        showToast('Gagal mengubah kategori artikel.', 'error');
       }
     } else if (bulkActionSelect === 'cat_series') {
       const success = await bulkUpdateArticles(selectedIds, { category: 'series', subCategory: 'reviews' });
       if (success !== false) {
-        showToast(`${selectedIds.length} artikel dipindahkan ke kategori Series.`);
+        showToast(`${selectedIds.length} artikel dipindahkan ke kategori Series.`, 'success');
         setSelectedIds([]);
         setBulkActionSelect('');
+      } else {
+        showToast('Gagal mengubah kategori artikel.', 'error');
       }
     } else if (bulkActionSelect === 'cat_anime') {
       const success = await bulkUpdateArticles(selectedIds, { category: 'anime', subCategory: 'news' });
       if (success !== false) {
-        showToast(`${selectedIds.length} artikel dipindahkan ke kategori Anime.`);
+        showToast(`${selectedIds.length} artikel dipindahkan ke kategori Anime.`, 'success');
         setSelectedIds([]);
         setBulkActionSelect('');
+      } else {
+        showToast('Gagal mengubah kategori artikel.', 'error');
       }
     } else if (bulkActionSelect === 'cat_gear') {
       const success = await bulkUpdateArticles(selectedIds, { category: 'cinema-gear', subCategory: 'gear-reviews' });
       if (success !== false) {
-        showToast(`${selectedIds.length} artikel dipindahkan ke kategori Cinema Gear.`);
+        showToast(`${selectedIds.length} artikel dipindahkan ke kategori Cinema Gear.`, 'success');
         setSelectedIds([]);
         setBulkActionSelect('');
+      } else {
+        showToast('Gagal mengubah kategori artikel.', 'error');
       }
     } else if (bulkActionSelect === 'cat_studies') {
       const success = await bulkUpdateArticles(selectedIds, { category: 'film-studies', subCategory: 'directing' });
       if (success !== false) {
-        showToast(`${selectedIds.length} artikel dipindahkan ke kategori Film Studies.`);
+        showToast(`${selectedIds.length} artikel dipindahkan ke kategori Film Studies.`, 'success');
         setSelectedIds([]);
         setBulkActionSelect('');
+      } else {
+        showToast('Gagal mengubah kategori artikel.', 'error');
       }
     } else if (bulkActionSelect === 'reassign_modal') {
       if (!isAdminView) {
-        showToast('Hanya Admin yang dapat memindahkan kepemilikan penulis artikel.');
+        showToast('Hanya Admin yang dapat memindahkan kepemilikan penulis artikel.', 'error');
         return;
       }
       setIsBulkAuthorModalOpen(true);
@@ -356,9 +372,11 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
       if (window.confirm(`PERINGATAN PERMANEN: Hapus selamanya ${selectedIds.length} artikel dari database Firestore? Tindakan ini tidak dapat dibatalkan!`)) {
         const success = await bulkDeleteArticles(selectedIds);
         if (success !== false) {
-          showToast(`${selectedIds.length} artikel dihapus permanen dari Firestore.`);
+          showToast(`${selectedIds.length} artikel dihapus permanen dari Firestore.`, 'success');
           setSelectedIds([]);
           setBulkActionSelect('');
+        } else {
+          showToast('Gagal menghapus artikel permanen.', 'error');
         }
       }
     }
@@ -382,10 +400,12 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
     });
 
     if (success !== false) {
-      showToast(`Kepemilikan ${selectedIds.length} artikel dialihkan ke ${selectedUser.name}.`);
+      showToast(`Kepemilikan ${selectedIds.length} artikel dialihkan ke ${selectedUser.name}.`, 'success');
       setIsBulkAuthorModalOpen(false);
       setSelectedIds([]);
       setBulkActionSelect('');
+    } else {
+      showToast('Gagal mengalihkan kepemilikan penulis.', 'error');
     }
   };
 
@@ -848,7 +868,9 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
                                 if (window.confirm(`Hapus permanen artikel "${article.title}" dari database?`)) {
                                   const success = await bulkDeleteArticles([article.id]);
                                   if (success !== false) {
-                                    showToast(`Artikel "${article.title}" berhasil dihapus.`);
+                                    showToast(`Artikel "${article.title}" berhasil dihapus.`, 'success');
+                                  } else {
+                                    showToast(`Gagal menghapus artikel "${article.title}".`, 'error');
                                   }
                                 }
                               }}

@@ -271,7 +271,7 @@ export const AdminCMSArticles: React.FC = () => {
 
   const saveQuickEdit = async (id: string) => {
     if (!quickForm.title.trim()) {
-      showToast('Judul artikel tidak boleh kosong!');
+      showToast('Judul artikel tidak boleh kosong!', 'error');
       return;
     }
     const cleanSlug = quickForm.slug.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-');
@@ -285,7 +285,7 @@ export const AdminCMSArticles: React.FC = () => {
       role: TARGET_MIGRATION_AUTHOR.role,
     };
 
-    await updateArticle(id, {
+    const success = await updateArticle(id, {
       title: quickForm.title.trim(),
       slug: cleanSlug,
       category: quickForm.category,
@@ -302,53 +302,86 @@ export const AdminCMSArticles: React.FC = () => {
       tags: parsedTags,
     });
 
-    setQuickEditingId(null);
-    showToast(`Artikel "${quickForm.title}" berhasil diperbarui!`);
+    if (success !== false) {
+      setQuickEditingId(null);
+      showToast(`Artikel "${quickForm.title}" berhasil diperbarui!`, 'success');
+    } else {
+      showToast('Gagal memperbarui artikel via Quick Edit.', 'error');
+    }
   };
 
   // Bulk Action Execution (WordPress standard dropdown)
   const handleApplyBulkAction = async () => {
     if (selectedIds.length === 0) {
-      showToast('Pilih setidaknya 1 artikel untuk menerapkan aksi massal.');
+      showToast('Pilih setidaknya 1 artikel untuk menerapkan aksi massal.', 'info');
       return;
     }
 
     if (!bulkActionSelect) {
-      showToast('Pilih tindakan massal yang ingin diterapkan.');
+      showToast('Pilih tindakan massal yang ingin diterapkan.', 'info');
       return;
     }
 
-    if (bulkActionSelect === 'publish') {
-      await bulkUpdateArticles(selectedIds, { status: 'published' });
-      setSelectedIds([]);
-      setBulkActionSelect('');
-    } else if (bulkActionSelect === 'draft') {
-      await bulkUpdateArticles(selectedIds, { status: 'draft' });
-      setSelectedIds([]);
-      setBulkActionSelect('');
-    } else if (bulkActionSelect === 'trash') {
-      await bulkUpdateArticles(selectedIds, { status: 'trash' });
-      setSelectedIds([]);
-      setBulkActionSelect('');
-      showToast(`${selectedIds.length} artikel dipindahkan ke Tempat Sampah.`);
-    } else if (bulkActionSelect === 'reassign_target') {
-      const targetAuth = availableAuthors[0] || {
-        id: currentUser.id,
-        name: currentUser.name,
-        avatar: currentUser.avatar,
-        role: currentUser.role,
-      };
-      await bulkReassignAuthor(selectedIds, targetAuth);
-      setSelectedIds([]);
-      setBulkActionSelect('');
-    } else if (bulkActionSelect === 'reassign_modal') {
-      setIsBulkAuthorModalOpen(true);
-    } else if (bulkActionSelect === 'delete_permanently') {
-      if (window.confirm(`PERINGATAN: Hapus permanen ${selectedIds.length} artikel yang dipilih dari Firestore?`)) {
-        await bulkDeleteArticles(selectedIds);
-        setSelectedIds([]);
-        setBulkActionSelect('');
+    try {
+      if (bulkActionSelect === 'publish') {
+        const success = await bulkUpdateArticles(selectedIds, { status: 'published' });
+        if (success !== false) {
+          showToast(`${selectedIds.length} artikel berhasil diterbitkan.`, 'success');
+          setSelectedIds([]);
+          setBulkActionSelect('');
+        } else {
+          showToast('Gagal menerbitkan artikel massal.', 'error');
+        }
+      } else if (bulkActionSelect === 'draft') {
+        const success = await bulkUpdateArticles(selectedIds, { status: 'draft' });
+        if (success !== false) {
+          showToast(`${selectedIds.length} artikel diubah ke draf.`, 'success');
+          setSelectedIds([]);
+          setBulkActionSelect('');
+        } else {
+          showToast('Gagal mengubah status artikel ke draf.', 'error');
+        }
+      } else if (bulkActionSelect === 'trash') {
+        const success = await bulkUpdateArticles(selectedIds, { status: 'trash' });
+        if (success !== false) {
+          showToast(`${selectedIds.length} artikel dipindahkan ke Tempat Sampah.`, 'success');
+          setSelectedIds([]);
+          setBulkActionSelect('');
+        } else {
+          showToast('Gagal memindahkan artikel ke Sampah.', 'error');
+        }
+      } else if (bulkActionSelect === 'reassign_target') {
+        const targetAuth = availableAuthors[0] || {
+          id: currentUser.id,
+          name: currentUser.name,
+          avatar: currentUser.avatar,
+          role: currentUser.role,
+        };
+        const success = await bulkReassignAuthor(selectedIds, targetAuth);
+        if (success !== false) {
+          showToast(`Kepemilikan ${selectedIds.length} artikel berhasil dialihkan.`, 'success');
+          setSelectedIds([]);
+          setBulkActionSelect('');
+        } else {
+          showToast('Gagal mengalihkan kepemilikan penulis.', 'error');
+        }
+      } else if (bulkActionSelect === 'reassign_modal') {
+        setIsBulkAuthorModalOpen(true);
+      } else if (bulkActionSelect === 'delete_permanently') {
+        if (window.confirm(`PERINGATAN: Hapus permanen ${selectedIds.length} artikel yang dipilih dari Firestore?`)) {
+          const success = await bulkDeleteArticles(selectedIds);
+          if (success !== false) {
+            showToast(`${selectedIds.length} artikel berhasil dihapus permanen.`, 'success');
+            setSelectedIds([]);
+            setBulkActionSelect('');
+          } else {
+            showToast('Gagal menghapus artikel permanen.', 'error');
+          }
+        }
       }
+    } catch (err) {
+      console.error('Bulk action execution error:', err);
+      showToast('Terjadi kesalahan saat memproses tindakan massal.', 'error');
     }
   };
 
@@ -363,10 +396,20 @@ export const AdminCMSArticles: React.FC = () => {
       role: currentUser.role,
     };
 
-    await bulkReassignAuthor(selectedIds, selectedUser);
-    setIsBulkAuthorModalOpen(false);
-    setSelectedIds([]);
-    setBulkActionSelect('');
+    try {
+      const success = await bulkReassignAuthor(selectedIds, selectedUser);
+      if (success !== false) {
+        showToast(`Kepemilikan ${selectedIds.length} artikel dialihkan ke ${selectedUser.name}.`, 'success');
+        setIsBulkAuthorModalOpen(false);
+        setSelectedIds([]);
+        setBulkActionSelect('');
+      } else {
+        showToast('Gagal mengalihkan kepemilikan penulis.', 'error');
+      }
+    } catch (err) {
+      console.error('Reassign error:', err);
+      showToast('Terjadi kesalahan saat mengalihkan penulis.', 'error');
+    }
   };
 
   // Dedicated One-Click Migration to active user UID
@@ -376,15 +419,21 @@ export const AdminCMSArticles: React.FC = () => {
     try {
       setMigrationProgress(50);
       const res = await migrateAllOldArticlesToTargetAuthor(currentUser.id);
-      setMigrationProgress(100);
-      setTimeout(() => {
+      if (res.success) {
+        setMigrationProgress(100);
+        showToast(`Migrasi Berhasil! ${res.count} artikel dipindahkan ke akun Anda.`, 'success');
+        setTimeout(() => {
+          setIsMigrating(false);
+          setIsMigrationModalOpen(false);
+          setMigrationProgress(0);
+        }, 500);
+      } else {
         setIsMigrating(false);
-        setIsMigrationModalOpen(false);
-        setMigrationProgress(0);
-      }, 500);
+        showToast('Gagal memigrasikan artikel. Silakan coba kembali.', 'error');
+      }
     } catch (e) {
       setIsMigrating(false);
-      showToast('Gagal memigrasikan artikel. Silakan coba kembali.');
+      showToast('Gagal memigrasikan artikel. Terjadi kesalahan sistem.', 'error');
     }
   };
 
@@ -817,24 +866,33 @@ export const AdminCMSArticles: React.FC = () => {
                                 <button
                                   onClick={async () => {
                                     if (window.confirm(`Hapus permanen artikel "${article.title}"?`)) {
-                                      await deleteArticle(article.id);
+                                    const success = await deleteArticle(article.id);
+                                    if (success !== false) {
+                                      showToast(`Artikel "${article.title}" berhasil dihapus.`, 'success');
+                                    } else {
+                                      showToast(`Gagal menghapus artikel "${article.title}".`, 'error');
                                     }
-                                  }}
-                                  className="text-red-400 hover:underline"
-                                >
-                                  Hapus Permanen
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={async () => {
-                                    await updateArticle(article.id, { status: 'trash' });
-                                    showToast(`Artikel "${article.title}" dipindahkan ke Sampah.`);
-                                  }}
-                                  className="text-red-400 hover:underline"
-                                >
-                                  Sampah
-                                </button>
-                              )}
+                                  }
+                                }}
+                                className="text-red-400 hover:underline"
+                              >
+                                Hapus Permanen
+                              </button>
+                            ) : (
+                              <button
+                                onClick={async () => {
+                                  const success = await updateArticle(article.id, { status: 'trash' });
+                                  if (success !== false) {
+                                    showToast(`Artikel "${article.title}" dipindahkan ke Sampah.`, 'success');
+                                  } else {
+                                    showToast(`Gagal memindahkan artikel "${article.title}" ke Sampah.`, 'error');
+                                  }
+                                }}
+                                className="text-red-400 hover:underline"
+                              >
+                                Sampah
+                              </button>
+                            )}
                             </div>
                           </div>
                         </td>

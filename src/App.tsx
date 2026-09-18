@@ -1,4 +1,6 @@
 import React from 'react';
+import { HelmetProvider } from 'react-helmet-async';
+import { SEOHead } from './components/SEO/SEOHead';
 import { AppProvider, useApp } from './context/AppContext';
 import { Navbar } from './components/Navigation/Navbar';
 import { Footer } from './components/Navigation/Footer';
@@ -35,18 +37,31 @@ import { MobileBottomNav } from './components/Navigation/MobileBottomNav';
 import { Sparkles, CheckCircle, Info } from 'lucide-react';
 
 const AppContent: React.FC = () => {
-  const { currentView, toastMessage } = useApp();
+  const { currentView, toastMessage, toastType } = useApp();
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0D0E15] text-slate-100 relative selection:bg-[#FF2E7E] selection:text-white pb-16 lg:pb-0">
+      {/* Default SEO Metadata fallback */}
+      <SEOHead />
+
       {/* Toast Notification Alert - positioned above bottom bar on mobile */}
       {toastMessage && (
         <div
           id="global-toast-notification"
-          className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 left-4 sm:left-auto z-50 bg-[#151624]/95 backdrop-blur-md border border-[#FF2E7E] text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-5 duration-200"
+          className={`fixed bottom-20 sm:bottom-6 right-4 sm:right-6 left-4 sm:left-auto z-50 bg-[#151624]/95 backdrop-blur-md border ${
+            toastType === 'success' ? 'border-emerald-500' : 
+            toastType === 'error' ? 'border-red-500' : 
+            'border-[#FF2E7E]'
+          } text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-5 duration-200`}
         >
-          <div className="w-6 h-6 rounded-full bg-[#FF2E7E]/20 text-[#FF2E7E] flex items-center justify-center shrink-0">
-            <Sparkles className="w-3.5 h-3.5" />
+          <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
+            toastType === 'success' ? 'bg-emerald-500/20 text-emerald-400' : 
+            toastType === 'error' ? 'bg-red-500/20 text-red-400' : 
+            'bg-[#FF2E7E]/20 text-[#FF2E7E]'
+          }`}>
+            {toastType === 'success' ? <CheckCircle className="w-3.5 h-3.5" /> : 
+             toastType === 'error' ? <X className="w-3.5 h-3.5" /> : 
+             <Sparkles className="w-3.5 h-3.5" />}
           </div>
           <span className="text-xs font-bold flex-1">{toastMessage}</span>
         </div>
@@ -110,8 +125,10 @@ const AppContent: React.FC = () => {
 
 export default function App() {
   return (
-    <AppProvider>
-      <AppContent />
-    </AppProvider>
+    <HelmetProvider>
+      <AppProvider>
+        <AppContent />
+      </AppProvider>
+    </HelmetProvider>
   );
 }

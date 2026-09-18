@@ -15,6 +15,8 @@ import {
 import { useApp } from '../../context/AppContext';
 import { MainCategory, SubCategory } from '../../types';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
+import { SEOHead } from '../SEO/SEOHead';
+import { generateBreadcrumbSchema } from '../../utils/schemaHelpers';
 
 export const CategoryPage: React.FC = () => {
   const {
@@ -104,8 +106,32 @@ export const CategoryPage: React.FC = () => {
     return true;
   });
 
+  const seoUrl = activeSubCategory
+    ? `https://sotoyfilm.my.id/category/${currentCategory}/${activeSubCategory}`
+    : `https://sotoyfilm.my.id/category/${currentCategory}`;
+
+  const breadcrumbsList = [
+    { name: 'Home', item: 'https://sotoyfilm.my.id' },
+    { name: meta.title, item: `https://sotoyfilm.my.id/category/${currentCategory}` },
+  ];
+  if (activeSubCategory) {
+    breadcrumbsList.push({
+      name: activeSubCategory.toUpperCase(),
+      item: seoUrl,
+    });
+  }
+  const breadcrumbSchema = generateBreadcrumbSchema(breadcrumbsList);
+
   return (
     <div className="min-h-screen py-8">
+      <SEOHead
+        title={activeSubCategory ? `${meta.title} - ${activeSubCategory.toUpperCase()}` : meta.title}
+        description={meta.subtitle}
+        url={seoUrl}
+        type="website"
+        keywords={['sotoy film', meta.title, currentCategory, activeSubCategory || '']}
+        schema={breadcrumbSchema}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         
         {/* Breadcrumb Header */}

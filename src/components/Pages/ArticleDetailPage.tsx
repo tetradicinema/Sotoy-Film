@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
+import { SEOHead } from '../SEO/SEOHead';
+import { generateArticleSchema, generateBreadcrumbSchema } from '../../utils/schemaHelpers';
 import { StarRating } from '../Common/StarRating';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { EditorialSidebar } from '../Common/EditorialSidebar';
@@ -126,8 +128,36 @@ export const ArticleDetailPage: React.FC = () => {
     .filter(a => a.id !== article.id && a.category === article.category)
     .slice(0, 3);
 
+  // Prepare SEO Metadata & Structured Schemas
+  const seoUrl = `https://sotoyfilm.my.id/article/${article.slug || article.id}`;
+  const breadcrumbSchema = generateBreadcrumbSchema([
+    { name: 'Home', item: 'https://sotoyfilm.my.id' },
+    { name: article.category.toUpperCase(), item: `https://sotoyfilm.my.id/category/${article.category}` },
+    { name: article.title, item: seoUrl },
+  ]);
+
+  const articleSchema = generateArticleSchema({
+    title: article.seoTitle || article.title,
+    description: article.metaDescription || article.excerpt || article.content.slice(0, 160),
+    image: article.ogImage || article.coverImage,
+    url: seoUrl,
+    datePublished: article.publishedAt || new Date().toISOString(),
+    authorName: author.displayName || author.name || article.author.name,
+    authorAvatar: author.avatarURL || author.avatar || article.author.avatar,
+    keywords: article.tags || [],
+  });
+
   return (
     <div className="min-h-screen py-8">
+      <SEOHead
+        title={article.seoTitle || article.title}
+        description={article.metaDescription || article.excerpt || article.content.slice(0, 160)}
+        image={article.ogImage || article.coverImage}
+        url={seoUrl}
+        type="article"
+        keywords={[...(article.tags || []), 'sotoy film', article.category, article.subCategory]}
+        schema={[breadcrumbSchema, articleSchema]}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         
         {/* Navigation Breadcrumbs */}
