@@ -16,8 +16,8 @@ interface SEOHeadProps {
 const DEFAULT_TITLE = 'Sotoy Film - Ulasan & Kritik Film Terpercaya';
 const DEFAULT_DESC = 'Platform ulasan film dengan skor sotoy paling jujur di Indonesia.';
 const DEFAULT_KEYWORDS = 'ulasan film, kritik film, film indonesia, skor sotoy, cinema gear';
-const DEFAULT_IMAGE = 'https://sotoyfilm.my.id/og-default.jpg';
-const DEFAULT_URL = 'https://sotoyfilm.my.id';
+const DEFAULT_IMAGE = 'https://www.sotoyfilm.my.id/og-default.jpg';
+const DEFAULT_URL = 'https://www.sotoyfilm.my.id';
 
 export const SEOHead: React.FC<SEOHeadProps> = ({
   title,

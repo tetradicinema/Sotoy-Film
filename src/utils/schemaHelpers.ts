@@ -172,7 +172,7 @@ export function generateArticleSchema(input: ArticleSchemaInput) {
       name: input.publisherName || 'Sotoy Film',
       logo: {
         '@type': 'ImageObject',
-        url: input.publisherLogo || 'https://sotoyfilm.my.id/logo.png',
+        url: input.publisherLogo || 'https://www.sotoyfilm.my.id/logo.png',
       },
     },
     mainEntityOfPage: {

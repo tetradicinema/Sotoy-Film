@@ -367,6 +367,7 @@ Meskipun plot cerita masih dirahasiakan rapat-rapat oleh studio, rumor dari oran
 export const INITIAL_FILMS: FilmItem[] = [
   {
     id: 'film-1',
+    slug: 'dune-part-two',
     title: 'Dune: Part Two',
     originalTitle: 'Dune: Part Two',
     type: 'movie',
@@ -391,6 +392,7 @@ export const INITIAL_FILMS: FilmItem[] = [
   },
   {
     id: 'film-2',
+    slug: 'oppenheimer',
     title: 'Oppenheimer',
     originalTitle: 'Oppenheimer',
     type: 'movie',
@@ -415,6 +417,7 @@ export const INITIAL_FILMS: FilmItem[] = [
   },
   {
     id: 'film-3',
+    slug: 'shogun',
     title: 'Shōgun',
     originalTitle: 'Shōgun',
     type: 'series',
@@ -438,6 +441,7 @@ export const INITIAL_FILMS: FilmItem[] = [
   },
   {
     id: 'film-4',
+    slug: 'chainsaw-man-reze-arc',
     title: 'Chainsaw Man: Reze Arc',
     originalTitle: '劇場版 チェンソーマン レゼ篇',
     type: 'anime',
@@ -461,6 +465,7 @@ export const INITIAL_FILMS: FilmItem[] = [
   },
   {
     id: 'film-5',
+    slug: 'past-lives',
     title: 'Past Lives',
     originalTitle: 'Past Lives',
     type: 'movie',
@@ -485,6 +490,7 @@ export const INITIAL_FILMS: FilmItem[] = [
   },
   {
     id: 'film-6',
+    slug: 'spider-man-across-the-spider-verse',
     title: 'Spider-Man: Across the Spider-Verse',
     originalTitle: 'Spider-Man: Across the Spider-Verse',
     type: 'movie',
@@ -508,6 +514,7 @@ export const INITIAL_FILMS: FilmItem[] = [
   },
   {
     id: 'film-7',
+    slug: 'siksa-kubur',
     title: 'Siksa Kubur',
     originalTitle: 'Grave Torture',
     type: 'movie',
@@ -534,6 +541,7 @@ export const INITIAL_FILMS: FilmItem[] = [
   },
   {
     id: 'film-8',
+    slug: 'exhuma',
     title: 'Exhuma',
     originalTitle: '파묘 (Pamyo)',
     type: 'movie',
@@ -560,6 +568,7 @@ export const INITIAL_FILMS: FilmItem[] = [
   },
   {
     id: 'film-9',
+    slug: 'late-night-with-the-devil',
     title: 'Late Night with the Devil',
     originalTitle: 'Late Night with the Devil',
     type: 'movie',

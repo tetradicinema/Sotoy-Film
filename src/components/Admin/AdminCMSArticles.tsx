@@ -866,33 +866,33 @@ export const AdminCMSArticles: React.FC = () => {
                                 <button
                                   onClick={async () => {
                                     if (window.confirm(`Hapus permanen artikel "${article.title}"?`)) {
-                                    const success = await deleteArticle(article.id);
-                                    if (success !== false) {
-                                      showToast(`Artikel "${article.title}" berhasil dihapus.`, 'success');
-                                    } else {
-                                      showToast(`Gagal menghapus artikel "${article.title}".`, 'error');
+                                      try {
+                                        await deleteArticle(article.id);
+                                        showToast(`Artikel "${article.title}" berhasil dihapus.`, 'success');
+                                      } catch {
+                                        showToast(`Gagal menghapus artikel "${article.title}".`, 'error');
+                                      }
                                     }
-                                  }
-                                }}
-                                className="text-red-400 hover:underline"
-                              >
-                                Hapus Permanen
-                              </button>
-                            ) : (
-                              <button
-                                onClick={async () => {
-                                  const success = await updateArticle(article.id, { status: 'trash' });
-                                  if (success !== false) {
-                                    showToast(`Artikel "${article.title}" dipindahkan ke Sampah.`, 'success');
-                                  } else {
-                                    showToast(`Gagal memindahkan artikel "${article.title}" ke Sampah.`, 'error');
-                                  }
-                                }}
-                                className="text-red-400 hover:underline"
-                              >
-                                Sampah
-                              </button>
-                            )}
+                                  }}
+                                  className="text-red-400 hover:underline"
+                                >
+                                  Hapus Permanen
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      await updateArticle(article.id, { status: 'trash' });
+                                      showToast(`Artikel "${article.title}" dipindahkan ke Sampah.`, 'success');
+                                    } catch {
+                                      showToast(`Gagal memindahkan artikel "${article.title}" ke Sampah.`, 'error');
+                                    }
+                                  }}
+                                  className="text-red-400 hover:underline"
+                                >
+                                  Sampah
+                                </button>
+                              )}
                             </div>
                           </div>
                         </td>

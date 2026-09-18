@@ -131,6 +131,7 @@ export interface CastMember {
 
 export interface FilmItem {
   id: string;
+  slug?: string;
   title: string;
   originalTitle?: string;
   type: 'movie' | 'series' | 'anime';

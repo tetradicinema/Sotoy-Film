@@ -1,6 +1,6 @@
 # Sotoy Film Ecosystem
 
-Sotoy Film (https://sotoyfilm.my.id) is a premier community-driven film criticism and cinematic catalog platform in Indonesia.
+Sotoy Film (https://www.sotoyfilm.my.id) is a premier community-driven film criticism and cinematic catalog platform in Indonesia.
 
 ## Content Architecture
 
@@ -15,12 +15,14 @@ Sotoy Film (https://sotoyfilm.my.id) is a premier community-driven film criticis
 
 ## Key Feeds
 
-- XML Sitemap: https://sotoyfilm.my.id/sitemap.xml
-- Robots Directive: https://sotoyfilm.my.id/robots.txt
+- XML Sitemap: https://www.sotoyfilm.my.id/sitemap.xml
+- Robots Directive: https://www.sotoyfilm.my.id/robots.txt
 
 ## Discovery Endpoints
 
 - Film Directory: `/film-database`
-- Editorial Articles: `/article/{slug}`
-- Detailed Film Pages: `/film/{id}`
+- Editorial Articles: `/artikel/{slug}`
+- Detailed Film Pages: `/film/{slug}`
+- Category Hubs: `/kategori/{name}`
 - Community Feed: `/community-feed`
+

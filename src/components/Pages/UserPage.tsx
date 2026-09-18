@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import {
@@ -54,8 +55,13 @@ import { QuickReactionBar } from '../Common/QuickReactionBar';
 import { User, UserTab, UserSettings } from '../../types';
 import { StarRating } from '../Common/StarRating';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
-import { AdminDashboard } from '../Admin/AdminDashboard';
-import { WriterDashboard } from '../Writer/WriterDashboard';
+
+const AdminDashboard = React.lazy(() =>
+  import('../Admin/AdminDashboard').then(m => ({ default: m.AdminDashboard }))
+);
+const WriterDashboard = React.lazy(() =>
+  import('../Writer/WriterDashboard').then(m => ({ default: m.WriterDashboard }))
+);
 
 export const UserPage: React.FC = () => {
   const {
@@ -93,19 +99,30 @@ export const UserPage: React.FC = () => {
     setViewedUserId,
   } = useApp();
 
+  // Support URL param for user profile /user/:id
+  const { id: routeUserId } = useParams<{ id?: string }>();
+  const effectiveUserId = routeUserId || viewedUserId;
+
+  useEffect(() => {
+    if (routeUserId && routeUserId !== viewedUserId) {
+      setViewedUserId(routeUserId);
+    }
+  }, [routeUserId, viewedUserId, setViewedUserId]);
+
   // Firestore fetched target profile state
   const [fetchedUser, setFetchedUser] = useState<User | null>(null);
   const [loadingProfile, setLoadingProfile] = useState<boolean>(false);
 
   useEffect(() => {
     let isMounted = true;
-    if (viewedUserId && viewedUserId !== currentUser.id) {
-      const localFound = allUsers.find(u => u.id === viewedUserId);
+    const targetId = effectiveUserId;
+    if (targetId && targetId !== currentUser.id) {
+      const localFound = allUsers.find(u => u.id === targetId);
       if (localFound) {
         setFetchedUser(localFound);
       } else {
         setLoadingProfile(true);
-        getDoc(doc(db, 'users', viewedUserId))
+        getDoc(doc(db, 'users', targetId))
           .then(snap => {
             if (isMounted) {
               if (snap.exists()) {
@@ -128,7 +145,7 @@ export const UserPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [viewedUserId, allUsers, currentUser.id]);
+  }, [effectiveUserId, allUsers, currentUser.id]);
 
   // Determine which user profile is being visited
   const targetUser: User = (viewedUserId && viewedUserId !== currentUser.id)
@@ -1599,7 +1616,14 @@ export const UserPage: React.FC = () => {
         {/* ========================================================================= */}
         {activeUserTab === 'writer' && (isOwnProfile && (currentUser.role === 'penulis_sotoy' || currentUser.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02' || currentUser.role === 'admin')) && (
           <div className="pt-2">
-            <WriterDashboard />
+            <React.Suspense fallback={
+              <div className="py-12 flex flex-col items-center justify-center gap-3">
+                <Loader2 className="w-8 h-8 text-[#FF2E7E] animate-spin" />
+                <p className="text-xs text-slate-400 font-bold">Memuat Dasbor Penulis...</p>
+              </div>
+            }>
+              <WriterDashboard />
+            </React.Suspense>
           </div>
         )}
 
@@ -1608,7 +1632,14 @@ export const UserPage: React.FC = () => {
         {/* ========================================================================= */}
         {activeUserTab === 'admin' && (isOwnProfile && (currentUser.role === 'admin' || currentUser.id === 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' || currentUser.email === 'eksposurmedia@gmail.com')) && (
           <div className="pt-2">
-            <AdminDashboard />
+            <React.Suspense fallback={
+              <div className="py-12 flex flex-col items-center justify-center gap-3">
+                <Loader2 className="w-8 h-8 text-[#00F0FF] animate-spin" />
+                <p className="text-xs text-slate-400 font-bold">Memuat Dasbor Admin...</p>
+              </div>
+            }>
+              <AdminDashboard />
+            </React.Suspense>
           </div>
         )}
 

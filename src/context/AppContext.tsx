@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { slugify } from '../utils/slugify';
 import {
   User,
   UserRole,
@@ -392,6 +394,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [shareModalData, setShareModalData] = useState<ShareData | null>(null);
 
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [currentView, setCurrentView] = useState<AppView>('home');
   const [viewHistory, setViewHistory] = useState<AppView[]>(['home']);
   const [buzzFeedTab, setBuzzFeedTab] = useState<'for-you' | 'following' | 'saved' | 'liked' | 'trending'>('for-you');
@@ -407,6 +412,77 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // User Profile Visiting state
   const [viewedUserId, setViewedUserId] = useState<string | null>(null);
   const viewedUser = (viewedUserId ? allUsers.find(u => u.id === viewedUserId) : null) || currentUser;
+
+  // Synchronize browser URL location to currentView and relevant entity IDs on page load / route change
+  useEffect(() => {
+    const path = location.pathname;
+    if (path === '/') {
+      setCurrentView('home');
+    } else if (path.startsWith('/film/')) {
+      const slug = decodeURIComponent(path.replace('/film/', ''));
+      setCurrentView('film-detail');
+      const foundFilm = films.find(f => (f.slug && f.slug === slug) || slugify(f.title) === slug || f.id === slug)
+        || INITIAL_FILMS.find(f => (f.slug && f.slug === slug) || slugify(f.title) === slug || f.id === slug);
+      if (foundFilm) setSelectedFilmId(foundFilm.id);
+    } else if (path.startsWith('/artikel/') || path.startsWith('/article/')) {
+      const slug = decodeURIComponent(path.replace(/^\/(artikel|article)\//, ''));
+      setCurrentView('article-detail');
+      const foundArticle = articles.find(a => a.slug === slug || a.id === slug)
+        || INITIAL_ARTICLES.find(a => a.slug === slug || a.id === slug);
+      if (foundArticle) setSelectedArticleId(foundArticle.id);
+    } else if (path.startsWith('/kategori/') || path.startsWith('/category/')) {
+      setCurrentView('category');
+      const clean = path.replace(/^\/(kategori|category)\//, '');
+      const parts = clean.split('/');
+      if (parts[0]) setActiveCategory(parts[0] as MainCategory);
+      if (parts[1]) setActiveSubCategory(parts[1] as SubCategory);
+    } else if (path === '/film-database') {
+      setCurrentView('film-database');
+    } else if (path === '/rekomendasi-film' || path === '/film-recommendations') {
+      setCurrentView('film-recommendations');
+    } else if (path === '/komunitas' || path === '/community-feed') {
+      setCurrentView('community-feed');
+    } else if (path.startsWith('/buzz/')) {
+      const buzzId = path.replace('/buzz/', '');
+      setCurrentView('buzz-detail');
+      setSelectedBuzzId(buzzId);
+    } else if (path === '/tulis-artikel' || path === '/write-article') {
+      setCurrentView('write-article');
+    } else if (path.startsWith('/user/')) {
+      const uid = decodeURIComponent(path.replace('/user/', ''));
+      setCurrentView('user-profile');
+      setViewedUserId(uid);
+    } else if (path === '/profil' || path === '/profile') {
+      setCurrentView('user-profile');
+      setViewedUserId(currentUser.id);
+    } else if (path === '/settings') {
+      setCurrentView('settings');
+    } else if (path === '/search') {
+      setCurrentView('search');
+    } else if (path === '/tentang-kami' || path === '/about-us') {
+      setCurrentView('about-us');
+    } else if (path === '/kebijakan-privasi' || path === '/privacy-policy') {
+      setCurrentView('privacy-policy');
+    } else if (path === '/syarat-ketentuan' || path === '/terms-conditions') {
+      setCurrentView('terms-conditions');
+    } else if (path === '/kontak-bisnis' || path === '/business-inquiries') {
+      setCurrentView('business-inquiries');
+    } else if (path === '/gabung-kritikus' || path === '/critic-submission') {
+      setCurrentView('critic-submission');
+    } else if (path === '/kriteria-kritikus' || path === '/critic-criteria') {
+      setCurrentView('critic-criteria');
+    } else if (path === '/admin/submissions') {
+      setCurrentView('admin-critic-submissions');
+    } else if (path === '/admin') {
+      setCurrentView('admin-dashboard');
+    } else if (path === '/writer' || path === '/penulis') {
+      setCurrentView('writer-dashboard');
+    } else if (path === '/critic' || path === '/kritikus') {
+      setCurrentView('critic-dashboard');
+    } else if (path === '/onboarding') {
+      setCurrentView('onboarding');
+    }
+  }, [location.pathname, films, articles, currentUser.id]);
 
   // Sync basic preferences and follow lists to local storage
   useEffect(() => {
@@ -1457,6 +1533,99 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setViewedUserId(currentUser.id);
     }
 
+    // Determine target URL route
+    let targetPath = '/';
+    switch (view) {
+      case 'home':
+        targetPath = '/';
+        break;
+      case 'film-detail': {
+        const targetFilmId = options?.filmId || selectedFilmId;
+        const targetFilm = films.find(f => f.id === targetFilmId) || INITIAL_FILMS.find(f => f.id === targetFilmId);
+        const slug = targetFilm?.slug || (targetFilm?.title ? slugify(targetFilm.title) : targetFilmId);
+        targetPath = slug ? `/film/${encodeURIComponent(slug)}` : '/film-database';
+        break;
+      }
+      case 'article-detail': {
+        const targetArticleId = options?.articleId || selectedArticleId;
+        const targetArticle = resolvedArticles.find(a => a.id === targetArticleId) || INITIAL_ARTICLES.find(a => a.id === targetArticleId);
+        const slug = targetArticle?.slug || targetArticleId;
+        targetPath = slug ? `/artikel/${encodeURIComponent(slug)}` : '/';
+        break;
+      }
+      case 'category': {
+        const cat = options?.category || activeCategory || 'movies';
+        const sub = options?.subCategory !== undefined ? options.subCategory : activeSubCategory;
+        targetPath = sub ? `/kategori/${cat}/${sub}` : `/kategori/${cat}`;
+        break;
+      }
+      case 'film-database':
+        targetPath = '/film-database';
+        break;
+      case 'film-recommendations':
+        targetPath = '/rekomendasi-film';
+        break;
+      case 'community-feed':
+        targetPath = '/komunitas';
+        break;
+      case 'buzz-detail':
+        targetPath = `/buzz/${options?.buzzId || selectedBuzzId || ''}`;
+        break;
+      case 'write-article':
+        targetPath = '/tulis-artikel';
+        break;
+      case 'user-profile': {
+        const uid = options?.userId || viewedUserId || currentUser.id;
+        targetPath = `/user/${encodeURIComponent(uid)}`;
+        break;
+      }
+      case 'settings':
+        targetPath = '/settings';
+        break;
+      case 'search':
+        targetPath = options?.searchQuery ? `/search?q=${encodeURIComponent(options.searchQuery)}` : '/search';
+        break;
+      case 'about-us':
+        targetPath = '/tentang-kami';
+        break;
+      case 'privacy-policy':
+        targetPath = '/kebijakan-privasi';
+        break;
+      case 'terms-conditions':
+        targetPath = '/syarat-ketentuan';
+        break;
+      case 'business-inquiries':
+        targetPath = '/kontak-bisnis';
+        break;
+      case 'critic-submission':
+        targetPath = '/gabung-kritikus';
+        break;
+      case 'critic-criteria':
+        targetPath = '/kriteria-kritikus';
+        break;
+      case 'admin-critic-submissions':
+        targetPath = '/admin/submissions';
+        break;
+      case 'admin-dashboard':
+        targetPath = '/admin';
+        break;
+      case 'writer-dashboard':
+        targetPath = '/writer';
+        break;
+      case 'critic-dashboard':
+        targetPath = '/critic';
+        break;
+      case 'onboarding':
+        targetPath = '/onboarding';
+        break;
+      default:
+        targetPath = '/';
+    }
+
+    if (location.pathname !== targetPath) {
+      navigate(targetPath);
+    }
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -1466,14 +1635,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const updated = prev.slice(0, -1);
         const targetView = updated[updated.length - 1];
         setCurrentView(targetView);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
         return updated;
-      } else {
-        setCurrentView('home');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return ['home'];
       }
+      return ['home'];
     });
+    navigate(-1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Publish or Save Draft Article directly to Firestore
@@ -2307,6 +2474,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         buzzFeedTab,
         setBuzzFeedTab,
         toastMessage,
+        toastType,
         showToast,
         finishOnboarding,
         notifications,

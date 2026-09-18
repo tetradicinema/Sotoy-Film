@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useParams } from 'react-router-dom';
 import {
   Star,
   Clock,
@@ -31,6 +32,8 @@ import { useApp } from '../../context/AppContext';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
 import { SEOHead } from '../SEO/SEOHead';
 import { generateMovieSchema, generateBreadcrumbSchema } from '../../utils/schemaHelpers';
+import { slugify } from '../../utils/slugify';
+import { INITIAL_FILMS } from '../../data/mockData';
 
 const RelatedArticleAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }> = ({ authorId, defaultAuthor }) => {
   const author = useDynamicArticleAuthor(authorId, defaultAuthor);
@@ -103,7 +106,11 @@ export const FilmDetailPage: React.FC = () => {
   const [isPlayingTrailer, setIsPlayingTrailer] = useState(false);
   const [reviewFilter, setReviewFilter] = useState<'all' | 'critics' | 'community'>('all');
 
-  const film: FilmItem = films.find(f => f.id === selectedFilmId) || films[0];
+  const { slug } = useParams<{ slug?: string }>();
+  const film: FilmItem = (slug ? (films.find(f => (f.slug && f.slug === slug) || slugify(f.title) === slug || f.id === slug) || INITIAL_FILMS.find(f => (f.slug && f.slug === slug) || slugify(f.title) === slug || f.id === slug)) : null)
+    || films.find(f => f.id === selectedFilmId)
+    || INITIAL_FILMS.find(f => f.id === selectedFilmId)
+    || films[0];
 
   if (films.length === 0 || !film) {
     return (
@@ -206,10 +213,11 @@ export const FilmDetailPage: React.FC = () => {
   );
 
   // Prepare SEO Metadata & Structured Schemas
-  const seoUrl = `https://sotoyfilm.my.id/film/${film.id}`;
+  const filmSlug = film.slug || slugify(film.title) || film.id;
+  const seoUrl = `https://www.sotoyfilm.my.id/film/${filmSlug}`;
   const breadcrumbSchema = generateBreadcrumbSchema([
-    { name: 'Home', item: 'https://sotoyfilm.my.id' },
-    { name: 'Film Database', item: 'https://sotoyfilm.my.id/film-database' },
+    { name: 'Home', item: 'https://www.sotoyfilm.my.id' },
+    { name: 'Film Database', item: 'https://www.sotoyfilm.my.id/film-database' },
     { name: film.title, item: seoUrl },
   ]);
 
@@ -237,9 +245,9 @@ export const FilmDetailPage: React.FC = () => {
   return (
     <div className="min-h-screen py-6 sm:py-8">
       <SEOHead
-        title={`${film.title} (${film.year}) - Ulasan & Skor Sotoy`}
-        description={film.synopsis.slice(0, 160) + '...'}
-        image={film.poster}
+        title={`${film.title} (${film.year}) - Skor & Review`}
+        description={film.synopsis.slice(0, 160) + (film.synopsis.length > 160 ? '...' : '')}
+        image={film.backdrop || film.poster}
         url={seoUrl}
         type="video.movie"
         keywords={[film.title, film.director, 'skor sotoy', 'ulasan film', ...(film.genres || [])]}

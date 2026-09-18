@@ -1,4 +1,5 @@
 import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { SEOHead } from './components/SEO/SEOHead';
 import { AppProvider, useApp } from './context/AppContext';
@@ -26,18 +27,55 @@ import { BusinessInquiriesPage } from './components/Pages/BusinessInquiriesPage'
 import { CriticSubmissionPage } from './components/Pages/CriticSubmissionPage';
 import { CriticCriteriaPage } from './components/Pages/CriticCriteriaPage';
 import { AdminCriticSubmissionsPage } from './components/Pages/AdminCriticSubmissionsPage';
-import { AdminDashboard } from './components/Admin/AdminDashboard';
-import { WriterDashboard } from './components/Writer/WriterDashboard';
-import { CriticDashboard } from './components/Critic/CriticDashboard';
 import { OnboardingPage } from './components/Pages/OnboardingPage';
 import { LoginModal } from './components/Modals/LoginModal';
 import { SocialShareModal } from './components/Modals/SocialShareModal';
 import { ComposeBuzzModal } from './components/Modals/ComposeBuzzModal';
 import { MobileBottomNav } from './components/Navigation/MobileBottomNav';
-import { Sparkles, CheckCircle, Info } from 'lucide-react';
+import { Sparkles, CheckCircle, X } from 'lucide-react';
+
+// Code-split large/rarely-visited dashboard and admin modules
+const AdminDashboard = React.lazy(() =>
+  import('./components/Admin/AdminDashboard').then(m => ({ default: m.AdminDashboard }))
+);
+const WriterDashboard = React.lazy(() =>
+  import('./components/Writer/WriterDashboard').then(m => ({ default: m.WriterDashboard }))
+);
+const CriticDashboard = React.lazy(() =>
+  import('./components/Critic/CriticDashboard').then(m => ({ default: m.CriticDashboard }))
+);
+
+// Fallback loader matching Sotoy Film aesthetic
+const PageLoadingFallback: React.FC = () => (
+  <div className="min-h-[60vh] flex flex-col items-center justify-center py-16 px-4">
+    <div className="relative mb-6">
+      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FF2E7E]/20 to-[#00F0FF]/20 border border-[#FF2E7E]/40 flex items-center justify-center animate-pulse">
+        <div className="w-6 h-6 border-2 border-[#FF2E7E] border-t-transparent rounded-full animate-spin" />
+      </div>
+      <div className="absolute -inset-1 bg-[#FF2E7E]/20 rounded-2xl blur-lg pointer-events-none animate-pulse" />
+    </div>
+    <div className="text-center space-y-1">
+      <p className="text-sm font-black text-white tracking-wide">Memuat Halaman...</p>
+      <p className="text-xs text-slate-400">Menyiapkan antarmuka dasbor Sotoy Film</p>
+    </div>
+  </div>
+);
+
+// Standard Home Page view aggregating hero, news, recommendations, and categories
+const HomeView: React.FC = () => (
+  <>
+    <HeroSection />
+    <FeaturedNews />
+    <HomeFilmRecommendations />
+    <HomeCategorySection />
+  </>
+);
 
 const AppContent: React.FC = () => {
-  const { currentView, toastMessage, toastType } = useApp();
+  const { toastMessage, toastType } = useApp();
+  const location = useLocation();
+
+  const isOnboarding = location.pathname === '/onboarding';
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0D0E15] text-slate-100 relative selection:bg-[#FF2E7E] selection:text-white pb-16 lg:pb-0">
@@ -77,48 +115,113 @@ const AppContent: React.FC = () => {
       <ComposeBuzzModal />
 
       {/* Main Navigation Bar */}
-      {currentView !== 'onboarding' && <Navbar />}
+      {!isOnboarding && <Navbar />}
 
       {/* Mobile Fixed Bottom Navigation Dock */}
-      {currentView !== 'onboarding' && <MobileBottomNav />}
+      {!isOnboarding && <MobileBottomNav />}
 
-      {/* Main View Router */}
+      {/* Main URL-based Route Switcher */}
       <main className="flex-1">
-        {currentView === 'onboarding' && <OnboardingPage />}
-        {currentView === 'home' && (
-          <>
-            <HeroSection />
-            <FeaturedNews />
-            <HomeFilmRecommendations />
-            <HomeCategorySection />
-          </>
-        )}
+        <Routes>
+          <Route path="/" element={<HomeView />} />
+          <Route path="/onboarding" element={<OnboardingPage />} />
+          
+          {/* Film Routes */}
+          <Route path="/film/:slug" element={<FilmDetailPage />} />
+          <Route path="/film-database" element={<FilmDatabasePage />} />
+          <Route path="/rekomendasi-film" element={<FilmRecommendationsPage />} />
+          <Route path="/film-recommendations" element={<FilmRecommendationsPage />} />
 
-        {currentView === 'category' && <CategoryPage />}
-        {currentView === 'article-detail' && <ArticleDetailPage />}
-        {currentView === 'film-database' && <FilmDatabasePage />}
-        {currentView === 'film-detail' && <FilmDetailPage />}
-        {currentView === 'film-recommendations' && <FilmRecommendationsPage />}
-        {currentView === 'community-feed' && <CommunityFeedPage />}
-        {currentView === 'buzz-detail' && <BuzzDetailPage />}
-        {currentView === 'write-article' && <WriteArticlePage />}
-        {currentView === 'user-profile' && <UserPage />}
-        {currentView === 'settings' && <SettingsPage />}
-        {currentView === 'search' && <SearchPage />}
-        {currentView === 'about-us' && <AboutUsPage />}
-        {currentView === 'privacy-policy' && <PrivacyPolicyPage />}
-        {currentView === 'terms-conditions' && <TermsPage />}
-        {currentView === 'business-inquiries' && <BusinessInquiriesPage />}
-        {currentView === 'critic-submission' && <CriticSubmissionPage />}
-        {currentView === 'critic-criteria' && <CriticCriteriaPage />}
-        {currentView === 'admin-critic-submissions' && <AdminCriticSubmissionsPage />}
-        {currentView === 'admin-dashboard' && <AdminDashboard />}
-        {currentView === 'writer-dashboard' && <WriterDashboard />}
-        {currentView === 'critic-dashboard' && <CriticDashboard />}
+          {/* Article & Editorial Routes */}
+          <Route path="/artikel/:slug" element={<ArticleDetailPage />} />
+          <Route path="/article/:slug" element={<ArticleDetailPage />} />
+          <Route path="/tulis-artikel" element={<WriteArticlePage />} />
+          <Route path="/write-article" element={<WriteArticlePage />} />
+
+          {/* Category & Exploration Routes */}
+          <Route path="/kategori/:name" element={<CategoryPage />} />
+          <Route path="/kategori/:name/:subCategory" element={<CategoryPage />} />
+          <Route path="/category/:name" element={<CategoryPage />} />
+          <Route path="/category/:name/:subCategory" element={<CategoryPage />} />
+
+          {/* Community & Buzz Routes */}
+          <Route path="/komunitas" element={<CommunityFeedPage />} />
+          <Route path="/community-feed" element={<CommunityFeedPage />} />
+          <Route path="/buzz/:id" element={<BuzzDetailPage />} />
+
+          {/* User & Settings Routes */}
+          <Route path="/user/:id" element={<UserPage />} />
+          <Route path="/profil" element={<UserPage />} />
+          <Route path="/profile" element={<UserPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/search" element={<SearchPage />} />
+
+          {/* Informational & Legal Pages */}
+          <Route path="/tentang-kami" element={<AboutUsPage />} />
+          <Route path="/about-us" element={<AboutUsPage />} />
+          <Route path="/kebijakan-privasi" element={<PrivacyPolicyPage />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+          <Route path="/syarat-ketentuan" element={<TermsPage />} />
+          <Route path="/terms-conditions" element={<TermsPage />} />
+          <Route path="/kontak-bisnis" element={<BusinessInquiriesPage />} />
+          <Route path="/business-inquiries" element={<BusinessInquiriesPage />} />
+
+          {/* Critic Program Routes */}
+          <Route path="/gabung-kritikus" element={<CriticSubmissionPage />} />
+          <Route path="/critic-submission" element={<CriticSubmissionPage />} />
+          <Route path="/kriteria-kritikus" element={<CriticCriteriaPage />} />
+          <Route path="/critic-criteria" element={<CriticCriteriaPage />} />
+          <Route path="/admin/submissions" element={<AdminCriticSubmissionsPage />} />
+
+          {/* Protected Dashboards (Code-Split with Suspense) */}
+          <Route
+            path="/admin"
+            element={
+              <React.Suspense fallback={<PageLoadingFallback />}>
+                <AdminDashboard />
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/writer"
+            element={
+              <React.Suspense fallback={<PageLoadingFallback />}>
+                <WriterDashboard />
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/penulis"
+            element={
+              <React.Suspense fallback={<PageLoadingFallback />}>
+                <WriterDashboard />
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/critic"
+            element={
+              <React.Suspense fallback={<PageLoadingFallback />}>
+                <CriticDashboard />
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/kritikus"
+            element={
+              <React.Suspense fallback={<PageLoadingFallback />}>
+                <CriticDashboard />
+              </React.Suspense>
+            }
+          />
+
+          {/* Catch-all Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </main>
 
       {/* Footer */}
-      {currentView !== 'onboarding' && <Footer />}
+      {!isOnboarding && <Footer />}
     </div>
   );
 };
@@ -126,9 +229,11 @@ const AppContent: React.FC = () => {
 export default function App() {
   return (
     <HelmetProvider>
-      <AppProvider>
-        <AppContent />
-      </AppProvider>
+      <BrowserRouter>
+        <AppProvider>
+          <AppContent />
+        </AppProvider>
+      </BrowserRouter>
     </HelmetProvider>
   );
 }

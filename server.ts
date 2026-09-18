@@ -50,22 +50,22 @@ async function startServer() {
       const sitemapDb = getFirestore(sitemapApp, firebaseConfig.firestoreDatabaseId);
 
       const staticUrls = [
-        { loc: "https://sotoyfilm.my.id/", priority: "1.0", changefreq: "daily", lastmod: "2026-09-17" },
-        { loc: "https://sotoyfilm.my.id/film-database", priority: "0.9", changefreq: "daily", lastmod: "2026-09-17" },
-        { loc: "https://sotoyfilm.my.id/film-recommendations", priority: "0.8", changefreq: "weekly", lastmod: "2026-09-17" },
-        { loc: "https://sotoyfilm.my.id/community-feed", priority: "0.8", changefreq: "daily", lastmod: "2026-09-17" },
-        { loc: "https://sotoyfilm.my.id/about-us", priority: "0.5", changefreq: "monthly", lastmod: "2026-09-17" },
-        { loc: "https://sotoyfilm.my.id/privacy-policy", priority: "0.5", changefreq: "monthly", lastmod: "2026-09-17" },
-        { loc: "https://sotoyfilm.my.id/terms-conditions", priority: "0.5", changefreq: "monthly", lastmod: "2026-09-17" },
-        { loc: "https://sotoyfilm.my.id/business-inquiries", priority: "0.5", changefreq: "monthly", lastmod: "2026-09-17" },
-        { loc: "https://sotoyfilm.my.id/critic-criteria", priority: "0.5", changefreq: "monthly", lastmod: "2026-09-17" },
+        { loc: "https://www.sotoyfilm.my.id/", priority: "1.0", changefreq: "daily", lastmod: "2026-09-17" },
+        { loc: "https://www.sotoyfilm.my.id/film-database", priority: "0.9", changefreq: "daily", lastmod: "2026-09-17" },
+        { loc: "https://www.sotoyfilm.my.id/film-recommendations", priority: "0.8", changefreq: "weekly", lastmod: "2026-09-17" },
+        { loc: "https://www.sotoyfilm.my.id/community-feed", priority: "0.8", changefreq: "daily", lastmod: "2026-09-17" },
+        { loc: "https://www.sotoyfilm.my.id/about-us", priority: "0.5", changefreq: "monthly", lastmod: "2026-09-17" },
+        { loc: "https://www.sotoyfilm.my.id/privacy-policy", priority: "0.5", changefreq: "monthly", lastmod: "2026-09-17" },
+        { loc: "https://www.sotoyfilm.my.id/terms-conditions", priority: "0.5", changefreq: "monthly", lastmod: "2026-09-17" },
+        { loc: "https://www.sotoyfilm.my.id/business-inquiries", priority: "0.5", changefreq: "monthly", lastmod: "2026-09-17" },
+        { loc: "https://www.sotoyfilm.my.id/critic-criteria", priority: "0.5", changefreq: "monthly", lastmod: "2026-09-17" },
       ];
 
       // Add category hubs
       const categories = ["movies", "series", "anime", "cinema-gear", "film-studies"];
       categories.forEach(cat => {
         staticUrls.push({
-          loc: `https://sotoyfilm.my.id/category/${cat}`,
+          loc: `https://www.sotoyfilm.my.id/kategori/${cat}`,
           priority: "0.7",
           changefreq: "weekly",
           lastmod: "2026-09-17"
@@ -91,7 +91,7 @@ async function startServer() {
           }
           
           articlesList.push({
-            loc: `https://sotoyfilm.my.id/article/${data.slug || docSnap.id}`,
+            loc: `https://www.sotoyfilm.my.id/artikel/${data.slug || docSnap.id}`,
             lastmod: pubDate.split("T")[0],
             changefreq: "weekly",
             priority: "0.8"
@@ -106,6 +106,15 @@ async function startServer() {
         const filmsCol = collection(sitemapDb, "films");
         const filmsSnapshot = await getDocs(filmsCol);
         
+        const slugifyLocal = (str: string) => {
+          return (str || '')
+            .toLowerCase()
+            .trim()
+            .replace(/[^\w\s-]/g, '')
+            .replace(/[\s_-]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+        };
+
         filmsSnapshot.forEach(docSnap => {
           const data = docSnap.data();
           // Use movie release year as approximate last modified fallback, or current build time
@@ -115,8 +124,10 @@ async function startServer() {
             latestDateMs = filmTime;
           }
 
+          const filmSlug = data.slug || (data.title ? slugifyLocal(data.title) : docSnap.id);
+
           filmsList.push({
-            loc: `https://sotoyfilm.my.id/film/${docSnap.id}`,
+            loc: `https://www.sotoyfilm.my.id/film/${filmSlug}`,
             lastmod,
             changefreq: "monthly",
             priority: "0.9"

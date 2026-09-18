@@ -1,4 +1,5 @@
 import { collection, getDocs, Firestore } from 'firebase/firestore';
+import { slugify } from './slugify';
 
 interface SitemapUrl {
   loc: string;
@@ -12,22 +13,38 @@ interface SitemapUrl {
  * Note: In a production app, this would typically run as a server-side route or build script.
  */
 export async function generateSitemapXml(db: Firestore): Promise<string> {
-  const baseUrl = 'https://sotoyfilm.my.id';
+  const baseUrl = 'https://www.sotoyfilm.my.id';
   const urls: SitemapUrl[] = [
     { loc: `${baseUrl}/`, lastmod: new Date().toISOString().split('T')[0], changefreq: 'daily', priority: '1.0' },
     { loc: `${baseUrl}/film-database`, lastmod: new Date().toISOString().split('T')[0], changefreq: 'daily', priority: '0.9' },
     { loc: `${baseUrl}/film-recommendations`, lastmod: new Date().toISOString().split('T')[0], changefreq: 'weekly', priority: '0.8' },
     { loc: `${baseUrl}/community-feed`, lastmod: new Date().toISOString().split('T')[0], changefreq: 'daily', priority: '0.8' },
+    { loc: `${baseUrl}/about-us`, lastmod: new Date().toISOString().split('T')[0], changefreq: 'monthly', priority: '0.5' },
+    { loc: `${baseUrl}/privacy-policy`, lastmod: new Date().toISOString().split('T')[0], changefreq: 'monthly', priority: '0.5' },
+    { loc: `${baseUrl}/terms-conditions`, lastmod: new Date().toISOString().split('T')[0], changefreq: 'monthly', priority: '0.5' },
+    { loc: `${baseUrl}/business-inquiries`, lastmod: new Date().toISOString().split('T')[0], changefreq: 'monthly', priority: '0.5' },
+    { loc: `${baseUrl}/critic-criteria`, lastmod: new Date().toISOString().split('T')[0], changefreq: 'monthly', priority: '0.5' },
   ];
+
+  // Add category hubs
+  const categories = ['movies', 'series', 'anime', 'cinema-gear', 'film-studies'];
+  categories.forEach((cat) => {
+    urls.push({
+      loc: `${baseUrl}/kategori/${cat}`,
+      lastmod: new Date().toISOString().split('T')[0],
+      changefreq: 'weekly',
+      priority: '0.7',
+    });
+  });
 
   // Fetch Articles
   try {
     const articlesSnap = await getDocs(collection(db, 'articles'));
     articlesSnap.forEach((doc) => {
       const data = doc.data();
-      if (data.title) {
+      if (data.title && data.status !== 'trash') {
         urls.push({
-          loc: `${baseUrl}/article/${data.slug || doc.id}`,
+          loc: `${baseUrl}/artikel/${data.slug || doc.id}`,
           lastmod: (data.publishedAt || new Date().toISOString()).split('T')[0],
           changefreq: 'weekly',
           priority: '0.8',
@@ -44,11 +61,12 @@ export async function generateSitemapXml(db: Firestore): Promise<string> {
     filmsSnap.forEach((doc) => {
       const data = doc.data();
       if (data.title) {
+        const filmSlug = data.slug || (data.title ? slugify(data.title) : doc.id);
         urls.push({
-          loc: `${baseUrl}/film/${doc.id}`,
-          lastmod: new Date().toISOString().split('T')[0],
+          loc: `${baseUrl}/film/${filmSlug}`,
+          lastmod: data.year ? `${data.year}-01-01` : new Date().toISOString().split('T')[0],
           changefreq: 'monthly',
-          priority: '0.7',
+          priority: '0.9',
         });
       }
     });
@@ -72,3 +90,4 @@ export async function generateSitemapXml(db: Firestore): Promise<string> {
   xml += '</urlset>';
   return xml;
 }
+

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useParams } from 'react-router-dom';
 import {
   Film,
   Tv,
@@ -26,7 +27,12 @@ export const CategoryPage: React.FC = () => {
     navigateTo,
   } = useApp();
 
-  const currentCategory: MainCategory = activeCategory || 'movies';
+  const { name, subCategory } = useParams<{ name?: string; subCategory?: string }>();
+  const validCategory: MainCategory = (name && ['movies', 'series', 'anime', 'awards', 'lifestyle'].includes(name.toLowerCase()))
+    ? (name.toLowerCase() as MainCategory)
+    : activeCategory || 'movies';
+  const currentCategory: MainCategory = validCategory;
+  const currentSubCategory: SubCategory | undefined = (subCategory as SubCategory) || activeSubCategory;
 
   // Category visual metadata
   const categoryMetadata: Record<
@@ -102,21 +108,21 @@ export const CategoryPage: React.FC = () => {
   // Filter articles by category and active subcategory
   const filteredArticles = publishedArticles.filter(a => {
     if (a.category !== currentCategory) return false;
-    if (activeSubCategory && a.subCategory !== activeSubCategory) return false;
+    if (currentSubCategory && a.subCategory !== currentSubCategory) return false;
     return true;
   });
 
-  const seoUrl = activeSubCategory
-    ? `https://sotoyfilm.my.id/category/${currentCategory}/${activeSubCategory}`
-    : `https://sotoyfilm.my.id/category/${currentCategory}`;
+  const seoUrl = currentSubCategory
+    ? `https://www.sotoyfilm.my.id/kategori/${currentCategory}/${currentSubCategory}`
+    : `https://www.sotoyfilm.my.id/kategori/${currentCategory}`;
 
   const breadcrumbsList = [
-    { name: 'Home', item: 'https://sotoyfilm.my.id' },
-    { name: meta.title, item: `https://sotoyfilm.my.id/category/${currentCategory}` },
+    { name: 'Home', item: 'https://www.sotoyfilm.my.id' },
+    { name: meta.title, item: `https://www.sotoyfilm.my.id/kategori/${currentCategory}` },
   ];
-  if (activeSubCategory) {
+  if (currentSubCategory) {
     breadcrumbsList.push({
-      name: activeSubCategory.toUpperCase(),
+      name: currentSubCategory.toUpperCase(),
       item: seoUrl,
     });
   }
@@ -125,11 +131,11 @@ export const CategoryPage: React.FC = () => {
   return (
     <div className="min-h-screen py-8">
       <SEOHead
-        title={activeSubCategory ? `${meta.title} - ${activeSubCategory.toUpperCase()}` : meta.title}
+        title={currentSubCategory ? `${meta.title} - ${currentSubCategory.toUpperCase()}` : meta.title}
         description={meta.subtitle}
         url={seoUrl}
         type="website"
-        keywords={['sotoy film', meta.title, currentCategory, activeSubCategory || '']}
+        keywords={['sotoy film', meta.title, currentCategory, currentSubCategory || '']}
         schema={breadcrumbSchema}
       />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">

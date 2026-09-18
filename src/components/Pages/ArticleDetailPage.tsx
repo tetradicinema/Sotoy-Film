@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useParams } from 'react-router-dom';
 import {
   ArrowLeft,
   Clock,
@@ -52,7 +53,11 @@ export const ArticleDetailPage: React.FC = () => {
     isFollowing,
   } = useApp();
 
-  const article = articles.find(a => a.id === selectedArticleId) || articles[0];
+  const { slug } = useParams<{ slug?: string }>();
+
+  const article = (slug ? (articles.find(a => a.slug === slug || a.id === slug)) : null)
+    || articles.find(a => a.id === selectedArticleId)
+    || articles[0];
   const author = useDynamicArticleAuthor(article?.authorId || article?.author?.id, article?.author);
   const [commentText, setCommentText] = useState('');
   const [rateModalOpen, setRateModalOpen] = useState(false);
@@ -129,10 +134,11 @@ export const ArticleDetailPage: React.FC = () => {
     .slice(0, 3);
 
   // Prepare SEO Metadata & Structured Schemas
-  const seoUrl = `https://sotoyfilm.my.id/article/${article.slug || article.id}`;
+  const articleSlug = article.slug || article.id;
+  const seoUrl = `https://www.sotoyfilm.my.id/artikel/${articleSlug}`;
   const breadcrumbSchema = generateBreadcrumbSchema([
-    { name: 'Home', item: 'https://sotoyfilm.my.id' },
-    { name: article.category.toUpperCase(), item: `https://sotoyfilm.my.id/category/${article.category}` },
+    { name: 'Home', item: 'https://www.sotoyfilm.my.id' },
+    { name: article.category.toUpperCase(), item: `https://www.sotoyfilm.my.id/kategori/${article.category}` },
     { name: article.title, item: seoUrl },
   ]);
 
