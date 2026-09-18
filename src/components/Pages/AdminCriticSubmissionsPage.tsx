@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useApp, isUserAdmin } from '../../context/AppContext';
-import { ShieldCheck, CheckCircle2, XCircle, Search, ExternalLink, Filter } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, XCircle, Search, ExternalLink, Filter, ArrowLeft } from 'lucide-react';
 
 interface Submission {
   id: string;
@@ -88,6 +89,18 @@ export const AdminCriticSubmissionsPage: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 lg:py-12">
+      {/* Back to Admin Dashboard link */}
+      <div className="mb-6">
+        <Link
+          to="/admin"
+          id="critic-submissions-back-to-admin"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-400 hover:text-purple-300 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Kembali ke Sotoy Admin Control Center</span>
+        </Link>
+      </div>
+
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
         <div>
           <div className="flex items-center gap-3 mb-2">

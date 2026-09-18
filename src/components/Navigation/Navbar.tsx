@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Film,
   Sparkles,
@@ -297,9 +298,9 @@ export const Navbar: React.FC = () => {
 
             {/* ADMIN MODE Pill Button for Admin (Ungu #7928CA) */}
             {(isAdmin || currentUser.role === 'admin') ? (
-              <button
+              <Link
+                to="/admin"
                 id="navbar-admin-mode-pill"
-                onClick={() => navigateTo('admin-dashboard')}
                 className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-black tracking-wider transition-all duration-200 border shadow-sm ${
                   currentView === 'admin-dashboard'
                     ? 'bg-[#7928CA] text-white border-[#7928CA] shadow-purple-900/50 ring-2 ring-purple-400/40'
@@ -313,7 +314,7 @@ export const Navbar: React.FC = () => {
                 </span>
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">ADMIN MODE</span>
-              </button>
+              </Link>
             ) : (isWriter || currentUser.role === 'penulis_sotoy' || currentUser.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02') ? (
               <button
                 id="navbar-writer-mode-pill"
@@ -640,18 +641,22 @@ export const Navbar: React.FC = () => {
                             </button>
                           )}
                           <button
-                            id="menu-my-content-settings-btn"
+                            id="menu-cms-page-btn"
                             onClick={() => {
-                              navigateTo('settings', { settingsTab: 'my-content' });
+                              navigateTo('cms');
                               setRoleDropdownOpen(false);
                             }}
-                            className="w-full text-left p-2 rounded-xl text-xs flex items-center justify-between hover:bg-slate-800 text-slate-200 transition-colors"
+                            className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
+                              currentView === 'cms' || currentView === 'cms-workspace'
+                                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold'
+                                : 'hover:bg-purple-500/10 text-purple-300 hover:text-white border border-purple-500/20'
+                            }`}
                           >
                             <div className="flex items-center gap-2.5">
-                              <FileText className="w-4 h-4 text-pink-400" />
-                              <span>My Content (Settings)</span>
+                              <ShieldCheck className="w-4 h-4 text-purple-400" />
+                              <span>{currentUser.role === 'admin' ? 'Full Control CMS (Halaman Khusus)' : 'Workspace CMS (Halaman Khusus)'}</span>
                             </div>
-                            <span className="text-xs text-slate-400">→</span>
+                            <span className="text-xs text-purple-400">→</span>
                           </button>
                           <button
                             id="menu-write-article-btn"
@@ -676,12 +681,10 @@ export const Navbar: React.FC = () => {
                             <span>Akses Admin Panel</span>
                             <RoleBadge role="admin" size="xs" showTooltip={false} />
                           </div>
-                          <button
+                          <Link
+                            to="/admin"
                             id="menu-admin-dashboard-btn"
-                            onClick={() => {
-                              navigateTo('admin-dashboard');
-                              setRoleDropdownOpen(false);
-                            }}
+                            onClick={() => setRoleDropdownOpen(false)}
                             className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
                               currentView === 'admin-dashboard'
                                 ? 'bg-purple-500/20 text-purple-300 border border-purple-500/50 font-bold'
@@ -693,13 +696,27 @@ export const Navbar: React.FC = () => {
                               <span>Sotoy Admin Control Center</span>
                             </div>
                             <span className="text-xs text-purple-300">→</span>
-                          </button>
-                          <button
+                          </Link>
+                          <Link
+                            to="/admin/cms"
+                            id="menu-admin-full-cms-btn"
+                            onClick={() => setRoleDropdownOpen(false)}
+                            className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
+                              currentView === 'cms' || currentView === 'cms-workspace'
+                                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/50 font-bold'
+                                : 'hover:bg-purple-500/10 text-purple-300 font-bold border border-purple-500/30'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <FileText className="w-4 h-4 text-purple-400" />
+                              <span>Full Control CMS (Halaman Khusus)</span>
+                            </div>
+                            <span className="text-xs text-purple-300">→</span>
+                          </Link>
+                          <Link
+                            to="/admin/submissions"
                             id="menu-admin-critics-btn"
-                            onClick={() => {
-                              navigateTo('admin-critic-submissions');
-                              setRoleDropdownOpen(false);
-                            }}
+                            onClick={() => setRoleDropdownOpen(false)}
                             className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
                               currentView === 'admin-critic-submissions'
                                 ? 'bg-red-500/20 text-red-300 border border-red-500/50 font-bold'
@@ -711,7 +728,7 @@ export const Navbar: React.FC = () => {
                               <span>Verifikasi Kritikus Film</span>
                             </div>
                             <span className="text-xs text-red-400">→</span>
-                          </button>
+                          </Link>
                         </div>
                       )}
                     </div>

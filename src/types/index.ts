@@ -23,6 +23,8 @@ export interface User {
   hasFinishedOnboarding?: boolean;
   watchlist?: string[]; // Saved film IDs
   savedArticles?: string[]; // Saved article IDs
+  interestProfile?: InterestProfile;
+  lastInterestDecay?: string;
   isSuspended?: boolean;
   suspendedAt?: string;
 }
@@ -215,6 +217,15 @@ export interface BuzzReactions {
   clap?: number;
 }
 
+export type InterestProfile = Record<string, number>;
+
+export interface RecommendationSignal {
+  type: 'interest' | 'following' | 'trending';
+  label: string;
+  matchedTag?: string;
+  score?: number;
+}
+
 export interface BuzzPost {
   id: string;
   author: {
@@ -229,6 +240,7 @@ export interface BuzzPost {
   taggedFilm?: {
     id: string;
     title: string;
+    type?: 'movie' | 'series' | 'anime' | string;
     poster?: string;
     year?: number;
     skorSotoy?: number;
@@ -247,10 +259,13 @@ export interface BuzzPost {
   likes: number;
   likedByMe?: boolean;
   reactions?: BuzzReactions;
+  reactionsByUser?: Record<string, ReactionType>;
   myReaction?: ReactionType | null;
   repliesCount: number;
   replies?: BuzzReply[];
   tags: string[];
+  recommendationSignal?: RecommendationSignal;
+  feedScore?: number;
 }
 
 export interface AdBanner {
@@ -288,7 +303,7 @@ export interface UploadedFile {
   uploadedAt: string;
 }
 
-export type NotificationType = 'comment' | 'like' | 'mention' | 'reply' | 'editor_request' | 'follow';
+export type NotificationType = 'comment' | 'like' | 'mention' | 'reply' | 'editor_request' | 'follow' | 'reaction';
 
 export interface NotificationSender {
   id: string;

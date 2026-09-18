@@ -20,6 +20,7 @@ import {
   UploadedFile,
   NotificationItem,
   ModerationReport,
+  InterestProfile,
 } from '../types';
 import {
   DEFAULT_FALLBACK_AUTHOR,
@@ -60,6 +61,7 @@ import {
   onSnapshot,
   query,
   where,
+  increment,
 } from 'firebase/firestore';
 import { 
   onAuthStateChanged, 
@@ -127,6 +129,8 @@ export type AppView =
   | 'admin-dashboard'
   | 'writer-dashboard'
   | 'critic-dashboard'
+  | 'cms'
+  | 'cms-workspace'
   | 'onboarding';
 
 interface AppContextType {
@@ -157,6 +161,13 @@ interface AppContextType {
   savedArticles: string[];
   toggleSaveArticle: (articleId: string) => void;
   isArticleSaved: (articleId: string) => boolean;
+  savedBuzzIds: string[];
+  toggleSaveBuzz: (buzzId: string) => void;
+  isBuzzSaved: (buzzId: string) => boolean;
+  interestProfile: InterestProfile;
+  recordUserInterest: (topics: (string | undefined | null)[], weight: number) => Promise<void>;
+  decayInterestProfile: (decayFactor?: number) => Promise<void>;
+  performPeriodicInterestReduction: (reductionFactor?: number) => Promise<void>;
   toggleSaveFilm: (filmId: string) => void;
   isFilmSaved: (filmId: string) => boolean;
   updateUserBio: (newBio: string) => Promise<void>;
@@ -314,7 +325,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
   const [articles, setArticles] = useState<Article[]>([]);
   const [films, setFilms] = useState<FilmItem[]>([]);
-  const [buzzList, setBuzzList] = useState<BuzzPost[]>([]);
+  const [rawBuzzList, setRawBuzzList] = useState<BuzzPost[]>([]);
   const [ratings, setRatings] = useState<UserRating[]>([]);
   const [criticSubmissions, setCriticSubmissions] = useState<CriticSubmission[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -360,37 +371,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   });
 
-  const [followingIds, setFollowingIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem('sotoy_following_ids');
-    if (!saved) return [];
+  const [followingIds, setFollowingIds] = useState<string[]>([]);
+  const [followersIds, setFollowersIds] = useState<string[]>([]);
+
+  // Saved buzz bookmark state persisted in localStorage
+  const [savedBuzzIds, setSavedBuzzIds] = useState<string[]>(() => {
     try {
-      const parsed = JSON.parse(saved);
-      // Clean legacy mock defaults
-      if (Array.isArray(parsed) && parsed.some(id => ['u-2', 'u-4', 'u-6'].includes(id))) {
-        localStorage.setItem('sotoy_following_ids', JSON.stringify([]));
-        return [];
-      }
-      return Array.isArray(parsed) ? parsed : [];
+      const saved = localStorage.getItem('sotoy_saved_buzz_ids');
+      return saved ? JSON.parse(saved) : ['buzz-1', 'buzz-3'];
     } catch {
-      return [];
+      return ['buzz-1', 'buzz-3'];
     }
   });
 
-  const [followersIds, setFollowersIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem('sotoy_followers_ids');
-    if (!saved) return [];
+  // User Interest Profile state (tracks tags, genres, categories, and creators)
+  const [interestProfile, setInterestProfile] = useState<InterestProfile>(() => {
     try {
-      const parsed = JSON.parse(saved);
-      // Clean legacy mock defaults
-      if (Array.isArray(parsed) && parsed.some(id => ['u-2', 'u-3', 'u-5'].includes(id))) {
-        localStorage.setItem('sotoy_followers_ids', JSON.stringify([]));
-        return [];
-      }
-      return Array.isArray(parsed) ? parsed : [];
+      const saved = localStorage.getItem('sotoy_interest_profile');
+      return saved ? JSON.parse(saved) : {};
     } catch {
-      return [];
+      return {};
     }
   });
+
+  // Derive per-user buzz posts reaction & like state with zero account bleed-over
+  const buzzList = useMemo(() => {
+    return rawBuzzList.map(post => {
+      const userReaction = (isLoggedIn && currentUser?.id && post.reactionsByUser)
+        ? post.reactionsByUser[currentUser.id] || null
+        : null;
+      return {
+        ...post,
+        myReaction: userReaction,
+        likedByMe: userReaction === 'heart',
+      };
+    });
+  }, [rawBuzzList, isLoggedIn, currentUser?.id]);
 
   const [shareModalData, setShareModalData] = useState<ShareData | null>(null);
 
@@ -473,7 +489,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentView('critic-criteria');
     } else if (path === '/admin/submissions') {
       setCurrentView('admin-critic-submissions');
-    } else if (path === '/admin') {
+    } else if (path === '/cms' || path === '/workspace' || path === '/admin/cms') {
+      setCurrentView('cms-workspace');
+    } else if (path === '/admin' || path.startsWith('/admin/')) {
       setCurrentView('admin-dashboard');
     } else if (path === '/writer' || path === '/penulis') {
       setCurrentView('writer-dashboard');
@@ -484,18 +502,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [location.pathname, films, articles, currentUser.id]);
 
-  // Sync basic preferences and follow lists to local storage
+  // Sync basic preferences to local storage
   useEffect(() => {
     localStorage.setItem('sotoy_user_settings', JSON.stringify(userSettings));
   }, [userSettings]);
-
-  useEffect(() => {
-    localStorage.setItem('sotoy_following_ids', JSON.stringify(followingIds));
-  }, [followingIds]);
-
-  useEffect(() => {
-    localStorage.setItem('sotoy_followers_ids', JSON.stringify(followersIds));
-  }, [followersIds]);
 
   useEffect(() => {
     localStorage.setItem('sotoy_is_logged_in', String(isLoggedIn));
@@ -594,20 +604,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     );
 
+    const getSortTimestamp = (item: { id: string; createdAt?: string; timestamp?: number }): number => {
+      if (item.timestamp && typeof item.timestamp === 'number') {
+        return item.timestamp;
+      }
+      if (item.createdAt && !isNaN(Date.parse(item.createdAt))) {
+        return Date.parse(item.createdAt);
+      }
+      const numMatch = item.id.match(/\d+/g);
+      if (numMatch && numMatch.length > 0) {
+        const lastNum = parseInt(numMatch[numMatch.length - 1], 10);
+        if (lastNum > 1000000000) return lastNum;
+        return 1700000000000 + lastNum * 1000;
+      }
+      return 0;
+    };
+
     const unsubBuzz = onSnapshot(
       collection(db, 'buzz'),
       (snapshot) => {
         const items: BuzzPost[] = [];
         snapshot.forEach(doc => items.push(doc.data() as BuzzPost));
         if (items.length > 0) {
-          setBuzzList(items.sort((a, b) => b.id.localeCompare(a.id)));
+          setRawBuzzList(items.sort((a, b) => getSortTimestamp(b) - getSortTimestamp(a)));
         } else {
-          setBuzzList(INITIAL_BUZZ);
+          setRawBuzzList(INITIAL_BUZZ);
         }
       },
       (err) => {
         console.warn('[Firestore] buzz subscription fallback to initial mock:', err.message);
-        setBuzzList(INITIAL_BUZZ);
+        setRawBuzzList(INITIAL_BUZZ);
       }
     );
 
@@ -617,7 +643,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const items: UserRating[] = [];
         snapshot.forEach(doc => items.push(doc.data() as UserRating));
         if (items.length > 0) {
-          setRatings(items.sort((a, b) => b.id.localeCompare(a.id)));
+          setRatings(items.sort((a, b) => getSortTimestamp(b) - getSortTimestamp(a)));
         } else {
           setRatings(INITIAL_RATINGS);
         }
@@ -858,14 +884,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               try { await updateDoc(userDocRef, { role: 'si_paling_sotoy', roleTitle: 'Si Paling Sotoy (Kritikus Film)' }); } catch (e) {}
             }
 
-            // Clean mock IDs if present in followers/following
+            // Followers and Following will be populated in real-time from the Firestore 'follows' collection
             const cleanFollowing = Array.isArray(data.following) ? data.following.filter(id => !['u-2', 'u-4', 'u-6'].includes(id)) : [];
             const cleanFollowers = Array.isArray(data.followers) ? data.followers.filter(id => !['u-2', 'u-3', 'u-5'].includes(id)) : [];
-            
             setFollowingIds(cleanFollowing);
             setFollowersIds(cleanFollowers);
-            localStorage.setItem('sotoy_following_ids', JSON.stringify(cleanFollowing));
-            localStorage.setItem('sotoy_followers_ids', JSON.stringify(cleanFollowers));
 
             // Clean legacy mock watchlist if user hasn't modified it
             setWatchlist(prev => {
@@ -885,6 +908,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             });
 
             setCurrentUser(data);
+
+            // Check and perform periodic interest profile weight reduction (halving) on login if overdue (>= 7 days)
+            const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+            const now = Date.now();
+            const lastDecay = data.lastInterestDecay || localStorage.getItem('sotoy_last_interest_decay');
+            if (lastDecay) {
+              const lastDecayTime = new Date(lastDecay).getTime();
+              if (!isNaN(lastDecayTime) && (now - lastDecayTime) >= ONE_WEEK_MS) {
+                performPeriodicInterestReduction(0.5);
+              }
+            } else {
+              try {
+                const nowIso = new Date(now).toISOString();
+                localStorage.setItem('sotoy_last_interest_decay', nowIso);
+                updateDoc(userDocRef, { lastInterestDecay: nowIso }).catch(() => {});
+              } catch {}
+            }
 
             // Redirect to onboarding if not finished
             if (data.hasFinishedOnboarding === false && currentView !== 'onboarding') {
@@ -934,8 +974,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setSavedArticles([]);
             localStorage.setItem('sotoy_watchlist', JSON.stringify([]));
             localStorage.setItem('sotoy_saved_articles', JSON.stringify([]));
-            localStorage.setItem('sotoy_following_ids', JSON.stringify([]));
-            localStorage.setItem('sotoy_followers_ids', JSON.stringify([]));
           }
           setIsLoggedIn(true);
         } catch (err) {
@@ -953,6 +991,274 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     return () => unsubAuth();
   }, []);
+
+  // Real-time listener for current user's follows (follower and following) from Firestore
+  useEffect(() => {
+    if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') {
+      setFollowingIds([]);
+      setFollowersIds([]);
+      return;
+    }
+
+    const followingQuery = query(
+      collection(db, 'follows'),
+      where('followerId', '==', currentUser.id)
+    );
+    const unsubFollowing = onSnapshot(
+      followingQuery,
+      (snapshot) => {
+        const ids: string[] = [];
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.followingId) ids.push(data.followingId);
+        });
+        setFollowingIds(ids);
+      },
+      (err) => {
+        console.warn('[Firestore] following subscription notice:', err.message);
+      }
+    );
+
+    const followersQuery = query(
+      collection(db, 'follows'),
+      where('followingId', '==', currentUser.id)
+    );
+    const unsubFollowers = onSnapshot(
+      followersQuery,
+      (snapshot) => {
+        const ids: string[] = [];
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.followerId) ids.push(data.followerId);
+        });
+        setFollowersIds(ids);
+      },
+      (err) => {
+        console.warn('[Firestore] followers subscription notice:', err.message);
+      }
+    );
+
+    return () => {
+      unsubFollowing();
+      unsubFollowers();
+    };
+  }, [isLoggedIn, currentUser?.id]);
+
+  // Real-time listener for current user's interest profile from Firestore
+  useEffect(() => {
+    if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') {
+      try {
+        const local = localStorage.getItem('sotoy_interest_profile');
+        if (local) setInterestProfile(JSON.parse(local));
+      } catch {}
+      return;
+    }
+
+    const userDocRef = doc(db, 'users', currentUser.id);
+    const interestDocRef = doc(db, 'users', currentUser.id, 'meta', 'interestProfile');
+    
+    // Listen to user document for interestProfile
+    const unsubUser = onSnapshot(
+      userDocRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          if (data?.interestProfile && typeof data.interestProfile === 'object') {
+            setInterestProfile(data.interestProfile);
+            try {
+              localStorage.setItem('sotoy_interest_profile', JSON.stringify(data.interestProfile));
+            } catch {}
+          }
+        }
+      },
+      (err) => {
+        console.warn('[Firestore] user doc interestProfile subscription notice:', err.message);
+      }
+    );
+
+    const unsubMeta = onSnapshot(
+      interestDocRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          if (data?.profile && typeof data.profile === 'object') {
+            setInterestProfile(data.profile);
+            try {
+              localStorage.setItem('sotoy_interest_profile', JSON.stringify(data.profile));
+            } catch {}
+          }
+        } else {
+          // Initialize baseline interest from userSettings.favoriteGenres if present
+          if (userSettings?.favoriteGenres && userSettings.favoriteGenres.length > 0) {
+            const initial: InterestProfile = {};
+            userSettings.favoriteGenres.forEach(g => {
+              if (g) initial[g.toLowerCase().trim()] = 5;
+            });
+            setInterestProfile(initial);
+            setDoc(interestDocRef, {
+              profile: initial,
+              lastUpdated: new Date().toISOString(),
+            }).catch(() => {});
+            setDoc(userDocRef, {
+              interestProfile: initial,
+            }, { merge: true }).catch(() => {});
+          }
+        }
+      },
+      (err) => {
+        console.warn('[Firestore] interestProfile subscription notice:', err.message);
+      }
+    );
+
+    return () => {
+      unsubUser();
+      unsubMeta();
+    };
+  }, [isLoggedIn, currentUser?.id]);
+
+  // Record user interest signal helper (increments weights for tags, genres, categories)
+  const recordUserInterest = useCallback(async (rawTopics: (string | undefined | null)[], weight: number) => {
+    if (!rawTopics || rawTopics.length === 0 || weight <= 0) return;
+
+    // Filter, clean, and normalize topics
+    const cleanTopics = rawTopics
+      .filter((t): t is string => Boolean(t && typeof t === 'string'))
+      .map(t => t.trim().toLowerCase().replace(/^#/, ''))
+      .filter(t => t.length >= 2 && t !== 'all' && t !== 'sotoyfeed');
+
+    if (cleanTopics.length === 0) return;
+
+    setInterestProfile(prev => {
+      const updated = { ...prev };
+      const MAX_TAG_WEIGHT = 50;
+      const TOTAL_WEIGHT_THRESHOLD = 300;
+
+      cleanTopics.forEach(topic => {
+        const current = updated[topic] || 0;
+        updated[topic] = Math.min(MAX_TAG_WEIGHT, Number((current + weight).toFixed(1)));
+      });
+
+      const totalWeight = Object.values(updated).reduce((sum, w) => sum + (w || 0), 0);
+      if (totalWeight > TOTAL_WEIGHT_THRESHOLD) {
+        Object.keys(updated).forEach(k => {
+          updated[k] = Math.max(1, Math.round((updated[k] || 1) * 0.85));
+        });
+      }
+
+      try {
+        localStorage.setItem('sotoy_interest_profile', JSON.stringify(updated));
+      } catch (e) {
+        // ignore
+      }
+
+      if (auth.currentUser) {
+        const uid = auth.currentUser.uid;
+        const nowIso = new Date().toISOString();
+        const userDocRef = doc(db, 'users', uid);
+        const interestDocRef = doc(db, 'users', uid, 'meta', 'interestProfile');
+
+        // Persist directly to user document's interestProfile field
+        setDoc(userDocRef, {
+          interestProfile: updated,
+        }, { merge: true }).catch(err => {
+          console.warn('[Firestore] Error persisting interestProfile on user doc:', err);
+        });
+
+        // Also update subcollection for complete sync
+        setDoc(interestDocRef, {
+          profile: updated,
+          lastUpdated: nowIso,
+        }, { merge: true }).catch(err => {
+          console.warn('[Firestore] Error persisting interestProfile to meta:', err);
+        });
+      }
+
+      return updated;
+    });
+  }, []);
+
+  // Periodic scheduled reduction: iterates through interestProfile map and halves all weights
+  const decayInterestProfile = useCallback(async (reductionFactor = 0.5) => {
+    setInterestProfile(prev => {
+      if (!prev || Object.keys(prev).length === 0) return prev;
+
+      const updated: InterestProfile = {};
+      // Iterate through user's interestProfile map and halve (or reduce) all values
+      Object.entries(prev).forEach(([key, weight]) => {
+        const halved = Number((weight * reductionFactor).toFixed(1));
+        if (halved >= 0.5) {
+          updated[key] = halved;
+        }
+      });
+
+      const nowIso = new Date().toISOString();
+      try {
+        localStorage.setItem('sotoy_interest_profile', JSON.stringify(updated));
+        localStorage.setItem('sotoy_last_interest_decay', nowIso);
+      } catch (e) {
+        // ignore
+      }
+
+      if (auth.currentUser) {
+        const uid = auth.currentUser.uid;
+        const userDocRef = doc(db, 'users', uid);
+        const metaDocRef = doc(db, 'users', uid, 'meta', 'interestProfile');
+
+        setDoc(userDocRef, {
+          interestProfile: updated,
+          lastInterestDecay: nowIso,
+        }, { merge: true }).catch(err => {
+          console.warn('[Firestore] Error persisting decayed interestProfile to user doc:', err);
+        });
+
+        setDoc(metaDocRef, {
+          profile: updated,
+          lastUpdated: nowIso,
+          lastInterestDecay: nowIso,
+        }, { merge: true }).catch(err => {
+          console.warn('[Firestore] Error persisting decayed interestProfile to meta doc:', err);
+        });
+      }
+
+      return updated;
+    });
+  }, []);
+
+  // Alias for backward compatibility
+  const performPeriodicInterestReduction = decayInterestProfile;
+
+  // Background trigger & weekly timer hook check to call decay once per week
+  useEffect(() => {
+    if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') return;
+
+    const checkAndDecayWeekly = () => {
+      const lastDecayStr = currentUser.lastInterestDecay || localStorage.getItem('sotoy_last_interest_decay');
+      const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+      const now = Date.now();
+
+      if (!lastDecayStr) {
+        try {
+          const nowIso = new Date(now).toISOString();
+          localStorage.setItem('sotoy_last_interest_decay', nowIso);
+          if (auth.currentUser) {
+            updateDoc(doc(db, 'users', auth.currentUser.uid), { lastInterestDecay: nowIso }).catch(() => {});
+          }
+        } catch {}
+      } else {
+        const lastDecayTime = new Date(lastDecayStr).getTime();
+        if (!isNaN(lastDecayTime) && (now - lastDecayTime) >= ONE_WEEK_MS) {
+          decayInterestProfile(0.5);
+        }
+      }
+    };
+
+    // Run check on mount
+    checkAndDecayWeekly();
+
+    // Background periodic timer interval check every 12 hours while the app is active
+    const timer = setInterval(checkAndDecayWeekly, 12 * 60 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, [isLoggedIn, currentUser?.id, currentUser?.lastInterestDecay, decayInterestProfile]);
 
   // Real-time listener for files and critic submissions based on user role
   useEffect(() => {
@@ -1018,12 +1324,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const exists = prev.includes(filmId);
       const updated = exists ? prev.filter(id => id !== filmId) : [...prev, filmId];
       showToast(exists ? 'Dihapus dari Daftar Tonton (Watchlist)' : 'Ditambahkan ke Daftar Tonton (Watchlist)!');
+      
+      // Track interest signal when adding film to watchlist (+3 weight)
+      if (!exists) {
+        const film = films.find(f => f.id === filmId);
+        if (film) {
+          const topics = [...(film.genres || []), film.type, film.title];
+          recordUserInterest(topics, 3);
+        }
+      }
+
       return updated;
     });
   };
 
   const isFilmInWatchlist = (filmId: string) => {
     return watchlist.includes(filmId);
+  };
+
+  const toggleSaveBuzz = (buzzId: string) => {
+    setSavedBuzzIds(prev => {
+      const exists = prev.includes(buzzId);
+      const updated = exists ? prev.filter(id => id !== buzzId) : [...prev, buzzId];
+      try {
+        localStorage.setItem('sotoy_saved_buzz_ids', JSON.stringify(updated));
+      } catch (err) {
+        console.warn('localStorage save failed:', err);
+      }
+      showToast(exists ? 'Buzz dihapus dari Tersimpan' : 'Buzz disimpan ke Tersimpan! 📌');
+
+      // Track interest signal when bookmarking a buzz (+3 weight)
+      if (!exists) {
+        const post = rawBuzzList.find(b => b.id === buzzId) || buzzList.find(b => b.id === buzzId);
+        if (post) {
+          const topics: string[] = [...(post.tags || [])];
+          if (post.taggedFilm?.genres) {
+            topics.push(...post.taggedFilm.genres);
+          }
+          if (post.taggedFilm?.type) {
+            topics.push(post.taggedFilm.type);
+          }
+          recordUserInterest(topics, 3);
+        }
+      }
+
+      return updated;
+    });
+  };
+
+  const isBuzzSaved = (buzzId: string) => {
+    return savedBuzzIds.includes(buzzId);
   };
 
   const toggleSaveArticle = (articleId: string) => {
@@ -1392,7 +1742,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Pengaturan pengguna berhasil disimpan!');
   };
 
-  const toggleFollowUser = (targetUserId: string) => {
+  const toggleFollowUser = async (targetUserId: string) => {
     if (!isLoggedIn) {
       setLoginModalOpen(true);
       showToast('Silakan login terlebih dahulu untuk mengikuti sesama cinephile!');
@@ -1406,17 +1756,101 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const target = allUsers.find(u => u.id === targetUserId);
     const targetName = target ? target.name : 'Pengguna';
+    const isAlreadyFollowing = followingIds.includes(targetUserId);
+    const followDocId = `${currentUser.id}_${targetUserId}`;
 
-    setFollowingIds(prev => {
-      const isAlreadyFollowing = prev.includes(targetUserId);
-      if (isAlreadyFollowing) {
-        showToast(`Berhenti mengikuti ${targetName}`);
-        return prev.filter(id => id !== targetUserId);
-      } else {
-        showToast(`Sekarang kamu mengikuti ${targetName}! 🎉`);
-        return [...prev, targetUserId];
+    if (isAlreadyFollowing) {
+      // Optimistic update
+      setFollowingIds(prev => prev.filter(id => id !== targetUserId));
+      showToast(`Berhenti mengikuti ${targetName}`);
+
+      try {
+        await deleteDoc(doc(db, 'follows', followDocId));
+        try {
+          await updateDoc(doc(db, 'users', targetUserId), {
+            followersCount: increment(-1),
+          });
+        } catch (e) {
+          // fallback if user doc missing count
+        }
+        try {
+          await updateDoc(doc(db, 'users', currentUser.id), {
+            followingCount: increment(-1),
+          });
+        } catch (e) {
+          // fallback
+        }
+      } catch (err) {
+        console.warn('[Firestore] Error removing follow record:', err);
       }
-    });
+    } else {
+      // Optimistic update
+      setFollowingIds(prev => [...prev, targetUserId]);
+      showToast(`Sekarang kamu mengikuti ${targetName}! 🎉`);
+
+      try {
+        await setDoc(doc(db, 'follows', followDocId), {
+          followerId: currentUser.id,
+          followingId: targetUserId,
+          createdAt: new Date().toISOString(),
+        });
+        try {
+          await updateDoc(doc(db, 'users', targetUserId), {
+            followersCount: increment(1),
+          });
+        } catch (e) {
+          // fallback
+        }
+        try {
+          await updateDoc(doc(db, 'users', currentUser.id), {
+            followingCount: increment(1),
+          });
+        } catch (e) {
+          // fallback
+        }
+
+        // Trigger follow notification to target user
+        await sendNotification({
+          userId: targetUserId,
+          type: 'follow',
+          title: 'Pengikut Baru',
+          message: `${currentUser.name} mulai mengikuti profil Anda.`,
+          targetView: 'user-profile',
+          targetId: currentUser.id,
+          sender: {
+            id: currentUser.id,
+            name: currentUser.name,
+            avatar: currentUser.avatar,
+            handle: currentUser.handle,
+          },
+        });
+
+        // Track interest signal toward top tags from followed user's posts (+1 weight)
+        const targetPosts = rawBuzzList.filter(b => b.author.id === targetUserId);
+        const tagCounts: Record<string, number> = {};
+        targetPosts.forEach(post => {
+          post.tags?.forEach(t => {
+            const clean = t.toLowerCase().replace(/^#/, '');
+            tagCounts[clean] = (tagCounts[clean] || 0) + 1;
+          });
+          if (post.taggedFilm?.genres) {
+            post.taggedFilm.genres.forEach(g => {
+              const clean = g.toLowerCase().trim();
+              tagCounts[clean] = (tagCounts[clean] || 0) + 1;
+            });
+          }
+        });
+        const topFollowedTags = Object.entries(tagCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 4)
+          .map(([tag]) => tag);
+        if (topFollowedTags.length > 0) {
+          recordUserInterest(topFollowedTags, 1);
+        }
+      } catch (err) {
+        console.warn('[Firestore] Error saving follow record:', err);
+      }
+    }
   };
 
   const isFollowing = (userId: string) => {
@@ -1615,6 +2049,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       case 'critic-dashboard':
         targetPath = '/critic';
         break;
+      case 'cms':
+      case 'cms-workspace':
+        targetPath = '/cms';
+        break;
       case 'onboarding':
         targetPath = '/onboarding';
         break;
@@ -1761,37 +2199,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const matchedTags = content.match(/#[a-zA-Z0-9_]+/g) || [];
     const cleanTags = matchedTags.map(t => t.replace('#', ''));
 
-    const buzzId = `buzz-${Date.now()}`;
+    const now = Date.now();
+    const buzzId = `buzz-${now}`;
+    const authorId = auth.currentUser?.uid || currentUser.id;
+
     const newBuzz: BuzzPost = {
       id: buzzId,
       author: {
-        id: currentUser.id,
-        name: currentUser.name,
-        handle: currentUser.handle,
-        avatar: currentUser.avatar,
-        role: currentUser.role,
+        id: authorId,
+        name: currentUser.name || auth.currentUser?.displayName || 'Cinephile',
+        handle: currentUser.handle || '@cinephile',
+        avatar: currentUser.avatar || auth.currentUser?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+        role: currentUser.role || 'warga_sotoy',
       },
-      content,
-      taggedFilm,
-      taggedArticle,
-      skorSotoyMention: skorSotoy,
-      createdAt: 'Baru saja',
+      content: content.trim(),
+      createdAt: new Date().toISOString(),
       likes: 0,
       likedByMe: false,
       repliesCount: 0,
-      tags: cleanTags.length > 0 ? cleanTags : ['SotoyFeed'],
+      tags: cleanTags,
       replies: [],
+      reactions: {
+        heart: 0,
+        mindblown: 0,
+        fire: 0,
+        laugh: 0,
+        clap: 0,
+      },
+      reactionsByUser: {},
     };
 
+    if (taggedFilm) {
+      newBuzz.taggedFilm = taggedFilm;
+    }
+    if (taggedArticle) {
+      newBuzz.taggedArticle = taggedArticle;
+    }
+    if (skorSotoy !== undefined && !isNaN(skorSotoy)) {
+      newBuzz.skorSotoyMention = skorSotoy;
+    }
+
+    // 1. Optimistic UI update so user immediately sees their post at top of feed & profile
+    setRawBuzzList(prev => [newBuzz, ...prev.filter(b => b.id !== buzzId)]);
+    showToast('Buzz kamu berhasil diposting!');
+
+    // Check for user mentions in the buzz content
+    checkAndSendMentions(content, 'Sebutan Baru di Buzz', 'buzz-detail', buzzId);
+
+    // 2. Persist to Firestore with clean payload (no undefined values)
     try {
-      await setDoc(doc(db, 'buzz', buzzId), newBuzz);
-      showToast('Buzz Sotoy kamu berhasil diposting!');
+      const sanitizedPayload = JSON.parse(JSON.stringify(newBuzz));
+      await setDoc(doc(db, 'buzz', buzzId), sanitizedPayload);
     } catch (error) {
+      console.error('[Firestore] Error saving buzz post:', error);
       handleFirestoreError(error, OperationType.CREATE, `buzz/${buzzId}`);
     }
   };
 
-  // Quick Reactions for Buzz Post in Firestore
+  // Quick Reactions for Buzz Post in Firestore (Per-user scoped with aggregate counts)
   const reactToBuzzPost = async (buzzId: string, reaction: ReactionType) => {
     if (!isLoggedIn) {
       setLoginModalOpen(true);
@@ -1799,7 +2264,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    const post = buzzList.find(b => b.id === buzzId);
+    const post = rawBuzzList.find(b => b.id === buzzId) || buzzList.find(b => b.id === buzzId);
     if (!post) return;
 
     const currentReactions: BuzzReactions = post.reactions || {
@@ -1810,14 +2275,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clap: 0,
     };
 
-    const prevReaction = post.myReaction;
+    const currentReactionsByUser: Record<string, ReactionType> = { ...(post.reactionsByUser || {}) };
+    const prevReaction = currentReactionsByUser[currentUser.id] || post.myReaction || null;
     const updatedReactions = { ...currentReactions };
+    const updatedReactionsByUser = { ...currentReactionsByUser };
 
     let newReaction: ReactionType | null = reaction;
 
     if (prevReaction === reaction) {
       // User tapped the same reaction -> toggle off
       updatedReactions[reaction] = Math.max(0, (updatedReactions[reaction] || 0) - 1);
+      delete updatedReactionsByUser[currentUser.id];
       newReaction = null;
     } else {
       // If user had a previous reaction, decrement old one
@@ -1826,6 +2294,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       // Increment new reaction
       updatedReactions[reaction] = (updatedReactions[reaction] || 0) + 1;
+      updatedReactionsByUser[currentUser.id] = reaction;
     }
 
     // Compute total likes/reactions
@@ -1834,25 +2303,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updatedPost: BuzzPost = {
       ...post,
       reactions: updatedReactions,
-      myReaction: newReaction,
+      reactionsByUser: updatedReactionsByUser,
       likes: totalReactions,
-      likedByMe: newReaction === 'heart',
     };
 
+    // Optimistic UI update
+    setRawBuzzList(prev => prev.map(b => b.id === buzzId ? updatedPost : b));
+
+    // Track interest signal when adding reaction (+2 weight)
+    if (newReaction) {
+      const topics: string[] = [...(post.tags || [])];
+      if (post.taggedFilm?.genres) {
+        topics.push(...post.taggedFilm.genres);
+      }
+      if (post.taggedFilm?.type) {
+        topics.push(post.taggedFilm.type);
+      }
+      if (topics.length > 0) {
+        recordUserInterest(topics, 2);
+      }
+    }
+
+    const emojiMap: Record<ReactionType, string> = {
+      heart: '❤️ Suka',
+      mindblown: '🤯 Mind Blown',
+      fire: '🔥 Hype',
+      laugh: '😂 Lucu',
+      clap: '👏 Mantap',
+    };
+    showToast(
+      newReaction
+        ? `Reaksi ${emojiMap[reaction]} dikirim!`
+        : 'Reaksi dihapus.'
+    );
+
     try {
-      await setDoc(doc(db, 'buzz', buzzId), updatedPost);
-      const emojiMap: Record<ReactionType, string> = {
-        heart: '❤️ Suka',
-        mindblown: '🤯 Mind Blown',
-        fire: '🔥 Hype',
-        laugh: '😂 Lucu',
-        clap: '👏 Mantap',
-      };
-      showToast(
-        newReaction
-          ? `Reaksi ${emojiMap[reaction]} dikirim!`
-          : 'Reaksi dihapus.'
-      );
+      const sanitizedPayload = JSON.parse(JSON.stringify(updatedPost));
+      await setDoc(doc(db, 'buzz', buzzId), sanitizedPayload);
+
+      // Trigger reaction notification to post author (if not reacting to own post)
+      if (newReaction && post.author?.id && post.author.id !== currentUser.id) {
+        await sendNotification({
+          userId: post.author.id,
+          type: 'reaction',
+          title: 'Reaksi Baru di Buzz',
+          message: `${currentUser.name} memberi reaksi ${emojiMap[reaction]} pada Buzz Anda.`,
+          targetView: 'buzz-detail',
+          targetId: buzzId,
+          sender: {
+            id: currentUser.id,
+            name: currentUser.name,
+            avatar: currentUser.avatar,
+            handle: currentUser.handle,
+          },
+        });
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `buzz/${buzzId}`);
     }
@@ -1863,7 +2368,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await reactToBuzzPost(buzzId, 'heart');
   };
 
-  // Add Reply to a Buzz Post in Firestore (Supports threaded replies & mentions)
+  // Add Reply to a Buzz Post in Firestore (Supports threaded replies & mentions & notifications)
   const addBuzzReply = async (
     buzzId: string,
     content: string,
@@ -1877,38 +2382,94 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    const post = buzzList.find(b => b.id === buzzId);
+    const post = rawBuzzList.find(b => b.id === buzzId) || buzzList.find(b => b.id === buzzId);
     if (!post) return;
 
+    const authorId = auth.currentUser?.uid || currentUser.id;
     const newReply: BuzzReply = {
       id: `reply-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       buzzId,
       parentId,
       replyToUser,
       author: {
-        id: currentUser.id,
-        name: currentUser.name,
-        handle: currentUser.handle,
-        avatar: currentUser.avatar,
-        role: currentUser.role,
+        id: authorId,
+        name: currentUser.name || auth.currentUser?.displayName || 'Cinephile',
+        handle: currentUser.handle || '@cinephile',
+        avatar: currentUser.avatar || auth.currentUser?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+        role: currentUser.role || 'warga_sotoy',
       },
       content: content.trim(),
-      createdAt: 'Baru saja',
+      createdAt: new Date().toISOString(),
       likes: 0,
       likedByMe: false,
     };
 
     const currentReplies = post.replies || [];
     const updatedReplies = [...currentReplies, newReply];
-    const updatedPost = {
+    const updatedPost: BuzzPost = {
       ...post,
       replies: updatedReplies,
       repliesCount: updatedReplies.length,
     };
 
+    // Optimistic UI update
+    setRawBuzzList(prev => prev.map(b => b.id === buzzId ? updatedPost : b));
+    showToast('Balasan kamu berhasil diposting!');
+
+    // Track interest signal when replying to a buzz (+3 weight)
+    const replyTopics: string[] = [...(post.tags || [])];
+    if (post.taggedFilm?.genres) {
+      replyTopics.push(...post.taggedFilm.genres);
+    }
+    if (post.taggedFilm?.type) {
+      replyTopics.push(post.taggedFilm.type);
+    }
+    if (replyTopics.length > 0) {
+      recordUserInterest(replyTopics, 3);
+    }
+
     try {
-      await setDoc(doc(db, 'buzz', buzzId), updatedPost);
-      showToast('Balasan kamu berhasil diposting!');
+      const sanitizedPayload = JSON.parse(JSON.stringify(updatedPost));
+      await setDoc(doc(db, 'buzz', buzzId), sanitizedPayload);
+
+      // 1. Notify post author (if author is not the replier)
+      if (post.author?.id && post.author.id !== authorId) {
+        await sendNotification({
+          userId: post.author.id,
+          type: 'reply',
+          title: 'Balasan Baru di Buzz',
+          message: `${currentUser.name} membalas Buzz Anda: "${content.length > 50 ? content.slice(0, 50) + '...' : content}"`,
+          targetView: 'buzz-detail',
+          targetId: buzzId,
+          sender: {
+            id: currentUser.id,
+            name: currentUser.name,
+            avatar: currentUser.avatar,
+            handle: currentUser.handle,
+          },
+        });
+      }
+
+      // 2. If replying to a specific comment author, notify them as well (if not self and not post author)
+      if (replyToUser?.id && replyToUser.id !== authorId && replyToUser.id !== post.author?.id) {
+        await sendNotification({
+          userId: replyToUser.id,
+          type: 'reply',
+          title: 'Balasan Baru di Diskusi',
+          message: `${currentUser.name} membalas komentar Anda di Buzz: "${content.length > 50 ? content.slice(0, 50) + '...' : content}"`,
+          targetView: 'buzz-detail',
+          targetId: buzzId,
+          sender: {
+            id: currentUser.id,
+            name: currentUser.name,
+            avatar: currentUser.avatar,
+            handle: currentUser.handle,
+          },
+        });
+      }
+
+      // 3. Send notifications for any tagged mentions in reply
+      checkAndSendMentions(content, 'Sebutan Baru di Balasan Buzz', 'buzz-detail', buzzId);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `buzz/${buzzId}`);
     }
@@ -1916,7 +2477,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Like a Buzz Post Reply in Firestore
   const likeBuzzReply = async (buzzId: string, replyId: string) => {
-    const post = buzzList.find(b => b.id === buzzId);
+    const post = rawBuzzList.find(b => b.id === buzzId) || buzzList.find(b => b.id === buzzId);
     if (!post || !post.replies) return;
 
     const updatedReplies = post.replies.map(r => {
@@ -1936,8 +2497,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       replies: updatedReplies,
     };
 
+    setRawBuzzList(prev => prev.map(b => b.id === buzzId ? updatedPost : b));
+
     try {
-      await setDoc(doc(db, 'buzz', buzzId), updatedPost);
+      const sanitizedPayload = JSON.parse(JSON.stringify(updatedPost));
+      await setDoc(doc(db, 'buzz', buzzId), sanitizedPayload);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `buzz/${buzzId}`);
     }
@@ -1978,6 +2542,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           totalVotes: newVotes,
         };
         await setDoc(doc(db, 'films', filmId), updatedFilm);
+
+        // Track interest signal when rating film (+3 weight)
+        const rateTopics = [...(film.genres || []), film.type, film.title];
+        recordUserInterest(rateTopics, 3);
       }
 
       showToast(`Skor Sotoy ${score.toFixed(1)}/5.0 dan ulasan kamu berhasil dikirim!`);
@@ -2313,7 +2881,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteBuzzPost = async (buzzId: string): Promise<boolean> => {
     try {
       await deleteDoc(doc(db, 'buzz', buzzId));
-      setBuzzList(prev => prev.filter(b => b.id !== buzzId));
+      setRawBuzzList(prev => prev.filter(b => b.id !== buzzId));
       showToast('Post obrolan warga berhasil dihapus.');
       return true;
     } catch (error) {
@@ -2323,7 +2891,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteBuzzReply = async (buzzId: string, replyId: string): Promise<boolean> => {
-    const post = buzzList.find(b => b.id === buzzId);
+    const post = rawBuzzList.find(b => b.id === buzzId) || buzzList.find(b => b.id === buzzId);
     if (!post) return false;
     const filteredReplies = (post.replies || []).filter(r => r.id !== replyId);
     try {
@@ -2331,7 +2899,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         replies: filteredReplies,
         repliesCount: Math.max(0, (post.repliesCount || 1) - 1),
       });
-      setBuzzList(prev => prev.map(b => b.id === buzzId ? { ...b, replies: filteredReplies, repliesCount: Math.max(0, (b.repliesCount || 1) - 1) } : b));
+      setRawBuzzList(prev => prev.map(b => b.id === buzzId ? { ...b, replies: filteredReplies, repliesCount: Math.max(0, (b.repliesCount || 1) - 1) } : b));
       showToast('Balasan komentar berhasil dihapus.');
       return true;
     } catch (error) {
@@ -2421,6 +2989,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         savedArticles,
         toggleSaveArticle,
         isArticleSaved,
+        savedBuzzIds,
+        toggleSaveBuzz,
+        isBuzzSaved,
+        interestProfile,
+        recordUserInterest,
+        decayInterestProfile,
+        performPeriodicInterestReduction,
         toggleSaveFilm,
         isFilmSaved,
         updateUserBio,

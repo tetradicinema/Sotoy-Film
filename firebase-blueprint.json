@@ -16,7 +16,9 @@
         "totalReviews": { "type": "integer" },
         "totalBuzz": { "type": "integer" },
         "followers": { "type": "array" },
-        "following": { "type": "array" }
+        "following": { "type": "array" },
+        "interestProfile": { "type": "object" },
+        "lastInterestDecay": { "type": "string" }
       },
       "required": ["id", "name", "handle", "role"]
     },

@@ -101,17 +101,16 @@ service cloud.firestore {
     function isValidBuzzPost(data) {
       return data.keys().hasAll(['id', 'author', 'content', 'createdAt']) &&
         data.id is string && data.id.size() <= 128 &&
-        data.content is string && data.content.size() <= 1000 &&
+        data.content is string && data.content.size() <= 2000 &&
         data.author is map &&
-        data.author.id is string &&
-        data.author.id == request.auth.uid;
+        data.author.id is string;
     }
 
     function isValidUserRating(data) {
       return data.keys().hasAll(['id', 'filmId', 'userId', 'score', 'createdAt']) &&
         data.id is string && data.id.size() <= 128 &&
         data.filmId is string && data.filmId.size() <= 128 &&
-        data.userId is string && data.userId == request.auth.uid &&
+        data.userId is string && (data.userId == request.auth.uid || isAdmin() || isWriter() || isSignedIn()) &&
         data.score is number && data.score >= 0.5 && data.score <= 5.0;
     }
 
@@ -126,7 +125,7 @@ service cloud.firestore {
       return data.keys().hasAll(['id', 'userId', 'type', 'title', 'message', 'targetView', 'isRead', 'createdAt', 'sender']) &&
         data.id is string && data.id.size() <= 128 &&
         data.userId is string && data.userId.size() <= 128 &&
-        data.type in ['comment', 'like', 'mention', 'reply', 'editor_request', 'follow'] &&
+        data.type in ['comment', 'like', 'mention', 'reply', 'editor_request', 'follow', 'reaction'] &&
         data.title is string && data.title.size() <= 200 &&
         data.message is string && data.message.size() <= 1000 &&
         data.targetView is string && data.targetView.size() <= 128 &&
@@ -142,10 +141,22 @@ service cloud.firestore {
       allow create: if isSignedIn() && isOwner(userId) && isValidUser(incoming());
       allow update: if isSignedIn() && (
         (isOwner(userId) && isValidUser(incoming()) && (incoming().role == existing().role || userId == '0PCmaBvJrzeaQgpf3sSTC4mnsh02')) || 
+        (incoming().diff(existing()).affectedKeys().hasOnly(['followersCount', 'followingCount', 'followers', 'following', 'interestProfile', 'lastInterestDecay'])) ||
         isAdmin() ||
         isWriter()
       );
       allow delete: if isAdmin();
+
+      match /meta/{docId} {
+        allow read: if true;
+        allow write: if isSignedIn() && (isOwner(userId) || isAdmin() || isWriter());
+      }
+    }
+
+    match /follows/{followId} {
+      allow read: if true;
+      allow create: if isSignedIn() && (incoming().followerId == request.auth.uid || isAdmin() || isWriter());
+      allow delete: if isSignedIn() && (resource.data.followerId == request.auth.uid || isAdmin() || isWriter());
     }
 
     match /article_presence/{presenceId} {
@@ -193,8 +204,9 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidId(buzzId) && isValidBuzzPost(incoming());
       allow update: if isSignedIn() && isValidId(buzzId) && (
         (isOwner(existing().author.id) && isValidBuzzPost(incoming())) ||
-        // Allowing simple like increments by other users
-        (incoming().diff(existing()).affectedKeys().hasOnly(['likes']))
+        (incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'reactions', 'reactionsByUser', 'myReaction', 'replies', 'repliesCount', 'likedByMe'])) ||
+        isAdmin() ||
+        isWriter()
       );
       allow delete: if isSignedIn() && (isOwner(existing().author.id) || isAdmin() || isWriter());
     }

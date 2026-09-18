@@ -11,6 +11,8 @@ import {
   FileText,
   Download,
   BarChart3,
+  ExternalLink,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -254,6 +256,18 @@ export const WriterDashboard: React.FC = () => {
               <div className="bg-slate-900/80 p-1.5 rounded-2xl border border-slate-700/80 shadow-md">
                 <NotificationBell mode="writer" />
               </div>
+
+              {/* Buka Dedicated CMS Page Button */}
+              <button
+                id="writer-open-cms-btn"
+                onClick={() => navigateTo('cms')}
+                className="px-4 py-3 rounded-2xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 hover:text-white font-bold text-xs sm:text-sm border border-purple-500/40 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                title="Buka Ruang Kerja Editorial Mandiri (Halaman CMS)"
+              >
+                <ShieldCheck className="w-4 h-4 text-purple-400" />
+                <span>Halaman CMS Penuh</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </button>
 
               {/* Download PDF Report Button */}
               <button

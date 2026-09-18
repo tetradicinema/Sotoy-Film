@@ -59,9 +59,6 @@ import { AdBannerSlot } from '../Common/AdBannerSlot';
 const AdminDashboard = React.lazy(() =>
   import('../Admin/AdminDashboard').then(m => ({ default: m.AdminDashboard }))
 );
-const WriterDashboard = React.lazy(() =>
-  import('../Writer/WriterDashboard').then(m => ({ default: m.WriterDashboard }))
-);
 
 export const UserPage: React.FC = () => {
   const {
@@ -213,8 +210,14 @@ export const UserPage: React.FC = () => {
   ];
 
   // Filter content authored by the viewed/target user
-  const myBuzz = buzzList.filter(b => b.author.id === targetUser.id);
-  const myReviews = ratings.filter(r => r.userId === targetUser.id);
+  const myBuzz = buzzList.filter(
+    b => b.author.id === targetUser.id || 
+         (targetUser.handle && b.author.handle && b.author.handle.toLowerCase() === targetUser.handle.toLowerCase())
+  );
+  const myReviews = ratings.filter(
+    r => r.userId === targetUser.id || 
+         (targetUser.name && r.userName && r.userName.toLowerCase() === targetUser.name.toLowerCase())
+  );
   const myArticles = articles.filter(a => a.author.id === targetUser.id || a.author.name === targetUser.name);
 
   // Watchlist & saved items perspective:
@@ -239,10 +242,10 @@ export const UserPage: React.FC = () => {
   // Target user follower & following counts
   const targetFollowersCount = isOwnProfile
     ? followersIds.length
-    : (targetUser.followers?.length ?? targetUser.followersCount ?? 0);
+    : (targetUser.followersCount ?? targetUser.followers?.length ?? 0);
   const targetFollowingCount = isOwnProfile
     ? followingIds.length
-    : (targetUser.following?.length ?? targetUser.followingCount ?? 0);
+    : (targetUser.followingCount ?? targetUser.following?.length ?? 0);
 
   const handlePostDashboardBuzz = (e: React.FormEvent) => {
     e.preventDefault();
@@ -666,26 +669,7 @@ export const UserPage: React.FC = () => {
             <span>Komunitas Cinephile</span>
           </button>
 
-          {/* TAB 6: CMS ARTIKEL & WORKSPACE (UNTUK PENULIS SOTOY & ADMIN) */}
-          {isOwnProfile && (currentUser.role === 'penulis_sotoy' || currentUser.role === 'admin' || isWriter || isAdmin || currentUser.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02') && (
-            <button
-              id="user-tab-writer-dashboard"
-              onClick={() => setActiveUserTab('writer')}
-              className={`px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all shrink-0 ${
-                activeUserTab === 'writer'
-                  ? 'bg-gradient-to-r from-pink-500/20 to-rose-500/20 text-[#FF2E7E] border border-pink-500/50 shadow-sm'
-                  : 'text-pink-400/80 hover:text-pink-300 hover:bg-pink-950/20'
-              }`}
-            >
-              <PenSquare className="w-4 h-4 text-[#FF2E7E]" />
-              <span>CMS Artikel & Workspace</span>
-              <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#FF2E7E] text-white">
-                {currentUser.role === 'admin' || isAdmin ? 'CMS Redaksi' : 'Penulis Sotoy'}
-              </span>
-            </button>
-          )}
-
-          {/* TAB 7: ADMIN DASHBOARD VIEW (ONLY FOR ADMIN USER) */}
+          {/* TAB 6: ADMIN DASHBOARD VIEW (ONLY FOR ADMIN USER) */}
           {isOwnProfile && (currentUser.role === 'admin' || isAdmin || currentUser.id === 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' || currentUser.email === 'eksposurmedia@gmail.com') && (
             <button
               id="user-tab-admin-dashboard"
@@ -1608,22 +1592,6 @@ export const UserPage: React.FC = () => {
                 </div>
               );
             })()}
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* TAB: WRITER WORKSPACE (KHUSUS PENULIS SOTOY & ADMIN) */}
-        {/* ========================================================================= */}
-        {activeUserTab === 'writer' && (isOwnProfile && (currentUser.role === 'penulis_sotoy' || currentUser.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02' || currentUser.role === 'admin')) && (
-          <div className="pt-2">
-            <React.Suspense fallback={
-              <div className="py-12 flex flex-col items-center justify-center gap-3">
-                <Loader2 className="w-8 h-8 text-[#FF2E7E] animate-spin" />
-                <p className="text-xs text-slate-400 font-bold">Memuat Dasbor Penulis...</p>
-              </div>
-            }>
-              <WriterDashboard />
-            </React.Suspense>
           </div>
         )}
 

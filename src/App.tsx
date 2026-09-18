@@ -44,6 +44,9 @@ const WriterDashboard = React.lazy(() =>
 const CriticDashboard = React.lazy(() =>
   import('./components/Critic/CriticDashboard').then(m => ({ default: m.CriticDashboard }))
 );
+const CMSPage = React.lazy(() =>
+  import('./components/Pages/CMSPage').then(m => ({ default: m.CMSPage }))
+);
 
 // Fallback loader matching Sotoy Film aesthetic
 const PageLoadingFallback: React.FC = () => (
@@ -173,9 +176,41 @@ const AppContent: React.FC = () => {
           <Route path="/critic-criteria" element={<CriticCriteriaPage />} />
           <Route path="/admin/submissions" element={<AdminCriticSubmissionsPage />} />
 
-          {/* Protected Dashboards (Code-Split with Suspense) */}
+          {/* Admin Control Center Standalone URLs */}
           <Route
             path="/admin"
+            element={
+              <React.Suspense fallback={<PageLoadingFallback />}>
+                <AdminDashboard />
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <React.Suspense fallback={<PageLoadingFallback />}>
+                <AdminDashboard />
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/admin/moderation"
+            element={
+              <React.Suspense fallback={<PageLoadingFallback />}>
+                <AdminDashboard />
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/admin/catalog"
+            element={
+              <React.Suspense fallback={<PageLoadingFallback />}>
+                <AdminDashboard />
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/admin/storage"
             element={
               <React.Suspense fallback={<PageLoadingFallback />}>
                 <AdminDashboard />
@@ -211,6 +246,32 @@ const AppContent: React.FC = () => {
             element={
               <React.Suspense fallback={<PageLoadingFallback />}>
                 <CriticDashboard />
+              </React.Suspense>
+            }
+          />
+
+          {/* Dedicated Full Control CMS & Editorial Workspace Routes */}
+          <Route
+            path="/cms"
+            element={
+              <React.Suspense fallback={<PageLoadingFallback />}>
+                <CMSPage />
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/workspace"
+            element={
+              <React.Suspense fallback={<PageLoadingFallback />}>
+                <CMSPage />
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/admin/cms"
+            element={
+              <React.Suspense fallback={<PageLoadingFallback />}>
+                <CMSPage />
               </React.Suspense>
             }
           />

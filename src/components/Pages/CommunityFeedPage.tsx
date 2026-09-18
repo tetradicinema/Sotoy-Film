@@ -33,14 +33,69 @@ import {
 import { useApp } from '../../context/AppContext';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
 import { RoleBadge } from '../Common/RoleBadge';
-import { BuzzPost, User } from '../../types';
+import { BuzzPost, User, RecommendationSignal } from '../../types';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { QuickReactionBar } from '../Common/QuickReactionBar';
 import { BuzzFeedSidebar, BuzzFeedTab } from '../Navigation/BuzzFeedSidebar';
 import { MentionText } from '../Common/MentionText';
 import { MentionInput } from '../Common/MentionInput';
 
+// ==========================================
+// FEED RANKING WEIGHT CONSTANTS
+// Tunable weight constants for the personalized "For You" algorithm:
+// - RECENCY: Weight for post freshness vs older high-engagement content
+// - INTEREST_OVERLAP: Influence of tag/genre/category overlap with user interestProfile
+// - AUTHOR_AFFINITY: Boost for posts from authors the user follows
+// - ENGAGEMENT: Influence of total reactions and conversation replies
+// ==========================================
+export const FEED_RANKING_WEIGHTS = {
+  RECENCY: 0.35,          // Weight for recency / freshness
+  INTEREST_OVERLAP: 0.40, // Weight for user interest profile match
+  AUTHOR_AFFINITY: 0.30,  // Weight for followed accounts / network affinity
+  ENGAGEMENT: 0.15,       // Weight for reactions & replies volume
+} as const;
+
+// Helper to safely parse any post timestamp into epoch milliseconds
+const getPostTimestampMs = (createdAt: string): number => {
+  if (!createdAt) return 0;
+  const parsed = new Date(createdAt).getTime();
+  if (!isNaN(parsed)) return parsed;
+
+  const lower = createdAt.toLowerCase().trim();
+  const now = Date.now();
+  if (lower.includes('baru saja') || lower.includes('just now') || lower.includes('detik')) {
+    return now;
+  }
+  const minMatch = lower.match(/(\d+)\s*menit/);
+  if (minMatch) return now - parseInt(minMatch[1], 10) * 60 * 1000;
+  const hrMatch = lower.match(/(\d+)\s*jam/);
+  if (hrMatch) return now - parseInt(hrMatch[1], 10) * 60 * 60 * 1000;
+  const dayMatch = lower.match(/(\d+)\s*hari/);
+  if (dayMatch) return now - parseInt(dayMatch[1], 10) * 24 * 60 * 60 * 1000;
+  return now - 24 * 60 * 60 * 1000;
+};
+
+// Helper to calculate post age in hours
+const getPostAgeInHours = (createdAt: string): number => {
+  const timestamp = getPostTimestampMs(createdAt);
+  const diffHours = (Date.now() - timestamp) / (1000 * 60 * 60);
+  return Math.max(0.01, diffHours);
+};
+
 export const CommunityFeedPage: React.FC = () => {
+  // =========================================================================
+  // RANKING WEIGHT CONSTANTS (FOR-YOU FEED ALGORITHM)
+  // Expose and balance how heavily the 'for-you' feed reacts to:
+  // - WEIGHT_RECENCY: Freshness decay over time vs older posts
+  // - WEIGHT_INTEREST_OVERLAP: User interestProfile match (tags, genres, categories)
+  // - WEIGHT_AUTHOR_AFFINITY: Social connection boost for followed creators
+  // - WEIGHT_ENGAGEMENT: Community reaction and reply activity
+  // =========================================================================
+  const WEIGHT_RECENCY = FEED_RANKING_WEIGHTS.RECENCY; // 0.35
+  const WEIGHT_INTEREST_OVERLAP = FEED_RANKING_WEIGHTS.INTEREST_OVERLAP; // 0.40
+  const WEIGHT_AUTHOR_AFFINITY = FEED_RANKING_WEIGHTS.AUTHOR_AFFINITY; // 0.30
+  const WEIGHT_ENGAGEMENT = FEED_RANKING_WEIGHTS.ENGAGEMENT; // 0.15
+
   const {
     buzzList,
     films,
@@ -60,6 +115,9 @@ export const CommunityFeedPage: React.FC = () => {
     buzzFeedTab,
     setBuzzFeedTab,
     setIsComposeBuzzOpen,
+    savedBuzzIds,
+    toggleSaveBuzz,
+    interestProfile,
   } = useApp();
 
   const [postContent, setPostContent] = useState('');
@@ -67,30 +125,6 @@ export const CommunityFeedPage: React.FC = () => {
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [skorMention, setSkorMention] = useState<number | undefined>(undefined);
   const [activeTagFilter, setActiveTagFilter] = useState<string>('all');
-
-  // Saved buzz bookmark state persisted in localStorage
-  const [savedBuzzIds, setSavedBuzzIds] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('sotoy_saved_buzz_ids');
-      return saved ? JSON.parse(saved) : ['buzz-1', 'buzz-3'];
-    } catch {
-      return ['buzz-1', 'buzz-3'];
-    }
-  });
-
-  const toggleSaveBuzz = (buzzId: string) => {
-    setSavedBuzzIds(prev => {
-      const exists = prev.includes(buzzId);
-      const updated = exists ? prev.filter(id => id !== buzzId) : [...prev, buzzId];
-      try {
-        localStorage.setItem('sotoy_saved_buzz_ids', JSON.stringify(updated));
-      } catch (err) {
-        console.warn('localStorage save failed:', err);
-      }
-      showToast(exists ? 'Buzz dihapus dari Saved' : 'Buzz disimpan ke Saved! 📌');
-      return updated;
-    });
-  };
 
   // Search dropdown state
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -134,6 +168,9 @@ export const CommunityFeedPage: React.FC = () => {
     setSkorMention(undefined);
     setDropdownOpen(false);
     setSearchQuery('');
+    // Switch to main feed and reset tag filter so the new post is immediately in view
+    setBuzzFeedTab('for-you');
+    setActiveTagFilter('all');
   };
 
   const allTags = useMemo(() => {
@@ -154,24 +191,9 @@ export const CommunityFeedPage: React.FC = () => {
   }, [buzzList, activeTagFilter]);
 
   const filteredBuzz = useMemo(() => {
-    let list = buzzList;
+    let list = [...buzzList];
 
-    // 1. Tab view filtering
-    if (buzzFeedTab === 'following') {
-      list = list.filter(b => followingIds.includes(b.author.id));
-    } else if (buzzFeedTab === 'saved') {
-      list = list.filter(b => savedBuzzIds.includes(b.id));
-    } else if (buzzFeedTab === 'liked') {
-      list = list.filter(b => b.likedByMe || (b.myReaction !== undefined && b.myReaction !== null));
-    } else if (buzzFeedTab === 'trending') {
-      list = [...list].sort((a, b) => {
-        const aScore = (a.reactions ? Object.values(a.reactions).reduce((s, v) => s + v, 0) : 0) + (a.repliesCount || 0) * 2;
-        const bScore = (b.reactions ? Object.values(b.reactions).reduce((s, v) => s + v, 0) : 0) + (b.repliesCount || 0) * 2;
-        return bScore - aScore;
-      });
-    }
-
-    // 2. Tag filtering
+    // 1. Tag filtering (if active tag filter is chosen)
     if (activeTagFilter !== 'all') {
       const target = activeTagFilter.toLowerCase().replace(/^#/, '');
       list = list.filter(b => {
@@ -181,8 +203,127 @@ export const CommunityFeedPage: React.FC = () => {
       });
     }
 
-    return list;
-  }, [buzzList, buzzFeedTab, followingIds, savedBuzzIds, activeTagFilter]);
+    // 2. Tab view filtering & scoring
+    if (buzzFeedTab === 'following') {
+      // Predictable, reverse-chronological feed of only followed accounts
+      return list
+        .filter(b => followingIds.includes(b.author.id))
+        .sort((a, b) => getPostTimestampMs(b.createdAt) - getPostTimestampMs(a.createdAt));
+    }
+
+    if (buzzFeedTab === 'saved') {
+      return list.filter(b => savedBuzzIds.includes(b.id));
+    }
+
+    if (buzzFeedTab === 'liked') {
+      return list.filter(b => b.likedByMe || (b.myReaction !== undefined && b.myReaction !== null));
+    }
+
+    if (buzzFeedTab === 'trending') {
+      return list.sort((a, b) => {
+        const aReactions = a.reactions ? Object.values(a.reactions).reduce((s, v) => s + (v || 0), 0) : (a.likes || 0);
+        const bReactions = b.reactions ? Object.values(b.reactions).reduce((s, v) => s + (v || 0), 0) : (b.likes || 0);
+        const aScore = aReactions + (a.repliesCount || 0) * 2;
+        const bScore = bReactions + (b.repliesCount || 0) * 2;
+        return bScore - aScore;
+      });
+    }
+
+    // Default 'for-you' tab: Multi-signal personalized feed scoring
+    return list
+      .map(post => {
+        // A. Recency Score (smooth decay over time, scale 0 to 100)
+        const ageHours = getPostAgeInHours(post.createdAt);
+        const recencyScore = 100 / (1 + Math.pow(ageHours / 20, 1.25));
+
+        // B. Engagement Score (reactions + replies, scale 0 to 60)
+        const totalReactions = post.reactions
+          ? Object.values(post.reactions).reduce((sum, v) => sum + (v || 0), 0)
+          : (post.likes || 0);
+        const repliesCount = (post.replies && post.replies.length > 0)
+          ? post.replies.length
+          : (post.repliesCount || 0);
+        const engagementScore = Math.min(60, (totalReactions * 2) + (repliesCount * 4));
+
+        // C. Author Affinity Score (followed creator boost, scale 0 to 35)
+        const isFollowedAuthor = followingIds.includes(post.author.id);
+        const isOwnPost = Boolean(currentUser?.id && post.author.id === currentUser.id);
+        const authorAffinityScore = isFollowedAuthor ? 35 : (isOwnPost ? 20 : 0);
+
+        // D. Interest Match Score (overlap between post topics and user interest profile)
+        const postTopics: string[] = [];
+        (post.tags || []).forEach(t => {
+          if (t) postTopics.push(t.toLowerCase().replace(/^#/, ''));
+        });
+        const contentHashtags = post.content.match(/#([a-zA-Z0-9_\u00C0-\u024F]+)/g);
+        contentHashtags?.forEach(m => postTopics.push(m.toLowerCase().replace(/^#/, '')));
+
+        if (post.taggedFilm?.genres) {
+          post.taggedFilm.genres.forEach(g => postTopics.push(g.toLowerCase().trim()));
+        }
+        if (post.taggedFilm?.type) {
+          postTopics.push(post.taggedFilm.type.toLowerCase().trim());
+        }
+        if (post.taggedArticle?.category) {
+          postTopics.push(post.taggedArticle.category.toLowerCase().trim());
+        }
+
+        let matchedWeights = 0;
+        let topMatchedTag: string | undefined = undefined;
+        let topTagWeight = 0;
+
+        const uniqueTopics = Array.from(new Set(postTopics.filter(t => t && t.length >= 2)));
+        uniqueTopics.forEach(topic => {
+          const userWeight = interestProfile[topic] || 0;
+          if (userWeight > 0) {
+            matchedWeights += Math.min(userWeight, 25);
+            if (userWeight > topTagWeight) {
+              topTagWeight = userWeight;
+              topMatchedTag = topic;
+            }
+          }
+        });
+
+        const interestScore = Math.min(65, matchedWeights * 3);
+
+        // E. Total Weighted Score using exposed weight constants
+        const feedScore =
+          (recencyScore * WEIGHT_RECENCY) +
+          (interestScore * WEIGHT_INTEREST_OVERLAP) +
+          (authorAffinityScore * WEIGHT_AUTHOR_AFFINITY) +
+          (engagementScore * WEIGHT_ENGAGEMENT);
+
+        // F. Generate explainable recommendation badge
+        let recommendationSignal: RecommendationSignal | undefined = undefined;
+        if (interestScore >= 18 && topMatchedTag) {
+          recommendationSignal = {
+            type: 'interest',
+            label: `Sesuai minat #${topMatchedTag}`,
+            matchedTag: topMatchedTag,
+            score: feedScore,
+          };
+        } else if (isFollowedAuthor) {
+          recommendationSignal = {
+            type: 'following',
+            label: 'Dari kreator yang kamu ikuti',
+            score: feedScore,
+          };
+        } else if (engagementScore >= 35) {
+          recommendationSignal = {
+            type: 'trending',
+            label: 'Sedang hangat dibicarakan',
+            score: feedScore,
+          };
+        }
+
+        return {
+          ...post,
+          feedScore,
+          recommendationSignal,
+        };
+      })
+      .sort((a, b) => (b.feedScore || 0) - (a.feedScore || 0));
+  }, [buzzList, buzzFeedTab, followingIds, savedBuzzIds, activeTagFilter, interestProfile, currentUser?.id]);
 
   const handleShareBuzz = (post: typeof buzzList[0]) => {
     const postFilm = post.taggedFilm ? films.find(f => f.id === post.taggedFilm?.id) || post.taggedFilm : null;
@@ -714,6 +855,14 @@ export const CommunityFeedPage: React.FC = () => {
                     )}
                   </div>
                 </div>
+
+                {/* Recommendation Signal Badge (Explainable AI / personalization badge) */}
+                {buzzFeedTab === 'for-you' && post.recommendationSignal && (
+                  <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-cyan-300 bg-cyan-950/70 border border-cyan-500/30 px-2.5 py-0.5 rounded-full shadow-sm">
+                    <Sparkles className="w-3 h-3 text-cyan-400 shrink-0" />
+                    <span>{post.recommendationSignal.label}</span>
+                  </div>
+                )}
 
                 {/* Content Text */}
                 <p className="text-slate-200 text-sm sm:text-base leading-relaxed whitespace-pre-line">

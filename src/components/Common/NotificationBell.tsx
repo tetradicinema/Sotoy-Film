@@ -10,7 +10,8 @@ import {
   Award, 
   Trash2, 
   X,
-  ExternalLink
+  ExternalLink,
+  Sparkles
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { NotificationItem, NotificationType } from '../../types';
@@ -37,11 +38,11 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ mode = 'glob
   // Filter notifications based on mode and active tab
   const filteredNotifications = notifications.filter(n => {
     if (mode === 'writer') {
-      const writerTypes: NotificationType[] = ['comment', 'like', 'editor_request'];
+      const writerTypes: NotificationType[] = ['comment', 'like', 'reaction', 'editor_request'];
       if (!writerTypes.includes(n.type)) return false;
     }
     if (mode === 'critic') {
-      const criticTypes: NotificationType[] = ['comment', 'like'];
+      const criticTypes: NotificationType[] = ['comment', 'like', 'reaction'];
       if (!criticTypes.includes(n.type)) return false;
     }
     if (activeFilter === 'unread') {
@@ -52,11 +53,11 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ mode = 'glob
 
   const unreadCountForMode = notifications.filter(n => {
     if (mode === 'writer') {
-      const writerTypes: NotificationType[] = ['comment', 'like', 'editor_request'];
+      const writerTypes: NotificationType[] = ['comment', 'like', 'reaction', 'editor_request'];
       return !n.isRead && writerTypes.includes(n.type);
     }
     if (mode === 'critic') {
-      const criticTypes: NotificationType[] = ['comment', 'like'];
+      const criticTypes: NotificationType[] = ['comment', 'like', 'reaction'];
       return !n.isRead && criticTypes.includes(n.type);
     }
     return !n.isRead;
@@ -84,6 +85,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ mode = 'glob
         return <MessageSquare className="w-4 h-4 text-blue-500" />;
       case 'like':
         return <Heart className="w-4 h-4 text-rose-500 fill-rose-500/20" />;
+      case 'reaction':
+        return <Sparkles className="w-4 h-4 text-amber-400" />;
       case 'mention':
         return <AtSign className="w-4 h-4 text-purple-500" />;
       case 'editor_request':
