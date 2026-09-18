@@ -6,13 +6,21 @@ Allow: /artikel/*
 Allow: /article/*
 Allow: /film/*
 Allow: /film-database
+Allow: /rekomendasi-film
 Allow: /film-recommendations
+Allow: /komunitas
 Allow: /community-feed
 Allow: /search
+Allow: /tentang-kami
 Allow: /about-us
+Allow: /kebijakan-privasi
 Allow: /privacy-policy
+Allow: /syarat-ketentuan
 Allow: /terms-conditions
+Allow: /kontak-bisnis
 Allow: /business-inquiries
+Allow: /gabung-kritikus
+Allow: /kriteria-kritikus
 Allow: /critic-criteria
 
 # Disallow administrative and private views
