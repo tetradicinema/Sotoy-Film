@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import { handleTmdbRequest } from "./api/tmdb";
 
 async function startServer() {
   const app = express();
@@ -8,6 +9,11 @@ async function startServer() {
   // 1. API ROUTES FIRST
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  // TMDB Proxy route for catalog import (mirrors Vercel api/tmdb.ts)
+  app.get("/api/tmdb", (req, res) => {
+    return handleTmdbRequest(req, res);
   });
 
   // Note: /sitemap.xml is statically generated at build-time into public/sitemap.xml
