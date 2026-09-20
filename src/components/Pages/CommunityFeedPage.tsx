@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   MessageSquare,
   Heart,
@@ -399,19 +400,28 @@ export const CommunityFeedPage: React.FC = () => {
                     key={tab.id}
                     id={`mobile-buzz-tab-${tab.id}`}
                     onClick={() => setBuzzFeedTab(tab.id as BuzzFeedTab)}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all shrink-0 ${
+                    className={`relative flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors shrink-0 ${
                       isActive
-                        ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25'
+                        ? 'text-white'
                         : 'bg-slate-900/90 text-slate-400 hover:text-white border border-slate-800'
                     }`}
                   >
-                    <Icon className="w-3.5 h-3.5" />
-                    <span>{tab.label}</span>
-                    {tab.badge ? (
-                      <span className="text-[10px] bg-black/40 text-white px-1.5 py-0.2 rounded-full font-mono">
-                        {tab.badge}
-                      </span>
-                    ) : null}
+                    {isActive && (
+                      <motion.div
+                        layoutId="activeMobileBuzzTab"
+                        className="absolute inset-0 bg-[#FF2E7E] rounded-full shadow-md shadow-[#FF2E7E]/25 z-0"
+                        transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+                      />
+                    )}
+                    <span className="relative z-10 flex items-center gap-1.5">
+                      <Icon className="w-3.5 h-3.5" />
+                      <span>{tab.label}</span>
+                      {tab.badge ? (
+                        <span className="text-[10px] bg-black/40 text-white px-1.5 py-0.2 rounded-full font-mono">
+                          {tab.badge}
+                        </span>
+                      ) : null}
+                    </span>
                   </button>
                 );
               })}
@@ -744,42 +754,65 @@ export const CommunityFeedPage: React.FC = () => {
         {/* Tag Filters Bar */}
         <div className="flex items-center gap-2 overflow-x-auto py-1 scrollbar-none flex-nowrap">
           <Hash className="w-4 h-4 text-slate-500 shrink-0" />
-          {allTags.map((tag: string) => (
-            <button
-              key={tag}
-              onClick={() => setActiveTagFilter(tag)}
-              className={`px-3 py-1 rounded-xl text-xs font-bold transition-colors shrink-0 ${
-                activeTagFilter === tag
-                  ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/30'
-                  : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-              }`}
-            >
-              {tag === 'all' ? 'Semua Topik' : `#${tag}`}
-            </button>
-          ))}
+          {allTags.map((tag: string) => {
+            const isActive = activeTagFilter === tag;
+            return (
+              <button
+                key={tag}
+                onClick={() => setActiveTagFilter(tag)}
+                className={`relative px-3 py-1 rounded-xl text-xs font-bold transition-colors shrink-0 ${
+                  isActive
+                    ? 'text-white shadow-md shadow-[#FF2E7E]/30'
+                    : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                }`}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTagFilterPill"
+                    className="absolute inset-0 bg-[#FF2E7E] rounded-xl z-0"
+                    transition={{ type: 'spring', damping: 26, stiffness: 350 }}
+                  />
+                )}
+                <span className="relative z-10">
+                  {tag === 'all' ? 'Semua Topik' : `#${tag}`}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* ========================================================================= */}
         {/* BUZZ POSTS STREAM WITH RICH PREVIEW CARDS */}
         {/* ========================================================================= */}
         <div className="space-y-4">
-          {filteredBuzz.map((post: BuzzPost) => {
-            // Find full film details if tagged
-            const postFilm = post.taggedFilm
-              ? films.find(f => f.id === post.taggedFilm?.id) || post.taggedFilm
-              : null;
+          <AnimatePresence mode="popLayout" initial={false}>
+            {filteredBuzz.map((post: BuzzPost) => {
+              // Find full film details if tagged
+              const postFilm = post.taggedFilm
+                ? films.find(f => f.id === post.taggedFilm?.id) || post.taggedFilm
+                : null;
 
-            // Find full article details if tagged
-            const postArticle = post.taggedArticle
-              ? articles.find(a => a.id === post.taggedArticle?.id) || post.taggedArticle
-              : null;
+              // Find full article details if tagged
+              const postArticle = post.taggedArticle
+                ? articles.find(a => a.id === post.taggedArticle?.id) || post.taggedArticle
+                : null;
 
-            return (
-              <div
-                key={post.id}
-                id={`buzz-feed-card-${post.id}`}
-                className="bg-[#121324] border border-slate-800/80 hover:border-slate-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl transition-all space-y-3.5 sm:space-y-4"
-              >
+              return (
+                <motion.div
+                  key={post.id}
+                  layout="position"
+                  initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.96, y: -8, transition: { duration: 0.16, ease: 'easeOut' } }}
+                  transition={{
+                    layout: { type: 'spring', damping: 28, stiffness: 320 },
+                    opacity: { duration: 0.22, ease: 'easeOut' },
+                    y: { duration: 0.22, ease: 'easeOut' },
+                    scale: { duration: 0.22, ease: 'easeOut' },
+                  }}
+                  id={`buzz-feed-card-${post.id}`}
+                  className="bg-[#121324] border border-slate-800/80 hover:border-slate-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl transition-colors space-y-3.5 sm:space-y-4"
+                >
                 {/* Post Author Info */}
                 <div className="flex items-center justify-between gap-2.5">
                   <div
@@ -1047,14 +1080,21 @@ export const CommunityFeedPage: React.FC = () => {
                     </button>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
-        </div>
 
-        {/* Empty States for Tabs */}
-        {filteredBuzz.length === 0 && (
-          <div className="bg-[#121324] border border-slate-800 rounded-3xl p-8 text-center space-y-4 shadow-xl">
+          {/* Empty States for Tabs */}
+          {filteredBuzz.length === 0 && (
+            <motion.div
+              key={`empty-${buzzFeedTab}-${activeTagFilter}`}
+              layout
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: -12 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+              className="bg-[#121324] border border-slate-800 rounded-3xl p-8 text-center space-y-4 shadow-xl"
+            >
             <div className="w-14 h-14 rounded-2xl bg-white/10 mx-auto flex items-center justify-center text-slate-200">
               {buzzFeedTab === 'following' ? (
                 <Users className="w-7 h-7 text-cyan-400" />
@@ -1125,9 +1165,11 @@ export const CommunityFeedPage: React.FC = () => {
                 <span>Kembali ke Feed "For you"</span>
               </button>
             )}
-          </div>
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
+    </div>
+  </div>
 
       {/* ========================================================================= */}
       {/* RIGHT WIDGETS COLUMN (DESKTOP) */}
