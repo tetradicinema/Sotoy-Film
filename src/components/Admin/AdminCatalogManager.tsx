@@ -21,10 +21,20 @@ import {
   Info,
   CheckCircle2,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Tag,
+  Users,
+  Image as ImageIcon
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { FilmItem } from '../../types';
+import { FilmItem, CastMember } from '../../types';
+import { AdminBatchTmdbModal } from './AdminBatchTmdbModal';
+import { 
+  formatDuration, 
+  generateSuggestedTags, 
+  mapTmdbDetailsToFilm,
+  fetchTmdbDetails
+} from '../../utils/tmdbHelper';
 
 interface FilmFormData {
   title: string;
@@ -39,7 +49,10 @@ interface FilmFormData {
   writer: string;
   studio: string;
   cast: string; // Comma-separated in form
+  castDetails: CastMember[]; // Top 5 with profile photos
   genres: string; // Comma-separated in form
+  tags: string[]; // Active selected tags
+  suggestedTags: string[]; // Dynamic suggested tags
   skorSotoy: number;
   trailerUrl: string;
   featuredRecommendation: boolean;
@@ -58,20 +71,13 @@ const DEFAULT_FORM: FilmFormData = {
   writer: '',
   studio: '',
   cast: '',
+  castDetails: [],
   genres: 'Action, Drama',
+  tags: ['action-packed', 'drama'],
+  suggestedTags: ['action-packed', 'drama', 'thriller', 'must-watch'],
   skorSotoy: 4.0,
   trailerUrl: '',
   featuredRecommendation: false,
-};
-
-// Helper to format minutes as "Xh Ym"
-const formatDuration = (minutes?: number): string => {
-  if (!minutes || minutes <= 0) return '';
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h > 0 && m > 0) return `${h}h ${m}m`;
-  if (h > 0) return `${h}h`;
-  return `${m}m`;
 };
 
 export const AdminCatalogManager: React.FC = () => {
@@ -80,10 +86,17 @@ export const AdminCatalogManager: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'movie' | 'series' | 'anime'>('all');
 
+  // Delete Confirmation State
+  const [filmToDelete, setFilmToDelete] = useState<FilmItem | null>(null);
+  const [isDeletingFilm, setIsDeletingFilm] = useState(false);
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingFilmId, setEditingFilmId] = useState<string | null>(null);
   const [formData, setFormData] = useState<FilmFormData>(DEFAULT_FORM);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const [customTagInput, setCustomTagInput] = useState('');
 
   // TMDB Import State
   const [tmdbQuery, setTmdbQuery] = useState('');
@@ -144,118 +157,39 @@ export const AdminCatalogManager: React.FC = () => {
     return () => clearTimeout(timer);
   }, [tmdbQuery, tmdbType, isModalOpen]);
 
-  // Handle selecting a TMDB search result to import its full details
+  // Handle selecting a TMDB search result to import its full details + cast profile photos + auto-tags
   const handleSelectTmdbResult = async (result: any) => {
     setIsTmdbImporting(true);
     setTmdbError(null);
     try {
-      const res = await fetch(`/api/tmdb?action=details&id=${result.id}&type=${tmdbType}`);
-      const data = await res.json();
+      const details = await fetchTmdbDetails(result.id, tmdbType);
+      const mapped = mapTmdbDetailsToFilm(details, tmdbType);
 
-      if (!res.ok) {
-        throw new Error(data?.error || 'Gagal mengambil detail dari TMDB.');
-      }
-
-      const details = data?.data || data;
-
-      // 1. Title: title (movie) or name (tv)
-      const mappedTitle = (details.title || details.name || result.title || result.name || '').trim();
-
-      // 2. Original Title: original_title / original_name (only if different from title)
-      const rawOriginal = (details.original_title || details.original_name || '').trim();
-      const mappedOriginalTitle = rawOriginal && rawOriginal.toLowerCase() !== mappedTitle.toLowerCase() ? rawOriginal : '';
-
-      // 3. Year: extracted from release_date / first_air_date
-      const dateStr = details.release_date || details.first_air_date || result.release_date || result.first_air_date || '';
-      let mappedYear = new Date().getFullYear();
-      if (dateStr) {
-        const parsed = parseInt(dateStr.slice(0, 4), 10);
-        if (!isNaN(parsed) && parsed > 1880) {
-          mappedYear = parsed;
-        }
-      }
-
-      // 4. Poster: https://image.tmdb.org/t/p/w500${poster_path}
-      const posterPath = details.poster_path || result.poster_path;
-      const mappedPoster = posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : '';
-
-      // 5. Backdrop: https://image.tmdb.org/t/p/original${backdrop_path}
-      const backdropPath = details.backdrop_path || result.backdrop_path;
-      const mappedBackdrop = backdropPath ? `https://image.tmdb.org/t/p/original${backdropPath}` : '';
-
-      // 6. Synopsis: overview
-      const mappedSynopsis = details.overview || result.overview || '';
-
-      // 7. Director: from credits.crew, find entry with job === "Director" (for tv, use created_by if crew has no director-job entry)
-      const crew: any[] = details.credits?.crew || [];
-      const directorEntry = crew.find((c: any) => c.job === 'Director');
-      let mappedDirector = directorEntry?.name || '';
-      if (!mappedDirector && Array.isArray(details.created_by) && details.created_by.length > 0) {
-        mappedDirector = details.created_by.map((c: any) => c.name).filter(Boolean).join(', ');
-      }
-
-      // 8. Writer: from credits.crew, find job === "Screenplay" or "Writer" (first match, optional field, leave blank if none found)
-      const writerEntry = crew.find((c: any) => c.job === 'Screenplay' || c.job === 'Writer');
-      const mappedWriter = writerEntry?.name || '';
-
-      // 9. Cast: first 8-10 names from credits.cast, mapped to just the name strings (comma-separated)
-      const castArray = (details.credits?.cast || []).slice(0, 10);
-      const mappedCast = castArray.map((c: any) => c.name).filter(Boolean).join(', ');
-
-      // 10. Genres: map genre_ids/genres to name strings (comma-separated)
-      const mappedGenres = (details.genres || []).map((g: any) => g.name).filter(Boolean).join(', ');
-
-      // 11. Duration: for movies, format runtime minutes as "Xh Ym"; for tv, use episode_run_time[0] similarly if present, else blank
-      let mappedDuration = '';
-      if (tmdbType === 'movie') {
-        mappedDuration = formatDuration(details.runtime);
-      } else {
-        if (Array.isArray(details.episode_run_time) && details.episode_run_time.length > 0) {
-          mappedDuration = formatDuration(details.episode_run_time[0]);
-        } else if (details.number_of_episodes) {
-          mappedDuration = `${details.number_of_episodes} Episodes`;
-        }
-      }
-
-      // 12. Trailer URL: from videos.results, find first entry with type === "Trailer" and site === "YouTube", build https://www.youtube.com/watch?v=${key}
-      let mappedTrailerUrl = '';
-      if (details.videos && Array.isArray(details.videos.results)) {
-        const trailer = details.videos.results.find(
-          (v: any) => v.site === 'YouTube' && v.type === 'Trailer'
-        );
-        if (trailer && trailer.key) {
-          mappedTrailerUrl = `https://www.youtube.com/watch?v=${trailer.key}`;
-        }
-      }
-
-      // 13. Type: 'movie' or 'series' based on which search mode was used
-      const mappedType: 'movie' | 'series' = tmdbType === 'tv' ? 'series' : 'movie';
-
-      // Studio from first production company if available
-      const mappedStudio = (details.production_companies && details.production_companies[0]?.name) || '';
-
-      // Populate exact same formData state used by the form
       setFormData(prev => ({
         ...prev,
-        title: mappedTitle,
-        originalTitle: mappedOriginalTitle,
-        type: mappedType,
-        year: mappedYear,
-        poster: mappedPoster || prev.poster,
-        backdrop: mappedBackdrop || prev.backdrop,
-        synopsis: mappedSynopsis || prev.synopsis,
-        director: mappedDirector || prev.director,
-        writer: mappedWriter || prev.writer,
-        studio: mappedStudio || prev.studio,
-        cast: mappedCast || prev.cast,
-        genres: mappedGenres || prev.genres,
-        duration: mappedDuration || prev.duration,
-        trailerUrl: mappedTrailerUrl || prev.trailerUrl,
+        title: mapped.title,
+        originalTitle: mapped.originalTitle,
+        type: mapped.type,
+        year: mapped.year,
+        poster: mapped.poster || prev.poster,
+        backdrop: mapped.backdrop || prev.backdrop,
+        synopsis: mapped.synopsis || prev.synopsis,
+        director: mapped.director || prev.director,
+        writer: mapped.writer || prev.writer,
+        studio: mapped.studio || prev.studio,
+        cast: mapped.cast || prev.cast,
+        castDetails: mapped.castDetails,
+        genres: mapped.genres || prev.genres,
+        tags: mapped.tags,
+        suggestedTags: mapped.suggestedTags,
+        duration: mapped.duration || prev.duration,
+        trailerUrl: mapped.trailerUrl || prev.trailerUrl,
+        skorSotoy: mapped.skorSotoy || prev.skorSotoy,
       }));
 
-      setImportedTmdbTitle(mappedTitle);
+      setImportedTmdbTitle(mapped.title);
       setTmdbResults([]);
-      showToast(`Metadata untuk "${mappedTitle}" berhasil diimpor dari TMDB!`);
+      showToast(`Metadata & foto profil pemeran "${mapped.title}" berhasil diimpor dari TMDB!`);
     } catch (err: any) {
       const msg = err.message || 'Gagal mengimpor data dari TMDB.';
       setTmdbError(msg);
@@ -267,13 +201,17 @@ export const AdminCatalogManager: React.FC = () => {
 
   // Filtered films
   const filteredFilms = useMemo(() => {
+    const seenIds = new Set<string>();
     return films.filter(film => {
+      if (!film || !film.id) return false;
+      if (seenIds.has(film.id)) return false;
+      seenIds.add(film.id);
       if (typeFilter !== 'all' && film.type !== typeFilter) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const matchTitle = film.title.toLowerCase().includes(q);
+        const matchTitle = film.title?.toLowerCase().includes(q);
         const matchDirector = film.director?.toLowerCase().includes(q);
-        const matchGenre = film.genres?.some(g => g.toLowerCase().includes(q));
+        const matchGenre = film.genres?.some(g => g?.toLowerCase().includes(q));
         if (!matchTitle && !matchDirector && !matchGenre) return false;
       }
       return true;
@@ -289,12 +227,24 @@ export const AdminCatalogManager: React.FC = () => {
     setTmdbError(null);
     setImportedTmdbTitle(null);
     setShowTmdbSection(true);
+    setIsSubmitting(false);
+    setCustomTagInput('');
     setIsModalOpen(true);
   };
 
   // Open modal for editing existing film
   const handleOpenEditModal = (film: FilmItem) => {
     setEditingFilmId(film.id);
+    const existingGenres = film.genres || [];
+    const suggested = generateSuggestedTags(
+      film.title,
+      existingGenres,
+      film.year,
+      film.synopsis,
+      film.skorSotoy ? film.skorSotoy * 2 : 8.0,
+      film.director
+    );
+
     setFormData({
       title: film.title || '',
       originalTitle: film.originalTitle || '',
@@ -308,7 +258,14 @@ export const AdminCatalogManager: React.FC = () => {
       writer: film.writer || '',
       studio: film.studio || '',
       cast: (film.cast || []).join(', '),
-      genres: (film.genres || []).join(', '),
+      castDetails: film.castDetails || (film.cast || []).slice(0, 5).map(name => ({
+        name,
+        character: 'Pemeran',
+        photo: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'
+      })),
+      genres: existingGenres.join(', '),
+      tags: film.tags || suggested.slice(0, 4),
+      suggestedTags: suggested,
       skorSotoy: film.skorSotoy || 4.0,
       trailerUrl: film.trailerUrl || '',
       featuredRecommendation: !!film.featuredRecommendation,
@@ -318,38 +275,113 @@ export const AdminCatalogManager: React.FC = () => {
     setTmdbError(null);
     setImportedTmdbTitle(null);
     setShowTmdbSection(false);
+    setIsSubmitting(false);
+    setCustomTagInput('');
     setIsModalOpen(true);
   };
 
   // Save (Add or Update)
-  const handleSaveFilm = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveFilm = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
 
-    if (!formData.title.trim()) {
-      showToast('Judul film wajib diisi!');
+    console.log('[AdminCatalogManager] === [EVENT CAPTURED] handleSaveFilm triggered ===', {
+      eventType: e?.type,
+      editingFilmId,
+      isSubmitting,
+      timestamp: new Date().toISOString(),
+    });
+
+    console.log('[AdminCatalogManager] Raw formData state before validation:', {
+      title: formData.title,
+      type: formData.type,
+      year: formData.year,
+      duration: formData.duration,
+      genres: formData.genres,
+      cast: formData.cast,
+      poster: formData.poster,
+      backdrop: formData.backdrop,
+      director: formData.director,
+      tags: formData.tags,
+      skorSotoy: formData.skorSotoy,
+    });
+
+    // Guard: Prevent double-submission
+    if (isSubmitting) {
+      console.warn('[AdminCatalogManager] Submission BLOCKED: isSubmitting is currently true');
       return;
     }
 
-    const castArray = formData.cast
-      .split(',')
-      .map(c => c.trim())
-      .filter(Boolean);
+    // Step 1: Validate Title
+    console.log('[AdminCatalogManager] [Validation Step 1] Checking title:', {
+      value: formData.title,
+      trimmed: formData.title?.trim(),
+      isEmpty: !formData.title || !formData.title.trim(),
+    });
 
+    if (!formData.title || !formData.title.trim()) {
+      console.warn('[AdminCatalogManager] Validation BLOCKED: Judul film is empty or contains only whitespace!');
+      showToast('Judul film wajib diisi!');
+      return;
+    }
+    console.log('[AdminCatalogManager] Title validated successfully:', formData.title.trim());
+
+    // Step 2: Validate & Parse Year
+    const parsedYear = Number(formData.year) || 2024;
+    console.log('[AdminCatalogManager] [Validation Step 2] Parsed year:', { raw: formData.year, parsed: parsedYear });
+
+    // Step 3: Validate & Parse Genres
     const genresArray = formData.genres
-      .split(',')
-      .map(g => g.trim())
-      .filter(Boolean);
+      ? formData.genres.split(',').map(g => g.trim()).filter(Boolean)
+      : [];
+    console.log('[AdminCatalogManager] [Validation Step 3] Parsed genres:', genresArray);
 
-    const posterUrl = formData.poster.trim() || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80';
-    const backdropUrl = formData.backdrop.trim() || 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&w=1200&q=80';
+    // Step 4: Validate & Parse Cast
+    const castArray = formData.cast
+      ? formData.cast.split(',').map(c => c.trim()).filter(Boolean)
+      : [];
+    console.log('[AdminCatalogManager] [Validation Step 4] Parsed cast array (count):', castArray.length);
 
-    if (editingFilmId) {
-      // Update existing
-      await updateFilm(editingFilmId, {
+    setIsSubmitting(true);
+    console.log('[AdminCatalogManager] isSubmitting state set to true, proceeding with payload construction...');
+
+    try {
+      // Clean & ensure valid image and trailer URLs
+      let posterUrl = formData.poster.trim();
+      if (!posterUrl) {
+        posterUrl = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80';
+      } else if (!/^https?:\/\//i.test(posterUrl) && posterUrl.includes('.')) {
+        posterUrl = 'https://' + posterUrl;
+      }
+
+      let backdropUrl = formData.backdrop.trim();
+      if (!backdropUrl) {
+        backdropUrl = 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&w=1200&q=80';
+      } else if (!/^https?:\/\//i.test(backdropUrl) && backdropUrl.includes('.')) {
+        backdropUrl = 'https://' + backdropUrl;
+      }
+
+      let trailerUrl = formData.trailerUrl.trim();
+      if (trailerUrl && !/^https?:\/\//i.test(trailerUrl) && trailerUrl.includes('.')) {
+        trailerUrl = 'https://' + trailerUrl;
+      }
+
+      // Sync top 5 castDetails with castArray if castDetails was empty
+      let finalCastDetails = formData.castDetails;
+      if ((!finalCastDetails || finalCastDetails.length === 0) && castArray.length > 0) {
+        finalCastDetails = castArray.slice(0, 5).map(name => ({
+          name,
+          character: 'Pemeran',
+          photo: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'
+        }));
+      }
+
+      const filmPayload = {
         title: formData.title.trim(),
         originalTitle: formData.originalTitle.trim() || undefined,
         type: formData.type,
-        year: Number(formData.year) || 2024,
+        year: parsedYear,
         duration: formData.duration.trim() || undefined,
         poster: posterUrl,
         backdrop: backdropUrl,
@@ -358,44 +390,72 @@ export const AdminCatalogManager: React.FC = () => {
         writer: formData.writer.trim() || undefined,
         studio: formData.studio.trim() || undefined,
         cast: castArray,
+        castDetails: finalCastDetails,
         genres: genresArray,
-        skorSotoy: Number(formData.skorSotoy) || 4.0,
-        trailerUrl: formData.trailerUrl.trim() || undefined,
-        featuredRecommendation: formData.featuredRecommendation,
-      });
-    } else {
-      // Create new
-      await addFilm({
-        title: formData.title.trim(),
-        originalTitle: formData.originalTitle.trim() || undefined,
-        type: formData.type,
-        year: Number(formData.year) || 2024,
-        duration: formData.duration.trim() || undefined,
-        poster: posterUrl,
-        backdrop: backdropUrl,
-        synopsis: formData.synopsis.trim(),
-        director: formData.director.trim(),
-        writer: formData.writer.trim() || undefined,
-        studio: formData.studio.trim() || undefined,
-        cast: castArray,
-        genres: genresArray,
+        tags: formData.tags,
         skorSotoy: Number(formData.skorSotoy) || 4.0,
         totalVotes: 1,
         criticsSkorSotoy: Number(formData.skorSotoy) || 4.0,
         whereToWatch: [
-          { platform: 'Bioskop / Cinema', type: 'cinema', badgeColor: '#E50914' }
+          { platform: 'Bioskop / Cinema', type: 'cinema' as const, badgeColor: '#E50914' }
         ],
-        trailerUrl: formData.trailerUrl.trim() || undefined,
+        trailerUrl: trailerUrl || undefined,
         featuredRecommendation: formData.featuredRecommendation,
-      });
-    }
+      };
 
-    setIsModalOpen(false);
+      console.log('[AdminCatalogManager] Validation ALL PASSED! Prepared filmPayload:', filmPayload);
+
+      let success = false;
+      if (editingFilmId) {
+        console.log('[AdminCatalogManager] Invoking updateFilm for film ID:', editingFilmId);
+        success = await updateFilm(editingFilmId, filmPayload);
+      } else {
+        console.log('[AdminCatalogManager] Invoking addFilm with new film payload...');
+        success = await addFilm(filmPayload);
+      }
+
+      console.log('[AdminCatalogManager] Result from AppContext (addFilm/updateFilm):', { success });
+
+      if (success !== false) {
+        console.log('[AdminCatalogManager] Operation reported success, closing modal.');
+        setIsModalOpen(false);
+      } else {
+        console.warn('[AdminCatalogManager] Operation returned false from Firestore, but local catalog was updated. Closing modal.');
+        setIsModalOpen(false);
+      }
+    } catch (err: any) {
+      console.error('[AdminCatalogManager] [CRITICAL ERROR] in handleSaveFilm:', err);
+      showToast('Gagal memproses film: ' + (err?.message || 'Terjadi kesalahan sistem'));
+    } finally {
+      console.log('[AdminCatalogManager] Resetting isSubmitting to false');
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDelete = async (film: FilmItem) => {
-    if (window.confirm(`Yakin ingin menghapus film "${film.title}" dari database secara permanen?`)) {
-      await deleteFilm(film.id);
+  const handleDelete = (film: FilmItem) => {
+    console.log('[AdminCatalogManager] Initiating in-app delete modal for film:', {
+      id: film.id,
+      title: film.title,
+    });
+    setFilmToDelete(film);
+  };
+
+  const confirmDelete = async () => {
+    if (!filmToDelete) return;
+    console.log('[AdminCatalogManager] Confirming deletion for film:', {
+      id: filmToDelete.id,
+      title: filmToDelete.title,
+    });
+    setIsDeletingFilm(true);
+    try {
+      const res = await deleteFilm(filmToDelete.id);
+      console.log('[AdminCatalogManager] deleteFilm returned:', res);
+      setFilmToDelete(null);
+    } catch (err: any) {
+      console.error('[AdminCatalogManager] Error deleting film:', err);
+      showToast('Gagal menghapus film: ' + (err?.message || 'Terjadi kesalahan'));
+    } finally {
+      setIsDeletingFilm(false);
     }
   };
 
@@ -417,6 +477,16 @@ export const AdminCatalogManager: React.FC = () => {
 
         {/* Actions: TMDB Import and Manual Add */}
         <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-start sm:self-auto">
+          <button
+            onClick={() => setIsBatchModalOpen(true)}
+            id="admin-batch-import-btn"
+            className="px-3.5 py-2.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/40 text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm"
+            title="Import banyak film sekaligus dengan daftar ID TMDB"
+          >
+            <Layers className="w-4 h-4 text-purple-400" />
+            <span>Import Massal TMDB</span>
+          </button>
+
           <button
             onClick={() => handleOpenAddModal(true)}
             className="px-3.5 py-2.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm"
@@ -586,8 +656,13 @@ export const AdminCatalogManager: React.FC = () => {
                           <Eye className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={() => handleDelete(film)}
-                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors"
+                          type="button"
+                          id={`admin-delete-film-btn-${film.id}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(film);
+                          }}
+                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors cursor-pointer"
                           title="Hapus Film dari Katalog"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -835,7 +910,7 @@ export const AdminCatalogManager: React.FC = () => {
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSaveFilm} className="space-y-4">
+            <form onSubmit={handleSaveFilm} noValidate className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Title */}
                 <div className="sm:col-span-2 space-y-1">
@@ -911,11 +986,14 @@ export const AdminCatalogManager: React.FC = () => {
 
                 {/* Poster URL */}
                 <div className="sm:col-span-2 space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    URL Poster Film
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                    <span>URL Poster Film</span>
+                    {formData.poster && (
+                      <span className="text-[10px] text-emerald-400 font-normal">✓ Poster Terisi</span>
+                    )}
                   </label>
                   <input
-                    type="url"
+                    type="text"
                     value={formData.poster}
                     onChange={e => setFormData({ ...formData, poster: e.target.value })}
                     placeholder="https://images.unsplash.com/... atau tautan gambar poster"
@@ -925,11 +1003,14 @@ export const AdminCatalogManager: React.FC = () => {
 
                 {/* Backdrop URL */}
                 <div className="sm:col-span-2 space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    URL Backdrop / Header Gambar Lebar
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                    <span>URL Backdrop / Header Gambar Lebar</span>
+                    {formData.backdrop && (
+                      <span className="text-[10px] text-emerald-400 font-normal">✓ Backdrop Terisi</span>
+                    )}
                   </label>
                   <input
-                    type="url"
+                    type="text"
                     value={formData.backdrop}
                     onChange={e => setFormData({ ...formData, backdrop: e.target.value })}
                     placeholder="https://images.unsplash.com/... atau tautan gambar landscape"
@@ -993,6 +1074,80 @@ export const AdminCatalogManager: React.FC = () => {
                   />
                 </div>
 
+                {/* Cast Details: Top 5 with Profile Photos */}
+                <div className="sm:col-span-2 space-y-2 pt-2 border-t border-slate-800/80">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Foto Profil & Metadata Top 5 Pemeran Utama (TMDB)</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400">
+                      {formData.castDetails?.length || 0}/5 Pemeran Ditautkan
+                    </span>
+                  </div>
+
+                  {formData.castDetails && formData.castDetails.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                      {formData.castDetails.map((castMember, idx) => (
+                        <div
+                          key={idx}
+                          className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 flex flex-col items-center text-center relative group hover:border-cyan-500/40 transition-all"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => ({
+                                ...prev,
+                                castDetails: prev.castDetails.filter((_, i) => i !== idx)
+                              }));
+                            }}
+                            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                            title="Hapus pemeran ini"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                          <img
+                            src={castMember.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'}
+                            alt={castMember.name}
+                            className="w-14 h-14 rounded-full object-cover border border-cyan-500/30 mb-1.5 shadow-sm"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
+                            }}
+                          />
+                          <input
+                            type="text"
+                            value={castMember.name}
+                            onChange={(e) => {
+                              const updated = [...formData.castDetails];
+                              updated[idx] = { ...updated[idx], name: e.target.value };
+                              setFormData(prev => ({ ...prev, castDetails: updated }));
+                            }}
+                            placeholder="Nama Aktor"
+                            className="w-full bg-slate-950/60 border border-slate-800 text-[11px] font-bold text-white text-center rounded px-1 py-0.5 focus:outline-none focus:border-cyan-400"
+                          />
+                          <input
+                            type="text"
+                            value={castMember.character || ''}
+                            onChange={(e) => {
+                              const updated = [...formData.castDetails];
+                              updated[idx] = { ...updated[idx], character: e.target.value };
+                              setFormData(prev => ({ ...prev, castDetails: updated }));
+                            }}
+                            placeholder="Sebagai / Peran"
+                            className="w-full bg-transparent text-[10px] text-slate-400 text-center border-none p-0 focus:outline-none focus:ring-1 focus:ring-cyan-400 rounded mt-1"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-slate-900/50 border border-dashed border-slate-800 rounded-xl p-3 text-center">
+                      <p className="text-[11px] text-slate-500">
+                        Belum ada foto profil aktor. Impor metadata melalui TMDB di atas atau foto default akan digunakan saat publikasi.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
                 {/* Genres (comma-separated) */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
@@ -1023,13 +1178,128 @@ export const AdminCatalogManager: React.FC = () => {
                   />
                 </div>
 
+                {/* Auto-Tagging & Tags Management */}
+                <div className="sm:col-span-2 space-y-2 pt-2 border-t border-slate-800/80">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <Tag className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Tagar Film & Auto-Tagging Rekomendasi</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400">
+                      {formData.tags?.length || 0} tag aktif
+                    </span>
+                  </div>
+
+                  {/* Active tags chips */}
+                  <div className="flex flex-wrap items-center gap-1.5 min-h-[36px] p-2 bg-slate-900 border border-slate-750 rounded-xl">
+                    {formData.tags && formData.tags.length > 0 ? (
+                      formData.tags.map((tag, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30 text-xs font-semibold"
+                        >
+                          #{tag}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => ({
+                                ...prev,
+                                tags: prev.tags.filter((_, i) => i !== idx)
+                              }));
+                            }}
+                            className="hover:text-white transition-colors ml-0.5"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-xs text-slate-500 italic">
+                        Belum ada tagar dipilih. Klik saran tag di bawah atau buat tag sendiri.
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Suggested tags chips based on genres, title, and TMDB import */}
+                  {formData.suggestedTags && formData.suggestedTags.length > 0 && (
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-[10px] text-slate-400 font-medium block">
+                        Saran Tag Otomatis (Klik untuk menambah atau menghapus):
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {formData.suggestedTags.map((stag, idx) => {
+                          const isSelected = formData.tags?.includes(stag);
+                          return (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => {
+                                setFormData(prev => {
+                                  const currentTags = prev.tags || [];
+                                  if (currentTags.includes(stag)) {
+                                    return { ...prev, tags: currentTags.filter(t => t !== stag) };
+                                  } else {
+                                    return { ...prev, tags: [...currentTags, stag] };
+                                  }
+                                });
+                              }}
+                              className={`px-2 py-0.5 rounded-md text-[11px] font-medium transition-all flex items-center gap-1 ${
+                                isSelected
+                                  ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
+                                  : 'bg-slate-800 hover:bg-slate-750 text-slate-300 border border-slate-700'
+                              }`}
+                            >
+                              <span>{isSelected ? '✓' : '+'}</span>
+                              <span>{stag}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Add Custom Tag input */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <input
+                      type="text"
+                      value={customTagInput}
+                      onChange={e => setCustomTagInput(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const val = customTagInput.trim().toLowerCase().replace(/^#/, '');
+                          if (val && !formData.tags?.includes(val)) {
+                            setFormData(prev => ({ ...prev, tags: [...(prev.tags || []), val] }));
+                            setCustomTagInput('');
+                          }
+                        }
+                      }}
+                      placeholder="Ketik tag custom (cth: 90s cinema, thriller, oscar-winner) lalu tekan Enter..."
+                      className="flex-1 bg-slate-900 border border-slate-750 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const val = customTagInput.trim().toLowerCase().replace(/^#/, '');
+                        if (val && !formData.tags?.includes(val)) {
+                          setFormData(prev => ({ ...prev, tags: [...(prev.tags || []), val] }));
+                          setCustomTagInput('');
+                        }
+                      }}
+                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-colors shrink-0"
+                    >
+                      + Tambah
+                    </button>
+                  </div>
+                </div>
+
                 {/* Trailer URL */}
                 <div className="sm:col-span-2 space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                     Tautan Trailer YouTube (Opsional)
                   </label>
                   <input
-                    type="url"
+                    type="text"
                     value={formData.trailerUrl}
                     onChange={e => setFormData({ ...formData, trailerUrl: e.target.value })}
                     placeholder="https://www.youtube.com/watch?v=..."
@@ -1057,19 +1327,110 @@ export const AdminCatalogManager: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-bold transition-all"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-bold transition-all disabled:opacity-50"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 text-xs font-black transition-all shadow-md shadow-amber-500/20 flex items-center gap-1.5"
+                  id="admin-publish-film-btn"
+                  disabled={isSubmitting}
+                  onClick={(e) => {
+                    console.log('[AdminCatalogManager] "Terbitkan Film" button clicked via onClick!', {
+                      buttonId: 'admin-publish-film-btn',
+                      isSubmitting,
+                      title: formData.title,
+                      timestamp: new Date().toISOString(),
+                    });
+                    // Explicit trigger in case form.onSubmit does not bubble or is intercepted
+                    handleSaveFilm(e);
+                  }}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 text-xs font-black transition-all shadow-md shadow-amber-500/20 flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed hover:brightness-110 cursor-pointer"
                 >
-                  <Check className="w-4 h-4 stroke-[3]" />
-                  <span>{editingFilmId ? 'Simpan Perubahan' : 'Terbitkan Film ke Database'}</span>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+                      <span>{editingFilmId ? 'Menyimpan Perubahan...' : 'Menerbitkan Film ke Database...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4 stroke-[3]" />
+                      <span>{editingFilmId ? 'Simpan Perubahan' : 'Terbitkan Film ke Database'}</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Batch Import TMDB Modal */}
+      <AdminBatchTmdbModal
+        isOpen={isBatchModalOpen}
+        onClose={() => setIsBatchModalOpen(false)}
+        onAddFilm={addFilm}
+        showToast={showToast}
+      />
+
+      {/* Delete Confirmation Modal (In-App, non-blocking for iframes) */}
+      {filmToDelete && (
+        <div
+          id="delete-film-modal-backdrop"
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => !isDeletingFilm && setFilmToDelete(null)}
+        >
+          <div
+            id="delete-film-modal-card"
+            className="bg-[#121324] border border-red-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto text-red-400">
+              <Trash2 className="w-7 h-7 stroke-[2]" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="font-display font-black text-lg text-white">
+                Hapus Film dari Database?
+              </h3>
+              <p className="text-slate-400 text-xs leading-relaxed max-w-xs mx-auto">
+                Apakah Anda yakin ingin menghapus film{' '}
+                <strong className="text-white font-bold">"{filmToDelete.title}"</strong>{' '}
+                ({filmToDelete.year})? Tindakan ini akan menghapus data film secara permanen dari Firestore.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                id="cancel-delete-film-btn"
+                onClick={() => setFilmToDelete(null)}
+                disabled={isDeletingFilm}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold text-xs transition-all disabled:opacity-50 cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                id="confirm-delete-film-btn"
+                onClick={confirmDelete}
+                disabled={isDeletingFilm}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs transition-all shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
+              >
+                {isDeletingFilm ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span>Menghapus...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 stroke-[2.5]" />
+                    <span>Ya, Hapus Film</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

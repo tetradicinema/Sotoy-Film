@@ -147,6 +147,7 @@ export interface FilmItem {
   cast: string[];
   castDetails?: CastMember[];
   genres: string[];
+  tags?: string[];
   duration?: string; // e.g. "2h 46m" or "12 Episodes"
   skorSotoy: number; // Average 1.0 - 5.0
   totalVotes: number;

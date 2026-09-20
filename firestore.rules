@@ -25,6 +25,7 @@ service cloud.firestore {
         request.auth.uid == 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' ||
         request.auth.uid == 'QkNGf1ZfhsMyUEk90a6Iz8ZplZS2' ||
         request.auth.uid == 'I34eqzOmvsSdS2Rf7jpfxw1ZKeu1' ||
+        (request.auth.token.email in ['eksposurmedia@gmail.com', 'admin1@sotoyfilm.id', 'admin2@sotoyfilm.id']) ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'admin')
       );
     }
@@ -34,6 +35,7 @@ service cloud.firestore {
         request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' ||
         request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' ||
         isAdmin() ||
+        (request.auth.token.email in ['eksposurmedia@gmail.com', 'admin1@sotoyfilm.id', 'admin2@sotoyfilm.id']) ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role in ['penulis_sotoy', 'admin'])
       );
     }
@@ -94,7 +96,7 @@ service cloud.firestore {
         data.id is string && data.id.size() <= 128 &&
         data.title is string && data.title.size() <= 200 &&
         data.type in ['movie', 'series', 'anime'] &&
-        data.year is int &&
+        (data.year is int || data.year is number) &&
         data.genres is list;
     }
 
@@ -196,7 +198,8 @@ service cloud.firestore {
 
     match /films/{filmId} {
       allow read: if true;
-      allow create, update, delete: if (isAdmin() || isWriter()) && isValidId(filmId) && isValidFilmItem(incoming());
+      allow create, update: if (isAdmin() || isWriter()) && isValidId(filmId) && isValidFilmItem(incoming());
+      allow delete: if (isAdmin() || isWriter()) && isValidId(filmId);
     }
 
     match /buzz/{buzzId} {

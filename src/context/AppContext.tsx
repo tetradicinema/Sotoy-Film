@@ -283,6 +283,27 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const DELETED_FILMS_STORAGE_KEY = 'sotoy_deleted_film_ids';
+
+const getDeletedFilmIds = (): Set<string> => {
+  try {
+    const raw = localStorage.getItem(DELETED_FILMS_STORAGE_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+};
+
+const recordDeletedFilmId = (id: string) => {
+  try {
+    const set = getDeletedFilmIds();
+    set.add(id);
+    localStorage.setItem(DELETED_FILMS_STORAGE_KEY, JSON.stringify(Array.from(set)));
+  } catch (e) {
+    console.error('[AppContext] Failed saving deleted film ID to localStorage:', e);
+  }
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Authentication & Session States
   const [currentUser, setCurrentUser] = useState<User>(() => GUEST_USER);
@@ -566,37 +587,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const unsubFilms = onSnapshot(
       collection(db, 'films'),
       (snapshot) => {
-        const items: FilmItem[] = [];
-        snapshot.forEach(doc => items.push(doc.data() as FilmItem));
-        if (items.length > 0) {
-          const existingIds = new Set(items.map(f => f.id));
-          const merged = [...items];
-          for (const init of INITIAL_FILMS) {
-            if (!existingIds.has(init.id)) {
-              merged.push(init);
-            }
+        const filmMap = new Map<string, FilmItem>();
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data() as FilmItem;
+          const id = data.id || docSnap.id;
+          if (id) {
+            filmMap.set(id, { ...data, id });
           }
-          setFilms(merged.sort((a, b) => (a.trendingRank || 99) - (b.trendingRank || 99)));
-        } else {
-          setFilms(INITIAL_FILMS);
+        });
+        const deletedIds = getDeletedFilmIds();
+        for (const init of INITIAL_FILMS) {
+          if (!filmMap.has(init.id) && !deletedIds.has(init.id)) {
+            filmMap.set(init.id, init);
+          }
         }
+        const merged = Array.from(filmMap.values()).filter(f => !deletedIds.has(f.id));
+        setFilms(merged.sort((a, b) => (a.trendingRank || 99) - (b.trendingRank || 99)));
       },
       (err) => {
         console.warn('[Firestore] films subscription fallback to initial mock:', err.message);
-        setFilms(INITIAL_FILMS);
+        const deletedIds = getDeletedFilmIds();
+        setFilms(INITIAL_FILMS.filter(f => !deletedIds.has(f.id)));
       }
     );
 
     const unsubArticles = onSnapshot(
       collection(db, 'articles'),
       (snapshot) => {
-        const items: Article[] = [];
-        snapshot.forEach(doc => items.push(doc.data() as Article));
-        if (items.length > 0) {
-          setArticles(items.sort((a, b) => b.id.localeCompare(a.id)));
-        } else {
-          setArticles(INITIAL_ARTICLES);
+        const articleMap = new Map<string, Article>();
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data() as Article;
+          const id = data.id || docSnap.id;
+          if (id) {
+            articleMap.set(id, { ...data, id });
+          }
+        });
+        for (const init of INITIAL_ARTICLES) {
+          if (!articleMap.has(init.id)) {
+            articleMap.set(init.id, init);
+          }
         }
+        const merged = Array.from(articleMap.values());
+        setArticles(merged.sort((a, b) => b.id.localeCompare(a.id)));
       },
       (err) => {
         console.warn('[Firestore] articles subscription fallback to initial mock:', err.message);
@@ -623,13 +655,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const unsubBuzz = onSnapshot(
       collection(db, 'buzz'),
       (snapshot) => {
-        const items: BuzzPost[] = [];
-        snapshot.forEach(doc => items.push(doc.data() as BuzzPost));
-        if (items.length > 0) {
-          setRawBuzzList(items.sort((a, b) => getSortTimestamp(b) - getSortTimestamp(a)));
-        } else {
-          setRawBuzzList(INITIAL_BUZZ);
+        const buzzMap = new Map<string, BuzzPost>();
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data() as BuzzPost;
+          const id = data.id || docSnap.id;
+          if (id) {
+            buzzMap.set(id, { ...data, id });
+          }
+        });
+        if (buzzMap.size === 0) {
+          INITIAL_BUZZ.forEach(b => buzzMap.set(b.id, b));
         }
+        const merged = Array.from(buzzMap.values());
+        setRawBuzzList(merged.sort((a, b) => getSortTimestamp(b) - getSortTimestamp(a)));
       },
       (err) => {
         console.warn('[Firestore] buzz subscription fallback to initial mock:', err.message);
@@ -640,13 +678,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const unsubRatings = onSnapshot(
       collection(db, 'ratings'),
       (snapshot) => {
-        const items: UserRating[] = [];
-        snapshot.forEach(doc => items.push(doc.data() as UserRating));
-        if (items.length > 0) {
-          setRatings(items.sort((a, b) => getSortTimestamp(b) - getSortTimestamp(a)));
-        } else {
-          setRatings(INITIAL_RATINGS);
+        const ratingMap = new Map<string, UserRating>();
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data() as UserRating;
+          const id = data.id || docSnap.id;
+          if (id) {
+            ratingMap.set(id, { ...data, id });
+          }
+        });
+        if (ratingMap.size === 0) {
+          INITIAL_RATINGS.forEach(r => ratingMap.set(r.id, r));
         }
+        const merged = Array.from(ratingMap.values());
+        setRatings(merged.sort((a, b) => getSortTimestamp(b) - getSortTimestamp(a)));
       },
       (err) => {
         console.warn('[Firestore] ratings subscription fallback to initial mock:', err.message);
@@ -657,8 +701,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const unsubUsers = onSnapshot(
       collection(db, 'users'),
       (snapshot) => {
-        const items: User[] = [];
-        snapshot.forEach(doc => items.push(doc.data() as User));
+        const userMap = new Map<string, User>();
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data() as User;
+          const id = data.id || docSnap.id;
+          if (id) {
+            userMap.set(id, { ...data, id });
+          }
+        });
+        const items = Array.from(userMap.values());
         if (items.length > 0) {
           const mapped = items.map(u => {
             if (u.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02' || WRITER_UIDS.includes(u.id)) {
@@ -2838,42 +2889,110 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addFilm = async (filmData: Omit<FilmItem, 'id'>): Promise<boolean> => {
+    console.log('[AppContext] === [addFilm INVOKED] ===', {
+      title: filmData.title,
+      type: filmData.type,
+      year: filmData.year,
+      genres: filmData.genres,
+      castCount: filmData.cast?.length || 0,
+      timestamp: new Date().toISOString(),
+    });
+
     const filmId = `film-${Date.now()}`;
     const newFilm: FilmItem = {
       ...filmData,
       id: filmId,
     };
+
+    console.log('[AppContext] Generated filmId:', filmId);
+    console.log('[AppContext] Current Auth State during addFilm:', {
+      firebaseAuthCurrentUser: auth.currentUser ? {
+        uid: auth.currentUser.uid,
+        email: auth.currentUser.email,
+        isAnonymous: auth.currentUser.isAnonymous,
+      } : 'No active Firebase Auth user (null)',
+      appContextCurrentUser: {
+        id: currentUser.id,
+        name: currentUser.name,
+        email: currentUser.email,
+        role: currentUser.role,
+      },
+    });
+
     try {
-      await setDoc(doc(db, 'films', filmId), newFilm);
-      setFilms(prev => [newFilm, ...prev]);
+      // Remove any undefined properties which crash Firestore setDoc
+      const sanitizedFilm = JSON.parse(JSON.stringify(newFilm));
+      console.log('[AppContext] Attempting Firestore setDoc on path "films/' + filmId + '" with payload:', sanitizedFilm);
+      await setDoc(doc(db, 'films', filmId), sanitizedFilm);
+      console.log('[AppContext] Firestore setDoc SUCCESS for filmId:', filmId);
+      setFilms(prev => {
+        if (prev.some(f => f.id === newFilm.id)) {
+          return prev.map(f => f.id === newFilm.id ? newFilm : f);
+        }
+        return [newFilm, ...prev];
+      });
       showToast(`Film "${newFilm.title}" berhasil ditambahkan ke database.`);
       return true;
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, `films/${filmId}`);
+    } catch (error: any) {
+      console.error('[AppContext] Firestore setDoc FAILED for filmId:', filmId, error);
+      console.error('[AppContext] Detailed Firestore Error info:', {
+        code: error?.code,
+        message: error?.message,
+        name: error?.name,
+      });
+
+      if (error?.code === 'permission-denied') {
+        console.warn('[AppContext] DIAGNOSIS: Firestore returned "permission-denied". In firestore.rules, "allow create, update: if (isAdmin() || isWriter()) && isValidId(filmId) && isValidFilmItem(incoming())". Ensure request.auth is signed in with an authorized email (e.g., eksposurmedia@gmail.com) or admin role.');
+      }
+
+      const errMsg = error?.message || 'Gagal menyimpan ke database Firestore.';
+      showToast(`Gagal menerbitkan film ke Firestore: ${errMsg}`);
+      // Also update local list safely without duplicating
+      setFilms(prev => {
+        if (prev.some(f => f.id === newFilm.id)) {
+          return prev.map(f => f.id === newFilm.id ? newFilm : f);
+        }
+        return [newFilm, ...prev];
+      });
       return false;
     }
   };
 
   const updateFilm = async (id: string, updates: Partial<FilmItem>): Promise<boolean> => {
+    console.log('[AppContext] === [updateFilm INVOKED] for ID:', id, updates);
     try {
-      await updateDoc(doc(db, 'films', id), updates);
+      const sanitizedUpdates = JSON.parse(JSON.stringify(updates));
+      console.log('[AppContext] Attempting Firestore updateDoc on path "films/' + id + '" with payload:', sanitizedUpdates);
+      await updateDoc(doc(db, 'films', id), sanitizedUpdates);
+      console.log('[AppContext] Firestore updateDoc SUCCESS for filmId:', id);
       setFilms(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
       showToast('Metadata film berhasil diperbarui.');
       return true;
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `films/${id}`);
+    } catch (error: any) {
+      console.error('[AppContext] Firestore updateDoc FAILED for filmId:', id, error);
+      const errMsg = error?.message || 'Gagal memperbarui ke database Firestore.';
+      showToast(`Gagal memperbarui film: ${errMsg}`);
+      setFilms(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
       return false;
     }
   };
 
   const deleteFilm = async (id: string): Promise<boolean> => {
+    console.log('[AppContext] === [deleteFilm INVOKED] ===', { id });
+    // Immediately record in persistent deleted set and remove from state
+    recordDeletedFilmId(id);
+    setFilms(prev => prev.filter(f => f.id !== id));
+
     try {
+      console.log('[AppContext] Calling Firestore deleteDoc on path: films/' + id);
       await deleteDoc(doc(db, 'films', id));
-      setFilms(prev => prev.filter(f => f.id !== id));
+      console.log('[AppContext] Firestore deleteDoc SUCCESS for: films/' + id);
       showToast('Film berhasil dihapus dari katalog.');
       return true;
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `films/${id}`);
+    } catch (error: any) {
+      console.error('[AppContext] Firestore deleteDoc ERROR for filmId:', id, error);
+      const errMsg = error?.message || 'Gagal menghapus dari database Firestore.';
+      showToast(`Catatan: Film dihapus dari katalog lokal (${errMsg})`);
       return false;
     }
   };
