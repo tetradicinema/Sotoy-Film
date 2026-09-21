@@ -36,6 +36,7 @@ import { FilmItem, UserRating, UserRole } from '../../types';
 import { StarRating } from '../Common/StarRating';
 import { RateFilmModal } from '../Modals/RateFilmModal';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
+import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
 
 export interface GenreCategory {
   id: string;
@@ -1128,7 +1129,7 @@ export const FilmDatabasePage: React.FC = () => {
                                 <RoleBadge role={rev.userRole} size="xs" />
                               )}
                             </div>
-                            <div className="text-[11px] text-slate-400">{rev.createdAt}</div>
+                            <div className="text-[11px] text-slate-400" title={formatFullDateTime(rev.createdAt)}>{formatRelativeTime(rev.createdAt)}</div>
                           </div>
                         </div>
 

@@ -38,6 +38,7 @@ import { BuzzPost, User, RecommendationSignal } from '../../types';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { QuickReactionBar } from '../Common/QuickReactionBar';
 import { BuzzFeedSidebar, BuzzFeedTab } from '../Navigation/BuzzFeedSidebar';
+import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
 import { MentionText } from '../Common/MentionText';
 import { MentionInput } from '../Common/MentionInput';
 
@@ -834,8 +835,11 @@ export const CommunityFeedPage: React.FC = () => {
                           <RoleBadge role={post.author.role} size="xs" />
                         )}
                       </div>
-                      <span className="text-[11px] sm:text-xs text-slate-400 group-hover:text-slate-300 block truncate">
-                        {post.author.handle} • {post.createdAt}
+                      <span
+                        className="text-[11px] sm:text-xs text-slate-400 group-hover:text-slate-300 block truncate"
+                        title={formatFullDateTime(post.createdAt)}
+                      >
+                        {formatRelativeTime(post.createdAt)}
                       </span>
                     </div>
                   </div>

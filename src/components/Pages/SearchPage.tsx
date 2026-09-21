@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { FilmItem, Article, BuzzPost, User } from '../../types';
+import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
 
 type SearchTab = 'all' | 'film' | 'article' | 'buzz' | 'user';
 
@@ -596,7 +597,7 @@ export const SearchPage: React.FC = () => {
                                   {buzz.author.name}
                                 </span>
                                 <span className="text-xs text-slate-400">@{buzz.author.handle}</span>
-                                <span className="text-[10px] text-slate-500">• {buzz.createdAt}</span>
+                                <span className="text-[10px] text-slate-500" title={formatFullDateTime(buzz.createdAt)}>• {formatRelativeTime(buzz.createdAt)}</span>
                               </div>
 
                               <p className="text-sm text-slate-200 mt-2 line-clamp-3 leading-relaxed">

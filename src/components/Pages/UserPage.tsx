@@ -55,6 +55,7 @@ import { QuickReactionBar } from '../Common/QuickReactionBar';
 import { User, UserTab, UserSettings } from '../../types';
 import { StarRating } from '../Common/StarRating';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
+import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
 
 const AdminDashboard = React.lazy(() =>
   import('../Admin/AdminDashboard').then(m => ({ default: m.AdminDashboard }))
@@ -822,7 +823,7 @@ export const UserPage: React.FC = () => {
                           />
                           <div>
                             <span className="font-bold text-xs text-white block group-hover:text-[#FF2E7E] transition-colors">{authorName}</span>
-                            <span className="text-[10px] text-slate-400">{buzz.createdAt}</span>
+                            <span className="text-[10px] text-slate-400" title={formatFullDateTime(buzz.createdAt)}>{formatRelativeTime(buzz.createdAt)}</span>
                           </div>
                         </div>
                         {buzz.skorSotoyMention && (
@@ -1205,8 +1206,8 @@ export const UserPage: React.FC = () => {
                             >
                               {targetFilm ? targetFilm.title : 'Film Terkait'}
                             </h4>
-                            <span className="text-[11px] text-slate-400">
-                              Diulas pada {rev.createdAt}
+                            <span className="text-[11px] text-slate-400" title={formatFullDateTime(rev.createdAt)}>
+                              Diulas {formatRelativeTime(rev.createdAt)}
                             </span>
                           </div>
                         </div>

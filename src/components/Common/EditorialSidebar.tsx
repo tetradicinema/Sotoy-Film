@@ -16,6 +16,7 @@ import { getRoleBadgeStyle } from '../../utils/roleStyles';
 import { RoleBadge } from './RoleBadge';
 import { AdBannerSlot } from './AdBannerSlot';
 import { QuickReactionBar } from './QuickReactionBar';
+import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
 
 interface EditorialSidebarProps {
   currentArticleId?: string;
@@ -164,8 +165,11 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                     <div className="text-xs font-bold text-white group-hover:text-[#00F0FF] transition-colors leading-tight">
                       {post.author.name}
                     </div>
-                    <div className="text-[10px] text-slate-400">
-                      {post.author.handle} • {post.createdAt}
+                    <div
+                      className="text-[10px] text-slate-400"
+                      title={formatFullDateTime(post.createdAt)}
+                    >
+                      {formatRelativeTime(post.createdAt)}
                     </div>
                   </div>
                 </div>

@@ -26,6 +26,7 @@ import { QuickReactionBar } from '../Common/QuickReactionBar';
 import { MentionText } from '../Common/MentionText';
 import { MentionInput } from '../Common/MentionInput';
 import { BuzzReply } from '../../types';
+import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
 
 export const BuzzDetailPage: React.FC = () => {
   const {
@@ -221,7 +222,7 @@ export const BuzzDetailPage: React.FC = () => {
                   <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-slate-400 mt-0.5 truncate">
                     <span className="font-mono text-slate-400">{buzz.author.handle}</span>
                     <span>•</span>
-                    <span className="text-slate-400">{buzz.createdAt}</span>
+                    <span className="text-slate-400" title={formatFullDateTime(buzz.createdAt)}>{formatRelativeTime(buzz.createdAt)}</span>
                   </div>
                 </div>
               </div>
@@ -585,7 +586,7 @@ export const BuzzDetailPage: React.FC = () => {
                                 <div className="flex items-center gap-2 text-[11px] text-slate-400">
                                   <span className="font-mono">{reply.author.handle}</span>
                                   <span>•</span>
-                                  <span>{reply.createdAt}</span>
+                                  <span title={formatFullDateTime(reply.createdAt)}>{formatRelativeTime(reply.createdAt)}</span>
                                 </div>
                               </div>
                             </div>
@@ -682,7 +683,7 @@ export const BuzzDetailPage: React.FC = () => {
                     <span className="text-xs font-bold text-white truncate">
                       {item.author.name}
                     </span>
-                    <span className="text-[10px] text-slate-400">• {item.createdAt}</span>
+                    <span className="text-[10px] text-slate-400" title={formatFullDateTime(item.createdAt)}>• {formatRelativeTime(item.createdAt)}</span>
                   </div>
 
                   <p className="text-xs text-slate-300 line-clamp-2 group-hover:text-slate-100 transition-colors leading-relaxed">

@@ -34,6 +34,7 @@ import { SEOHead } from '../SEO/SEOHead';
 import { generateMovieSchema, generateBreadcrumbSchema } from '../../utils/schemaHelpers';
 import { slugify } from '../../utils/slugify';
 import { INITIAL_FILMS } from '../../data/mockData';
+import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
 
 const RelatedArticleAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }> = ({ authorId, defaultAuthor }) => {
   const author = useDynamicArticleAuthor(authorId, defaultAuthor);
@@ -882,7 +883,7 @@ export const FilmDetailPage: React.FC = () => {
                                 <RoleBadge role={rev.userRole} size="xs" />
                               )}
                             </div>
-                            <span className="text-[11px] text-slate-400">{rev.createdAt}</span>
+                            <span className="text-[11px] text-slate-400" title={formatFullDateTime(rev.createdAt)}>{formatRelativeTime(rev.createdAt)}</span>
                           </div>
                         </div>
 
