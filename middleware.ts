@@ -1,6 +1,4 @@
 import { next } from '@vercel/edge';
-import { INITIAL_FILMS, INITIAL_ARTICLES } from './src/data/mockData';
-import { slugify } from './src/utils/slugify';
 
 export const config = {
   matcher: ['/film/:path*', '/artikel/:path*'],
@@ -86,7 +84,7 @@ const FIRESTORE_DOCUMENTS_URL =
   'https://firestore.googleapis.com/v1/projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents';
 
 /**
- * Fetches content from Firestore REST API or fallback seed data by slug or docId.
+ * Fetches content from Firestore REST API by slug or docId.
  */
 async function fetchEntityData(
   collection: 'films' | 'articles',
@@ -141,19 +139,6 @@ async function fetchEntityData(
     }
   } catch (err) {
     console.error('[Middleware] Firestore query error:', err);
-  }
-
-  // 3. Fallback to initial seed data if not found or Firestore cold
-  if (collection === 'films') {
-    const fallbackFilm = INITIAL_FILMS.find(
-      f => (f.slug && f.slug === slug) || slugify(f.title) === slug || f.id === slug
-    );
-    if (fallbackFilm) return fallbackFilm;
-  } else if (collection === 'articles') {
-    const fallbackArt = INITIAL_ARTICLES.find(
-      a => a.slug === slug || a.id === slug
-    );
-    if (fallbackArt) return fallbackArt;
   }
 
   return null;
