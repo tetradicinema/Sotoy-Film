@@ -137,13 +137,93 @@ service cloud.firestore {
         data.sender.id is string;
     }
 
+    // Granular delta & diff validation helpers
+    function isValidFollowersCountDelta() {
+      let prev = ('followersCount' in existing()) ? existing().followersCount : 0;
+      let next = incoming().followersCount;
+      return next == prev + 1 || next == prev - 1;
+    }
+
+    function isValidFollowingCountDelta() {
+      let prev = ('followingCount' in existing()) ? existing().followingCount : 0;
+      let next = incoming().followingCount;
+      return next == prev + 1 || next == prev - 1;
+    }
+
+    function isValidFollowersArrayUpdate() {
+      let prev = ('followers' in existing()) ? existing().followers : [];
+      let next = incoming().followers;
+      return (next.removeAll(prev) == [request.auth.uid] && prev.removeAll(next) == []) ||
+             (prev.removeAll(next) == [request.auth.uid] && next.removeAll(prev) == []);
+    }
+
+    function isValidFollowingArrayUpdate() {
+      let prev = ('following' in existing()) ? existing().following : [];
+      let next = incoming().following;
+      return (next.removeAll(prev) == [request.auth.uid] && prev.removeAll(next) == []) ||
+             (prev.removeAll(next) == [request.auth.uid] && next.removeAll(prev) == []);
+    }
+
+    function isValidReactionsByUserUpdate() {
+      let prev = ('reactionsByUser' in existing()) ? existing().reactionsByUser : {};
+      let next = ('reactionsByUser' in incoming()) ? incoming().reactionsByUser : {};
+      return next.diff(prev).affectedKeys().hasOnly([request.auth.uid]) &&
+             (!(request.auth.uid in next) || (next[request.auth.uid] in ['heart', 'mindblown', 'fire', 'laugh', 'clap']));
+    }
+
+    function isValidRepliesCountDelta() {
+      let prev = ('repliesCount' in existing()) ? existing().repliesCount : 0;
+      let next = incoming().repliesCount;
+      return next == prev + 1 || next == prev - 1;
+    }
+
+    function isValidReactionsAggregateUpdate() {
+      let prev = ('reactions' in existing()) ? existing().reactions : {heart:0, mindblown:0, fire:0, laugh:0, clap:0};
+      let next = incoming().reactions;
+      
+      let deltaHeart = next.get('heart', 0) - prev.get('heart', 0);
+      let deltaMindblown = next.get('mindblown', 0) - prev.get('mindblown', 0);
+      let deltaFire = next.get('fire', 0) - prev.get('fire', 0);
+      let deltaLaugh = next.get('laugh', 0) - prev.get('laugh', 0);
+      let deltaClap = next.get('clap', 0) - prev.get('clap', 0);
+
+      let netDelta = deltaHeart + deltaMindblown + deltaFire + deltaLaugh + deltaClap;
+
+      return deltaHeart >= -1 && deltaHeart <= 1 &&
+             deltaMindblown >= -1 && deltaMindblown <= 1 &&
+             deltaFire >= -1 && deltaFire <= 1 &&
+             deltaLaugh >= -1 && deltaLaugh <= 1 &&
+             deltaClap >= -1 && deltaClap <= 1 &&
+             (netDelta == 0 || netDelta == 1 || netDelta == -1);
+    }
+
+    function isValidLikesDelta() {
+      let prev = ('likes' in existing()) ? existing().likes : 0;
+      let next = incoming().likes;
+      return next == prev + 1 || next == prev - 1 || next == prev;
+    }
+
     // Rules for each collection
     match /users/{userId} {
       allow read: if true;
       allow create: if isSignedIn() && isOwner(userId) && isValidUser(incoming());
       allow update: if isSignedIn() && (
-        (isOwner(userId) && isValidUser(incoming()) && (incoming().role == existing().role || userId == '0PCmaBvJrzeaQgpf3sSTC4mnsh02')) || 
-        (incoming().diff(existing()).affectedKeys().hasOnly(['followersCount', 'followingCount', 'followers', 'following', 'interestProfile', 'lastInterestDecay'])) ||
+        // Document Owner updating profile / interests / following
+        (isOwner(userId) && isValidUser(incoming()) && (incoming().role == existing().role || userId == '0PCmaBvJrzeaQgpf3sSTC4mnsh02') && (
+          !('followersCount' in incoming().diff(existing()).affectedKeys()) || isValidFollowersCountDelta()
+        ) && (
+          !('followingCount' in incoming().diff(existing()).affectedKeys()) || isValidFollowingCountDelta()
+        ) && (
+          !('following' in incoming().diff(existing()).affectedKeys()) || isValidFollowingArrayUpdate()
+        ) && (
+          !('followers' in incoming().diff(existing()).affectedKeys()) || isValidFollowersArrayUpdate()
+        )) ||
+        // Non-Owner (e.g. User A) updating User B's followersCount or followers array
+        (!isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['followersCount', 'followers']) && (
+          !('followersCount' in incoming().diff(existing()).affectedKeys()) || isValidFollowersCountDelta()
+        ) && (
+          !('followers' in incoming().diff(existing()).affectedKeys()) || isValidFollowersArrayUpdate()
+        )) ||
         isAdmin() ||
         isWriter()
       );
@@ -207,7 +287,15 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidId(buzzId) && isValidBuzzPost(incoming());
       allow update: if isSignedIn() && isValidId(buzzId) && (
         (isOwner(existing().author.id) && isValidBuzzPost(incoming())) ||
-        (incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'reactions', 'reactionsByUser', 'myReaction', 'replies', 'repliesCount', 'likedByMe'])) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'reactions', 'reactionsByUser', 'replies', 'repliesCount']) && (
+          !('reactionsByUser' in incoming().diff(existing()).affectedKeys()) || isValidReactionsByUserUpdate()
+        ) && (
+          !('reactions' in incoming().diff(existing()).affectedKeys()) || isValidReactionsAggregateUpdate()
+        ) && (
+          !('likes' in incoming().diff(existing()).affectedKeys()) || isValidLikesDelta()
+        ) && (
+          !('repliesCount' in incoming().diff(existing()).affectedKeys()) || isValidRepliesCountDelta()
+        )) ||
         isAdmin() ||
         isWriter()
       );
@@ -219,7 +307,7 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidId(ratingId) && isValidUserRating(incoming());
       allow update: if isSignedIn() && isValidId(ratingId) && (
         (isOwner(existing().userId) && isValidUserRating(incoming())) ||
-        (incoming().diff(existing()).affectedKeys().hasOnly(['likes'])) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['likes']) && isValidLikesDelta()) ||
         (isCritic() && isOwner(existing().userId))
       );
       allow delete: if isSignedIn() && (isOwner(existing().userId) || isAdmin() || isWriter() || (isCritic() && isOwner(existing().userId)));
@@ -229,7 +317,7 @@ service cloud.firestore {
       allow read: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin() || isWriter());
       allow create: if isSignedIn() && isValidId(submissionId) && isValidCriticSubmission(incoming()) && incoming().status == 'pending';
       allow update: if isSignedIn() && isValidId(submissionId) && (
-        (isOwner(existing().userId) && isValidCriticSubmission(incoming()) && incoming().status == existing().status) || // owner can edit motivation but not change status
+        (isOwner(existing().userId) && isValidCriticSubmission(incoming()) && incoming().status == existing().status) ||
         isAdmin() ||
         isWriter()
       );

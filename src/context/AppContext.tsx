@@ -2320,6 +2320,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 2. Persist to Firestore with clean payload (no undefined values)
     try {
       const sanitizedPayload = JSON.parse(JSON.stringify(newBuzz));
+      delete sanitizedPayload.myReaction;
+      delete sanitizedPayload.likedByMe;
       await setDoc(doc(db, 'buzz', buzzId), sanitizedPayload);
     } catch (error) {
       console.error('[Firestore] Error saving buzz post:', error);
@@ -2410,6 +2412,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     try {
       const sanitizedPayload = JSON.parse(JSON.stringify(updatedPost));
+      delete sanitizedPayload.myReaction;
+      delete sanitizedPayload.likedByMe;
       await setDoc(doc(db, 'buzz', buzzId), sanitizedPayload);
 
       // Trigger reaction notification to post author (if not reacting to own post)
@@ -2501,6 +2505,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     try {
       const sanitizedPayload = JSON.parse(JSON.stringify(updatedPost));
+      delete sanitizedPayload.myReaction;
+      delete sanitizedPayload.likedByMe;
       await setDoc(doc(db, 'buzz', buzzId), sanitizedPayload);
 
       // 1. Notify post author (if author is not the replier)
@@ -2572,6 +2578,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     try {
       const sanitizedPayload = JSON.parse(JSON.stringify(updatedPost));
+      delete sanitizedPayload.myReaction;
+      delete sanitizedPayload.likedByMe;
       await setDoc(doc(db, 'buzz', buzzId), sanitizedPayload);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `buzz/${buzzId}`);
