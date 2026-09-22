@@ -7,8 +7,23 @@ import { injectMetaTags, FALLBACK_HTML_TEMPLATE } from './src/lib/edge/metaInjec
 export { isBotUserAgent };
 
 export const config = {
+  runtime: 'edge',
   matcher: ['/film/:path*', '/artikel/:path*'],
 };
+
+/**
+ * Safely invokes Vercel Edge next() with fallback to raw x-middleware-next header
+ * if @vercel/edge helper throws an unexpected runtime error.
+ */
+function safeNext(): Response {
+  try {
+    return next();
+  } catch {
+    return new Response(null, {
+      headers: { 'x-middleware-next': '1' },
+    });
+  }
+}
 
 /**
  * Vercel Edge Middleware entrypoint.
@@ -17,11 +32,15 @@ export const config = {
  */
 export default async function middleware(request: Request): Promise<Response> {
   try {
+    if (!request || !request.headers) {
+      return safeNext();
+    }
+
     const userAgent = request.headers.get('user-agent');
 
     // 1. Pass through immediately for normal human visitors with zero latency penalty
     if (!isBotUserAgent(userAgent)) {
-      return next();
+      return safeNext();
     }
 
     const url = new URL(request.url);
@@ -39,14 +58,14 @@ export default async function middleware(request: Request): Promise<Response> {
     }
 
     if (!collection || !slug) {
-      return next();
+      return safeNext();
     }
 
     // 2. Fetch the entity data from Firestore REST API (with 3-way slug matching)
     const data = await fetchEntityData(collection, slug);
     if (!data) {
       // Fall through to normal SPA rather than returning an error
-      return next();
+      return safeNext();
     }
 
     // 3. Prepare metadata based on collection type
@@ -107,7 +126,7 @@ export default async function middleware(request: Request): Promise<Response> {
   } catch (err) {
     // Fail gracefully: log and pass request through
     console.error('[Middleware Error]', err);
-    return next();
+    return safeNext();
   }
 }
 
