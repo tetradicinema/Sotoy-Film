@@ -81,6 +81,25 @@ export const SearchPage: React.FC = () => {
     setLocalQuery(searchQuery);
   }, [searchQuery]);
 
+  // Sync recent searches with localStorage events
+  useEffect(() => {
+    const syncStorage = () => {
+      try {
+        const saved = localStorage.getItem(RECENT_SEARCHES_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) setRecentSearches(parsed.slice(0, 8));
+        } else {
+          setRecentSearches([]);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener('storage', syncStorage);
+    return () => window.removeEventListener('storage', syncStorage);
+  }, []);
+
   // Focus input on mount
   useEffect(() => {
     inputRef.current?.focus();
@@ -92,6 +111,19 @@ export const SearchPage: React.FC = () => {
     setRecentSearches(prev => {
       const filtered = prev.filter(item => item.toLowerCase() !== clean.toLowerCase());
       const updated = [clean, ...filtered].slice(0, 8);
+      try {
+        localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
+  };
+
+  const removeRecentSearch = (termToRemove: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRecentSearches(prev => {
+      const updated = prev.filter(item => item.toLowerCase() !== termToRemove.toLowerCase());
       try {
         localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
       } catch {
@@ -355,21 +387,29 @@ export const SearchPage: React.FC = () => {
                   </h2>
                   <button
                     onClick={clearRecentSearches}
-                    className="text-xs text-slate-400 hover:text-red-400 transition-colors"
+                    className="text-xs text-slate-400 hover:text-red-400 transition-colors flex items-center gap-1 font-semibold"
                   >
-                    Hapus Riwayat
+                    <span>Hapus Riwayat</span>
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {recentSearches.map(term => (
-                    <button
+                    <div
                       key={term}
                       onClick={() => handleSelectKeyword(term)}
-                      className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-xs sm:text-sm text-slate-200 hover:text-white transition-all group"
+                      className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-xs sm:text-sm text-slate-200 hover:text-white transition-all cursor-pointer group shadow-sm hover:border-[#00F0FF]/40"
                     >
-                      <Clock className="w-3.5 h-3.5 text-slate-500 group-hover:text-[#00F0FF]" />
-                      <span>{term}</span>
-                    </button>
+                      <Clock className="w-3.5 h-3.5 text-slate-500 group-hover:text-[#00F0FF] transition-colors shrink-0" />
+                      <span className="font-medium">{term}</span>
+                      <button
+                        type="button"
+                        onClick={(e) => removeRecentSearch(term, e)}
+                        className="p-1 rounded-md text-slate-500 hover:text-rose-400 hover:bg-white/10 transition-all shrink-0 ml-0.5"
+                        title={`Hapus "${term}" dari riwayat`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
                   ))}
                 </div>
               </div>
