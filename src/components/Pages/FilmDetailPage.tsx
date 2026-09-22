@@ -182,9 +182,9 @@ export const FilmDetailPage: React.FC = () => {
 
   const handleShare = () => {
     openShareModal({
-      title: `${film.title} (${film.year}) - Skor Sotoy: ${film.skorSotoy.toFixed(1)}/5.0`,
+      title: `${film.title} (${film.year}) - Skor Sotoy: ${film.skorSotoy.toFixed(1)}/10.0`,
       text: film.synopsis,
-      headline: `Film Rating & Skor Sotoy Komunitas: ${film.skorSotoy.toFixed(1)} / 5.0`,
+      headline: `Film Rating & Skor Sotoy Komunitas: ${film.skorSotoy.toFixed(1)} / 10.0`,
       url: window.location.href,
       type: 'film',
       image: film.poster,
@@ -322,7 +322,7 @@ export const FilmDetailPage: React.FC = () => {
                 alt={film.title}
                 className="w-32 sm:w-52 md:w-60 rounded-2xl shadow-2xl border-2 border-white/20 group-hover:scale-105 transition-transform duration-300"
               />
-              <div className="absolute top-2.5 left-2.5 bg-black/85 backdrop-blur-md px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-xl border border-[#FFD000]/60 text-[#FFD000] font-black text-xs sm:text-sm flex items-center gap-1 shadow-lg">
+              <div className="absolute top-2.5 left-2.5 bg-black/85 backdrop-blur-md px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-xl border border-[#FFD000]/60 text-[#FFD000] font-medium text-xs sm:text-sm flex items-center gap-1 shadow-lg">
                 <Star className="w-3.5 h-3.5 fill-current" />
                 <span>{film.skorSotoy.toFixed(1)}</span>
               </div>
@@ -369,7 +369,7 @@ export const FilmDetailPage: React.FC = () => {
                 <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-4">
                   {/* 1. Skor Critics - PRIORITAS UTAMA */}
                   <div className="flex items-center gap-2.5">
-                    <div className="font-display font-black text-2xl sm:text-3xl text-[#00F0FF] drop-shadow-[0_0_12px_rgba(0,240,255,0.3)]">
+                    <div className="font-display font-medium text-2xl sm:text-3xl text-[#00F0FF] drop-shadow-[0_0_12px_rgba(0,240,255,0.3)]">
                       ★ {film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}
                     </div>
                     <div className="text-left">
@@ -391,7 +391,7 @@ export const FilmDetailPage: React.FC = () => {
 
                   {/* 2. Skor Komunitas - SEKUNDER */}
                   <div className="flex items-center gap-2">
-                    <div className="font-display font-black text-lg sm:text-xl text-[#FFD000]">
+                    <div className="font-display font-medium text-lg sm:text-xl text-[#FFD000]">
                       ★ {film.skorSotoy.toFixed(1)}
                     </div>
                     <div className="text-left">
@@ -1037,7 +1037,7 @@ export const FilmDetailPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3 text-center">
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3">
-                  <div className="font-display font-black text-xl text-[#FFD000]">
+                  <div className="font-display font-medium text-xl text-[#FFD000]">
                     ★ {film.skorSotoy.toFixed(1)}
                   </div>
                   <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase">
@@ -1046,7 +1046,7 @@ export const FilmDetailPage: React.FC = () => {
                 </div>
 
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3">
-                  <div className="font-display font-black text-xl text-[#00F0FF]">
+                  <div className="font-display font-medium text-xl text-[#00F0FF]">
                     ★ {film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}
                   </div>
                   <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase">
@@ -1058,14 +1058,14 @@ export const FilmDetailPage: React.FC = () => {
               <div className="pt-1">
                 <div className="flex items-center justify-between text-xs text-slate-400 mb-1.5">
                   <span>Tingkat Kepuasan Penonton</span>
-                  <span className="font-bold text-[#FFD000]">
-                    {Math.round((film.skorSotoy / 5.0) * 100)}%
+                  <span className="font-medium text-[#FFD000]">
+                    {Math.round((film.skorSotoy / 10.0) * 100)}%
                   </span>
                 </div>
                 <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
                   <div
                     className="bg-gradient-to-r from-[#FFD000] to-[#FF8008] h-full rounded-full"
-                    style={{ width: `${Math.round((film.skorSotoy / 5.0) * 100)}%` }}
+                    style={{ width: `${Math.round((film.skorSotoy / 10.0) * 100)}%` }}
                   />
                 </div>
               </div>

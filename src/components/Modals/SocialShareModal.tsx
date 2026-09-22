@@ -764,12 +764,12 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
 
           // Stars & Score inside badge
           ctx.fillStyle = '#FFD000';
-          ctx.font = '900 52px sans-serif';
+          ctx.font = '500 52px sans-serif';
           ctx.textAlign = 'center';
           ctx.fillText(`★ ${displayScore.toFixed(1)}`, cardX + cardW / 2 - 40, badgeY + 58);
           ctx.fillStyle = '#94A3B8';
           ctx.font = 'bold 24px sans-serif';
-          ctx.fillText('/ 5.0', cardX + cardW / 2 + 80, badgeY + 58);
+          ctx.fillText('/ 10.0', cardX + cardW / 2 + 80, badgeY + 58);
 
           // Verdict tag below score
           ctx.fillStyle = '#00F0FF';
@@ -890,12 +890,12 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           ctx.stroke();
 
           ctx.fillStyle = '#FFD000';
-          ctx.font = '900 42px sans-serif';
+          ctx.font = '500 42px sans-serif';
           ctx.fillText(`★ ${displayScore.toFixed(1)}`, rightX + 25, rY + 54);
 
           ctx.fillStyle = '#94A3B8';
           ctx.font = 'bold 20px sans-serif';
-          ctx.fillText('/ 5.0', rightX + 175, rY + 54);
+          ctx.fillText('/ 10.0', rightX + 175, rY + 54);
 
           ctx.fillStyle = '#00F0FF';
           ctx.font = '900 16px sans-serif';
@@ -1335,10 +1335,10 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                     <div className="bg-slate-950/90 border border-[#FFD000]/60 rounded-xl px-2.5 py-1.5 shadow-lg w-full">
                       <div className="flex items-center justify-center gap-1">
                         <Star className="w-3.5 h-3.5 text-[#FFD000] fill-current" />
-                        <span className="font-display font-black text-base text-[#FFD000]">
+                        <span className="font-display font-medium text-base text-[#FFD000]">
                           {displayScore.toFixed(1)}
                         </span>
-                        <span className="text-[10px] text-slate-400 font-bold">/ 5.0</span>
+                        <span className="text-[10px] text-slate-400 font-medium">/ 10.0</span>
                       </div>
                       <div className="text-[7.5px] font-black text-cyan-300 uppercase tracking-wider mt-0.5">
                         ★ {getScoreVerdict(displayScore)} ★
@@ -1534,7 +1534,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                           {data.filmTitle || data.title}
                         </h4>
                         <div className="flex items-center gap-1.5">
-                          <div className="bg-[#FFD000]/20 border border-[#FFD000]/40 px-2 py-0.5 rounded-lg flex items-center gap-1 text-[#FFD000] font-black text-xs">
+                          <div className="bg-[#FFD000]/20 border border-[#FFD000]/40 px-2 py-0.5 rounded-lg flex items-center gap-1 text-[#FFD000] font-medium text-xs">
                             <Star className="w-3 h-3 fill-current" />
                             <span>{displayScore.toFixed(1)}</span>
                           </div>

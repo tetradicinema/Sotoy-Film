@@ -69,7 +69,7 @@ export const StarRating: React.FC<StarRatingProps> = ({
       {showNumber && (
         <span
           id="star-rating-score-badge"
-          className={`font-black tracking-tight font-display text-[#FFD000] ${
+          className={`font-medium tracking-tight font-display text-[#FFD000] ${
             size === 'lg' ? 'text-xl' : size === 'md' ? 'text-sm' : 'text-xs'
           } bg-[#FFD000]/10 px-2 py-0.5 rounded border border-[#FFD000]/30`}
         >

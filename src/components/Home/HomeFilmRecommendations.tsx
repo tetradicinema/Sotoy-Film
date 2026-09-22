@@ -132,10 +132,10 @@ export const HomeFilmRecommendations: React.FC = () => {
                   <div className="absolute inset-0 bg-gradient-to-t from-[#121324] via-transparent to-transparent opacity-80" />
 
                   {/* Skor Critics Badge (Prioritized) */}
-                  <div className="absolute top-2 left-2 bg-black/90 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#00F0FF]/50 text-[#00F0FF] text-[11px] font-black flex items-center gap-1 shadow-md">
+                  <div className="absolute top-2 left-2 bg-black/90 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/50 text-[#FFD000] text-[11px] font-medium flex items-center gap-1 shadow-md">
                     <Star className="w-3 h-3 fill-current" />
                     <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
-                    <span className="text-[9px] text-slate-300 font-bold">Critics</span>
+                    <span className="text-[9px] text-amber-200/80 font-bold">Critics</span>
                   </div>
 
                   {/* Watchlist Quick Button */}

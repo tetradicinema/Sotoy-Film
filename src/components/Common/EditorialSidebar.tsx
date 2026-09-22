@@ -186,7 +186,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                   <Film className="w-3 h-3" />
                   <span>{post.taggedFilm.title}</span>
                   {post.skorSotoyMention && (
-                    <span className="text-[#FFD000] ml-1 font-black">★ {post.skorSotoyMention.toFixed(1)}</span>
+                    <span className="text-[#FFD000] ml-1 font-medium">★ {post.skorSotoyMention.toFixed(1)}</span>
                   )}
                 </div>
               )}

@@ -517,18 +517,18 @@ export const ArticleDetailPage: React.FC = () => {
                   <div>
                     <div className="text-[10px] text-slate-400 font-medium">Skor Komunitas Sotoy</div>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="text-lg font-black text-[#FFD000]">★ {discussedFilm.skorSotoy.toFixed(1)}</span>
-                      <span className="text-[11px] text-slate-400">/ 5.0 ({discussedFilm.totalVotes} ulasan)</span>
+                      <span className="text-lg font-medium text-[#FFD000]">★ {discussedFilm.skorSotoy.toFixed(1)}</span>
+                      <span className="text-[11px] text-slate-400">/ 10.0 ({discussedFilm.totalVotes} ulasan)</span>
                     </div>
                   </div>
 
                   <div>
                     <div className="text-[10px] text-slate-400 font-medium">Skor Si Paling Sotoy</div>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="text-lg font-black text-[#00F0FF]">
+                      <span className="text-lg font-medium text-[#00F0FF]">
                         ★ {discussedFilm.criticsSkorSotoy ? discussedFilm.criticsSkorSotoy.toFixed(1) : discussedFilm.skorSotoy.toFixed(1)}
                       </span>
-                      <span className="text-[11px] text-slate-400">/ 5.0 (Critic Verified)</span>
+                      <span className="text-[11px] text-slate-400">/ 10.0 (Critic Verified)</span>
                     </div>
                   </div>
 

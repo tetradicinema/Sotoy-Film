@@ -999,7 +999,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                               </div>
 
                               <div className="flex items-center gap-2 mt-1">
-                                <span className="text-[10px] font-bold text-[#FFD000] flex items-center gap-0.5">
+                                <span className="text-[10px] font-medium text-[#FFD000] flex items-center gap-0.5">
                                   <Star className="w-3 h-3 fill-current" />
                                   <span>{film.skorSotoy.toFixed(1)}</span>
                                 </span>

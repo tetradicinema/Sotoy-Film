@@ -947,9 +947,9 @@ export const AdminCatalogManager: React.FC = () => {
 
                       {/* Skor Sotoy */}
                       <td className="p-3.5">
-                        <div className="flex items-center gap-1 text-amber-400 font-black text-xs">
+                        <div className="flex items-center gap-1 text-amber-400 font-medium text-xs">
                           <Star className="w-3.5 h-3.5 fill-current" />
-                          <span>{(film.skorSotoy || 4.0).toFixed(1)}</span>
+                          <span>{(film.skorSotoy || 8.0).toFixed(1)}</span>
                         </div>
                       </td>
 

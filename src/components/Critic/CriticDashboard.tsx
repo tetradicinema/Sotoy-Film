@@ -276,8 +276,8 @@ export const CriticDashboard: React.FC = () => {
               </div>
             </div>
             <div className="mt-4 flex items-baseline gap-2">
-              <span className="text-3xl sm:text-4xl font-black text-white">{stats.avgScore}</span>
-              <span className="text-xs text-slate-400 font-semibold">/ 5.0</span>
+              <span className="text-3xl sm:text-4xl font-medium text-white">{stats.avgScore}</span>
+              <span className="text-xs text-slate-400 font-semibold">/ 10.0</span>
             </div>
             <div className="mt-2 text-[11px] text-slate-500 flex items-center gap-1">
               <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
@@ -446,7 +446,7 @@ export const CriticDashboard: React.FC = () => {
                     />
                     <div className="absolute top-1 left-1 bg-black/70 backdrop-blur-md px-1.5 py-0.5 rounded-lg border border-white/10 flex items-center gap-0.5">
                       <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
-                      <span className="text-[10px] font-black text-white">{rating.score}</span>
+                      <span className="text-[10px] font-medium text-white">{rating.score}</span>
                     </div>
                   </div>
 

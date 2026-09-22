@@ -677,7 +677,7 @@ export const CommunityFeedPage: React.FC = () => {
                                 <div className="min-w-0 flex-1">
                                   <h5 className="font-bold text-xs text-white truncate">{f.title}</h5>
                                   <p className="text-[11px] text-slate-400 truncate">{f.year} • {f.genres.join(', ')}</p>
-                                  <span className="text-[10px] text-[#FFD000] font-black">★ {f.skorSotoy.toFixed(1)}</span>
+                                  <span className="text-[10px] text-[#FFD000] font-medium">★ {f.skorSotoy.toFixed(1)}</span>
                                 </div>
                               </div>
                             ))

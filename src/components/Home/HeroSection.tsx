@@ -367,12 +367,12 @@ export const HeroSection: React.FC = () => {
                             {film.year} • {film.genres.slice(0, 2).join(', ')}
                           </p>
                           <div className="mt-1 flex items-center gap-1.5">
-                            <span className="text-[10px] font-black text-[#00F0FF] bg-[#00F0FF]/15 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                            <span className="text-[10px] font-medium text-[#FFD000] bg-[#FFD000]/15 px-1.5 py-0.5 rounded flex items-center gap-0.5">
                               <Star className="w-2.5 h-2.5 fill-current" />
                               <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
-                              <span className="text-[8px] font-bold">Critics</span>
+                              <span className="text-[8px] font-bold text-amber-300">Critics</span>
                             </span>
-                            <span className="text-[10px] text-slate-400">
+                            <span className="text-[10px] text-slate-400 font-medium">
                               ★ {film.skorSotoy.toFixed(1)}
                             </span>
                           </div>
@@ -426,7 +426,7 @@ export const HeroSection: React.FC = () => {
                                 {w.platform}
                               </span>
                             ))}
-                            <span className="text-[10px] font-black text-[#00F0FF] ml-auto flex items-center gap-0.5">
+                            <span className="text-[10px] font-medium text-[#FFD000] ml-auto flex items-center gap-0.5">
                               <Star className="w-2.5 h-2.5 fill-current" />
                               <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
                             </span>

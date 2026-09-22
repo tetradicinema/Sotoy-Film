@@ -158,7 +158,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
                 />
                 <div>
                   <h4 className="font-display font-black text-sm text-white line-clamp-1">{film.title}</h4>
-                  <p className="text-[11px] text-slate-400">Skor Kamu: <span className="text-[#FFD000] font-bold">★ {score.toFixed(1)} / 10.0</span></p>
+                  <p className="text-[11px] text-slate-400">Skor Kamu: <span className="text-[#FFD000] font-medium">★ {score.toFixed(1)} / 10.0</span></p>
                 </div>
               </div>
             </div>
@@ -195,10 +195,10 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
 
               {/* Big Score Display */}
               <div className="flex items-center justify-center gap-2 my-2">
-                <span className="font-display font-black text-4xl text-[#FFD000] drop-shadow-[0_0_12px_rgba(255,208,0,0.4)]">
+                <span className="font-display font-medium text-4xl text-[#FFD000] drop-shadow-[0_0_12px_rgba(255,208,0,0.4)]">
                   {score.toFixed(1)}
                 </span>
-                <span className="text-slate-500 font-bold text-lg">/ 10.0</span>
+                <span className="text-slate-500 font-medium text-lg">/ 10.0</span>
               </div>
 
               {/* Star Visualizer (10 Stars) */}

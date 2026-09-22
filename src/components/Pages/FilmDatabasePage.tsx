@@ -274,7 +274,7 @@ export const FilmDatabasePage: React.FC = () => {
         roleTitle: u.roleTitle || 'Penulis / Kritikus',
         totalReviews: u.totalReviews || 12,
         helpfulVotes: 250,
-        avgScoreGiven: 4.2,
+        avgScoreGiven: 8.4,
         bio: u.bio || 'Penggemar sinema aktif di komunitas Sotoy Film.',
         badges: u.role === 'admin' ? ['Head Admin'] : ['Aktif Reviewer'],
       }));
@@ -290,7 +290,7 @@ export const FilmDatabasePage: React.FC = () => {
         roleTitle: 'Verified Critic',
         totalReviews: 84,
         helpfulVotes: 1420,
-        avgScoreGiven: 4.2,
+        avgScoreGiven: 8.4,
         bio: 'Menilai film dari ketelitian framing dan narasi audio visual.',
         badges: ['Critic of the Month', 'Master Reviewer'],
       },
@@ -304,7 +304,7 @@ export const FilmDatabasePage: React.FC = () => {
         roleTitle: 'Lead Writer',
         totalReviews: 67,
         helpfulVotes: 980,
-        avgScoreGiven: 4.5,
+        avgScoreGiven: 9.0,
         bio: 'Penulis esai film & kurator festival.',
         badges: ['Festival Insider', 'Story Analyst'],
       },
@@ -445,7 +445,7 @@ export const FilmDatabasePage: React.FC = () => {
               <div className="flex items-center gap-4 text-xs relative z-10 self-stretch sm:self-auto justify-between sm:justify-start border-t sm:border-t-0 sm:border-l border-slate-800 pt-3 sm:pt-0 sm:pl-5">
                 <div>
                   <div className="text-[10px] text-slate-500 uppercase font-black">Rata-Rata Skor</div>
-                  <div className="font-black text-sm text-[#FFD000] flex items-center gap-1 mt-0.5">
+                  <div className="font-medium text-sm text-[#FFD000] flex items-center gap-1 mt-0.5">
                     <Star className="w-3.5 h-3.5 fill-current" />
                     <span>{avgGenreScore} / 10.0</span>
                   </div>
@@ -681,11 +681,11 @@ export const FilmDatabasePage: React.FC = () => {
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-[#151628] via-transparent to-transparent opacity-80" />
 
-                        {/* Rating Badge - Prioritize Critics Score */}
-                        <div className="absolute top-2 left-2 bg-black/90 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#00F0FF]/50 text-[#00F0FF] text-[11px] font-black flex items-center gap-1 shadow-md">
+                        {/* Rating Badge */}
+                        <div className="absolute top-2 left-2 bg-black/90 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/50 text-[#FFD000] text-[11px] font-medium flex items-center gap-1 shadow-md">
                           <Star className="w-3 h-3 fill-current" />
                           <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
-                          <span className="text-[9px] text-slate-300 font-bold">Critics</span>
+                          <span className="text-[9px] text-amber-200/80 font-bold">Critics</span>
                         </div>
 
                         {/* Watchlist toggle */}
@@ -827,7 +827,7 @@ export const FilmDatabasePage: React.FC = () => {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#121324] via-transparent to-transparent opacity-80" />
 
-                    <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/50 text-[#FFD000] text-[11px] font-black flex items-center gap-1">
+                    <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/50 text-[#FFD000] text-[11px] font-medium flex items-center gap-1">
                       <Star className="w-3 h-3 fill-current" />
                       <span>{film.skorSotoy.toFixed(1)}</span>
                     </div>
@@ -918,7 +918,7 @@ export const FilmDatabasePage: React.FC = () => {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#121324] via-transparent to-transparent opacity-80" />
 
-                    <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/50 text-[#FFD000] text-[11px] font-black flex items-center gap-1">
+                    <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/50 text-[#FFD000] text-[11px] font-medium flex items-center gap-1">
                       <Star className="w-3 h-3 fill-current" />
                       <span>{film.skorSotoy.toFixed(1)}</span>
                     </div>
@@ -1009,7 +1009,7 @@ export const FilmDatabasePage: React.FC = () => {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#121324] via-transparent to-transparent opacity-80" />
 
-                    <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/50 text-[#FFD000] text-[11px] font-black flex items-center gap-1">
+                    <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/50 text-[#FFD000] text-[11px] font-medium flex items-center gap-1">
                       <Star className="w-3 h-3 fill-current" />
                       <span>{film.skorSotoy.toFixed(1)}</span>
                     </div>
@@ -1135,10 +1135,10 @@ export const FilmDatabasePage: React.FC = () => {
                         </div>
 
                         {/* Star Rating Badge */}
-                        <div className="bg-black/60 border border-[#FFD000]/40 px-3 py-1 rounded-xl text-[#FFD000] font-black text-xs sm:text-sm flex items-center gap-1 shadow-md">
+                        <div className="bg-black/60 border border-[#FFD000]/40 px-3 py-1 rounded-xl text-[#FFD000] font-medium text-xs sm:text-sm flex items-center gap-1 shadow-md">
                           <Star className="w-4 h-4 fill-current" />
                           <span>{rev.score.toFixed(1)}</span>
-                          <span className="text-slate-500 text-[10px]">/ 5.0</span>
+                          <span className="text-slate-500 text-[10px]">/ 10.0</span>
                         </div>
                       </div>
 
@@ -1264,7 +1264,7 @@ export const FilmDatabasePage: React.FC = () => {
                     <div className="text-[9px] text-slate-400 font-bold uppercase">Suka</div>
                   </div>
                   <div className="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
-                    <div className="text-base font-black text-[#FFD000]">★ {topReviewers[0].avgScoreGiven}</div>
+                    <div className="text-base font-medium text-[#FFD000]">★ {topReviewers[0].avgScoreGiven}</div>
                     <div className="text-[9px] text-slate-400 font-bold uppercase">Rerata Skor</div>
                   </div>
                 </div>
@@ -1336,7 +1336,7 @@ export const FilmDatabasePage: React.FC = () => {
                       </div>
 
                       <div className="text-right">
-                        <div className="text-xs font-black text-[#FFD000]">
+                        <div className="text-xs font-medium text-[#FFD000]">
                           ★ {user.avgScoreGiven}
                         </div>
                         <div className="text-[10px] text-slate-400">

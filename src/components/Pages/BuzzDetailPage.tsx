@@ -261,7 +261,7 @@ export const BuzzDetailPage: React.FC = () => {
                 )}
 
                 {buzz.skorSotoyMention && (
-                  <div className="bg-[#FFD000]/15 border border-[#FFD000]/40 px-2 py-0.5 sm:px-3 sm:py-1 rounded-xl text-[#FFD000] text-[11px] sm:text-xs font-black flex items-center gap-1 shrink-0">
+                  <div className="bg-[#FFD000]/15 border border-[#FFD000]/40 px-2 py-0.5 sm:px-3 sm:py-1 rounded-xl text-[#FFD000] text-[11px] sm:text-xs font-medium flex items-center gap-1 shrink-0">
                     <Star className="w-3 h-3 fill-current" />
                     <span>{buzz.skorSotoyMention.toFixed(1)}</span>
                   </div>
@@ -321,9 +321,9 @@ export const BuzzDetailPage: React.FC = () => {
                         {(postFilm as any).genres.join(', ')}
                       </p>
                     )}
-                    <div className="flex items-center gap-2 pt-1 text-xs text-[#FFD000] font-bold">
+                    <div className="flex items-center gap-2 pt-1 text-xs text-[#FFD000] font-medium">
                       <Star className="w-3.5 h-3.5 fill-current" />
-                      <span>{'skorSotoy' in postFilm ? (postFilm as any).skorSotoy.toFixed(1) : '4.9'}</span>
+                      <span>{'skorSotoy' in postFilm ? (postFilm as any).skorSotoy.toFixed(1) : '9.8'}</span>
                       <span className="text-[10px] text-slate-500 font-normal">• Skor Sotoy</span>
                     </div>
                   </div>

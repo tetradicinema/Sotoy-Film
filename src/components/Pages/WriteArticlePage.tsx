@@ -1544,7 +1544,7 @@ export const WriteArticlePage: React.FC = () => {
                   <div>
                     <div className="text-xs font-black text-white">{selectedFilm.title} ({selectedFilm.year})</div>
                     <div className="text-[11px] text-slate-400 mt-0.5">{selectedFilm.director} • {selectedFilm.genres.slice(0, 2).join(', ')}</div>
-                    <div className="text-[11px] text-[#FFD000] font-bold mt-1">★ {selectedFilm.skorSotoy} Skor Sotoy</div>
+                    <div className="text-[11px] text-[#FFD000] font-medium mt-1">★ {selectedFilm.skorSotoy} Skor Sotoy</div>
                   </div>
                 </div>
               )}
