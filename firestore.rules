@@ -139,6 +139,14 @@ service cloud.firestore {
         data.sender.id is string;
     }
 
+    function isValidArticlePresence(data) {
+      return data.keys().hasAll(['articleId', 'userId', 'userName', 'lastActive']) &&
+        data.articleId is string && data.articleId.size() <= 128 &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.userName is string && data.userName.size() <= 128 &&
+        (data.lastActive is int || data.lastActive is number);
+    }
+
     // Granular delta & diff validation helpers
     function isValidFollowersCountDelta() {
       let prev = ('followersCount' in existing()) ? existing().followersCount : 0;
@@ -264,7 +272,16 @@ service cloud.firestore {
 
     match /article_presence/{presenceId} {
       allow read: if true;
-      allow create, update, delete: if true;
+      allow create, update: if isSignedIn() &&
+        (isWriter() || isAdmin()) &&
+        incoming().userId == request.auth.uid &&
+        presenceId == incoming().articleId + '_' + request.auth.uid &&
+        isValidArticlePresence(incoming());
+      allow delete: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isWriter() ||
+        isAdmin()
+      );
     }
 
     match /files/{fileId} {
