@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, Sparkles, Film, MessageSquare, Star, Flame, ArrowRight } from 'lucide-react';
+import { TrendingUp, Sparkles, Film, MessageSquare, Star, Flame, ArrowRight, Heart, ArrowBigUp } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 export const SotoyTrendsDashboard: React.FC = () => {
@@ -42,7 +42,7 @@ export const SotoyTrendsDashboard: React.FC = () => {
           </div>
 
           <button
-            onClick={() => navigateTo('rekomendasi-film')}
+            onClick={() => navigateTo('film-recommendations')}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-bold text-white transition-all shadow-md active:scale-95 shrink-0 self-start sm:self-auto"
           >
             <span>Lihat Semua Rekomendasi</span>
@@ -126,9 +126,25 @@ export const SotoyTrendsDashboard: React.FC = () => {
                     </span>
                     <span className="text-[10px] text-slate-400">@{buzz.author.handle}</span>
                   </div>
-                  <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">
+                  <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed mb-2">
                     {buzz.content}
                   </p>
+                  <div className="flex items-center gap-3 text-[10px] text-slate-500 pt-1.5 border-t border-slate-800/50">
+                    <span className="flex items-center gap-1">
+                      <Heart className="w-3 h-3 text-[#FF2E7E]" />
+                      <span>{buzz.likes || 0}</span>
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <ArrowBigUp className="w-3 h-3 text-emerald-500" />
+                      <span className={(buzz.score || 0) > 0 ? 'text-emerald-400 font-bold' : (buzz.score || 0) < 0 ? 'text-red-400 font-bold' : ''}>
+                        {buzz.score || 0}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <MessageSquare className="w-3 h-3 text-[#00F0FF]" />
+                      <span>{buzz.repliesCount || 0}</span>
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>

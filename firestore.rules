@@ -105,7 +105,9 @@ service cloud.firestore {
         data.id is string && data.id.size() <= 128 &&
         data.content is string && data.content.size() <= 2000 &&
         data.author is map &&
-        data.author.id is string;
+        data.author.id is string &&
+        (!('upvotes' in data) || data.upvotes is list) &&
+        (!('downvotes' in data) || data.downvotes is list);
     }
 
     function isValidUserRating(data) {
@@ -203,6 +205,25 @@ service cloud.firestore {
       return next == prev + 1 || next == prev - 1 || next == prev;
     }
 
+    function isValidVotesUpdate() {
+      let prevUp = ('upvotes' in existing()) ? existing().upvotes : [];
+      let nextUp = ('upvotes' in incoming()) ? incoming().upvotes : [];
+      let prevDown = ('downvotes' in existing()) ? existing().downvotes : [];
+      let nextDown = ('downvotes' in incoming()) ? incoming().downvotes : [];
+      
+      let addedUp = nextUp.toSet().difference(prevUp.toSet());
+      let removedUp = prevUp.toSet().difference(nextUp.toSet());
+      let addedDown = nextDown.toSet().difference(prevDown.toSet());
+      let removedDown = prevDown.toSet().difference(nextDown.toSet());
+
+      return addedUp.hasOnly([request.auth.uid]) && 
+             removedUp.hasOnly([request.auth.uid]) &&
+             addedDown.hasOnly([request.auth.uid]) &&
+             removedDown.hasOnly([request.auth.uid]) &&
+             // Ensure likes field matches the score
+             incoming().likes == nextUp.size() - nextDown.size();
+    }
+
     // Rules for each collection
     match /users/{userId} {
       allow read: if true;
@@ -287,12 +308,12 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidId(buzzId) && isValidBuzzPost(incoming());
       allow update: if isSignedIn() && isValidId(buzzId) && (
         (isOwner(existing().author.id) && isValidBuzzPost(incoming())) ||
-        (incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'reactions', 'reactionsByUser', 'replies', 'repliesCount']) && (
+        (incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'reactions', 'reactionsByUser', 'replies', 'repliesCount', 'upvotes', 'downvotes']) && (
           !('reactionsByUser' in incoming().diff(existing()).affectedKeys()) || isValidReactionsByUserUpdate()
         ) && (
           !('reactions' in incoming().diff(existing()).affectedKeys()) || isValidReactionsAggregateUpdate()
         ) && (
-          !('likes' in incoming().diff(existing()).affectedKeys()) || isValidLikesDelta()
+          !('upvotes' in incoming().diff(existing()).affectedKeys() || 'downvotes' in incoming().diff(existing()).affectedKeys() || 'likes' in incoming().diff(existing()).affectedKeys()) || isValidVotesUpdate()
         ) && (
           !('repliesCount' in incoming().diff(existing()).affectedKeys()) || isValidRepliesCountDelta()
         )) ||
