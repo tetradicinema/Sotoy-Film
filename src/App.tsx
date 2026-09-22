@@ -9,7 +9,6 @@ import { HeroSection } from './components/Home/HeroSection';
 import { FeaturedNews } from './components/Home/FeaturedNews';
 import { HomeFilmRecommendations } from './components/Home/HomeFilmRecommendations';
 import { HomeCategorySection } from './components/Home/HomeCategorySection';
-import { SotoyTrendsDashboard } from './components/Home/SotoyTrendsDashboard';
 import { CategoryPage } from './components/Pages/CategoryPage';
 import { FilmDatabasePage } from './components/Pages/FilmDatabasePage';
 import { FilmDetailPage } from './components/Pages/FilmDetailPage';
@@ -65,13 +64,12 @@ const PageLoadingFallback: React.FC = () => (
   </div>
 );
 
-// Standard Home Page view aggregating hero, news, recommendations, trends, and categories
+// Standard Home Page view aggregating hero, news, recommendations, and categories
 const HomeView: React.FC = () => (
   <>
     <HeroSection />
     <FeaturedNews />
     <HomeFilmRecommendations />
-    <SotoyTrendsDashboard />
     <HomeCategorySection />
   </>
 );
