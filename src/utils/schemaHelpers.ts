@@ -3,6 +3,8 @@
  * Optimized for Sotoy Film reviews, movies, and editorial content.
  */
 
+import { FilmItem, Article } from '../types';
+
 export interface BreadcrumbItem {
   name: string;
   item: string;
@@ -24,7 +26,7 @@ export function generateBreadcrumbSchema(items: BreadcrumbItem[]) {
   };
 }
 
-interface MovieSchemaInput {
+export interface MovieSchemaInput {
   title: string;
   originalTitle?: string;
   image: string;
@@ -100,7 +102,7 @@ export function generateMovieSchema(input: MovieSchemaInput) {
   };
 }
 
-interface ReviewSchemaInput {
+export interface ReviewSchemaInput {
   authorName: string;
   itemReviewedName: string;
   reviewHeadline: string;
@@ -136,7 +138,7 @@ export function generateReviewSchema(input: ReviewSchemaInput) {
   };
 }
 
-interface ArticleSchemaInput {
+export interface ArticleSchemaInput {
   title: string;
   description: string;
   image: string;
@@ -181,4 +183,114 @@ export function generateArticleSchema(input: ArticleSchemaInput) {
     },
     keywords: input.keywords?.join(', '),
   };
+}
+
+/**
+ * Generates WebSite Schema with SearchAction
+ */
+export function generateWebSiteSchema(siteUrl = 'https://www.sotoyfilm.my.id') {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Sotoy Film',
+    alternateName: 'SotoyFilm',
+    url: siteUrl,
+    description: 'Platform komunitas & media pop-culture film, series, anime, cinema gear, dan film studies dengan ulasan Skor Sotoy dan diskusi buzz.',
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${siteUrl}/search?q={search_term_string}`,
+      },
+      'query-input': 'required name=search_term_string',
+    },
+  };
+}
+
+/**
+ * Generates Organization Schema
+ */
+export function generateOrganizationSchema(siteUrl = 'https://www.sotoyfilm.my.id') {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Sotoy Film',
+    url: siteUrl,
+    logo: {
+      '@type': 'ImageObject',
+      url: `${siteUrl}/logo.png`,
+    },
+    sameAs: [
+      'https://twitter.com/sotoyfilm',
+      'https://instagram.com/sotoyfilm',
+    ],
+  };
+}
+
+/**
+ * Dynamically converts a FilmItem into a Schema.org Movie structure
+ */
+export function createMovieSchemaFromFilm(
+  film: FilmItem,
+  options?: {
+    reviews?: {
+      userName?: string;
+      reviewText?: string;
+      score: number;
+      createdAt?: string;
+    }[];
+    currentUrl?: string;
+  }
+) {
+  const filmReviews = options?.reviews
+    ?.filter(r => r.reviewText && r.reviewText.trim().length > 0)
+    .map(r => ({
+      authorName: r.userName || 'Warga Sotoy',
+      reviewHeadline: `Ulasan Skor ${r.score} - ${film.title}`,
+      reviewBody: r.reviewText || '',
+      reviewRating: r.score,
+      createdAt: r.createdAt || new Date().toISOString(),
+    }));
+
+  return generateMovieSchema({
+    title: film.title,
+    originalTitle: film.originalTitle,
+    image: film.poster || film.backdrop || 'https://www.sotoyfilm.my.id/og-default.jpg',
+    description: film.synopsis || film.curatorNote || `Ulasan dan informasi film ${film.title}`,
+    director: film.director || 'Sutradara',
+    writer: film.writer,
+    actorNames: film.cast || [],
+    genre: film.genres || [],
+    year: film.year || new Date().getFullYear(),
+    skorSotoy: Number(film.skorSotoy || 0),
+    totalVotes: Number(film.totalVotes || (filmReviews ? filmReviews.length : 0)),
+    reviews: filmReviews,
+  });
+}
+
+/**
+ * Dynamically converts an Article into a Schema.org NewsArticle structure
+ */
+export function createArticleSchemaFromArticle(
+  article: Article,
+  options?: {
+    currentUrl?: string;
+    authorName?: string;
+    authorAvatar?: string;
+  }
+) {
+  const authorName = options?.authorName || article.author?.name || 'Tim Redaksi';
+  const authorAvatar = options?.authorAvatar || article.author?.avatar;
+  const canonicalUrl = options?.currentUrl || `https://www.sotoyfilm.my.id/artikel/${article.slug || article.id}`;
+
+  return generateArticleSchema({
+    title: article.seoTitle || article.title,
+    description: article.metaDescription || article.excerpt || (article.content ? article.content.slice(0, 160) : ''),
+    image: article.ogImage || article.coverImage || 'https://www.sotoyfilm.my.id/og-default.jpg',
+    url: canonicalUrl,
+    datePublished: article.publishedAt || new Date().toISOString(),
+    authorName,
+    authorAvatar,
+    keywords: article.tags || [],
+  });
 }

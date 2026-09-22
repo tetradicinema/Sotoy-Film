@@ -6,7 +6,7 @@ export const config = {
   matcher: ['/film/:path*', '/artikel/:path*'],
 };
 
-const BOT_PATTERNS = [
+export const BOT_PATTERNS = [
   'facebookexternalhit',
   'twitterbot',
   'slackbot',
@@ -31,7 +31,7 @@ const BOT_PATTERNS = [
 /**
  * Checks if incoming request is from a search engine crawler or social share preview bot.
  */
-function isBotUserAgent(userAgent: string | null): boolean {
+export function isBotUserAgent(userAgent: string | null): boolean {
   if (!userAgent) return false;
   const ua = userAgent.toLowerCase();
   if (BOT_PATTERNS.some(bot => ua.includes(bot))) {

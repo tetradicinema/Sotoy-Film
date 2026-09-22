@@ -251,6 +251,7 @@ export const FilmDetailPage: React.FC = () => {
         image={film.backdrop || film.poster}
         url={seoUrl}
         type="video.movie"
+        film={film}
         keywords={[film.title, film.director, 'skor sotoy', 'ulasan film', ...(film.genres || [])]}
         schema={[breadcrumbSchema, movieSchema]}
       />

@@ -161,6 +161,11 @@ export const ArticleDetailPage: React.FC = () => {
         image={article.ogImage || article.coverImage}
         url={seoUrl}
         type="article"
+        article={article}
+        author={{
+          name: author.displayName || author.name || article.author.name,
+          avatar: author.avatarURL || author.avatar || article.author.avatar,
+        }}
         keywords={[...(article.tags || []), 'sotoy film', article.category, article.subCategory]}
         schema={[breadcrumbSchema, articleSchema]}
       />
