@@ -12,19 +12,15 @@ export const config = {
 };
 
 /**
- * Safe pass-through helper function.
- * Wraps @vercel/edge next() and catches any unexpected runtime error,
- * falling back to returning a raw Response with the 'x-middleware-next: 1' header
- * so the middleware never hard-crashes on a pass-through.
+ * Safely invokes Vercel Edge next() with fallback to raw x-middleware-next header
+ * if @vercel/edge helper throws an unexpected runtime error.
  */
 function safeNext(): Response {
   try {
     return next();
-  } catch (err) {
+  } catch {
     return new Response(null, {
-      headers: {
-        'x-middleware-next': '1',
-      },
+      headers: { 'x-middleware-next': '1' },
     });
   }
 }
@@ -36,6 +32,10 @@ function safeNext(): Response {
  */
 export default async function middleware(request: Request): Promise<Response> {
   try {
+    if (!request || !request.headers) {
+      return safeNext();
+    }
+
     const userAgent = request.headers.get('user-agent');
 
     // 1. Pass through immediately for normal human visitors with zero latency penalty

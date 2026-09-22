@@ -214,17 +214,17 @@ export interface BuzzReply {
   content: string;
   createdAt: string;
   likes: number;
-  score?: number;
   likedByMe?: boolean;
-  myVote?: 'up' | 'down' | null;
-  upvotes?: string[];
-  downvotes?: string[];
 }
 
-export type ReactionType = 'heart';
+export type ReactionType = 'heart' | 'mindblown' | 'fire' | 'laugh' | 'clap';
 
 export interface BuzzReactions {
   heart?: number;
+  mindblown?: number;
+  fire?: number;
+  laugh?: number;
+  clap?: number;
 }
 
 export type InterestProfile = Record<string, number>;
@@ -267,11 +267,7 @@ export interface BuzzPost {
   skorSotoyMention?: number;
   createdAt: string;
   likes: number;
-  score?: number;
   likedByMe?: boolean;
-  myVote?: 'up' | 'down' | null;
-  upvotes?: string[];
-  downvotes?: string[];
   reactions?: BuzzReactions;
   reactionsByUser?: Record<string, ReactionType>;
   myReaction?: ReactionType | null;

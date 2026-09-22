@@ -232,27 +232,19 @@ async function run() {
   }
   xml += '</urlset>\n';
 
-  // 6. Write to output
-  const distDir = path.join(rootDir, 'dist');
+  // 6. Write to public/sitemap.xml
   const publicDir = path.join(rootDir, 'public');
-
-  let sitemapDest;
-  if (fs.existsSync(distDir)) {
-    sitemapDest = path.join(distDir, 'sitemap.xml');
-  } else {
-    if (!fs.existsSync(publicDir)) {
-      fs.mkdirSync(publicDir, { recursive: true });
-    }
-    sitemapDest = path.join(publicDir, 'sitemap.xml');
+  if (!fs.existsSync(publicDir)) {
+    fs.mkdirSync(publicDir, { recursive: true });
   }
 
+  const sitemapDest = path.join(publicDir, 'sitemap.xml');
   fs.writeFileSync(sitemapDest, xml, 'utf-8');
 
   console.log(`[Sitemap Builder] Successfully wrote ${entries.length} URLs (${articlesCount} articles, ${filmsCount} films) to ${sitemapDest}`);
 }
 
 run().catch(err => {
-  console.error('[Sitemap Builder] Error generating sitemap:', err);
-  // Do not exit with 1 to avoid breaking the main build if sitemap fails
-  // process.exit(1);
+  console.error('[Sitemap Builder] Fatal error:', err);
+  process.exit(1);
 });
