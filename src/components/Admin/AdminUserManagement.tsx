@@ -15,7 +15,13 @@ import {
   Star,
   FileText,
   UserX,
-  Sparkles
+  Sparkles,
+  CheckSquare,
+  Square,
+  MinusSquare,
+  X,
+  UserCheck,
+  Layers
 } from 'lucide-react';
 import { useApp, ADMIN_UIDS } from '../../context/AppContext';
 import { User, UserRole } from '../../types';
@@ -23,11 +29,24 @@ import { getRoleBadgeStyle, ROLES_CONFIG } from '../../utils/roleStyles';
 import { RoleBadge } from '../Common/RoleBadge';
 
 export const AdminUserManagement: React.FC = () => {
-  const { allUsers, updateUserRole, toggleUserSuspension, showToast, currentUser, navigateTo } = useApp();
+  const { 
+    allUsers, 
+    updateUserRole, 
+    toggleUserSuspension, 
+    bulkUpdateUserRoles,
+    bulkToggleUserSuspension,
+    showToast, 
+    currentUser, 
+    navigateTo 
+  } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | UserRole | 'suspended'>('all');
   const [copiedUid, setCopiedUid] = useState<string | null>(null);
+
+  // Bulk Selection State
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [isBulkOperating, setIsBulkOperating] = useState(false);
 
   // Filtered Users List
   const filteredUsers = allUsers.filter(user => {
@@ -50,6 +69,69 @@ export const AdminUserManagement: React.FC = () => {
 
     return true;
   });
+
+  // Bulk Selection Helpers
+  const isAllSelected = filteredUsers.length > 0 && filteredUsers.every(u => selectedUserIds.includes(u.id));
+  const isSomeSelected = filteredUsers.some(u => selectedUserIds.includes(u.id)) && !isAllSelected;
+
+  const handleToggleSelectUser = (id: string) => {
+    setSelectedUserIds(prev =>
+      prev.includes(id) ? prev.filter(uid => uid !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllFiltered = () => {
+    if (isAllSelected) {
+      const filteredIdSet = new Set(filteredUsers.map(u => u.id));
+      setSelectedUserIds(prev => prev.filter(id => !filteredIdSet.has(id)));
+    } else {
+      const newSelected = new Set([...selectedUserIds, ...filteredUsers.map(u => u.id)]);
+      setSelectedUserIds(Array.from(newSelected));
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedUserIds([]);
+  };
+
+  const handleBulkRoleChange = async (targetRole: UserRole) => {
+    if (selectedUserIds.length === 0) return;
+    setIsBulkOperating(true);
+    try {
+      await bulkUpdateUserRoles(selectedUserIds, targetRole);
+      setSelectedUserIds([]);
+    } catch (err: any) {
+      showToast('Gagal mengubah role massal: ' + (err?.message || 'Error'));
+    } finally {
+      setIsBulkOperating(false);
+    }
+  };
+
+  const handleBulkToggleSuspension = async (suspend: boolean) => {
+    if (selectedUserIds.length === 0) return;
+    // Don't suspend current user
+    const filteredUids = suspend ? selectedUserIds.filter(id => id !== currentUser.id) : selectedUserIds;
+    if (filteredUids.length === 0) {
+      showToast('Tidak ada pengguna valid yang dapat dibekukan.');
+      return;
+    }
+
+    setIsBulkOperating(true);
+    try {
+      await bulkToggleUserSuspension(filteredUids, suspend);
+      setSelectedUserIds([]);
+    } catch (err: any) {
+      showToast('Gagal memproses status pengguna: ' + (err?.message || 'Error'));
+    } finally {
+      setIsBulkOperating(false);
+    }
+  };
+
+  const handleBulkCopyUids = () => {
+    if (selectedUserIds.length === 0) return;
+    navigator.clipboard.writeText(selectedUserIds.join('\n'));
+    showToast(`${selectedUserIds.length} UID pengguna disalin ke clipboard!`);
+  };
 
   const handleCopyUid = (uid: string) => {
     navigator.clipboard.writeText(uid);
@@ -206,11 +288,105 @@ export const AdminUserManagement: React.FC = () => {
           </div>
         </div>
 
+        {/* Bulk Actions Floating Bar */}
+        {selectedUserIds.length > 0 && (
+          <div className="bg-gradient-to-r from-purple-950/90 via-slate-900/95 to-purple-950/90 border border-purple-500/40 rounded-2xl p-3.5 shadow-2xl backdrop-blur-md flex flex-wrap items-center justify-between gap-3 animate-in fade-in duration-200">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center justify-center w-7 h-7 rounded-xl bg-purple-500/20 text-purple-300 font-black text-xs border border-purple-500/30">
+                {selectedUserIds.length}
+              </span>
+              <span className="text-xs text-white font-bold">
+                {selectedUserIds.length} Pengguna Terpilih
+              </span>
+              <button
+                onClick={handleClearSelection}
+                className="text-xs text-slate-400 hover:text-white underline cursor-pointer"
+              >
+                Batal Pilih
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Bulk Change Role */}
+              <div className="flex items-center gap-1.5 bg-slate-900/80 border border-slate-750 px-2.5 py-1 rounded-xl">
+                <ShieldCheck className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                <span className="text-[11px] text-slate-400 font-semibold">Ubah Role:</span>
+                <select
+                  disabled={isBulkOperating}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      handleBulkRoleChange(e.target.value as UserRole);
+                      e.target.value = '';
+                    }
+                  }}
+                  defaultValue=""
+                  className="bg-transparent text-xs text-white font-bold focus:outline-none cursor-pointer"
+                >
+                  <option value="" disabled className="bg-slate-900 text-slate-400">Pilih Role...</option>
+                  <option value="warga_sotoy" className="bg-slate-900 text-[#00F0FF]">Warga Sotoy (Cyan)</option>
+                  <option value="si_paling_sotoy" className="bg-slate-900 text-[#FFD000]">Si Paling Sotoy (Kuning)</option>
+                  <option value="penulis_sotoy" className="bg-slate-900 text-[#FF2E7E]">Penulis Sotoy (Pink)</option>
+                  <option value="admin" className="bg-slate-900 text-purple-300">Admin Sotoy (Ungu)</option>
+                </select>
+              </div>
+
+              {/* Bulk Suspend */}
+              <button
+                type="button"
+                disabled={isBulkOperating}
+                onClick={() => handleBulkToggleSuspension(true)}
+                className="px-3 py-1.5 bg-red-500/15 hover:bg-red-500/25 text-red-300 border border-red-500/30 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>Bekukan Akun</span>
+              </button>
+
+              {/* Bulk Unsuspend */}
+              <button
+                type="button"
+                disabled={isBulkOperating}
+                onClick={() => handleBulkToggleSuspension(false)}
+                className="px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+              >
+                <Unlock className="w-3.5 h-3.5" />
+                <span>Buka Blokir</span>
+              </button>
+
+              {/* Copy all UIDs */}
+              <button
+                type="button"
+                onClick={handleBulkCopyUids}
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                title="Salin semua UID terpilih"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span>Salin UID</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Users Table */}
         <div className="overflow-x-auto rounded-xl border border-slate-850">
           <table className="w-full text-left text-xs">
             <thead className="bg-[#17182b] text-slate-400 text-[11px] font-bold uppercase tracking-wider border-b border-slate-800">
               <tr>
+                <th className="p-3.5 w-10 text-center">
+                  <button
+                    type="button"
+                    onClick={handleSelectAllFiltered}
+                    className="text-slate-400 hover:text-white transition-colors cursor-pointer"
+                    title={isAllSelected ? "Batal pilih semua" : "Pilih semua pengguna di halaman ini"}
+                  >
+                    {isAllSelected ? (
+                      <CheckSquare className="w-4 h-4 text-[#00F0FF]" />
+                    ) : isSomeSelected ? (
+                      <MinusSquare className="w-4 h-4 text-purple-400" />
+                    ) : (
+                      <Square className="w-4 h-4 text-slate-500" />
+                    )}
+                  </button>
+                </th>
                 <th className="p-3.5 min-w-[240px]">Profil Pengguna</th>
                 <th className="p-3.5 min-w-[180px]">UID & Email Akun</th>
                 <th className="p-3.5 min-w-[120px]">Bergabung</th>
@@ -223,7 +399,7 @@ export const AdminUserManagement: React.FC = () => {
             <tbody className="divide-y divide-slate-850/80 bg-[#111220]">
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-slate-500 text-xs">
+                  <td colSpan={7} className="p-8 text-center text-slate-500 text-xs">
                     Tidak ada pengguna yang cocok dengan kueri pencarian atau filter role.
                   </td>
                 </tr>
@@ -232,14 +408,32 @@ export const AdminUserManagement: React.FC = () => {
                   const isAdminUser = user.role === 'admin' || ADMIN_UIDS.includes(user.id);
                   const isSuspended = !!user.isSuspended;
                   const roleStyle = getRoleBadgeStyle(user.role);
+                  const isSelected = selectedUserIds.includes(user.id);
 
                   return (
                     <tr 
                       key={user.id} 
                       className={`hover:bg-slate-850/40 transition-colors ${
-                        isSuspended ? 'bg-red-950/10' : ''
+                        isSelected 
+                          ? 'bg-purple-950/30 ring-1 ring-inset ring-purple-500/30' 
+                          : isSuspended ? 'bg-red-950/10' : ''
                       }`}
                     >
+                      {/* Checkbox */}
+                      <td className="p-3.5 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleSelectUser(user.id)}
+                          className="text-slate-400 hover:text-white transition-colors cursor-pointer"
+                        >
+                          {isSelected ? (
+                            <CheckSquare className="w-4 h-4 text-[#00F0FF]" />
+                          ) : (
+                            <Square className="w-4 h-4 text-slate-600" />
+                          )}
+                        </button>
+                      </td>
+
                       {/* Avatar & Name & Handle */}
                       <td className="p-3.5">
                         <div className="flex items-center gap-3">

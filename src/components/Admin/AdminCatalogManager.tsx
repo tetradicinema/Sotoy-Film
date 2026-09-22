@@ -24,7 +24,12 @@ import {
   ChevronUp,
   Tag,
   Users,
-  Image as ImageIcon
+  Image as ImageIcon,
+  CheckSquare,
+  Square,
+  MinusSquare,
+  FileSpreadsheet,
+  Award
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { FilmItem, CastMember } from '../../types';
@@ -81,10 +86,22 @@ const DEFAULT_FORM: FilmFormData = {
 };
 
 export const AdminCatalogManager: React.FC = () => {
-  const { films, addFilm, updateFilm, deleteFilm, navigateTo, showToast } = useApp();
+  const { films, addFilm, updateFilm, deleteFilm, bulkDeleteFilms, bulkUpdateFilms, navigateTo, showToast } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'movie' | 'series' | 'anime'>('all');
+
+  // Bulk Selection State
+  const [selectedFilmIds, setSelectedFilmIds] = useState<string[]>([]);
+  const [isBulkOperating, setIsBulkOperating] = useState(false);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [showBulkFormatModal, setShowBulkFormatModal] = useState(false);
+  const [bulkTargetFormat, setBulkTargetFormat] = useState<'movie' | 'series' | 'anime'>('movie');
+  const [showBulkTagModal, setShowBulkTagModal] = useState(false);
+  const [bulkTagInput, setBulkTagInput] = useState('');
+  const [bulkSuggestedTags, setBulkSuggestedTags] = useState<string[]>([
+    'trending', 'must-watch', 'box-office', 'award-winning', 'cult-classic', 'indonesian-cinema', 'plot-twist', 'masterpiece'
+  ]);
 
   // Delete Confirmation State
   const [filmToDelete, setFilmToDelete] = useState<FilmItem | null>(null);
@@ -217,6 +234,161 @@ export const AdminCatalogManager: React.FC = () => {
       return true;
     });
   }, [films, typeFilter, searchQuery]);
+
+  // Bulk Selection Helpers
+  const isAllSelected = filteredFilms.length > 0 && filteredFilms.every(f => selectedFilmIds.includes(f.id));
+  const isSomeSelected = filteredFilms.some(f => selectedFilmIds.includes(f.id)) && !isAllSelected;
+
+  const handleToggleSelectFilm = (id: string) => {
+    setSelectedFilmIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllFiltered = () => {
+    if (isAllSelected) {
+      // Deselect all filtered
+      const filteredIds = new Set(filteredFilms.map(f => f.id));
+      setSelectedFilmIds(prev => prev.filter(id => !filteredIds.has(id)));
+    } else {
+      // Select all filtered
+      const newSelected = new Set([...selectedFilmIds, ...filteredFilms.map(f => f.id)]);
+      setSelectedFilmIds(Array.from(newSelected));
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedFilmIds([]);
+  };
+
+  // Bulk Operations Handlers
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedFilmIds.length === 0) return;
+    setIsBulkOperating(true);
+    try {
+      const ok = await bulkDeleteFilms(selectedFilmIds);
+      if (ok) {
+        setSelectedFilmIds([]);
+        setShowBulkDeleteModal(false);
+      }
+    } catch (err: any) {
+      showToast('Gagal menghapus film massal: ' + (err?.message || 'Error'));
+    } finally {
+      setIsBulkOperating(false);
+    }
+  };
+
+  const handleBulkFormatChange = async (targetFormat: 'movie' | 'series' | 'anime') => {
+    if (selectedFilmIds.length === 0) return;
+    setIsBulkOperating(true);
+    try {
+      const ok = await bulkUpdateFilms(selectedFilmIds, { type: targetFormat });
+      if (ok) {
+        showToast(`Format ${selectedFilmIds.length} film berhasil diubah ke ${targetFormat.toUpperCase()}.`);
+        setShowBulkFormatModal(false);
+        setSelectedFilmIds([]);
+      }
+    } catch (err: any) {
+      showToast('Gagal mengubah format film: ' + (err?.message || 'Error'));
+    } finally {
+      setIsBulkOperating(false);
+    }
+  };
+
+  const handleBulkToggleFeatured = async (isFeatured: boolean) => {
+    if (selectedFilmIds.length === 0) return;
+    setIsBulkOperating(true);
+    try {
+      const ok = await bulkUpdateFilms(selectedFilmIds, { featuredRecommendation: isFeatured });
+      if (ok) {
+        showToast(isFeatured 
+          ? `${selectedFilmIds.length} film ditandai sebagai Rekomendasi Unggulan! ⭐`
+          : `${selectedFilmIds.length} film dihapus dari Rekomendasi Unggulan.`
+        );
+        setSelectedFilmIds([]);
+      }
+    } catch (err: any) {
+      showToast('Gagal mengubah status rekomendasi: ' + (err?.message || 'Error'));
+    } finally {
+      setIsBulkOperating(false);
+    }
+  };
+
+  const handleBulkAddTags = async () => {
+    if (selectedFilmIds.length === 0) return;
+    const inputTags = bulkTagInput
+      .split(',')
+      .map(t => t.trim().toLowerCase().replace(/^#/, ''))
+      .filter(Boolean);
+
+    if (inputTags.length === 0) {
+      showToast('Masukkan minimal satu tag yang valid!');
+      return;
+    }
+
+    setIsBulkOperating(true);
+    try {
+      // Merge new tags with existing tags for each selected film
+      await Promise.all(
+        selectedFilmIds.map(async id => {
+          const film = films.find(f => f.id === id);
+          const currentTags = film?.tags || [];
+          const merged = Array.from(new Set([...currentTags, ...inputTags]));
+          await updateFilm(id, { tags: merged });
+        })
+      );
+      showToast(`Tag [${inputTags.join(', ')}] berhasil ditambahkan ke ${selectedFilmIds.length} film!`);
+      setShowBulkTagModal(false);
+      setBulkTagInput('');
+      setSelectedFilmIds([]);
+    } catch (err: any) {
+      showToast('Gagal menambahkan tag massal: ' + (err?.message || 'Error'));
+    } finally {
+      setIsBulkOperating(false);
+    }
+  };
+
+  const handleExportSelectedFilms = (format: 'json' | 'csv') => {
+    const targetFilms = films.filter(f => selectedFilmIds.includes(f.id));
+    if (targetFilms.length === 0) {
+      showToast('Pilih minimal satu film untuk diekspor!');
+      return;
+    }
+
+    if (format === 'json') {
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(targetFilms, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute('href', dataStr);
+      downloadAnchor.setAttribute('download', `sotoy-films-export-${Date.now()}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast(`${targetFilms.length} film berhasil diekspor ke format JSON.`);
+    } else {
+      // CSV Format
+      const headers = ['ID', 'Judul', 'Tipe', 'Tahun', 'Sutradara', 'Studio', 'Genre', 'Skor Sotoy', 'Poster'];
+      const rows = targetFilms.map(f => [
+        `"${f.id}"`,
+        `"${(f.title || '').replace(/"/g, '""')}"`,
+        `"${f.type || 'movie'}"`,
+        f.year || 2024,
+        `"${(f.director || '').replace(/"/g, '""')}"`,
+        `"${(f.studio || '').replace(/"/g, '""')}"`,
+        `"${(f.genres || []).join('; ')}"`,
+        f.skorSotoy || 4.0,
+        `"${f.poster || ''}"`
+      ]);
+      const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `sotoy-films-export-${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      showToast(`${targetFilms.length} film berhasil diekspor ke format CSV.`);
+    }
+  };
 
   // Open modal for new film
   const handleOpenAddModal = (focusTmdb = false) => {
@@ -539,11 +711,123 @@ export const AdminCatalogManager: React.FC = () => {
           </div>
         </div>
 
+        {/* Bulk Actions Floating/Contextual Bar */}
+        {selectedFilmIds.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-gradient-to-r from-amber-500/15 via-purple-500/15 to-cyan-500/15 border border-amber-500/40 rounded-xl animate-in fade-in slide-in-from-top-2 duration-200 shadow-md">
+            <div className="flex items-center gap-2.5">
+              <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-amber-500 text-slate-950 font-black text-xs">
+                {selectedFilmIds.length}
+              </span>
+              <span className="text-xs font-bold text-white">
+                Film Dipilih
+              </span>
+              <span className="text-[11px] text-slate-400">
+                (dari total {filteredFilms.length} yang ditampilkan)
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Change Format */}
+              <button
+                type="button"
+                onClick={() => setShowBulkFormatModal(true)}
+                className="px-2.5 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-750 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                title="Ubah format semua film yang dipilih"
+              >
+                <Tv className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Ubah Format</span>
+              </button>
+
+              {/* Add Tags */}
+              <button
+                type="button"
+                onClick={() => setShowBulkTagModal(true)}
+                className="px-2.5 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-750 text-purple-300 border border-purple-500/30 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                title="Tambahkan tag ke semua film yang dipilih"
+              >
+                <Tag className="w-3.5 h-3.5 text-purple-400" />
+                <span>Tambah Tag</span>
+              </button>
+
+              {/* Toggle Featured Recommendation */}
+              <button
+                type="button"
+                onClick={() => handleBulkToggleFeatured(true)}
+                className="px-2.5 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-750 text-amber-300 border border-amber-500/30 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                title="Jadikan film pilihan sebagai Rekomendasi Unggulan"
+              >
+                <Award className="w-3.5 h-3.5 text-amber-400" />
+                <span>+ Unggulan</span>
+              </button>
+
+              {/* Export JSON / CSV */}
+              <div className="flex items-center gap-1 bg-slate-900 border border-slate-750 rounded-lg p-0.5">
+                <button
+                  type="button"
+                  onClick={() => handleExportSelectedFilms('json')}
+                  className="px-2 py-1 rounded text-[11px] font-bold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors flex items-center gap-1"
+                  title="Ekspor film terpilih ke file JSON"
+                >
+                  <Download className="w-3 h-3 text-slate-400" />
+                  <span>JSON</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExportSelectedFilms('csv')}
+                  className="px-2 py-1 rounded text-[11px] font-bold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors flex items-center gap-1"
+                  title="Ekspor film terpilih ke file CSV / Excel"
+                >
+                  <FileSpreadsheet className="w-3 h-3 text-slate-400" />
+                  <span>CSV</span>
+                </button>
+              </div>
+
+              {/* Delete Selected */}
+              <button
+                type="button"
+                onClick={() => setShowBulkDeleteModal(true)}
+                className="px-2.5 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                title="Hapus massal film yang dipilih"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                <span>Hapus Massal</span>
+              </button>
+
+              {/* Cancel Selection */}
+              <button
+                type="button"
+                onClick={handleClearSelection}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                title="Batalkan semua pilihan"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Film Catalog Grid/List */}
         <div className="overflow-x-auto rounded-xl border border-slate-850">
           <table className="w-full text-left text-xs">
             <thead className="bg-[#17182b] text-slate-400 text-[11px] font-bold uppercase tracking-wider border-b border-slate-800">
               <tr>
+                {/* Select All Checkbox Column */}
+                <th className="p-3.5 w-10 text-center">
+                  <button
+                    type="button"
+                    onClick={handleSelectAllFiltered}
+                    className="p-1 rounded hover:bg-slate-750 text-slate-400 hover:text-amber-400 transition-colors cursor-pointer"
+                    title={isAllSelected ? "Batalkan pilihan semua" : "Pilih semua film di tabel"}
+                  >
+                    {isAllSelected ? (
+                      <CheckSquare className="w-4 h-4 text-amber-400" />
+                    ) : isSomeSelected ? (
+                      <MinusSquare className="w-4 h-4 text-amber-400" />
+                    ) : (
+                      <Square className="w-4 h-4 text-slate-500" />
+                    )}
+                  </button>
+                </th>
                 <th className="p-3.5 min-w-[260px]">Judul Film & Poster</th>
                 <th className="p-3.5 min-w-[90px]">Tipe</th>
                 <th className="p-3.5 min-w-[80px]">Tahun</th>
@@ -557,120 +841,152 @@ export const AdminCatalogManager: React.FC = () => {
             <tbody className="divide-y divide-slate-850/80 bg-[#111220]">
               {filteredFilms.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-500 text-xs">
+                  <td colSpan={8} className="p-8 text-center text-slate-500 text-xs">
                     Tidak ada film yang cocok dengan kueri pencarian Anda.
                   </td>
                 </tr>
               ) : (
-                filteredFilms.map(film => (
-                  <tr key={film.id} className="hover:bg-slate-850/40 transition-colors group">
-                    {/* Poster and Title */}
-                    <td className="p-3.5">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=120&q=80'}
-                          alt={film.title}
-                          className="w-10 h-14 rounded-lg object-cover ring-1 ring-slate-800 shrink-0"
-                        />
-                        <div className="min-w-0">
-                          <span 
-                            onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                            className="font-bold text-white hover:text-[#FFD000] cursor-pointer transition-colors text-xs block truncate max-w-[200px]"
-                          >
-                            {film.title}
-                          </span>
-                          {film.originalTitle && (
-                            <span className="text-[10px] text-slate-500 italic block truncate max-w-[180px]">
-                              {film.originalTitle}
-                            </span>
-                          )}
-                          <div className="text-[10px] text-slate-500 font-mono mt-0.5">
-                            ID: {film.id}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Type */}
-                    <td className="p-3.5">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
-                        film.type === 'series'
-                          ? 'bg-cyan-500/20 text-[#00F0FF] border border-cyan-500/30'
-                          : film.type === 'anime'
-                          ? 'bg-pink-500/20 text-[#FF2E7E] border border-pink-500/30'
-                          : 'bg-amber-500/20 text-[#FFD000] border border-amber-500/30'
-                      }`}>
-                        {film.type || 'Movie'}
-                      </span>
-                    </td>
-
-                    {/* Year */}
-                    <td className="p-3.5 text-slate-300 font-bold">
-                      {film.year || '-'}
-                    </td>
-
-                    {/* Director & Studio */}
-                    <td className="p-3.5">
-                      <div className="text-xs text-slate-200 font-medium truncate max-w-[140px]">
-                        {film.director || 'Tidak terdata'}
-                      </div>
-                      <div className="text-[10px] text-slate-500 truncate max-w-[140px]">
-                        {film.studio || 'Studio independen'}
-                      </div>
-                    </td>
-
-                    {/* Genres */}
-                    <td className="p-3.5">
-                      <div className="flex flex-wrap gap-1 max-w-[150px]">
-                        {(film.genres || []).slice(0, 2).map((g, i) => (
-                          <span key={i} className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300">
-                            {g}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-
-                    {/* Skor Sotoy */}
-                    <td className="p-3.5">
-                      <div className="flex items-center gap-1 text-amber-400 font-black text-xs">
-                        <Star className="w-3.5 h-3.5 fill-current" />
-                        <span>{(film.skorSotoy || 4.0).toFixed(1)}</span>
-                      </div>
-                    </td>
-
-                    {/* Action buttons */}
-                    <td className="p-3.5 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => handleOpenEditModal(film)}
-                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-amber-500/20 text-slate-400 hover:text-[#FFD000] transition-colors"
-                          title="Sunting Metadata Film"
-                        >
-                          <Edit className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-cyan-500/20 text-slate-400 hover:text-[#00F0FF] transition-colors"
-                          title="Buka Halaman Film"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                        </button>
+                filteredFilms.map(film => {
+                  const isSelected = selectedFilmIds.includes(film.id);
+                  return (
+                    <tr 
+                      key={film.id} 
+                      className={`transition-colors group ${
+                        isSelected 
+                          ? 'bg-amber-500/10 hover:bg-amber-500/15 border-l-2 border-amber-400' 
+                          : 'hover:bg-slate-850/40'
+                      }`}
+                    >
+                      {/* Checkbox Column */}
+                      <td className="p-3.5 text-center">
                         <button
                           type="button"
-                          id={`admin-delete-film-btn-${film.id}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(film);
-                          }}
-                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors cursor-pointer"
-                          title="Hapus Film dari Katalog"
+                          onClick={() => handleToggleSelectFilm(film.id)}
+                          className="p-1 rounded hover:bg-slate-750 text-slate-400 transition-colors cursor-pointer"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          {isSelected ? (
+                            <CheckSquare className="w-4 h-4 text-amber-400" />
+                          ) : (
+                            <Square className="w-4 h-4 text-slate-600 group-hover:text-slate-400" />
+                          )}
                         </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+
+                      {/* Poster and Title */}
+                      <td className="p-3.5">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=120&q=80'}
+                            alt={film.title}
+                            className="w-10 h-14 rounded-lg object-cover ring-1 ring-slate-800 shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span 
+                                onClick={() => navigateTo('film-detail', { filmId: film.id })}
+                                className="font-bold text-white hover:text-[#FFD000] cursor-pointer transition-colors text-xs block truncate max-w-[200px]"
+                              >
+                                {film.title}
+                              </span>
+                              {film.featuredRecommendation && (
+                                <span className="p-0.5 rounded bg-amber-500/20 text-amber-400" title="Rekomendasi Unggulan">
+                                  <Star className="w-3 h-3 fill-current" />
+                                </span>
+                              )}
+                            </div>
+                            {film.originalTitle && (
+                              <span className="text-[10px] text-slate-500 italic block truncate max-w-[180px]">
+                                {film.originalTitle}
+                              </span>
+                            )}
+                            <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                              ID: {film.id}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Type */}
+                      <td className="p-3.5">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                          film.type === 'series'
+                            ? 'bg-cyan-500/20 text-[#00F0FF] border border-cyan-500/30'
+                            : film.type === 'anime'
+                            ? 'bg-pink-500/20 text-[#FF2E7E] border border-pink-500/30'
+                            : 'bg-amber-500/20 text-[#FFD000] border border-amber-500/30'
+                        }`}>
+                          {film.type || 'Movie'}
+                        </span>
+                      </td>
+
+                      {/* Year */}
+                      <td className="p-3.5 text-slate-300 font-bold">
+                        {film.year || '-'}
+                      </td>
+
+                      {/* Director & Studio */}
+                      <td className="p-3.5">
+                        <div className="text-xs text-slate-200 font-medium truncate max-w-[140px]">
+                          {film.director || 'Tidak terdata'}
+                        </div>
+                        <div className="text-[10px] text-slate-500 truncate max-w-[140px]">
+                          {film.studio || 'Studio independen'}
+                        </div>
+                      </td>
+
+                      {/* Genres */}
+                      <td className="p-3.5">
+                        <div className="flex flex-wrap gap-1 max-w-[150px]">
+                          {(film.genres || []).slice(0, 2).map((g, i) => (
+                            <span key={i} className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300">
+                              {g}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+
+                      {/* Skor Sotoy */}
+                      <td className="p-3.5">
+                        <div className="flex items-center gap-1 text-amber-400 font-black text-xs">
+                          <Star className="w-3.5 h-3.5 fill-current" />
+                          <span>{(film.skorSotoy || 4.0).toFixed(1)}</span>
+                        </div>
+                      </td>
+
+                      {/* Action buttons */}
+                      <td className="p-3.5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => handleOpenEditModal(film)}
+                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-amber-500/20 text-slate-400 hover:text-[#FFD000] transition-colors"
+                            title="Sunting Metadata Film"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => navigateTo('film-detail', { filmId: film.id })}
+                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-cyan-500/20 text-slate-400 hover:text-[#00F0FF] transition-colors"
+                            title="Buka Halaman Film"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            id={`admin-delete-film-btn-${film.id}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(film);
+                            }}
+                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors cursor-pointer"
+                            title="Hapus Film dari Katalog"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -1427,6 +1743,256 @@ export const AdminCatalogManager: React.FC = () => {
                   <>
                     <Trash2 className="w-4 h-4 stroke-[2.5]" />
                     <span>Ya, Hapus Film</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BULK DELETE CONFIRMATION MODAL */}
+      {showBulkDeleteModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => !isBulkOperating && setShowBulkDeleteModal(false)}
+        >
+          <div
+            className="bg-[#121324] border border-red-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto text-red-400">
+              <Trash2 className="w-7 h-7 stroke-[2]" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="font-display font-black text-lg text-white">
+                Hapus {selectedFilmIds.length} Film Massal?
+              </h3>
+              <p className="text-slate-400 text-xs leading-relaxed max-w-sm mx-auto">
+                Apakah Anda yakin ingin menghapus <strong className="text-red-400 font-bold">{selectedFilmIds.length} judul film</strong> sekaligus? Tindakan ini akan menghapus dokumen film dari Firestore secara permanen.
+              </p>
+            </div>
+
+            {/* List preview */}
+            <div className="max-h-36 overflow-y-auto bg-slate-900/80 border border-slate-800 rounded-xl p-3 text-left divide-y divide-slate-800/60 custom-scrollbar">
+              {selectedFilmIds.map(id => {
+                const item = films.find(f => f.id === id);
+                return (
+                  <div key={id} className="py-1.5 flex items-center justify-between text-xs">
+                    <span className="font-bold text-slate-200 truncate max-w-[240px]">
+                      {item?.title || id}
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      {item?.year || ''}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowBulkDeleteModal(false)}
+                disabled={isBulkOperating}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold text-xs transition-all disabled:opacity-50 cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkDeleteConfirm}
+                disabled={isBulkOperating}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs transition-all shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
+              >
+                {isBulkOperating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span>Menghapus {selectedFilmIds.length} Film...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 stroke-[2.5]" />
+                    <span>Ya, Hapus {selectedFilmIds.length} Judul</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BULK FORMAT CHANGE MODAL */}
+      {showBulkFormatModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => !isBulkOperating && setShowBulkFormatModal(false)}
+        >
+          <div
+            className="bg-[#121324] border border-cyan-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <div className="flex items-center gap-2.5 text-cyan-400 font-display font-bold text-base">
+                <Tv className="w-5 h-5" />
+                <span>Ubah Format {selectedFilmIds.length} Film</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowBulkFormatModal(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-slate-400 text-xs leading-relaxed">
+              Pilih format tayangan baru untuk <strong className="text-white">{selectedFilmIds.length} film</strong> yang dipilih:
+            </p>
+
+            <div className="grid grid-cols-3 gap-3">
+              {(['movie', 'series', 'anime'] as const).map(fmt => (
+                <button
+                  key={fmt}
+                  type="button"
+                  onClick={() => setBulkTargetFormat(fmt)}
+                  className={`p-3.5 rounded-2xl border text-center transition-all ${
+                    bulkTargetFormat === fmt
+                      ? 'bg-cyan-500/20 border-cyan-400 text-cyan-200 shadow-md shadow-cyan-500/20 font-black'
+                      : 'bg-slate-900 border-slate-750 text-slate-400 hover:text-white hover:bg-slate-800 font-bold'
+                  }`}
+                >
+                  <div className="text-xs uppercase tracking-wider">{fmt}</div>
+                  <div className="text-[10px] text-slate-500 mt-1 capitalize font-normal">
+                    {fmt === 'movie' ? 'Film Layar Lebar' : fmt === 'series' ? 'Serial TV' : 'Animasi'}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowBulkFormatModal(false)}
+                disabled={isBulkOperating}
+                className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold text-xs transition-all disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => handleBulkFormatChange(bulkTargetFormat)}
+                disabled={isBulkOperating}
+                className="py-2.5 px-5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-black text-xs transition-all shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
+              >
+                {isBulkOperating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span>Menerapkan...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4 stroke-[2.5]" />
+                    <span>Terapkan Format ({bulkTargetFormat.toUpperCase()})</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BULK ADD TAGS MODAL */}
+      {showBulkTagModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => !isBulkOperating && setShowBulkTagModal(false)}
+        >
+          <div
+            className="bg-[#121324] border border-purple-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <div className="flex items-center gap-2.5 text-purple-400 font-display font-bold text-base">
+                <Tag className="w-5 h-5" />
+                <span>Tambah Tag Massal</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowBulkTagModal(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-slate-400 text-xs leading-relaxed">
+              Tambahkan label/tag ke <strong className="text-white">{selectedFilmIds.length} judul film</strong> yang dipilih sekaligus. Tag akan digabungkan dengan tag yang sudah ada.
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  Tag Cepat
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {bulkSuggestedTags.map(tag => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => {
+                        const current = bulkTagInput ? bulkTagInput.split(',').map(s => s.trim()).filter(Boolean) : [];
+                        if (!current.includes(tag)) {
+                          setBulkTagInput([...current, tag].join(', '));
+                        }
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[11px] font-bold transition-colors"
+                    >
+                      +{tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  Input Tag (Pisahkan dengan koma)
+                </label>
+                <input
+                  type="text"
+                  value={bulkTagInput}
+                  onChange={e => setBulkTagInput(e.target.value)}
+                  placeholder="trending, must-watch, plot-twist..."
+                  className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-400 transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowBulkTagModal(false)}
+                disabled={isBulkOperating}
+                className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold text-xs transition-all disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkAddTags}
+                disabled={isBulkOperating}
+                className="py-2.5 px-5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-black text-xs transition-all shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
+              >
+                {isBulkOperating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span>Menerapkan Tag...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4 stroke-[2.5]" />
+                    <span>Tambahkan Tag</span>
                   </>
                 )}
               </button>

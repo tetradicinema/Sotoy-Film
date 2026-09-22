@@ -264,6 +264,8 @@ interface AppContextType {
   // Admin Control Center Management
   updateUserRole: (userId: string, newRole: UserRole) => Promise<boolean>;
   toggleUserSuspension: (userId: string, isSuspended: boolean) => Promise<boolean>;
+  bulkUpdateUserRoles: (userIds: string[], newRole: UserRole) => Promise<boolean>;
+  bulkToggleUserSuspension: (userIds: string[], isSuspended: boolean) => Promise<boolean>;
   bulkUpdateArticles: (articleIds: string[], updates: Partial<Article>) => Promise<boolean>;
   bulkDeleteArticles: (articleIds: string[]) => Promise<boolean>;
   bulkReassignAuthor: (articleIds: string[], targetAuthor: { id: string; name: string; avatar: string; role: UserRole }) => Promise<boolean>;
@@ -271,6 +273,8 @@ interface AppContextType {
   addFilm: (film: Omit<FilmItem, 'id'>) => Promise<boolean>;
   updateFilm: (id: string, updates: Partial<FilmItem>) => Promise<boolean>;
   deleteFilm: (id: string) => Promise<boolean>;
+  bulkDeleteFilms: (filmIds: string[]) => Promise<boolean>;
+  bulkUpdateFilms: (filmIds: string[], updates: Partial<FilmItem>) => Promise<boolean>;
   deleteBuzzPost: (buzzId: string) => Promise<boolean>;
   deleteBuzzReply: (buzzId: string, replyId: string) => Promise<boolean>;
   moderationReports: ModerationReport[];
@@ -2787,6 +2791,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const bulkUpdateUserRoles = async (userIds: string[], newRole: UserRole): Promise<boolean> => {
+    try {
+      const roleTitles: Record<UserRole, string> = {
+        warga_sotoy: 'Warga Sotoy (Penonton Santai)',
+        si_paling_sotoy: 'Si Paling Sotoy (Kritikus Film)',
+        penulis_sotoy: 'Penulis Sotoy (Jurnalis Film & Pop-Culture)',
+        admin: 'Admin Sotoy (Pengelola Platform)',
+      };
+      const title = roleTitles[newRole] || 'Warga Sotoy';
+
+      await Promise.all(
+        userIds.map(id => 
+          updateDoc(doc(db, 'users', id), {
+            role: newRole,
+            roleTitle: title,
+          })
+        )
+      );
+
+      setAllUsers(prev => prev.map(u => userIds.includes(u.id) ? { ...u, role: newRole, roleTitle: title } : u));
+      if (userIds.includes(currentUser.id)) {
+        setCurrentUser(prev => ({ ...prev, role: newRole, roleTitle: title }));
+      }
+      showToast(`Role ${userIds.length} pengguna berhasil diubah menjadi "${newRole.replace('_', ' ').toUpperCase()}".`);
+      return true;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/bulk-roles`);
+      return false;
+    }
+  };
+
+  const bulkToggleUserSuspension = async (userIds: string[], isSuspended: boolean): Promise<boolean> => {
+    try {
+      await Promise.all(
+        userIds.map(id =>
+          updateDoc(doc(db, 'users', id), {
+            isSuspended,
+            suspendedAt: isSuspended ? new Date().toISOString() : null,
+          })
+        )
+      );
+
+      setAllUsers(prev => prev.map(u => userIds.includes(u.id) ? { ...u, isSuspended, suspendedAt: isSuspended ? new Date().toISOString() : undefined } : u));
+      showToast(isSuspended ? `${userIds.length} akun pengguna berhasil dibekukan.` : `${userIds.length} akun pengguna berhasil diaktifkan kembali.`);
+      return true;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/bulk-suspension`);
+      return false;
+    }
+  };
+
   const bulkUpdateArticles = async (articleIds: string[], updates: Partial<Article>): Promise<boolean> => {
     try {
       await Promise.all(
@@ -2997,6 +3052,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const bulkDeleteFilms = async (filmIds: string[]): Promise<boolean> => {
+    console.log('[AppContext] === [bulkDeleteFilms INVOKED] ===', { filmIds });
+    filmIds.forEach(id => recordDeletedFilmId(id));
+    setFilms(prev => prev.filter(f => !filmIds.includes(f.id)));
+
+    try {
+      await Promise.all(
+        filmIds.map(id => deleteDoc(doc(db, 'films', id)))
+      );
+      showToast(`${filmIds.length} film berhasil dihapus dari katalog.`);
+      return true;
+    } catch (error: any) {
+      console.error('[AppContext] Firestore bulk delete error:', error);
+      const errMsg = error?.message || 'Gagal menghapus dari database Firestore.';
+      showToast(`Catatan: Film dihapus dari katalog lokal (${errMsg})`);
+      return false;
+    }
+  };
+
+  const bulkUpdateFilms = async (filmIds: string[], updates: Partial<FilmItem>): Promise<boolean> => {
+    console.log('[AppContext] === [bulkUpdateFilms INVOKED] ===', { count: filmIds.length, updates });
+    try {
+      const sanitizedUpdates = JSON.parse(JSON.stringify(updates));
+      await Promise.all(
+        filmIds.map(id => updateDoc(doc(db, 'films', id), sanitizedUpdates))
+      );
+      setFilms(prev => prev.map(f => filmIds.includes(f.id) ? { ...f, ...updates } : f));
+      showToast(`${filmIds.length} film berhasil diperbarui secara massal.`);
+      return true;
+    } catch (error: any) {
+      console.error('[AppContext] Firestore bulk update error:', error);
+      setFilms(prev => prev.map(f => filmIds.includes(f.id) ? { ...f, ...updates } : f));
+      const errMsg = error?.message || 'Gagal memperbarui ke database Firestore.';
+      showToast(`Gagal memperbarui film: ${errMsg}`);
+      return false;
+    }
+  };
+
   const deleteBuzzPost = async (buzzId: string): Promise<boolean> => {
     try {
       await deleteDoc(doc(db, 'buzz', buzzId));
@@ -3180,6 +3273,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         checkAndSendMentions,
         updateUserRole,
         toggleUserSuspension,
+        bulkUpdateUserRoles,
+        bulkToggleUserSuspension,
         bulkUpdateArticles,
         bulkDeleteArticles,
         bulkReassignAuthor,
@@ -3187,6 +3282,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addFilm,
         updateFilm,
         deleteFilm,
+        bulkDeleteFilms,
+        bulkUpdateFilms,
         deleteBuzzPost,
         deleteBuzzReply,
         moderationReports,
