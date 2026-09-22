@@ -1,14 +1,33 @@
 import { next } from '@vercel/edge';
-import { isBotUserAgent } from './src/lib/edge/botDetection';
-import { fetchEntityData, fetchWithTimeout } from './src/lib/edge/firestoreRest';
-import { injectMetaTags, FALLBACK_HTML_TEMPLATE } from './src/lib/edge/metaInjection';
+import { isBotUserAgent } from './src/lib/edge/botDetection.js';
+import { fetchEntityData, fetchWithTimeout } from './src/lib/edge/firestoreRest.js';
+import { injectMetaTags, FALLBACK_HTML_TEMPLATE } from './src/lib/edge/metaInjection.js';
 
 // Re-export for unit tests and external consumers
 export { isBotUserAgent };
 
 export const config = {
+  runtime: 'edge',
   matcher: ['/film/:path*', '/artikel/:path*'],
 };
+
+/**
+ * Safe pass-through helper function.
+ * Wraps @vercel/edge next() and catches any unexpected runtime error,
+ * falling back to returning a raw Response with the 'x-middleware-next: 1' header
+ * so the middleware never hard-crashes on a pass-through.
+ */
+function safeNext(): Response {
+  try {
+    return next();
+  } catch (err) {
+    return new Response(null, {
+      headers: {
+        'x-middleware-next': '1',
+      },
+    });
+  }
+}
 
 /**
  * Vercel Edge Middleware entrypoint.
@@ -21,7 +40,7 @@ export default async function middleware(request: Request): Promise<Response> {
 
     // 1. Pass through immediately for normal human visitors with zero latency penalty
     if (!isBotUserAgent(userAgent)) {
-      return next();
+      return safeNext();
     }
 
     const url = new URL(request.url);
@@ -39,14 +58,14 @@ export default async function middleware(request: Request): Promise<Response> {
     }
 
     if (!collection || !slug) {
-      return next();
+      return safeNext();
     }
 
     // 2. Fetch the entity data from Firestore REST API (with 3-way slug matching)
     const data = await fetchEntityData(collection, slug);
     if (!data) {
       // Fall through to normal SPA rather than returning an error
-      return next();
+      return safeNext();
     }
 
     // 3. Prepare metadata based on collection type
@@ -107,7 +126,7 @@ export default async function middleware(request: Request): Promise<Response> {
   } catch (err) {
     // Fail gracefully: log and pass request through
     console.error('[Middleware Error]', err);
-    return next();
+    return safeNext();
   }
 }
 

@@ -12,7 +12,7 @@
  *   npx tsx scripts/test-middleware.ts
  */
 
-import middleware, { isBotUserAgent } from '../middleware';
+import middleware, { isBotUserAgent } from '../middleware.js';
 
 interface TestCase {
   name: string;
