@@ -21,28 +21,20 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && (
-        request.auth.uid == 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' ||
-        request.auth.uid == 'QkNGf1ZfhsMyUEk90a6Iz8ZplZS2' ||
-        request.auth.uid == 'I34eqzOmvsSdS2Rf7jpfxw1ZKeu1' ||
-        (request.auth.token.email in ['eksposurmedia@gmail.com', 'admin1@sotoyfilm.id', 'admin2@sotoyfilm.id']) ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'admin')
-      );
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserData().role == 'admin';
     }
 
     function isWriter() {
       return isSignedIn() && (
-        request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' ||
-        request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' ||
         isAdmin() ||
-        (request.auth.token.email in ['eksposurmedia@gmail.com', 'admin1@sotoyfilm.id', 'admin2@sotoyfilm.id']) ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role in ['penulis_sotoy', 'admin'])
       );
     }
 
     function isCritic() {
       return isSignedIn() && (
-        request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' ||
         isAdmin() ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role in ['si_paling_sotoy', 'admin'])
       );
@@ -88,7 +80,7 @@ service cloud.firestore {
         data.category is string &&
         data.author is map &&
         data.author.id is string &&
-        (data.author.id == request.auth.uid || isAdmin() || request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' || request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2');
+        (data.author.id == request.auth.uid || isAdmin() || isWriter());
     }
 
     function isValidFilmItem(data) {
@@ -238,7 +230,7 @@ service cloud.firestore {
       allow create: if isSignedIn() && isOwner(userId) && isValidUser(incoming());
       allow update: if isSignedIn() && (
         // Document Owner updating profile / interests / following
-        (isOwner(userId) && isValidUser(incoming()) && (incoming().role == existing().role || userId == '0PCmaBvJrzeaQgpf3sSTC4mnsh02') && (
+        (isOwner(userId) && isValidUser(incoming()) && (incoming().role == existing().role || isAdmin()) && (
           !('followersCount' in incoming().diff(existing()).affectedKeys()) || isValidFollowersCountDelta()
         ) && (
           !('followingCount' in incoming().diff(existing()).affectedKeys()) || isValidFollowingCountDelta()
@@ -294,23 +286,17 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidId(articleId) && isValidArticle(incoming()) && (
         isWriter() ||
         isAdmin() ||
-        request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' ||
-        request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' ||
         incoming().author.id == request.auth.uid
       );
       allow update: if isSignedIn() && isValidId(articleId) && isValidArticle(incoming()) && (
         isOwner(existing().author.id) || 
         isAdmin() || 
-        isWriter() ||
-        (request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' && (existing().author.id == request.auth.uid || incoming().author.id == request.auth.uid)) ||
-        (request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' && (existing().author.id == request.auth.uid || incoming().author.id == request.auth.uid))
+        isWriter()
       );
       allow delete: if isSignedIn() && (
         isOwner(existing().author.id) || 
         isAdmin() || 
-        isWriter() ||
-        (request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' && existing().author.id == request.auth.uid) ||
-        (request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' && existing().author.id == request.auth.uid)
+        isWriter()
       );
     }
 
