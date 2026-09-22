@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { FilmItem, Article } from '../../types';
+import { generateMetadata } from '../../utils/generateMetadata';
 import {
   BreadcrumbItem,
   generateBreadcrumbSchema,
@@ -125,8 +127,20 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
   section,
   tags,
 }) => {
-  const finalTitle = title ? `${title} | Sotoy Film` : DEFAULT_TITLE;
-  
+  const location = useLocation();
+
+  // Dynamic route-specific metadata resolved from current pathname
+  const routeMeta = useMemo(() => {
+    return generateMetadata(location.pathname);
+  }, [location.pathname]);
+
+  const rawTitle = title || routeMeta.title;
+  const finalTitle = rawTitle.includes('Sotoy Film') ? rawTitle : `${rawTitle} | Sotoy Film`;
+
+  const finalDescription = (description && description !== DEFAULT_DESC)
+    ? description
+    : (routeMeta.description || DEFAULT_DESC);
+
   // Dynamic URL resolution based on client location or fallback
   const clientLocationUrl = typeof window !== 'undefined' 
     ? `${window.location.origin}${window.location.pathname}`
@@ -134,12 +148,20 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
   const finalUrl = url || clientLocationUrl;
   const finalCanonical = canonicalUrl || finalUrl;
 
-  const finalKeywords = Array.isArray(keywords)
-    ? keywords.filter(Boolean).join(', ')
-    : keywords || DEFAULT_KEYWORDS;
+  const finalKeywords = useMemo(() => {
+    if (keywords) {
+      return Array.isArray(keywords) ? keywords.filter(Boolean).join(', ') : keywords;
+    }
+    if (routeMeta.keywords && routeMeta.keywords.length > 0) {
+      return routeMeta.keywords.join(', ');
+    }
+    return DEFAULT_KEYWORDS;
+  }, [keywords, routeMeta.keywords]);
 
   // Determine effective page type
-  const effectiveType = type || (film ? 'video.movie' : article ? 'article' : 'website');
+  const effectiveType = type || (film ? 'video.movie' : article ? 'article' : (routeMeta.type || 'website'));
+
+  const effectiveNoindex = noindex || !!routeMeta.noindex;
 
   // Dynamic Image Resolution:
   // For films: prioritize high-res landscape backdrop (optimal for 16:9 / summary_large_image), then poster
@@ -286,15 +308,15 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
     <Helmet>
       {/* Standard Meta Tags */}
       <title>{finalTitle}</title>
-      <meta name="description" content={description} />
+      <meta name="description" content={finalDescription} />
       <meta name="keywords" content={finalKeywords} />
       <link rel="canonical" href={finalCanonical} />
-      {noindex && <meta name="robots" content="noindex, nofollow" />}
+      {effectiveNoindex && <meta name="robots" content="noindex, nofollow" />}
 
       {/* Open Graph / Facebook / WhatsApp */}
       <meta property="og:site_name" content="Sotoy Film" />
       <meta property="og:title" content={finalTitle} />
-      <meta property="og:description" content={description} />
+      <meta property="og:description" content={finalDescription} />
       <meta property="og:url" content={finalUrl} />
       <meta property="og:type" content={effectiveType} />
       <meta property="og:locale" content="id_ID" />
@@ -354,7 +376,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
       <meta name="twitter:site" content={twitterSite} />
       {effectiveTwitterCreator && <meta name="twitter:creator" content={effectiveTwitterCreator} />}
       <meta name="twitter:title" content={finalTitle} />
-      <meta name="twitter:description" content={description} />
+      <meta name="twitter:description" content={finalDescription} />
       <meta name="twitter:image" content={primaryImageUrl} />
       <meta name="twitter:image:alt" content={finalImageAlt} />
       <meta name="twitter:domain" content={typeof window !== 'undefined' ? window.location.hostname : 'www.sotoyfilm.my.id'} />

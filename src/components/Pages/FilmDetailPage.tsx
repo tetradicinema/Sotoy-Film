@@ -43,6 +43,7 @@ import { RateFilmModal } from '../Modals/RateFilmModal';
 import { FullCastCrewModal } from '../Modals/FullCastCrewModal';
 import { PersonAvatar } from '../Common/PersonAvatar';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
+import { BreadcrumbNavigation } from '../Navigation/BreadcrumbNavigation';
 import { fetchFullTmdbCredits } from '../../utils/tmdbHelper';
 
 const RelatedArticleAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }> = ({ authorId, defaultAuthor }) => {
@@ -323,6 +324,12 @@ export const FilmDetailPage: React.FC = () => {
       />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         
+        {/* Breadcrumb Navigation */}
+        <BreadcrumbNavigation
+          currentTitle={film.title}
+          customLabels={{ film: film.type === 'series' ? 'Series' : 'Film' }}
+        />
+
         {/* ========================================================================= */}
         {/* TOP BAR: NAVIGATION & ACTIONS */}
         {/* ========================================================================= */}

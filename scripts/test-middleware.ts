@@ -25,12 +25,12 @@ interface TestCase {
 const TEST_CASES: TestCase[] = [
   // --- BOTS: Search Engine Crawlers ---
   {
-    name: 'Googlebot on Film route',
+    name: 'Googlebot on Film route (Breaking Bad)',
     userAgent: 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
-    path: '/film/film-7',
+    path: '/film/breaking-bad',
     expectedBranch: 'BOT',
     expectedMetaPatterns: [
-      '<title>Siksa Kubur',
+      '<title>Breaking Bad',
       'og:title',
       'og:image',
       'twitter:card',
@@ -38,13 +38,13 @@ const TEST_CASES: TestCase[] = [
     ],
   },
   {
-    name: 'Bingbot on Article route',
+    name: 'Bingbot on Film route (Boyhood)',
     userAgent: 'Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)',
-    path: '/artikel/dune-part-two-review-villeneuve',
+    path: '/film/boyhood',
     expectedBranch: 'BOT',
     expectedMetaPatterns: [
-      'Dune: Part Two',
-      'og:type" content="article"',
+      '<title>Boyhood',
+      'og:title',
       'og:url',
       'summary_large_image',
     ],
@@ -52,9 +52,9 @@ const TEST_CASES: TestCase[] = [
 
   // --- BOTS: Social Media & Messaging Previewers ---
   {
-    name: 'Twitterbot on Film route',
+    name: 'Twitterbot on Film route (Breaking Bad)',
     userAgent: 'Twitterbot/1.0',
-    path: '/film/film-7',
+    path: '/film/breaking-bad',
     expectedBranch: 'BOT',
     expectedMetaPatterns: [
       'twitter:card',
@@ -64,9 +64,9 @@ const TEST_CASES: TestCase[] = [
     ],
   },
   {
-    name: 'Facebook External Hit on Article route',
+    name: 'Facebook External Hit on Film route',
     userAgent: 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
-    path: '/artikel/dune-part-two-review-villeneuve',
+    path: '/film/boyhood',
     expectedBranch: 'BOT',
     expectedMetaPatterns: [
       'og:title',
@@ -78,42 +78,42 @@ const TEST_CASES: TestCase[] = [
   {
     name: 'WhatsApp link preview on Film route',
     userAgent: 'WhatsApp/2.23.20.10 A',
-    path: '/film/film-7',
+    path: '/film/breaking-bad',
     expectedBranch: 'BOT',
     expectedMetaPatterns: ['og:title', 'og:description', 'og:image'],
   },
   {
-    name: 'Telegram Bot on Article route',
+    name: 'Telegram Bot on Film route',
     userAgent: 'TelegramBot (like TwitterBot)',
-    path: '/artikel/dune-part-two-review-villeneuve',
+    path: '/film/boyhood',
     expectedBranch: 'BOT',
     expectedMetaPatterns: ['<title>', 'og:title', 'twitter:image'],
   },
   {
     name: 'Slackbot on Film route',
     userAgent: 'Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)',
-    path: '/film/film-7',
+    path: '/film/breaking-bad',
     expectedBranch: 'BOT',
     expectedMetaPatterns: ['og:image', 'og:title'],
   },
   {
     name: 'Discordbot on Film route',
     userAgent: 'Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)',
-    path: '/film/film-7',
+    path: '/film/boyhood',
     expectedBranch: 'BOT',
     expectedMetaPatterns: ['twitter:card', 'og:description'],
   },
   {
-    name: 'LinkedInBot on Article route',
+    name: 'LinkedInBot on Film route',
     userAgent: 'LinkedInBot/1.0 (compatible; Mozilla/5.0; Apache-HttpClient +http://www.linkedin.com)',
-    path: '/artikel/dune-part-two-review-villeneuve',
+    path: '/film/breaking-bad',
     expectedBranch: 'BOT',
     expectedMetaPatterns: ['og:title', 'og:url'],
   },
   {
     name: 'Generic Headless Crawler (Fallback pattern)',
     userAgent: 'CustomCrawlerBot/1.0 (web-scraper)',
-    path: '/film/film-7',
+    path: '/film/boyhood',
     expectedBranch: 'BOT',
     expectedMetaPatterns: ['<title>', 'og:title'],
   },
@@ -122,7 +122,7 @@ const TEST_CASES: TestCase[] = [
   {
     name: 'macOS Google Chrome (Desktop Human)',
     userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
-    path: '/film/film-7',
+    path: '/film/breaking-bad',
     expectedBranch: 'HUMAN',
   },
   {
@@ -134,7 +134,7 @@ const TEST_CASES: TestCase[] = [
   {
     name: 'Windows 11 Firefox (Desktop Human)',
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0',
-    path: '/film/film-7',
+    path: '/film/boyhood',
     expectedBranch: 'HUMAN',
   },
   {
@@ -146,7 +146,7 @@ const TEST_CASES: TestCase[] = [
   {
     name: 'Android Chrome (Mobile Human)',
     userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36',
-    path: '/film/film-7',
+    path: '/film/breaking-bad',
     expectedBranch: 'HUMAN',
   },
 

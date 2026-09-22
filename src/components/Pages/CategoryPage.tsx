@@ -18,6 +18,7 @@ import { MainCategory, SubCategory } from '../../types';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { SEOHead } from '../SEO/SEOHead';
 import { generateBreadcrumbSchema } from '../../utils/schemaHelpers';
+import { BreadcrumbNavigation } from '../Navigation/BreadcrumbNavigation';
 
 export const CategoryPage: React.FC = () => {
   const {
@@ -140,23 +141,10 @@ export const CategoryPage: React.FC = () => {
       />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         
-        {/* Breadcrumb Header */}
-        <div className="flex items-center gap-2 text-xs text-slate-400">
-          <button
-            onClick={() => navigateTo('home')}
-            className="hover:text-white transition-colors"
-          >
-            Home
-          </button>
-          <ChevronRight className="w-3 h-3" />
-          <span className="text-white font-bold capitalize">{meta.title}</span>
-          {activeSubCategory && (
-            <>
-              <ChevronRight className="w-3 h-3" />
-              <span className="text-[#FF2E7E] font-bold capitalize">{activeSubCategory}</span>
-            </>
-          )}
-        </div>
+        {/* Breadcrumb Navigation */}
+        <BreadcrumbNavigation
+          currentTitle={currentSubCategory ? currentSubCategory.toUpperCase() : meta.title}
+        />
 
         {/* Category Hero Banner */}
         <div

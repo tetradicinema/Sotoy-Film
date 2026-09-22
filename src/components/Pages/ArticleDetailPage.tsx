@@ -28,6 +28,7 @@ import { SEOHead } from '../SEO/SEOHead';
 import { generateArticleSchema, generateBreadcrumbSchema } from '../../utils/schemaHelpers';
 import { StarRating } from '../Common/StarRating';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
+import { BreadcrumbNavigation } from '../Navigation/BreadcrumbNavigation';
 import { EditorialSidebar } from '../Common/EditorialSidebar';
 import { RateFilmModal } from '../Modals/RateFilmModal';
 
@@ -172,24 +173,24 @@ export const ArticleDetailPage: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         
         {/* Navigation Breadcrumbs */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-900 pb-3">
           <button
             onClick={() => navigateTo('home')}
-            className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition-colors"
+            className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition-colors self-start"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Kembali ke Beranda</span>
           </button>
 
-          <div className="flex items-center gap-2 text-xs text-slate-400">
-            <span
-              onClick={() => navigateTo('category', { category: article.category })}
-              className="hover:text-[#00F0FF] cursor-pointer font-bold capitalize"
-            >
-              {article.category}
-            </span>
-            <ChevronRight className="w-3 h-3" />
-            <span className="text-[#FF2E7E] font-bold capitalize">{article.subCategory}</span>
+          <div className="flex-1 min-w-0 md:flex md:justify-end">
+            <BreadcrumbNavigation
+              currentTitle={article.title}
+              items={[
+                { label: article.category === 'movies' ? 'Movies' : article.category === 'series' ? 'Series' : article.category.toUpperCase(), path: `/kategori/${article.category}` },
+                ...(article.subCategory ? [{ label: article.subCategory, path: `/kategori/${article.category}/${article.subCategory}` }] : []),
+                { label: article.title }
+              ]}
+            />
           </div>
         </div>
 

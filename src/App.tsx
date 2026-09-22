@@ -130,18 +130,23 @@ const AppContent: React.FC = () => {
           <Route path="/onboarding" element={<OnboardingPage />} />
           
           {/* Film Routes */}
+          <Route path="/film" element={<Navigate to="/film-database" replace />} />
           <Route path="/film/:slug" element={<FilmDetailPage />} />
           <Route path="/film-database" element={<FilmDatabasePage />} />
           <Route path="/rekomendasi-film" element={<FilmRecommendationsPage />} />
           <Route path="/film-recommendations" element={<FilmRecommendationsPage />} />
 
           {/* Article & Editorial Routes */}
+          <Route path="/artikel" element={<Navigate to="/kategori/movies" replace />} />
+          <Route path="/article" element={<Navigate to="/kategori/movies" replace />} />
           <Route path="/artikel/:slug" element={<ArticleDetailPage />} />
           <Route path="/article/:slug" element={<ArticleDetailPage />} />
           <Route path="/tulis-artikel" element={<WriteArticlePage />} />
           <Route path="/write-article" element={<WriteArticlePage />} />
 
           {/* Category & Exploration Routes */}
+          <Route path="/kategori" element={<Navigate to="/kategori/movies" replace />} />
+          <Route path="/category" element={<Navigate to="/kategori/movies" replace />} />
           <Route path="/kategori/:name" element={<CategoryPage />} />
           <Route path="/kategori/:name/:subCategory" element={<CategoryPage />} />
           <Route path="/category/:name" element={<CategoryPage />} />
