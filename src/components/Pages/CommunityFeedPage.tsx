@@ -30,9 +30,6 @@ import {
   UserCheck,
   Plus,
   User as UserIcon,
-  ArrowBigUp,
-  ArrowBigDown,
-  Trash2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
@@ -110,8 +107,6 @@ export const CommunityFeedPage: React.FC = () => {
     setLoginModalOpen,
     addBuzzPost,
     likeBuzzPost,
-    voteBuzzPost,
-    deleteBuzzPost,
     navigateTo,
     showToast,
     openShareModal,
@@ -862,8 +857,7 @@ export const CommunityFeedPage: React.FC = () => {
                     {(!isLoggedIn || post.author.id !== currentUser.id) && (
                       <button
                         id={`buzz-follow-btn-${post.id}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
+                        onClick={() => {
                           if (!isLoggedIn) {
                             setLoginModalOpen(true);
                             showToast(`Silakan masuk untuk mengikuti ${post.author.name}!`);
@@ -894,22 +888,6 @@ export const CommunityFeedPage: React.FC = () => {
                             <span>+ Ikuti</span>
                           </>
                         )}
-                      </button>
-                    )}
-
-                    {/* Delete button for author or admin */}
-                    {isLoggedIn && (post.author.id === currentUser.id || currentUser.role === 'admin') && (
-                      <button
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          if (window.confirm('Hapus postingan ini?')) {
-                            await deleteBuzzPost(post.id);
-                          }
-                        }}
-                        className="p-1.5 sm:p-2 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all shadow-sm shrink-0"
-                        title="Hapus Postingan"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 sm:w-4" />
                       </button>
                     )}
                   </div>
@@ -1046,11 +1024,6 @@ export const CommunityFeedPage: React.FC = () => {
                           <span>
                             {'readTime' in postArticle ? (postArticle as any).readTime : '5 mnt baca'}
                           </span>
-                          <span>•</span>
-                          <span className="flex items-center gap-1 text-pink-400">
-                            <Heart className="w-3 h-3 fill-current" />
-                            <span>{'likes' in postArticle ? (postArticle as any).likes : '0'}</span>
-                          </span>
                         </div>
                       </div>
                     </div>
@@ -1062,45 +1035,9 @@ export const CommunityFeedPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Footer Controls: Quick Reaction Bar, Replies, Share, Voting */}
-                <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-4 text-xs text-slate-400">
-                  <div className="flex items-center gap-1 bg-slate-950/50 border border-slate-800 rounded-xl p-0.5 shadow-inner shrink-0">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        voteBuzzPost(post.id, 'up');
-                      }}
-                      className={`p-1.5 rounded-lg transition-all ${
-                        (post as any).myVote === 'up'
-                          ? 'bg-emerald-500/20 text-emerald-400'
-                          : 'hover:bg-slate-800 hover:text-white'
-                      }`}
-                      title="Upvote"
-                    >
-                      <ArrowBigUp className={`w-4 h-4 ${(post as any).myVote === 'up' ? 'fill-current' : ''}`} />
-                    </button>
-                    <span className={`px-0.5 font-black text-xs min-w-[1.2rem] text-center ${
-                      (post.score || 0) > 0 ? 'text-emerald-400' : (post.score || 0) < 0 ? 'text-red-400' : 'text-slate-400'
-                    }`}>
-                      {post.score || 0}
-                    </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        voteBuzzPost(post.id, 'down');
-                      }}
-                      className={`p-1.5 rounded-lg transition-all ${
-                        (post as any).myVote === 'down'
-                          ? 'bg-red-500/20 text-red-400'
-                          : 'hover:bg-slate-800 hover:text-white'
-                      }`}
-                      title="Downvote"
-                    >
-                      <ArrowBigDown className={`w-4 h-4 ${(post as any).myVote === 'down' ? 'fill-current' : ''}`} />
-                    </button>
-                  </div>
-
-                  <div className="overflow-x-auto scrollbar-none min-w-0 flex-1 px-1">
+                {/* Footer Controls: Quick Reaction Bar, Replies, Share */}
+                <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2 text-xs text-slate-400">
+                  <div className="overflow-x-auto scrollbar-none min-w-0 flex-1 pr-1">
                     <QuickReactionBar
                       buzzId={post.id}
                       reactions={post.reactions}
