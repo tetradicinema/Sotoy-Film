@@ -1,4 +1,4 @@
-import { CastMember } from '../types';
+import { CastMember, CrewMember } from '../types';
 
 export interface MappedTmdbFilm {
   title: string;
@@ -14,6 +14,7 @@ export interface MappedTmdbFilm {
   studio: string;
   cast: string;
   castDetails: CastMember[];
+  crewDetails: CrewMember[];
   genres: string;
   tags: string[];
   suggestedTags: string[];
@@ -227,17 +228,62 @@ export const mapTmdbDetailsToFilm = (details: any, type: 'movie' | 'tv'): Mapped
     }
   }
 
-  // Cast: Top 5 with profile photos
-  const topCastList = (details.credits?.cast || []).slice(0, 5);
+  // Cast: Top 10 with profile photos
+  const topCastList = (details.credits?.cast || []).slice(0, 10);
   const castDetails: CastMember[] = topCastList
     .map((c: any) => ({
       name: c.name || '',
       character: c.character || '',
-      photo: c.profile_path
-        ? `https://image.tmdb.org/t/p/w185${c.profile_path}`
-        : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+      photo: c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : '',
     }))
     .filter((c: CastMember) => Boolean(c.name));
+
+  // Crew mapping: Prioritize Directing, Writing, Production, Camera, Music, Editing
+  const rawCrew: any[] = details.credits?.crew || [];
+  const priorityJobs = [
+    'Director',
+    'Screenplay',
+    'Writer',
+    'Story',
+    'Producer',
+    'Executive Producer',
+    'Director of Photography',
+    'Original Music Composer',
+    'Music',
+    'Editor',
+    'Film Editor',
+    'Production Design',
+    'Costume Design',
+    'Sound Designer',
+    'Visual Effects Supervisor',
+  ];
+
+  // Sort crew by priority jobs first
+  const sortedCrew = [...rawCrew].sort((a, b) => {
+    const aIdx = priorityJobs.indexOf(a.job);
+    const bIdx = priorityJobs.indexOf(b.job);
+    if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+    if (aIdx !== -1) return -1;
+    if (bIdx !== -1) return 1;
+    return (b.popularity || 0) - (a.popularity || 0);
+  });
+
+  // Unique crew members by name + job
+  const seenCrewKeys = new Set<string>();
+  const crewDetails: CrewMember[] = [];
+  for (const c of sortedCrew) {
+    if (!c.name) continue;
+    const key = `${c.name}-${c.job}`;
+    if (seenCrewKeys.has(key)) continue;
+    seenCrewKeys.add(key);
+
+    crewDetails.push({
+      name: c.name,
+      job: c.job || c.department || 'Crew',
+      department: c.department || 'Production',
+      photo: c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : '',
+    });
+  }
 
   // Cast names string
   const castNames = (details.credits?.cast || [])
@@ -303,6 +349,7 @@ export const mapTmdbDetailsToFilm = (details: any, type: 'movie' | 'tv'): Mapped
     studio: mappedStudio,
     cast: castNames,
     castDetails,
+    crewDetails,
     genres: mappedGenres,
     tags: initialTags,
     suggestedTags,
@@ -311,4 +358,101 @@ export const mapTmdbDetailsToFilm = (details: any, type: 'movie' | 'tv'): Mapped
     featuredRecommendation: (details.vote_average || 0) >= 8.0,
     tmdbId: details.id,
   };
+};
+
+/**
+ * Fetches and returns full cast and crew for a movie or TV series from TMDB
+ */
+export const fetchFullTmdbCredits = async (
+  identifier: number | string,
+  type: 'movie' | 'tv' | 'series' = 'movie',
+  titleFallback?: string
+): Promise<{ cast: CastMember[]; crew: CrewMember[]; rawCredits?: any }> => {
+  const normType = type === 'series' || type === 'tv' ? 'tv' : 'movie';
+  let data: any = null;
+
+  // 1. Try fetching by numerical ID first
+  const numId = Number(identifier);
+  if (!isNaN(numId) && numId > 0) {
+    try {
+      data = await fetchTmdbDetails(numId, normType);
+    } catch {
+      // ignore, fall back to title search
+    }
+  }
+
+  // 2. If no data, try searching by title
+  const searchTitle = titleFallback || (typeof identifier === 'string' && isNaN(Number(identifier)) ? identifier : '');
+  if (!data && searchTitle.trim()) {
+    try {
+      const searchRes = await fetch(`/api/tmdb?action=search&query=${encodeURIComponent(searchTitle.trim())}&type=${normType}`);
+      if (searchRes.ok) {
+        const searchJson = await searchRes.json();
+        const results = Array.isArray(searchJson) ? searchJson : searchJson?.results || [];
+        if (results.length > 0 && results[0].id) {
+          data = await fetchTmdbDetails(results[0].id, normType);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  if (!data || !data.credits) {
+    return { cast: [], crew: [] };
+  }
+
+  const cast: CastMember[] = (data.credits.cast || [])
+    .filter((c: any) => Boolean(c.name))
+    .map((c: any) => ({
+      name: c.name,
+      character: c.character || 'Karakter',
+      photo: c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : '',
+    }));
+
+  const priorityJobs = [
+    'Director',
+    'Screenplay',
+    'Writer',
+    'Story',
+    'Producer',
+    'Executive Producer',
+    'Director of Photography',
+    'Original Music Composer',
+    'Music',
+    'Editor',
+    'Film Editor',
+    'Production Design',
+    'Costume Design',
+    'Sound Designer',
+    'Visual Effects Supervisor',
+  ];
+
+  const rawCrew: any[] = data.credits.crew || [];
+  const sortedCrew = [...rawCrew].sort((a, b) => {
+    const aIdx = priorityJobs.indexOf(a.job);
+    const bIdx = priorityJobs.indexOf(b.job);
+    if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+    if (aIdx !== -1) return -1;
+    if (bIdx !== -1) return 1;
+    return (b.popularity || 0) - (a.popularity || 0);
+  });
+
+  const seenCrewKeys = new Set<string>();
+  const crew: CrewMember[] = [];
+  for (const c of sortedCrew) {
+    if (!c.name) continue;
+    const key = `${c.name}-${c.job}`;
+    if (seenCrewKeys.has(key)) continue;
+    seenCrewKeys.add(key);
+
+    crew.push({
+      name: c.name,
+      job: c.job || c.department || 'Crew',
+      department: c.department || 'Production',
+      photo: c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : '',
+    });
+  }
+
+  return { cast, crew, rawCredits: data.credits };
 };

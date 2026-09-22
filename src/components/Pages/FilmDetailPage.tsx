@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Star,
@@ -27,6 +27,7 @@ import {
   Award,
   Video,
   Info,
+  Clapperboard,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
@@ -35,6 +36,14 @@ import { generateMovieSchema, generateBreadcrumbSchema } from '../../utils/schem
 import { slugify } from '../../utils/slugify';
 import { INITIAL_FILMS } from '../../data/mockData';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
+import { getRoleBadgeStyle } from '../../utils/roleStyles';
+import { RoleBadge } from '../Common/RoleBadge';
+import { FilmItem, CastMember, CrewMember } from '../../types';
+import { RateFilmModal } from '../Modals/RateFilmModal';
+import { FullCastCrewModal } from '../Modals/FullCastCrewModal';
+import { PersonAvatar } from '../Common/PersonAvatar';
+import { AdBannerSlot } from '../Common/AdBannerSlot';
+import { fetchFullTmdbCredits } from '../../utils/tmdbHelper';
 
 const RelatedArticleAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }> = ({ authorId, defaultAuthor }) => {
   const author = useDynamicArticleAuthor(authorId, defaultAuthor);
@@ -76,16 +85,11 @@ const RelatedArticleAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: a
         </span>
       )}
       <span className="text-[10px] text-slate-400 font-normal">
-        • {author.articleCount} {author.articleCount === 1 ? 'artikel' : 'artikel'}
+        • {author.articleCount} artikel
       </span>
     </div>
   );
 };
-import { getRoleBadgeStyle } from '../../utils/roleStyles';
-import { RoleBadge } from '../Common/RoleBadge';
-import { FilmItem } from '../../types';
-import { RateFilmModal } from '../Modals/RateFilmModal';
-import { AdBannerSlot } from '../Common/AdBannerSlot';
 
 export const FilmDetailPage: React.FC = () => {
   const {
@@ -103,6 +107,7 @@ export const FilmDetailPage: React.FC = () => {
   } = useApp();
 
   const [ratingModalOpen, setRatingModalOpen] = useState(false);
+  const [isCastCrewModalOpen, setIsCastCrewModalOpen] = useState(false);
   const [selectedStill, setSelectedStill] = useState<string | null>(null);
   const [isPlayingTrailer, setIsPlayingTrailer] = useState(false);
   const [reviewFilter, setReviewFilter] = useState<'all' | 'critics' | 'community'>('all');
@@ -112,6 +117,50 @@ export const FilmDetailPage: React.FC = () => {
     || films.find(f => f.id === selectedFilmId)
     || INITIAL_FILMS.find(f => f.id === selectedFilmId)
     || films[0];
+
+  // TMDB live cast & crew sync
+  const [liveCredits, setLiveCredits] = useState<{ cast: CastMember[]; crew: CrewMember[] }>({
+    cast: film?.castDetails || [],
+    crew: film?.crewDetails || [],
+  });
+  const [isLoadingCredits, setIsLoadingCredits] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!film) return;
+
+    // If film already has ample cast and crew data, synchronize immediate state
+    if (film.castDetails && film.castDetails.length >= 6 && film.crewDetails && film.crewDetails.length >= 6) {
+      setLiveCredits({
+        cast: film.castDetails,
+        crew: film.crewDetails,
+      });
+      return;
+    }
+
+    const loadCredits = async () => {
+      setIsLoadingCredits(true);
+      try {
+        const mediaType = film.type === 'series' ? 'tv' : 'movie';
+        const res = await fetchFullTmdbCredits(film.tmdbId || film.title, mediaType, film.title);
+        if (isMounted) {
+          setLiveCredits({
+            cast: res.cast.length > 0 ? res.cast : (film.castDetails || []),
+            crew: res.crew.length > 0 ? res.crew : (film.crewDetails || []),
+          });
+        }
+      } catch (err) {
+        console.warn('Could not fetch TMDB credits:', err);
+      } finally {
+        if (isMounted) setIsLoadingCredits(false);
+      }
+    };
+
+    loadCredits();
+    return () => {
+      isMounted = false;
+    };
+  }, [film?.id, film?.tmdbId, film?.title]);
 
   if (films.length === 0 || !film) {
     return (
@@ -137,7 +186,9 @@ export const FilmDetailPage: React.FC = () => {
   const isInWatchlist = isFilmInWatchlist(film.id);
 
   // Cast with photos fallback
-  const castList = film.castDetails && film.castDetails.length > 0
+  const allCastList: CastMember[] = liveCredits.cast && liveCredits.cast.length > 0
+    ? liveCredits.cast
+    : film.castDetails && film.castDetails.length > 0
     ? film.castDetails
     : film.cast.map((actorName, idx) => {
         const samplePhotos = [
@@ -160,6 +211,21 @@ export const FilmDetailPage: React.FC = () => {
           photo: samplePhotos[idx % samplePhotos.length],
         };
       });
+
+  // Crew with fallback
+  const allCrewList: CrewMember[] = liveCredits.crew && liveCredits.crew.length > 0
+    ? liveCredits.crew
+    : film.crewDetails && film.crewDetails.length > 0
+    ? film.crewDetails
+    : [
+        { name: film.director || 'Sutradara', job: 'Director', department: 'Directing', photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80' },
+        ...(film.writer ? [{ name: film.writer, job: 'Screenplay / Writer', department: 'Writing', photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80' }] : []),
+        ...(film.studio ? [{ name: film.studio, job: 'Production Studio', department: 'Production', photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80' }] : []),
+      ];
+
+  // Subset preview lists (show top 4 on mobile, up to 8 on desktop)
+  const previewCastList = allCastList.slice(0, 8);
+  const previewCrewList = allCrewList.slice(0, 8);
 
   // Stills gallery
   const stillsList = film.stills && film.stills.length > 0
@@ -354,22 +420,47 @@ export const FilmDetailPage: React.FC = () => {
                 ))}
               </div>
 
-              {/* Film Title */}
-              <div>
+              {/* Film Title & Sotoy Certified Badge */}
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5">
                 <h1 className="font-display font-black text-2xl sm:text-4xl lg:text-5xl text-white tracking-tight leading-tight">
                   {film.title}
                 </h1>
+
+                {/* Sotoy Certified Golden Badge with Pulse & Tooltip */}
+                <div className="relative inline-flex items-center group/cert z-20">
+                  <div
+                    id="sotoy-certified-badge"
+                    className="relative inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-[#FFD000]/20 via-[#FF8008]/15 to-[#FFD000]/20 border border-[#FFD000]/60 text-[#FFD000] text-[10px] sm:text-xs font-bold tracking-wide shadow-[0_0_18px_rgba(255,208,0,0.25)] backdrop-blur-sm shrink-0 transition-all duration-300 hover:scale-105 hover:border-[#FFD000] hover:shadow-[0_0_24px_rgba(255,208,0,0.4)] cursor-pointer select-none"
+                  >
+                    {/* Subtle pulsing indicator */}
+                    <span className="relative flex h-2 w-2 mr-0.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FFD000] opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FFD000]" />
+                    </span>
+
+                    <Award className="w-3.5 h-3.5 text-[#FFD000] fill-[#FFD000]/20 shrink-0" />
+                    <span>Sotoy Certified</span>
+                  </div>
+
+                  {/* Tooltip with smooth transition on hover */}
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-950/95 border border-[#FFD000]/50 rounded-xl shadow-2xl shadow-black/90 text-[#FFD000] text-[11px] font-bold pointer-events-none opacity-0 scale-90 translate-y-1 group-hover/cert:opacity-100 group-hover/cert:scale-100 group-hover/cert:translate-y-0 transition-all duration-200 ease-out z-50 whitespace-nowrap flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#FFD000]" />
+                    <span>Verified Sotoy Review</span>
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-950 border-b border-r border-[#FFD000]/50 rotate-45" />
+                  </div>
+                </div>
+
                 {film.originalTitle && film.originalTitle !== film.title && (
-                  <p className="text-slate-400 text-xs sm:text-sm italic mt-1">{film.originalTitle}</p>
+                  <p className="w-full text-slate-400 text-xs sm:text-sm italic mt-0.5">{film.originalTitle}</p>
                 )}
               </div>
 
               {/* Skor Sotoy Bar - Prioritize Critics Score */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 bg-slate-900/95 p-3.5 sm:p-4 rounded-2xl border border-slate-800 max-w-2xl shadow-xl">
-                <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-4">
-                  {/* 1. Skor Critics - PRIORITAS UTAMA */}
+                <div className="flex items-center justify-between sm:justify-start gap-4 sm:gap-6">
+                  {/* 1. Skor Critics - Emas */}
                   <div className="flex items-center gap-2.5">
-                    <div className="font-display font-medium text-2xl sm:text-3xl text-[#00F0FF] drop-shadow-[0_0_12px_rgba(0,240,255,0.3)]">
+                    <div className="font-display font-medium text-2xl sm:text-3xl text-[#FFD000] drop-shadow-[0_0_12px_rgba(255,208,0,0.3)]">
                       ★ {film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}
                     </div>
                     <div className="text-left">
@@ -377,7 +468,7 @@ export const FilmDetailPage: React.FC = () => {
                         <span className="text-[11px] sm:text-xs font-black text-white uppercase tracking-wider">
                           Skor Critics
                         </span>
-                        <span className="bg-[#00F0FF]/20 text-[#00F0FF] border border-[#00F0FF]/40 text-[9px] font-black uppercase px-1.5 py-0.2 rounded-full">
+                        <span className="bg-[#FFD000]/20 text-[#FFD000] border border-[#FFD000]/40 text-[9px] font-black uppercase px-1.5 py-0.2 rounded-full">
                           Utama
                         </span>
                       </div>
@@ -387,11 +478,11 @@ export const FilmDetailPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="h-7 w-px bg-slate-800 block" />
+                  <div className="h-8 w-px bg-slate-800 block" />
 
-                  {/* 2. Skor Komunitas - SEKUNDER */}
-                  <div className="flex items-center gap-2">
-                    <div className="font-display font-medium text-lg sm:text-xl text-[#FFD000]">
+                  {/* 2. Skor Komunitas - Biru / Cyan, Besarnya Sama */}
+                  <div className="flex items-center gap-2.5">
+                    <div className="font-display font-medium text-2xl sm:text-3xl text-[#00F0FF] drop-shadow-[0_0_12px_rgba(0,240,255,0.3)]">
                       ★ {film.skorSotoy.toFixed(1)}
                     </div>
                     <div className="text-left">
@@ -488,7 +579,7 @@ export const FilmDetailPage: React.FC = () => {
             onClick={() => scrollToSection('section-cast')}
             className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 hover:border-[#00F0FF] hover:text-white transition-colors shrink-0"
           >
-            Pemeran ({castList.length})
+            Pemeran & Kru ({allCastList.length + allCrewList.length})
           </button>
           <button
             onClick={() => scrollToSection('section-stills')}
@@ -610,50 +701,131 @@ export const FilmDetailPage: React.FC = () => {
               </div>
             </div>
 
-            {/* 3. DAFTAR PEMERAN UTAMA (CAST) */}
+            {/* 3. DAFTAR PEMERAN & TIM PRODUKSI (CAST & CREW) */}
             <div
               id="section-cast"
-              className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-5"
+              className="bg-[#121324] border border-slate-800 rounded-3xl p-5 sm:p-8 shadow-xl space-y-7"
             >
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              {/* Section Header with Quick Action */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
                 <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] sm:text-xs font-black uppercase text-[#FFD000] tracking-wider bg-[#FFD000]/10 px-2 py-0.5 rounded-full border border-[#FFD000]/30">
+                      Kredit Sinematik
+                    </span>
+                    {isLoadingCredits && (
+                      <span className="text-[10px] text-slate-400 flex items-center gap-1 animate-pulse">
+                        <Sparkles className="w-3 h-3 text-[#FFD000]" />
+                        Sinkronisasi TMDB...
+                      </span>
+                    )}
+                  </div>
                   <h2 className="font-display font-black text-xl sm:text-2xl text-white flex items-center gap-2.5">
-                    <User className="w-5 h-5 text-[#00F0FF]" />
-                    <span>Daftar Pemeran & Karakter</span>
+                    <Users className="w-5 h-5 text-[#00F0FF]" />
+                    <span>Daftar Pemeran & Tim Produksi</span>
                   </h2>
                   <p className="text-slate-400 text-xs mt-1">
-                    Jajaran aktor dan aktris pendukung utama dalam film {film.title}
+                    Jajaran aktor, aktris, sutradara, dan tim kreatif di balik layar film {film.title}
                   </p>
                 </div>
-                <span className="text-xs font-bold text-slate-400 bg-slate-900 px-3 py-1 rounded-full border border-slate-800">
-                  {castList.length} Pemeran
-                </span>
+
+                <button
+                  id="open-full-cast-crew-modal-header-btn"
+                  onClick={() => setIsCastCrewModalOpen(true)}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-slate-800 to-slate-900 hover:from-[#FFD000]/20 hover:to-[#FF8008]/20 border border-slate-700 hover:border-[#FFD000]/60 text-slate-200 hover:text-[#FFD000] text-xs font-bold transition-all shadow-md group shrink-0"
+                >
+                  <Users className="w-4 h-4 text-[#FFD000] group-hover:scale-110 transition-transform" />
+                  <span>Lihat Cast & Crew Lengkap</span>
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#FFD000] group-hover:translate-x-0.5 transition-all" />
+                </button>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {castList.map((actor, idx) => (
-                  <div
-                    key={idx}
-                    id={`cast-card-${idx}`}
-                    className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden hover:border-[#00F0FF] transition-all duration-300 flex flex-col group shadow-md"
-                  >
-                    <div className="aspect-[3/4] w-full overflow-hidden bg-slate-800 relative">
-                      <img
-                        src={actor.photo}
-                        alt={actor.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
+              {/* A. Sub-section: Pemeran & Karakter (Cast) */}
+              <div className="space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-display font-black text-sm sm:text-base text-white flex items-center gap-2">
+                    <Film className="w-4 h-4 text-[#00F0FF]" />
+                    <span>Pemeran & Karakter Utama</span>
+                  </h3>
+                  <span className="text-[11px] font-bold text-[#00F0FF] bg-[#00F0FF]/10 border border-[#00F0FF]/30 px-2.5 py-0.5 rounded-full">
+                    {allCastList.length} Pemeran
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5 sm:gap-4">
+                  {previewCastList.map((actor, idx) => (
+                    <div
+                      key={`preview-cast-${idx}`}
+                      id={`cast-card-${idx}`}
+                      className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden hover:border-[#00F0FF] hover:shadow-[0_0_15px_rgba(0,240,255,0.12)] hover:scale-[1.015] transition-all duration-300 flex flex-col group shadow-md"
+                    >
+                      <div className="aspect-[3/4] w-full overflow-hidden bg-slate-950 relative">
+                        <PersonAvatar photo={actor.photo} name={actor.name} />
+                      </div>
+                      <div className="p-3">
+                        <h4 className="font-bold text-xs sm:text-sm text-white group-hover:text-[#00F0FF] transition-colors truncate">
+                          {actor.name}
+                        </h4>
+                        <p className="text-[11px] text-[#00F0FF] font-semibold truncate mt-0.5">
+                          {actor.character ? `sebagai ${actor.character}` : 'Pemeran Utama'}
+                        </p>
+                      </div>
                     </div>
-                    <div className="p-3">
-                      <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-[#00F0FF] transition-colors truncate">
-                        {actor.name}
-                      </h3>
-                      <p className="text-[11px] text-[#00F0FF] font-semibold truncate mt-0.5">
-                        sebagai {actor.character}
-                      </p>
+                  ))}
+                </div>
+              </div>
+
+              {/* B. Sub-section: Tim Produksi & Kru (Crew) */}
+              <div className="space-y-3.5 pt-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-display font-black text-sm sm:text-base text-white flex items-center gap-2">
+                    <Clapperboard className="w-4 h-4 text-[#FFD000]" />
+                    <span>Tim Produksi & Kru Kunci</span>
+                  </h3>
+                  <span className="text-[11px] font-bold text-[#FFD000] bg-[#FFD000]/10 border border-[#FFD000]/30 px-2.5 py-0.5 rounded-full">
+                    {allCrewList.length} Tim Kru
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5 sm:gap-4">
+                  {previewCrewList.map((crew, idx) => (
+                    <div
+                      key={`preview-crew-${idx}`}
+                      id={`crew-card-${idx}`}
+                      className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FFD000] hover:shadow-[0_0_15px_rgba(255,208,0,0.12)] hover:scale-[1.015] transition-all duration-300 flex flex-col group shadow-md"
+                    >
+                      <div className="aspect-[3/4] w-full overflow-hidden bg-slate-950 relative">
+                        <PersonAvatar photo={crew.photo} name={crew.name} />
+                        {crew.department && (
+                          <span className="absolute top-2 right-2 bg-black/75 border border-white/10 text-[9px] font-bold text-slate-300 px-1.5 py-0.5 rounded backdrop-blur">
+                            {crew.department}
+                          </span>
+                        )}
+                      </div>
+                      <div className="p-3">
+                        <h4 className="font-bold text-xs sm:text-sm text-white group-hover:text-[#FFD000] transition-colors truncate">
+                          {crew.name}
+                        </h4>
+                        <p className="text-[11px] text-[#FFD000] font-semibold truncate mt-0.5">
+                          {crew.job}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+              </div>
+
+              {/* Bottom Expand CTA Button */}
+              <div className="pt-2 text-center">
+                <button
+                  id="open-full-cast-crew-modal-bottom-btn"
+                  onClick={() => setIsCastCrewModalOpen(true)}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-3 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 hover:from-[#FFD000]/15 hover:via-[#FF8008]/20 hover:to-[#FFD000]/15 border border-slate-700 hover:border-[#FFD000]/60 text-slate-200 hover:text-[#FFD000] font-bold text-xs sm:text-sm transition-all shadow-lg hover:shadow-[#FFD000]/10 group"
+                >
+                  <Users className="w-4 h-4 text-[#FFD000]" />
+                  <span>Lihat Cast & Crew Lengkap ({allCastList.length + allCrewList.length} Orang)</span>
+                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#FFD000] group-hover:translate-x-1 transition-all" />
+                </button>
               </div>
             </div>
 
@@ -1038,19 +1210,19 @@ export const FilmDetailPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-3 text-center">
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3">
                   <div className="font-display font-medium text-xl text-[#FFD000]">
-                    ★ {film.skorSotoy.toFixed(1)}
+                    ★ {film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}
                   </div>
-                  <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase">
-                    Komunitas
+                  <div className="text-[10px] font-bold text-[#FFD000] mt-1 uppercase">
+                    Si Paling Sotoy
                   </div>
                 </div>
 
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3">
                   <div className="font-display font-medium text-xl text-[#00F0FF]">
-                    ★ {film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}
+                    ★ {film.skorSotoy.toFixed(1)}
                   </div>
-                  <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase">
-                    Si Paling Sotoy
+                  <div className="text-[10px] font-bold text-[#00F0FF] mt-1 uppercase">
+                    Komunitas
                   </div>
                 </div>
               </div>
@@ -1104,6 +1276,18 @@ export const FilmDetailPage: React.FC = () => {
           film={film}
           isOpen={ratingModalOpen}
           onClose={() => setRatingModalOpen(false)}
+        />
+
+        {/* Full Cast & Crew Modal */}
+        <FullCastCrewModal
+          isOpen={isCastCrewModalOpen}
+          onClose={() => setIsCastCrewModalOpen(false)}
+          filmTitle={film.title}
+          filmYear={film.year}
+          filmPoster={film.poster}
+          castList={allCastList}
+          crewList={allCrewList}
+          isLoading={isLoadingCredits}
         />
       </div>
     </div>

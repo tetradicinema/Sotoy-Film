@@ -117,7 +117,7 @@ export const HomeFilmRecommendations: React.FC = () => {
               <div
                 key={film.id}
                 id={`rec-film-card-${film.id}`}
-                className="bg-[#121324] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FFD000]/60 transition-all duration-300 flex flex-col group shadow-lg hover:shadow-2xl hover:shadow-[#FFD000]/10"
+                className="bg-[#121324] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FFD000]/70 hover:shadow-[0_0_24px_rgba(255,208,0,0.2)] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group shadow-lg"
               >
                 {/* Movie Poster with Hover Zoom & Badges */}
                 <div

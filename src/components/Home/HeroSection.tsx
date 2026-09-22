@@ -334,7 +334,7 @@ export const HeroSection: React.FC = () => {
                         key={film.id}
                         id={`trending-film-item-${film.id}`}
                         onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                        className="group flex items-center gap-3 p-2.5 rounded-2xl bg-slate-900/50 hover:bg-slate-800/80 border border-slate-800/70 hover:border-[#FF2E7E]/50 transition-all cursor-pointer"
+                        className="group flex items-center gap-3 p-2.5 rounded-2xl bg-slate-900/50 hover:bg-slate-800/80 border border-slate-800/70 hover:border-[#FFD000]/60 hover:shadow-[0_0_16px_rgba(255,208,0,0.12)] hover:scale-[1.01] transition-all cursor-pointer"
                       >
                         {/* Rank Badge */}
                         <div
@@ -403,7 +403,7 @@ export const HeroSection: React.FC = () => {
                         key={film.id}
                         id={`towatch-film-item-${film.id}`}
                         onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                        className="group flex items-center gap-3 p-2.5 rounded-2xl bg-slate-900/50 hover:bg-slate-800/80 border border-slate-800/70 hover:border-[#00F0FF]/50 transition-all cursor-pointer"
+                        className="group flex items-center gap-3 p-2.5 rounded-2xl bg-slate-900/50 hover:bg-slate-800/80 border border-slate-800/70 hover:border-[#FFD000]/60 hover:shadow-[0_0_16px_rgba(255,208,0,0.12)] hover:scale-[1.01] transition-all cursor-pointer"
                       >
                         <img
                           src={film.poster}

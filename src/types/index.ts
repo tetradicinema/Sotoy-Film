@@ -131,9 +131,17 @@ export interface CastMember {
   photo: string;
 }
 
+export interface CrewMember {
+  name: string;
+  job: string;
+  department?: string;
+  photo: string;
+}
+
 export interface FilmItem {
   id: string;
   slug?: string;
+  tmdbId?: number;
   title: string;
   originalTitle?: string;
   type: 'movie' | 'series' | 'anime';
@@ -146,6 +154,7 @@ export interface FilmItem {
   studio?: string;
   cast: string[];
   castDetails?: CastMember[];
+  crewDetails?: CrewMember[];
   genres: string[];
   tags?: string[];
   duration?: string; // e.g. "2h 46m" or "12 Episodes"

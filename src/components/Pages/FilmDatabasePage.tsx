@@ -667,7 +667,7 @@ export const FilmDatabasePage: React.FC = () => {
                     <div
                       key={film.id}
                       id={`search-film-card-${film.id}`}
-                      className="bg-[#151628] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FFD000] transition-all duration-300 flex flex-col group shadow-lg"
+                      className="bg-[#151628] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FFD000]/70 hover:shadow-[0_0_24px_rgba(255,208,0,0.18)] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group shadow-lg"
                     >
                       {/* Movie Poster */}
                       <div
@@ -817,7 +817,7 @@ export const FilmDatabasePage: React.FC = () => {
                   key={film.id}
                   id={`recent-film-card-${film.id}`}
                   onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                  className="bg-[#121324] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#00F0FF] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
+                  className="bg-[#121324] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FFD000]/70 hover:shadow-[0_0_24px_rgba(255,208,0,0.18)] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
                 >
                   <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
                     <img
@@ -842,7 +842,7 @@ export const FilmDatabasePage: React.FC = () => {
                   </div>
 
                   <div className="p-3">
-                    <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#00F0FF] transition-colors line-clamp-1 mb-1">
+                    <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FFD000] transition-colors line-clamp-1 mb-1">
                       {film.title}
                     </h3>
                     <div className="flex flex-wrap gap-1">
@@ -908,7 +908,7 @@ export const FilmDatabasePage: React.FC = () => {
                   key={film.id}
                   id={`popular-film-card-${film.id}`}
                   onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                  className="bg-[#121324] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FF2E7E] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
+                  className="bg-[#121324] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FFD000]/70 hover:shadow-[0_0_24px_rgba(255,208,0,0.18)] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
                 >
                   <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
                     <img
@@ -933,7 +933,7 @@ export const FilmDatabasePage: React.FC = () => {
                   </div>
 
                   <div className="p-3">
-                    <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-1 mb-1">
+                    <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FFD000] transition-colors line-clamp-1 mb-1">
                       {film.title}
                     </h3>
                     <div className="flex flex-wrap gap-1">
@@ -999,7 +999,7 @@ export const FilmDatabasePage: React.FC = () => {
                   key={film.id}
                   id={`trending-film-card-${film.id}`}
                   onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                  className="bg-[#121324] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FFD000] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
+                  className="bg-[#121324] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FFD000]/70 hover:shadow-[0_0_24px_rgba(255,208,0,0.18)] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
                 >
                   <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
                     <img
