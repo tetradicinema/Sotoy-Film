@@ -1,7 +1,7 @@
 import { next } from '@vercel/edge';
-import { isBotUserAgent } from './src/lib/edge/botDetection';
-import { fetchEntityData, fetchWithTimeout } from './src/lib/edge/firestoreRest';
-import { injectMetaTags, FALLBACK_HTML_TEMPLATE } from './src/lib/edge/metaInjection';
+import { isBotUserAgent } from './src/lib/edge/botDetection.js';
+import { fetchEntityData, fetchWithTimeout } from './src/lib/edge/firestoreRest.js';
+import { injectMetaTags, FALLBACK_HTML_TEMPLATE } from './src/lib/edge/metaInjection.js';
 
 // Re-export for unit tests and external consumers
 export { isBotUserAgent };

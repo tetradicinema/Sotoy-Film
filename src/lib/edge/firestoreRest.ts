@@ -4,7 +4,7 @@
  * to keep Edge bundle size minimal (<20KB).
  */
 
-import { slugify } from '../../utils/slugify';
+import { slugify } from '../../utils/slugify.js';
 
 export const FIRESTORE_API_KEY =
   typeof process !== 'undefined' && process.env && process.env.VITE_FIREBASE_API_KEY
