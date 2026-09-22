@@ -235,6 +235,7 @@ interface AppContextType {
     taggedArticleId?: string
   ) => Promise<void>;
   likeBuzzPost: (buzzId: string) => Promise<void>;
+  voteBuzzPost: (buzzId: string, direction: 'up' | 'down') => Promise<void>;
   reactToBuzzPost: (buzzId: string, reaction: ReactionType) => Promise<void>;
   addBuzzReply: (
     buzzId: string,
@@ -243,6 +244,7 @@ interface AppContextType {
     replyToUser?: { id: string; name: string; handle: string }
   ) => Promise<void>;
   likeBuzzReply: (buzzId: string, replyId: string) => Promise<void>;
+  voteBuzzReply: (buzzId: string, replyId: string, direction: 'up' | 'down') => Promise<void>;
   addFilmRating: (filmId: string, score: number, headline: string, reviewText: string) => Promise<void>;
   updateFilmRating: (ratingId: string, updates: Partial<UserRating>) => Promise<void>;
   deleteFilmRating: (ratingId: string) => Promise<void>;
@@ -419,16 +421,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
-  // Derive per-user buzz posts reaction & like state with zero account bleed-over
+  // Derive per-user buzz posts reaction, vote & like state with zero account bleed-over
   const buzzList = useMemo(() => {
     return rawBuzzList.map(post => {
       const userReaction = (isLoggedIn && currentUser?.id && post.reactionsByUser)
         ? post.reactionsByUser[currentUser.id] || null
         : null;
+      
+      const userId = currentUser?.id || '';
+      const postUpvotes = post.upvotes || [];
+      const postDownvotes = post.downvotes || [];
+      const myPostVote: 'up' | 'down' | null = postUpvotes.includes(userId) ? 'up' : (postDownvotes.includes(userId) ? 'down' : null);
+      
+      const mappedReplies = (post.replies || []).map(reply => {
+        const rUpvotes = reply.upvotes || [];
+        const rDownvotes = reply.downvotes || [];
+        const myReplyVote: 'up' | 'down' | null = userId ? (rUpvotes.includes(userId) ? 'up' : (rDownvotes.includes(userId) ? 'down' : null)) : null;
+        return {
+          ...reply,
+          myVote: myReplyVote,
+          likes: rUpvotes.length - rDownvotes.length,
+        };
+      });
+
       return {
         ...post,
         myReaction: userReaction,
         likedByMe: userReaction === 'heart',
+        myVote: userId ? myPostVote : null,
+        likes: postUpvotes.length - postDownvotes.length,
+        replies: mappedReplies,
       };
     });
   }, [rawBuzzList, isLoggedIn, currentUser?.id]);
@@ -2287,15 +2309,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString(),
       likes: 0,
       likedByMe: false,
+      upvotes: [],
+      downvotes: [],
       repliesCount: 0,
       tags: cleanTags,
       replies: [],
       reactions: {
         heart: 0,
-        mindblown: 0,
-        fire: 0,
-        laugh: 0,
-        clap: 0,
       },
       reactionsByUser: {},
     };
@@ -2342,10 +2362,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const currentReactions: BuzzReactions = post.reactions || {
       heart: post.likes || 0,
-      mindblown: 0,
-      fire: 0,
-      laugh: 0,
-      clap: 0,
     };
 
     const currentReactionsByUser: Record<string, ReactionType> = { ...(post.reactionsByUser || {}) };
@@ -2357,16 +2373,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (prevReaction === reaction) {
       // User tapped the same reaction -> toggle off
-      updatedReactions[reaction] = Math.max(0, (updatedReactions[reaction] || 0) - 1);
+      if (reaction === 'heart') {
+        updatedReactions.heart = Math.max(0, (updatedReactions.heart || 0) - 1);
+      }
       delete updatedReactionsByUser[currentUser.id];
       newReaction = null;
     } else {
       // If user had a previous reaction, decrement old one
-      if (prevReaction) {
-        updatedReactions[prevReaction] = Math.max(0, (updatedReactions[prevReaction] || 0) - 1);
+      if (prevReaction === 'heart') {
+        updatedReactions.heart = Math.max(0, (updatedReactions.heart || 0) - 1);
       }
       // Increment new reaction
-      updatedReactions[reaction] = (updatedReactions[reaction] || 0) + 1;
+      if (reaction === 'heart') {
+        updatedReactions.heart = (updatedReactions.heart || 0) + 1;
+      }
       updatedReactionsByUser[currentUser.id] = reaction;
     }
 
@@ -2377,7 +2397,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...post,
       reactions: updatedReactions,
       reactionsByUser: updatedReactionsByUser,
-      likes: totalReactions,
+      likes: updatedReactions.heart || 0,
     };
 
     // Optimistic UI update
@@ -2399,10 +2419,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const emojiMap: Record<ReactionType, string> = {
       heart: '❤️ Suka',
-      mindblown: '🤯 Mind Blown',
-      fire: '🔥 Hype',
-      laugh: '😂 Lucu',
-      clap: '👏 Mantap',
     };
     showToast(
       newReaction
@@ -2443,6 +2459,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await reactToBuzzPost(buzzId, 'heart');
   };
 
+  // Upvote/Downvote Buzz Post in Firestore
+  const voteBuzzPost = async (buzzId: string, direction: 'up' | 'down') => {
+    if (!isLoggedIn) {
+      setLoginModalOpen(true);
+      showToast('Silakan masuk untuk memberikan suara!');
+      return;
+    }
+
+    const post = rawBuzzList.find(b => b.id === buzzId);
+    if (!post) return;
+
+    const userId = currentUser.id;
+    let upvotes = [...(post.upvotes || [])];
+    let downvotes = [...(post.downvotes || [])];
+
+    if (direction === 'up') {
+      if (upvotes.includes(userId)) {
+        upvotes = upvotes.filter(id => id !== userId);
+      } else {
+        upvotes.push(userId);
+        downvotes = downvotes.filter(id => id !== userId);
+      }
+    } else {
+      if (downvotes.includes(userId)) {
+        downvotes = downvotes.filter(id => id !== userId);
+      } else {
+        downvotes.push(userId);
+        upvotes = upvotes.filter(id => id !== userId);
+      }
+    }
+
+    const updatedPost: BuzzPost = { ...post, upvotes, downvotes, score: upvotes.length - downvotes.length };
+    setRawBuzzList(prev => prev.map(b => b.id === buzzId ? updatedPost : b));
+
+    try {
+      const sanitizedPayload = JSON.parse(JSON.stringify(updatedPost));
+      delete sanitizedPayload.myReaction;
+      delete sanitizedPayload.likedByMe;
+      delete sanitizedPayload.myVote;
+      await setDoc(doc(db, 'buzz', buzzId), sanitizedPayload);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `buzz/${buzzId}`);
+    }
+  };
+
   // Add Reply to a Buzz Post in Firestore (Supports threaded replies & mentions & notifications)
   const addBuzzReply = async (
     buzzId: string,
@@ -2477,6 +2538,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString(),
       likes: 0,
       likedByMe: false,
+      upvotes: [],
+      downvotes: [],
     };
 
     const currentReplies = post.replies || [];
@@ -2580,6 +2643,58 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const sanitizedPayload = JSON.parse(JSON.stringify(updatedPost));
       delete sanitizedPayload.myReaction;
       delete sanitizedPayload.likedByMe;
+      delete sanitizedPayload.myVote;
+      await setDoc(doc(db, 'buzz', buzzId), sanitizedPayload);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `buzz/${buzzId}`);
+    }
+  };
+
+  // Upvote/Downvote Buzz Reply in Firestore
+  const voteBuzzReply = async (buzzId: string, replyId: string, direction: 'up' | 'down') => {
+    if (!isLoggedIn) {
+      setLoginModalOpen(true);
+      showToast('Silakan masuk untuk memberikan suara!');
+      return;
+    }
+
+    const post = rawBuzzList.find(b => b.id === buzzId) || buzzList.find(b => b.id === buzzId);
+    if (!post || !post.replies) return;
+
+    const userId = currentUser.id;
+    const updatedReplies = post.replies.map(r => {
+      if (r.id === replyId) {
+        let upvotes = [...(r.upvotes || [])];
+        let downvotes = [...(r.downvotes || [])];
+
+        if (direction === 'up') {
+          if (upvotes.includes(userId)) {
+            upvotes = upvotes.filter(id => id !== userId);
+          } else {
+            upvotes.push(userId);
+            downvotes = downvotes.filter(id => id !== userId);
+          }
+        } else {
+          if (downvotes.includes(userId)) {
+            downvotes = downvotes.filter(id => id !== userId);
+          } else {
+            downvotes.push(userId);
+            upvotes = upvotes.filter(id => id !== userId);
+          }
+        }
+        return { ...r, upvotes, downvotes, score: upvotes.length - downvotes.length };
+      }
+      return r;
+    });
+
+    const updatedPost: BuzzPost = { ...post, replies: updatedReplies };
+    setRawBuzzList(prev => prev.map(b => b.id === buzzId ? updatedPost : b));
+
+    try {
+      const sanitizedPayload = JSON.parse(JSON.stringify(updatedPost));
+      delete sanitizedPayload.myReaction;
+      delete sanitizedPayload.likedByMe;
+      delete sanitizedPayload.myVote;
       await setDoc(doc(db, 'buzz', buzzId), sanitizedPayload);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `buzz/${buzzId}`);
@@ -3275,9 +3390,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteArticle,
         addBuzzPost,
         likeBuzzPost,
+        voteBuzzPost,
         reactToBuzzPost,
         addBuzzReply,
         likeBuzzReply,
+        voteBuzzReply,
         addFilmRating,
         updateFilmRating,
         deleteFilmRating,

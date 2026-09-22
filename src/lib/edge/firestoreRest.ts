@@ -6,13 +6,10 @@
 
 import { slugify } from '../../utils/slugify.js';
 
-export const FIRESTORE_API_KEY =
-  typeof process !== 'undefined' && process.env && process.env.VITE_FIREBASE_API_KEY
-    ? process.env.VITE_FIREBASE_API_KEY
-    : 'AIzaSyCJPXxHQZ8hEdRHIfSGNzU6Z8rqUJZVVs4';
-
 export const FIRESTORE_DOCUMENTS_URL =
   'https://firestore.googleapis.com/v1/projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents';
+
+export const FIREBASE_WEB_API_KEY = 'AIzaSyCJPXxHQZ8hEdRHIfSGNzU6Z8rqUJZVVs4';
 
 /**
  * Parses raw Firestore REST API document fields into a plain JavaScript object.
@@ -97,7 +94,7 @@ export async function fetchCollectionDocuments(
     do {
       pageCount++;
       const maskParams = META_FIELD_PATHS.map(f => `mask.fieldPaths=${encodeURIComponent(f)}`).join('&');
-      let endpoint = `${FIRESTORE_DOCUMENTS_URL}/${collection}?pageSize=300&key=${FIRESTORE_API_KEY}&${maskParams}`;
+      let endpoint = `${FIRESTORE_DOCUMENTS_URL}/${collection}?key=${FIREBASE_WEB_API_KEY}&pageSize=300&${maskParams}`;
       if (pageToken) {
         endpoint += `&pageToken=${encodeURIComponent(pageToken)}`;
       }
@@ -125,7 +122,7 @@ export async function fetchCollectionDocuments(
   // Strategy B: POST .../documents:runQuery with projected select fields
   try {
     const queryRes = await fetchWithTimeout(
-      `${FIRESTORE_DOCUMENTS_URL}:runQuery?key=${FIRESTORE_API_KEY}`,
+      `${FIRESTORE_DOCUMENTS_URL}:runQuery?key=${FIREBASE_WEB_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -169,7 +166,7 @@ export async function fetchEntityData(
   // 1. Direct document GET if slug happens to be the document ID
   try {
     const directRes = await fetchWithTimeout(
-      `${FIRESTORE_DOCUMENTS_URL}/${collection}/${encodeURIComponent(slug)}?key=${FIRESTORE_API_KEY}`,
+      `${FIRESTORE_DOCUMENTS_URL}/${collection}/${encodeURIComponent(slug)}?key=${FIREBASE_WEB_API_KEY}`,
       { headers: { Accept: 'application/json' } },
       1500
     );

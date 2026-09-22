@@ -42,7 +42,7 @@ export const SotoyTrendsDashboard: React.FC = () => {
           </div>
 
           <button
-            onClick={() => navigateTo('rekomendasi-film')}
+            onClick={() => navigateTo('film-recommendations')}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-bold text-white transition-all shadow-md active:scale-95 shrink-0 self-start sm:self-auto"
           >
             <span>Lihat Semua Rekomendasi</span>
