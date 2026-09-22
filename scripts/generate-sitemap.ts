@@ -86,15 +86,10 @@ async function run() {
     });
   }
 
-  // 2. Connect to Firestore using client configuration (Read-only)
+  // 2. Connect to Firestore using client configuration (Read-only if available)
   const configPath = path.join(rootDir, 'firebase-applet-config.json');
-  if (!fs.existsSync(configPath)) {
-    throw new Error(`[Sitemap Builder] Configuration not found at: ${configPath}`);
-  }
-
-  const firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-  const app = initializeApp(firebaseConfig, `sitemap-builder-${Date.now()}`);
-  const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+  let app: any = null;
+  let db: any = null;
 
   const seenArticleSlugs = new Set<string>();
   const seenFilmSlugs = new Set<string>();
@@ -102,27 +97,35 @@ async function run() {
   let filmsCount = 0;
 
   try {
-    // 3. Fetch Published Articles from Firestore
-    console.log('[Sitemap Builder] Querying articles from Firestore...');
-    const articlesCol = collection(db, 'articles');
-    const articlesSnap = await getDocs(articlesCol);
+    if (!fs.existsSync(configPath)) {
+      console.warn(`[Sitemap Builder] Configuration not found at: ${configPath}. Using static fallback.`);
+    } else {
+      const firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      app = initializeApp(firebaseConfig, `sitemap-builder-${Date.now()}`);
+      db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 
-    articlesSnap.forEach(docSnap => {
-      const article = docSnap.data();
-      if (article.status === 'trash' || article.status === 'draft') return;
-      const slug = article.slug || slugify(article.title) || docSnap.id;
-      if (!slug || seenArticleSlugs.has(slug)) return;
+      // 3. Fetch Published Articles from Firestore
+      console.log('[Sitemap Builder] Querying articles from Firestore...');
+      const articlesCol = collection(db, 'articles');
+      const articlesSnap = await getDocs(articlesCol);
 
-      seenArticleSlugs.add(slug);
-      const lastmod = formatDateToYMD(article.updatedAt || article.publishedAt);
-      entries.push({
-        loc: `${baseUrl}/artikel/${encodeURIComponent(slug)}`,
-        lastmod,
-        changefreq: 'weekly',
-        priority: '0.8',
+      articlesSnap.forEach(docSnap => {
+        const article = docSnap.data();
+        if (article.status === 'trash' || article.status === 'draft') return;
+        const slug = article.slug || slugify(article.title) || docSnap.id;
+        if (!slug || seenArticleSlugs.has(slug)) return;
+
+        seenArticleSlugs.add(slug);
+        const lastmod = formatDateToYMD(article.updatedAt || article.publishedAt);
+        entries.push({
+          loc: `${baseUrl}/artikel/${encodeURIComponent(slug)}`,
+          lastmod,
+          changefreq: 'weekly',
+          priority: '0.8',
+        });
+        articlesCount++;
       });
-      articlesCount++;
-    });
+    }
 
     // Also include published articles from INITIAL_ARTICLES if not yet written to Firestore
     for (const item of INITIAL_ARTICLES) {
@@ -211,8 +214,8 @@ async function run() {
     }
   } finally {
     try {
-      await terminate(db);
-      await deleteApp(app);
+      if (db) await terminate(db);
+      if (app) await deleteApp(app);
     } catch {
       // ignore
     }

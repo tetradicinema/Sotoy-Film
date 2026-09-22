@@ -21,28 +21,20 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && (
-        request.auth.uid == 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' ||
-        request.auth.uid == 'QkNGf1ZfhsMyUEk90a6Iz8ZplZS2' ||
-        request.auth.uid == 'I34eqzOmvsSdS2Rf7jpfxw1ZKeu1' ||
-        (request.auth.token.email in ['eksposurmedia@gmail.com', 'admin1@sotoyfilm.id', 'admin2@sotoyfilm.id']) ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'admin')
-      );
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserData().role == 'admin';
     }
 
     function isWriter() {
       return isSignedIn() && (
-        request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' ||
-        request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' ||
         isAdmin() ||
-        (request.auth.token.email in ['eksposurmedia@gmail.com', 'admin1@sotoyfilm.id', 'admin2@sotoyfilm.id']) ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role in ['penulis_sotoy', 'admin'])
       );
     }
 
     function isCritic() {
       return isSignedIn() && (
-        request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' ||
         isAdmin() ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role in ['si_paling_sotoy', 'admin'])
       );
@@ -88,7 +80,7 @@ service cloud.firestore {
         data.category is string &&
         data.author is map &&
         data.author.id is string &&
-        (data.author.id == request.auth.uid || isAdmin() || request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' || request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2');
+        (data.author.id == request.auth.uid || isAdmin() || isWriter());
     }
 
     function isValidFilmItem(data) {
@@ -105,7 +97,9 @@ service cloud.firestore {
         data.id is string && data.id.size() <= 128 &&
         data.content is string && data.content.size() <= 2000 &&
         data.author is map &&
-        data.author.id is string;
+        data.author.id is string &&
+        (!('upvotes' in data) || data.upvotes is list) &&
+        (!('downvotes' in data) || data.downvotes is list);
     }
 
     function isValidUserRating(data) {
@@ -135,6 +129,14 @@ service cloud.firestore {
         data.createdAt is string &&
         data.sender is map &&
         data.sender.id is string;
+    }
+
+    function isValidArticlePresence(data) {
+      return data.keys().hasAll(['articleId', 'userId', 'userName', 'lastActive']) &&
+        data.articleId is string && data.articleId.size() <= 128 &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.userName is string && data.userName.size() <= 128 &&
+        (data.lastActive is int || data.lastActive is number);
     }
 
     // Granular delta & diff validation helpers
@@ -203,13 +205,32 @@ service cloud.firestore {
       return next == prev + 1 || next == prev - 1 || next == prev;
     }
 
+    function isValidVotesUpdate() {
+      let prevUp = ('upvotes' in existing()) ? existing().upvotes : [];
+      let nextUp = ('upvotes' in incoming()) ? incoming().upvotes : [];
+      let prevDown = ('downvotes' in existing()) ? existing().downvotes : [];
+      let nextDown = ('downvotes' in incoming()) ? incoming().downvotes : [];
+      
+      let addedUp = nextUp.toSet().difference(prevUp.toSet());
+      let removedUp = prevUp.toSet().difference(nextUp.toSet());
+      let addedDown = nextDown.toSet().difference(prevDown.toSet());
+      let removedDown = prevDown.toSet().difference(nextDown.toSet());
+
+      return addedUp.hasOnly([request.auth.uid]) && 
+             removedUp.hasOnly([request.auth.uid]) &&
+             addedDown.hasOnly([request.auth.uid]) &&
+             removedDown.hasOnly([request.auth.uid]) &&
+             // Ensure likes field matches the score
+             incoming().likes == nextUp.size() - nextDown.size();
+    }
+
     // Rules for each collection
     match /users/{userId} {
       allow read: if true;
       allow create: if isSignedIn() && isOwner(userId) && isValidUser(incoming());
       allow update: if isSignedIn() && (
         // Document Owner updating profile / interests / following
-        (isOwner(userId) && isValidUser(incoming()) && (incoming().role == existing().role || userId == '0PCmaBvJrzeaQgpf3sSTC4mnsh02') && (
+        (isOwner(userId) && isValidUser(incoming()) && (incoming().role == existing().role || isAdmin()) && (
           !('followersCount' in incoming().diff(existing()).affectedKeys()) || isValidFollowersCountDelta()
         ) && (
           !('followingCount' in incoming().diff(existing()).affectedKeys()) || isValidFollowingCountDelta()
@@ -243,7 +264,16 @@ service cloud.firestore {
 
     match /article_presence/{presenceId} {
       allow read: if true;
-      allow create, update, delete: if true;
+      allow create, update: if isSignedIn() &&
+        (isWriter() || isAdmin()) &&
+        incoming().userId == request.auth.uid &&
+        presenceId == incoming().articleId + '_' + request.auth.uid &&
+        isValidArticlePresence(incoming());
+      allow delete: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isWriter() ||
+        isAdmin()
+      );
     }
 
     match /files/{fileId} {
@@ -256,23 +286,17 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidId(articleId) && isValidArticle(incoming()) && (
         isWriter() ||
         isAdmin() ||
-        request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' ||
-        request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' ||
         incoming().author.id == request.auth.uid
       );
       allow update: if isSignedIn() && isValidId(articleId) && isValidArticle(incoming()) && (
         isOwner(existing().author.id) || 
         isAdmin() || 
-        isWriter() ||
-        (request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' && (existing().author.id == request.auth.uid || incoming().author.id == request.auth.uid)) ||
-        (request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' && (existing().author.id == request.auth.uid || incoming().author.id == request.auth.uid))
+        isWriter()
       );
       allow delete: if isSignedIn() && (
         isOwner(existing().author.id) || 
         isAdmin() || 
-        isWriter() ||
-        (request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' && existing().author.id == request.auth.uid) ||
-        (request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' && existing().author.id == request.auth.uid)
+        isWriter()
       );
     }
 
@@ -287,12 +311,12 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidId(buzzId) && isValidBuzzPost(incoming());
       allow update: if isSignedIn() && isValidId(buzzId) && (
         (isOwner(existing().author.id) && isValidBuzzPost(incoming())) ||
-        (incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'reactions', 'reactionsByUser', 'replies', 'repliesCount']) && (
+        (incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'reactions', 'reactionsByUser', 'replies', 'repliesCount', 'upvotes', 'downvotes']) && (
           !('reactionsByUser' in incoming().diff(existing()).affectedKeys()) || isValidReactionsByUserUpdate()
         ) && (
           !('reactions' in incoming().diff(existing()).affectedKeys()) || isValidReactionsAggregateUpdate()
         ) && (
-          !('likes' in incoming().diff(existing()).affectedKeys()) || isValidLikesDelta()
+          !('upvotes' in incoming().diff(existing()).affectedKeys() || 'downvotes' in incoming().diff(existing()).affectedKeys() || 'likes' in incoming().diff(existing()).affectedKeys()) || isValidVotesUpdate()
         ) && (
           !('repliesCount' in incoming().diff(existing()).affectedKeys()) || isValidRepliesCountDelta()
         )) ||
