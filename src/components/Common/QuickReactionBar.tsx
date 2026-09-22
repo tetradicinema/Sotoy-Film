@@ -26,6 +26,38 @@ const REACTION_CONFIG: {
     activeBorder: 'border-rose-500/50',
     activeText: 'text-rose-300 font-bold',
   },
+  {
+    type: 'mindblown',
+    emoji: '🤯',
+    label: 'Mind-Blown',
+    activeBg: 'bg-amber-500/20',
+    activeBorder: 'border-amber-500/50',
+    activeText: 'text-amber-300 font-bold',
+  },
+  {
+    type: 'fire',
+    emoji: '🔥',
+    label: 'Hype',
+    activeBg: 'bg-orange-500/20',
+    activeBorder: 'border-orange-500/50',
+    activeText: 'text-orange-300 font-bold',
+  },
+  {
+    type: 'laugh',
+    emoji: '😂',
+    label: 'Lucu',
+    activeBg: 'bg-yellow-500/20',
+    activeBorder: 'border-yellow-500/50',
+    activeText: 'text-yellow-300 font-bold',
+  },
+  {
+    type: 'clap',
+    emoji: '👏',
+    label: 'Respek',
+    activeBg: 'bg-emerald-500/20',
+    activeBorder: 'border-emerald-500/50',
+    activeText: 'text-emerald-300 font-bold',
+  },
 ];
 
 export const QuickReactionBar: React.FC<QuickReactionBarProps> = ({
@@ -66,9 +98,11 @@ export const QuickReactionBar: React.FC<QuickReactionBarProps> = ({
             <span className="text-sm leading-none transition-transform hover:scale-125 duration-200">
               {emoji}
             </span>
-            <span className={`font-semibold text-[11px] sm:text-xs ${isActive ? activeText : 'text-slate-400'}`}>
-              {count}
-            </span>
+            {count > 0 && (
+              <span className={`font-semibold text-[11px] sm:text-xs ${isActive ? activeText : 'text-slate-400'}`}>
+                {count}
+              </span>
+            )}
             {!compact && isActive && (
               <span className="text-[10px] hidden md:inline ml-0.5 opacity-90">
                 {label}

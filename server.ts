@@ -1,29 +1,14 @@
 import express from "express";
 import path from "path";
-import fs from "fs";
 import { handleTmdbRequest } from "./api/tmdb";
-import { handleSitemapRequest } from "./api/sitemap";
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // Add JSON parsing middleware for POST bodies
-  app.use(express.json());
-
   // 1. API ROUTES FIRST
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
-  });
-
-  app.post("/api/client-error", (req, res) => {
-    try {
-      const logMsg = `[${new Date().toISOString()}] CLIENT ERROR:\n${JSON.stringify(req.body, null, 2)}\n\n`;
-      fs.appendFileSync(path.join(process.cwd(), "client-errors.log"), logMsg, "utf-8");
-    } catch (e) {
-      console.error("Failed to write to client-errors.log:", e);
-    }
-    res.sendStatus(204);
   });
 
   // TMDB Proxy route for catalog import (mirrors Vercel api/tmdb.ts)
@@ -31,10 +16,8 @@ async function startServer() {
     return handleTmdbRequest(req, res);
   });
 
-  // Dynamic Sitemap generation to prevent build-time Firestore/Node dependencies
-  app.get("/sitemap.xml", (req, res) => {
-    return handleSitemapRequest(req, res);
-  });
+  // Note: /sitemap.xml is statically generated at build-time into public/sitemap.xml
+  // and served directly by express.static(distPath) in production or Vite in development.
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
