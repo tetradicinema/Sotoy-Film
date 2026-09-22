@@ -2,7 +2,7 @@ import React from 'react';
 import { Star } from 'lucide-react';
 
 interface StarRatingProps {
-  score: number; // 0.0 - 5.0
+  score: number; // 0.0 - 10.0
   max?: number;
   size?: 'sm' | 'md' | 'lg';
   showNumber?: boolean;
@@ -28,14 +28,21 @@ export const StarRating: React.FC<StarRatingProps> = ({
 
   const handleStarClick = (index: number) => {
     if (!interactive || !onRatingChange) return;
-    onRatingChange(index + 1);
+    if (max === 10) {
+      onRatingChange(index + 1);
+    } else {
+      // 5-star scale representing 10 points
+      onRatingChange(Number(((index + 1) * 2).toFixed(1)));
+    }
   };
 
   return (
     <div className="inline-flex items-center gap-2">
       <div className="flex items-center gap-0.5">
         {Array.from({ length: max }).map((_, i) => {
-          const fillAmount = Math.max(0, Math.min(1, score - i));
+          // If max is 5, scale score (0-10) to 0-5
+          const normalizedScore = max === 5 ? score / 2 : score;
+          const fillAmount = Math.max(0, Math.min(1, normalizedScore - i));
           return (
             <div
               key={i}
@@ -66,7 +73,7 @@ export const StarRating: React.FC<StarRatingProps> = ({
             size === 'lg' ? 'text-xl' : size === 'md' ? 'text-sm' : 'text-xs'
           } bg-[#FFD000]/10 px-2 py-0.5 rounded border border-[#FFD000]/30`}
         >
-          {score.toFixed(1)} <span className="text-slate-400 font-normal text-[10px]">/ 5.0</span>
+          {score.toFixed(1)} <span className="text-slate-400 font-normal text-[10px]">/ 10.0</span>
         </span>
       )}
 

@@ -61,31 +61,31 @@ export const AboutUsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 5 Bintang Filosofi Skor Sotoy */}
+        {/* 10 Poin Filosofi Skor Sotoy */}
         <div className="space-y-6">
           <div className="text-center max-w-2xl mx-auto space-y-2">
             <h2 className="font-display font-black text-2xl sm:text-3xl text-white">
-              Filosofi Sistem Skor Sotoy (★ 1.0 - 5.0)
+              Filosofi Sistem Skor Sotoy (★ 1.0 - 10.0)
             </h2>
             <p className="text-slate-400 text-xs sm:text-sm">
-              Standar baku penilaian film di ekosistem Sotoy Film. Transparan, jujur, dan tidak dapat dibeli oleh sponsor mana pun.
+              Standar baku penilaian film berbasis skala 10 poin di ekosistem Sotoy Film. Transparan, presisi, jujur, dan tidak dapat dibeli oleh sponsor mana pun.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
             {[
-              { star: '★ 1.0', label: 'Bencana Sinematik', desc: 'Naskah rapuh, teknis berantakan, atau manipulatif tanpa visi artistik yang jelas.', color: 'border-red-500/40 text-red-400' },
-              { star: '★ 2.0', label: 'Kurang Matang', desc: 'Punya secuil potensi namun eksekusi membosankan dan pacing tersendat-sendat.', color: 'border-orange-500/40 text-orange-400' },
-              { star: '★ 3.0', label: 'Solid & Layak Tonton', desc: 'Menghibur, memenuhi ekspektasi genre, dan memiliki momen sinematik yang layak diapresiasi.', color: 'border-yellow-500/40 text-[#FFD000]' },
-              { star: '★ 4.0', label: 'Sangat Direkomendasikan', desc: 'Penyutradaraan prima, akting memikat, sinematografi indah, dan menyentuh emosi penonton.', color: 'border-cyan-500/40 text-[#00F0FF]' },
-              { star: '★ 5.0', label: 'Mahakarya Abadi', desc: 'Pencapaian sinematik langka yang mendefinisikan zaman dan layak dikenang sepanjang masa.', color: 'border-pink-500/40 text-[#FF2E7E]' },
+              { score: '★ 1.0 - 2.0', label: 'Bencana Sinematik', desc: 'Naskah rapuh, teknis berantakan, atau manipulatif tanpa visi artistik yang jelas.', color: 'border-red-500/40 text-red-400' },
+              { score: '★ 3.0 - 4.0', label: 'Kurang Matang', desc: 'Punya secuil potensi namun eksekusi membosankan dan pacing tersendat-sendat.', color: 'border-orange-500/40 text-orange-400' },
+              { score: '★ 5.0 - 6.0', label: 'Solid & Layak Tonton', desc: 'Menghibur, memenuhi ekspektasi genre, dan memiliki momen sinematik yang layak diapresiasi.', color: 'border-yellow-500/40 text-[#FFD000]' },
+              { score: '★ 7.0 - 8.0', label: 'Sangat Direkomendasikan', desc: 'Penyutradaraan prima, akting memikat, sinematografi indah, dan menyentuh emosi penonton.', color: 'border-cyan-500/40 text-[#00F0FF]' },
+              { score: '★ 9.0 - 10.0', label: 'Mahakarya Abadi', desc: 'Pencapaian sinematik langka yang mendefinisikan zaman dan layak dikenang sepanjang masa.', color: 'border-pink-500/40 text-[#FF2E7E]' },
             ].map((tier, idx) => (
               <div
                 key={idx}
                 className={`bg-[#121324] border ${tier.color} rounded-2xl p-4 flex flex-col justify-between space-y-3`}
               >
                 <div>
-                  <div className="font-display font-black text-xl mb-1">{tier.star}</div>
+                  <div className="font-display font-black text-lg mb-1">{tier.score}</div>
                   <div className="font-bold text-xs text-white mb-2">{tier.label}</div>
                   <p className="text-slate-400 text-[11px] leading-relaxed">{tier.desc}</p>
                 </div>
@@ -112,7 +112,7 @@ export const AboutUsPage: React.FC = () => {
                 <h3 className="font-display font-black text-base text-white">Warga Sotoy</h3>
               </div>
               <p className="text-slate-300 text-xs leading-relaxed">
-                Penonton umum penikmat bioskop dan serial. Berhak memposting buzz opini harian, memberikan rating Skor Sotoy 1-5, dan mengoleksi film ke dalam Watchlist pribadi.
+                Penonton umum penikmat bioskop dan serial. Berhak memposting buzz opini harian, memberikan rating Skor Sotoy 1-10, dan mengoleksi film ke dalam Watchlist pribadi.
               </p>
             </div>
 

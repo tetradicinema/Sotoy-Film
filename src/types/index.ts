@@ -149,9 +149,9 @@ export interface FilmItem {
   genres: string[];
   tags?: string[];
   duration?: string; // e.g. "2h 46m" or "12 Episodes"
-  skorSotoy: number; // Average 1.0 - 5.0
+  skorSotoy: number; // Average 1.0 - 10.0
   totalVotes: number;
-  criticsSkorSotoy: number;
+  criticsSkorSotoy: number; // Average 1.0 - 10.0
   whereToWatch: {
     platform: string;
     type: 'stream' | 'cinema' | 'rent';
@@ -176,7 +176,7 @@ export interface UserRating {
   userName: string;
   userAvatar: string;
   userRole: UserRole;
-  score: number; // 0.5 - 5.0
+  score: number; // 1.0 - 10.0
   headline: string;
   reviewText: string;
   createdAt: string;

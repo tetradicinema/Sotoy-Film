@@ -199,25 +199,22 @@ export const ComposeBuzzModal: React.FC = () => {
                   {/* Rating Selector if film tagged */}
                   {selectedFilmId && (
                     <div className="flex items-center gap-1.5 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-700">
-                      <span className="text-[11px] font-bold text-slate-400">Skor Sotoy:</span>
-                      <div className="flex items-center gap-0.5">
-                        {[1, 2, 3, 4, 5].map(star => (
-                          <button
-                            key={star}
-                            type="button"
-                            onClick={() => setSkorMention(star)}
-                            className="p-0.5 hover:scale-125 transition-transform"
-                          >
-                            <Star
-                              className={`w-3.5 h-3.5 ${
-                                (skorMention || 0) >= star
-                                  ? 'text-[#FFD000] fill-current'
-                                  : 'text-slate-600'
-                              }`}
-                            />
-                          </button>
+                      <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
+                        <Star className="w-3 h-3 text-[#FFD000] fill-current" />
+                        Skor:
+                      </span>
+                      <select
+                        value={skorMention || ''}
+                        onChange={e => setSkorMention(e.target.value ? Number(e.target.value) : undefined)}
+                        className="bg-slate-800 text-[#FFD000] font-bold text-xs rounded-lg px-2 py-0.5 border border-slate-700 focus:outline-none focus:border-[#FFD000] cursor-pointer"
+                      >
+                        <option value="" className="text-slate-400 bg-slate-900">Pilih Skor (1-10)</option>
+                        {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map(num => (
+                          <option key={num} value={num} className="bg-slate-900 text-[#FFD000]">
+                            ★ {num}.0 / 10.0
+                          </option>
                         ))}
-                      </div>
+                      </select>
                     </div>
                   )}
                 </div>

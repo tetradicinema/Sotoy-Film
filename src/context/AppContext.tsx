@@ -596,7 +596,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const data = docSnap.data() as FilmItem;
           const id = data.id || docSnap.id;
           if (id) {
-            filmMap.set(id, { ...data, id });
+            // Normalize legacy 5-point scale to 10-point scale if needed
+            const normalizedSkor = data.skorSotoy && data.skorSotoy <= 5.0 && data.skorSotoy > 0
+              ? Number((data.skorSotoy * 2).toFixed(1))
+              : data.skorSotoy;
+            const normalizedCriticsSkor = data.criticsSkorSotoy && data.criticsSkorSotoy <= 5.0 && data.criticsSkorSotoy > 0
+              ? Number((data.criticsSkorSotoy * 2).toFixed(1))
+              : data.criticsSkorSotoy;
+            filmMap.set(id, {
+              ...data,
+              id,
+              skorSotoy: normalizedSkor,
+              criticsSkorSotoy: normalizedCriticsSkor || normalizedSkor,
+            });
           }
         });
         const deletedIds = getDeletedFilmIds();
@@ -687,7 +699,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const data = docSnap.data() as UserRating;
           const id = data.id || docSnap.id;
           if (id) {
-            ratingMap.set(id, { ...data, id });
+            // Normalize legacy 5-point rating to 10-point scale if needed
+            const normalizedScore = data.score && data.score <= 5.0 && data.score > 0
+              ? Number((data.score * 2).toFixed(1))
+              : data.score;
+            ratingMap.set(id, { ...data, id, score: normalizedScore });
           }
         });
         if (ratingMap.size === 0) {
@@ -2572,7 +2588,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       userName: currentUser.name,
       userAvatar: currentUser.avatar,
       userRole: currentUser.role,
-      score: Math.min(5, Math.max(0.5, Number(score.toFixed(1)))),
+      score: Math.min(10, Math.max(1.0, Number(score.toFixed(1)))),
       headline,
       reviewText,
       createdAt: new Date().toISOString(),
@@ -2603,7 +2619,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         recordUserInterest(rateTopics, 3);
       }
 
-      showToast(`Skor Sotoy ${score.toFixed(1)}/5.0 dan ulasan kamu berhasil dikirim!`);
+      showToast(`Skor Sotoy ${score.toFixed(1)}/10.0 dan ulasan kamu berhasil dikirim!`);
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, `ratings/${ratingId}`);
     }

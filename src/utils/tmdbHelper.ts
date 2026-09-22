@@ -306,7 +306,7 @@ export const mapTmdbDetailsToFilm = (details: any, type: 'movie' | 'tv'): Mapped
     genres: mappedGenres,
     tags: initialTags,
     suggestedTags,
-    skorSotoy: details.vote_average ? Math.min(5, Math.max(1, Number((details.vote_average / 2).toFixed(1)))) : 4.0,
+    skorSotoy: details.vote_average ? Math.min(10, Math.max(1, Number(details.vote_average.toFixed(1)))) : 8.0,
     trailerUrl: mappedTrailerUrl,
     featuredRecommendation: (details.vote_average || 0) >= 8.0,
     tmdbId: details.id,

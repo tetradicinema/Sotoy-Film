@@ -12,7 +12,7 @@ interface RateFilmModalProps {
 export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onClose }) => {
   const { currentUser, isLoggedIn, setLoginModalOpen, addFilmRating, openShareModal } = useApp();
 
-  const [score, setScore] = useState<number>(4.5);
+  const [score, setScore] = useState<number>(8.5);
   const [headline, setHeadline] = useState('');
   const [reviewText, setReviewText] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -42,7 +42,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
     onClose();
     setSubmitted(false);
     openShareModal({
-      title: `Rating ${film.title} - ${score.toFixed(1)}/5.0 oleh ${currentUser.name}`,
+      title: `Rating ${film.title} - ${score.toFixed(1)}/10.0 oleh ${currentUser.name}`,
       text: reviewText,
       headline: finalHeadline,
       url: window.location.href,
@@ -57,7 +57,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
       reviewerName: currentUser.name,
       reviewerAvatar: currentUser.avatar,
       reviewerRole: currentUser.roleTitle,
-      meta: `${film.title} (${film.year}) • Skor: ${score.toFixed(1)}/5.0`,
+      meta: `${film.title} (${film.year}) • Skor: ${score.toFixed(1)}/10.0`,
     });
   };
 
@@ -158,7 +158,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
                 />
                 <div>
                   <h4 className="font-display font-black text-sm text-white line-clamp-1">{film.title}</h4>
-                  <p className="text-[11px] text-slate-400">Skor Kamu: <span className="text-[#FFD000] font-bold">★ {score.toFixed(1)} / 5.0</span></p>
+                  <p className="text-[11px] text-slate-400">Skor Kamu: <span className="text-[#FFD000] font-bold">★ {score.toFixed(1)} / 10.0</span></p>
                 </div>
               </div>
             </div>
@@ -187,10 +187,10 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4">
-            {/* Skor Sotoy 5-Star Decimal Controller */}
+            {/* Skor Sotoy 10-Point Decimal Controller */}
             <div className="bg-slate-900/90 rounded-2xl p-4 border border-slate-800 text-center">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                Berapa Skor Sotoy Menurut Kamu? (Skala 0.5 - 5.0 Bintang)
+                Berapa Skor Sotoy Menurut Kamu? (Skala 1.0 - 10.0)
               </span>
 
               {/* Big Score Display */}
@@ -198,26 +198,27 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
                 <span className="font-display font-black text-4xl text-[#FFD000] drop-shadow-[0_0_12px_rgba(255,208,0,0.4)]">
                   {score.toFixed(1)}
                 </span>
-                <span className="text-slate-500 font-bold text-lg">/ 5.0</span>
+                <span className="text-slate-500 font-bold text-lg">/ 10.0</span>
               </div>
 
-              {/* Star Visualizer */}
-              <div className="flex items-center justify-center gap-1 mb-3">
-                {Array.from({ length: 5 }).map((_, idx) => {
+              {/* Star Visualizer (10 Stars) */}
+              <div className="flex items-center justify-center gap-1 mb-3 flex-wrap">
+                {Array.from({ length: 10 }).map((_, idx) => {
                   const fill = Math.max(0, Math.min(1, score - idx));
                   return (
                     <div
                       key={idx}
                       onClick={() => setScore(idx + 1)}
-                      className="cursor-pointer relative transform hover:scale-110 transition-transform"
+                      className="cursor-pointer relative transform hover:scale-125 transition-transform p-0.5"
+                      title={`Beri skor ${idx + 1}.0`}
                     >
-                      <Star className="w-6 h-6 text-slate-700 fill-slate-800" />
+                      <Star className="w-5 h-5 text-slate-700 fill-slate-800" />
                       {fill > 0 && (
                         <div
-                          className="absolute inset-0 overflow-hidden"
+                          className="absolute inset-0.5 overflow-hidden"
                           style={{ width: `${fill * 100}%` }}
                         >
-                          <Star className="w-6 h-6 text-[#FFD000] fill-[#FFD000]" />
+                          <Star className="w-5 h-5 text-[#FFD000] fill-[#FFD000]" />
                         </div>
                       )}
                     </div>
@@ -230,18 +231,19 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
                 <input
                   id="skor-sotoy-slider"
                   type="range"
-                  min="0.5"
-                  max="5.0"
+                  min="1.0"
+                  max="10.0"
                   step="0.1"
                   value={score}
                   onChange={e => setScore(parseFloat(e.target.value))}
                   className="w-full accent-[#FFD000] cursor-pointer"
                 />
                 <div className="flex justify-between text-[10px] text-slate-500 font-bold px-1">
-                  <span>0.5 (Kurang Oke)</span>
-                  <span>2.5 (Lumayan)</span>
-                  <span>4.0 (Bagus)</span>
-                  <span>5.0 (Masterpiece)</span>
+                  <span>1.0 (Bencana)</span>
+                  <span>4.0 (Kurang)</span>
+                  <span>6.0 (Lumayan)</span>
+                  <span>8.0 (Bagus)</span>
+                  <span>10.0 (Masterpiece)</span>
                 </div>
               </div>
             </div>

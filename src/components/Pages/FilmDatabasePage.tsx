@@ -447,7 +447,7 @@ export const FilmDatabasePage: React.FC = () => {
                   <div className="text-[10px] text-slate-500 uppercase font-black">Rata-Rata Skor</div>
                   <div className="font-black text-sm text-[#FFD000] flex items-center gap-1 mt-0.5">
                     <Star className="w-3.5 h-3.5 fill-current" />
-                    <span>{avgGenreScore} / 5.0</span>
+                    <span>{avgGenreScore} / 10.0</span>
                   </div>
                 </div>
 
@@ -587,9 +587,10 @@ export const FilmDatabasePage: React.FC = () => {
                 className="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-[#FFD000] cursor-pointer"
               >
                 <option value={0}>Semua Skor Sotoy</option>
-                <option value={4.5}>★ 4.5+ Bintang</option>
-                <option value={4.0}>★ 4.0+ Bintang</option>
-                <option value={3.5}>★ 3.5+ Bintang</option>
+                <option value={9.0}>★ 9.0+ / 10.0</option>
+                <option value={8.0}>★ 8.0+ / 10.0</option>
+                <option value={7.0}>★ 7.0+ / 10.0</option>
+                <option value={6.0}>★ 6.0+ / 10.0</option>
               </select>
 
               {/* Sort By Selector */}

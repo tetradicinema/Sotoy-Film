@@ -54,7 +54,7 @@ export function generateMovieSchema(input: MovieSchemaInput) {
   const aggregateRating = input.totalVotes > 0 ? {
     '@type': 'AggregateRating',
     ratingValue: input.skorSotoy,
-    bestRating: '5.0',
+    bestRating: '10.0',
     worstRating: '1.0',
     ratingCount: input.totalVotes,
   } : undefined;
@@ -69,7 +69,7 @@ export function generateMovieSchema(input: MovieSchemaInput) {
     reviewRating: {
       '@type': 'Rating',
       ratingValue: rev.reviewRating,
-      bestRating: '5.0',
+      bestRating: '10.0',
       worstRating: '1.0',
     },
     name: rev.reviewHeadline,
@@ -129,7 +129,7 @@ export function generateReviewSchema(input: ReviewSchemaInput) {
     reviewRating: {
       '@type': 'Rating',
       ratingValue: input.reviewRating,
-      bestRating: '5.0',
+      bestRating: '10.0',
       worstRating: '1.0',
     },
     name: input.reviewHeadline,
