@@ -1039,7 +1039,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           userId: foundUser.id,
           type: 'mention',
           title,
-          message: `${currentUser.name} (@${currentUser.handle.replace('@', '')}) menyebut Anda: "${text.length > 60 ? text.slice(0, 60) + '...' : text}"`,
+          message: `menyebut Anda: "${text.length > 60 ? text.slice(0, 60) + '...' : text}"`,
           targetView,
           targetId,
           sender: {
@@ -2068,7 +2068,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           userId: targetUserId,
           type: 'follow',
           title: 'Pengikut Baru',
-          message: `${currentUser.name} mulai mengikuti profil Anda.`,
+          message: 'mulai mengikuti profil Anda.',
           targetView: 'user-profile',
           targetId: currentUser.id,
           sender: {
@@ -2611,7 +2611,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           userId: post.author.id,
           type: 'reaction',
           title: 'Reaksi Baru di Buzz',
-          message: `${currentUser.name} memberi reaksi ${emojiMap[reaction]} pada Buzz Anda.`,
+          message: `memberi reaksi ${emojiMap[reaction]} pada Buzz Anda.`,
           targetView: 'buzz-detail',
           targetId: buzzId,
           sender: {
@@ -2704,7 +2704,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           userId: post.author.id,
           type: 'reply',
           title: 'Balasan Baru di Buzz',
-          message: `${currentUser.name} membalas Buzz Anda: "${content.length > 50 ? content.slice(0, 50) + '...' : content}"`,
+          message: `membalas Buzz Anda: "${content.length > 50 ? content.slice(0, 50) + '...' : content}"`,
           targetView: 'buzz-detail',
           targetId: buzzId,
           sender: {
@@ -2722,7 +2722,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           userId: replyToUser.id,
           type: 'reply',
           title: 'Balasan Baru di Diskusi',
-          message: `${currentUser.name} membalas komentar Anda di Buzz: "${content.length > 50 ? content.slice(0, 50) + '...' : content}"`,
+          message: `membalas komentar Anda di Buzz: "${content.length > 50 ? content.slice(0, 50) + '...' : content}"`,
           targetView: 'buzz-detail',
           targetId: buzzId,
           sender: {

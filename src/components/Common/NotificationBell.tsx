@@ -14,12 +14,59 @@ import {
   Sparkles
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { NotificationItem, NotificationType } from '../../types';
+import { NotificationItem, NotificationType, User } from '../../types';
 
 interface NotificationBellProps {
   mode?: 'global' | 'writer' | 'critic';
   className?: string;
 }
+
+const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
+
+// Helper function to resolve live notification sender info with fallbacks
+const resolveSenderInfo = (item: NotificationItem, allUsers: User[]) => {
+  // 1. Try to find the live user profile from real-time allUsers
+  const liveUser = item.sender?.id ? allUsers.find(u => u.id === item.sender.id) : undefined;
+
+  // 2. Resolve live data first, then fall back to stored item.sender, and finally to safe defaults
+  const name = liveUser?.name || item.sender?.name || 'Pengguna';
+  const avatar = liveUser?.avatar || item.sender?.avatar || DEFAULT_AVATAR;
+  const handle = liveUser?.handle || item.sender?.handle || '';
+
+  return { name, avatar, handle };
+};
+
+// Helper function to format notification message with live sender name
+const formatNotificationMessage = (item: NotificationItem, liveSenderName: string): string => {
+  // System or administrative announcements should display directly
+  if (item.type === 'account_status' || item.sender?.id === 'system-admin' || item.sender?.id === 'system') {
+    return item.message || '';
+  }
+
+  let body = (item.message || '').trim();
+
+  // Backward-compatibility: If this is an existing/old notification in Firestore that had
+  // the sender's name (and optional handle in parentheses) baked into the string, strip that prefix.
+  const storedName = item.sender?.name?.trim();
+  const liveName = liveSenderName?.trim();
+
+  if (storedName) {
+    const escapedStored = storedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const legacyRegex = new RegExp(`^${escapedStored}(\\s*\\(@?[^)]+\\))?\\s*`, 'i');
+    if (legacyRegex.test(body)) {
+      body = body.replace(legacyRegex, '');
+    }
+  } else if (liveName) {
+    const escapedLive = liveName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const legacyRegex = new RegExp(`^${escapedLive}(\\s*\\(@?[^)]+\\))?\\s*`, 'i');
+    if (legacyRegex.test(body)) {
+      body = body.replace(legacyRegex, '');
+    }
+  }
+
+  // Prepend the live-resolved sender name before displaying item.message
+  return `${liveSenderName} ${body}`.trim();
+};
 
 export const NotificationBell: React.FC<NotificationBellProps> = ({ mode = 'global', className = '' }) => {
   const { 
@@ -28,7 +75,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ mode = 'glob
     markNotificationAsRead, 
     markAllNotificationsAsRead, 
     deleteNotification,
-    navigateTo 
+    navigateTo,
+    allUsers
   } = useApp();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -224,7 +272,11 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ mode = 'glob
                 <p>Belum ada notifikasi {activeFilter === 'unread' ? 'belum dibaca' : ''}.</p>
               </div>
             ) : (
-              filteredNotifications.map((item) => (
+              filteredNotifications.map((item) => {
+              const { name: senderName, avatar: senderAvatar, handle: senderHandle } = resolveSenderInfo(item, allUsers);
+              const formattedMessage = formatNotificationMessage(item, senderName);
+
+              return (
                 <div
                   key={item.id}
                   onClick={() => handleNotificationClick(item)}
@@ -233,10 +285,13 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ mode = 'glob
                   }`}
                 >
                   {/* Sender Avatar or Icon */}
-                  <div className="relative shrink-0">
+                  <div 
+                    className="relative shrink-0"
+                    title={senderHandle ? `${senderName} (${senderHandle.startsWith('@') ? senderHandle : `@${senderHandle}`})` : senderName}
+                  >
                     <img
-                      src={item.sender?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'}
-                      alt={item.sender?.name || 'Sotoy Bot'}
+                      src={senderAvatar}
+                      alt={senderName}
                       className="w-9 h-9 rounded-full object-cover border border-zinc-700"
                     />
                     <div className="absolute -bottom-1 -right-1 p-0.5 rounded-full bg-zinc-900 border border-zinc-800">
@@ -255,7 +310,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ mode = 'glob
                       </span>
                     </div>
                     <p className="text-xs text-zinc-300 line-clamp-2 leading-relaxed">
-                      {item.message}
+                      {formattedMessage}
                     </p>
                   </div>
 
@@ -276,7 +331,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ mode = 'glob
                     </button>
                   </div>
                 </div>
-              ))
+              );
+            })
             )}
           </div>
 

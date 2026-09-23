@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { SettingsSubPage, UserSettings } from '../../types';
+import { ProfilePhotoCropModal } from '../Common/ProfilePhotoCropModal';
 
 export const SettingsPage: React.FC = () => {
   const {
@@ -78,6 +79,15 @@ export const SettingsPage: React.FC = () => {
   const [bio, setBio] = useState(currentUser.bio || '');
   const [avatarPreview, setAvatarPreview] = useState(currentUser.avatar || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Profile Photo Cropping state
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<{
+    src: string;
+    name: string;
+    size: number;
+    type: string;
+  } | null>(null);
 
   // Security Form state
   const [currentEmail, setCurrentEmail] = useState(currentUser.email || 'budi.cinephile@sotoyfilm.id');
@@ -170,7 +180,7 @@ export const SettingsPage: React.FC = () => {
     'Cyberpunk',
   ];
 
-  // Handle device file upload
+  // Handle device file upload - opens 1:1 cropping modal
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -189,11 +199,32 @@ export const SettingsPage: React.FC = () => {
     reader.onload = event => {
       const base64 = event.target?.result as string;
       if (base64) {
-        setAvatarPreview(base64);
-        uploadProfilePhoto(base64, file.name, file.size, file.type);
+        setImageToCrop({
+          src: base64,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+        });
+        setCropModalOpen(true);
       }
     };
     reader.readAsDataURL(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleCropConfirmed = async (
+    croppedDataUrl: string,
+    fileName?: string,
+    fileSize?: number,
+    fileType?: string
+  ) => {
+    setAvatarPreview(croppedDataUrl);
+    await uploadProfilePhoto(croppedDataUrl, fileName, fileSize, fileType);
+  };
+
+  const handleCloseCropModal = () => {
+    setCropModalOpen(false);
+    setImageToCrop(null);
   };
 
   const handleSaveProfile = (e: React.FormEvent) => {
@@ -1605,6 +1636,17 @@ export const SettingsPage: React.FC = () => {
           </section>
         </div>
       </div>
+
+      {/* 1:1 Square Profile Photo Crop Modal */}
+      <ProfilePhotoCropModal
+        isOpen={cropModalOpen}
+        imageSrc={imageToCrop?.src || null}
+        fileName={imageToCrop?.name}
+        fileSize={imageToCrop?.size}
+        fileType={imageToCrop?.type}
+        onClose={handleCloseCropModal}
+        onCropConfirmed={handleCropConfirmed}
+      />
     </div>
   );
 };

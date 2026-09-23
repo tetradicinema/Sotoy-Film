@@ -2,9 +2,10 @@ import React, { useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Camera, User as UserIcon, AtSign, FileText, Sparkles, ArrowRight, Loader2, Film, Check, Compass } from 'lucide-react';
 import { motion } from 'motion/react';
+import { ProfilePhotoCropModal } from '../Common/ProfilePhotoCropModal';
 
 export const OnboardingPage: React.FC = () => {
-  const { currentUser, finishOnboarding, uploadProfilePhoto } = useApp();
+  const { currentUser, finishOnboarding, uploadProfilePhoto, showToast } = useApp();
   const [name, setName] = useState(currentUser.name || '');
   const [handle, setHandle] = useState((currentUser.handle || '').replace('@', ''));
   const [bio, setBio] = useState(currentUser.bio || '');
@@ -12,6 +13,15 @@ export const OnboardingPage: React.FC = () => {
   const [selectedGenres, setSelectedGenres] = useState<string[]>(['Sci-Fi', 'Neo-Noir', 'Drama & Auteur']);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Profile Photo Cropping state
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<{
+    src: string;
+    name: string;
+    size: number;
+    type: string;
+  } | null>(null);
 
   const availableGenres = [
     'Sci-Fi',
@@ -36,14 +46,47 @@ export const OnboardingPage: React.FC = () => {
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!file.type.startsWith('image/')) {
+        showToast('Mohon pilih file gambar yang valid (JPG, PNG, WEBP).');
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('Ukuran gambar terlalu besar. Maksimal 5 MB.');
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64 = reader.result as string;
-        setSelectedAvatar(base64);
-        uploadProfilePhoto(base64, file.name, file.size, file.type);
+        if (base64) {
+          setImageToCrop({
+            src: base64,
+            name: file.name,
+            size: file.size,
+            type: file.type,
+          });
+          setCropModalOpen(true);
+        }
       };
       reader.readAsDataURL(file);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  const handleCropConfirmed = async (
+    croppedDataUrl: string,
+    fileName?: string,
+    fileSize?: number,
+    fileType?: string
+  ) => {
+    setSelectedAvatar(croppedDataUrl);
+    await uploadProfilePhoto(croppedDataUrl, fileName, fileSize, fileType);
+  };
+
+  const handleCloseCropModal = () => {
+    setCropModalOpen(false);
+    setImageToCrop(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -240,6 +283,17 @@ export const OnboardingPage: React.FC = () => {
           Profil publikmu akan dapat dikunjungi oleh sesama cinephile di Sotoy Film.
         </p>
       </motion.div>
+
+      {/* 1:1 Square Profile Photo Crop Modal */}
+      <ProfilePhotoCropModal
+        isOpen={cropModalOpen}
+        imageSrc={imageToCrop?.src || null}
+        fileName={imageToCrop?.name}
+        fileSize={imageToCrop?.size}
+        fileType={imageToCrop?.type}
+        onClose={handleCloseCropModal}
+        onCropConfirmed={handleCropConfirmed}
+      />
     </div>
   );
 };
