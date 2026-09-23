@@ -10,6 +10,9 @@ import {
   UserPlus,
   Check,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  GitBranch,
   TrendingUp,
   Flame,
   CornerDownRight,
@@ -58,6 +61,26 @@ export const BuzzDetailPage: React.FC = () => {
     replyId: string;
     user: { id: string; name: string; handle: string };
   } | null>(null);
+  const [highlightedReplyId, setHighlightedReplyId] = useState<string | null>(null);
+  const [collapsedThreads, setCollapsedThreads] = useState<Record<string, boolean>>({});
+
+  const toggleThreadCollapse = (replyId: string) => {
+    setCollapsedThreads(prev => ({
+      ...prev,
+      [replyId]: !prev[replyId],
+    }));
+  };
+
+  const jumpToParentReply = (parentId: string) => {
+    const el = document.getElementById(`buzz-reply-card-${parentId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlightedReplyId(parentId);
+      setTimeout(() => {
+        setHighlightedReplyId(null);
+      }, 2200);
+    }
+  };
 
   // Find the selected buzz post, or fallback to the first one
   const buzz = buzzList.find(b => b.id === selectedBuzzId) || buzzList[0];
@@ -131,11 +154,14 @@ export const BuzzDetailPage: React.FC = () => {
   };
 
   // Build threaded tree structure for replies
-  const topLevelReplies = replies.filter(r => !r.parentId);
+  const replyIdSet = new Set(replies.map(r => r.id));
+  const topLevelReplies = replies.filter(r => !r.parentId || !replyIdSet.has(r.parentId));
   const childRepliesMap: Record<string, BuzzReply[]> = {};
+  const replyByIdMap: Record<string, BuzzReply> = {};
 
   replies.forEach(r => {
-    if (r.parentId) {
+    replyByIdMap[r.id] = r;
+    if (r.parentId && replyIdSet.has(r.parentId)) {
       if (!childRepliesMap[r.parentId]) {
         childRepliesMap[r.parentId] = [];
       }
@@ -177,7 +203,7 @@ export const BuzzDetailPage: React.FC = () => {
           </span>
           <span>/</span>
           <span className="text-[#00F0FF] truncate max-w-[200px]">
-            Diskusi @{buzz.author.handle.replace('@', '')}
+            Utas Utama: @{buzz.author.handle.replace('@', '')}
           </span>
         </div>
       </div>
@@ -187,7 +213,7 @@ export const BuzzDetailPage: React.FC = () => {
         {/* Left / Center: Main Buzz and Thread Replies */}
         <div className="lg:col-span-8 space-y-6">
           {/* ================================================================= */}
-          {/* MAIN BUZZ POST CARD */}
+          {/* MAIN BUZZ POST CARD (UTAS UTAMA DARI FEED) */}
           {/* ================================================================= */}
           <article
             id={`buzz-thread-main-${buzz.id}`}
@@ -195,6 +221,18 @@ export const BuzzDetailPage: React.FC = () => {
           >
             {/* Ambient subtle glow */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-[#00F0FF]/5 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Utas Utama Header Identity Pill */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 relative z-10">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-[#00F0FF]/15 to-[#3B82F6]/15 border border-[#00F0FF]/30 text-[#00F0FF] text-xs font-mono font-bold tracking-wide">
+                <Flame className="w-3.5 h-3.5 text-[#00F0FF]" />
+                <span>UTAS UTAMA</span>
+                <span className="text-[10px] text-slate-400 font-sans font-normal border-l border-slate-700 pl-2 hidden xs:inline">Dari Feed Komunitas</span>
+              </div>
+              <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
+                Pangkal percakapan diskusi
+              </span>
+            </div>
 
             {/* Author Header */}
             <div className="flex items-center justify-between gap-2.5 relative z-10">
@@ -411,6 +449,19 @@ export const BuzzDetailPage: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                <button
+                  onClick={() => {
+                    setReplyingTo(null);
+                    const comp = document.getElementById('buzz-reply-composer');
+                    comp?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#00F0FF]/10 hover:bg-[#00F0FF]/20 border border-[#00F0FF]/30 hover:border-[#00F0FF] text-[#00F0FF] transition-all font-semibold text-xs shrink-0 cursor-pointer"
+                  title="Beri balasan langsung ke Utas Utama ini"
+                >
+                  <CornerDownRight className="w-3.5 h-3.5" />
+                  <span className="hidden xs:inline">Tanggapi Utas</span>
+                </button>
+
                 <div className="flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 font-semibold text-xs shrink-0">
                   <MessageSquare className="w-3.5 h-3.5 text-[#00F0FF]" />
                   <span>{replies.length} <span className="hidden xs:inline">Balasan</span></span>
@@ -432,24 +483,40 @@ export const BuzzDetailPage: React.FC = () => {
           {/* THREAD REPLIES SECTION */}
           {/* ================================================================= */}
           <section className="space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-[#00F0FF]/15 text-[#00F0FF] flex items-center justify-center">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#00F0FF]/15 text-[#00F0FF] flex items-center justify-center border border-[#00F0FF]/25 shadow-sm shrink-0">
                   <MessageSquare className="w-4 h-4" />
                 </div>
-                <h3 className="font-display font-black text-lg text-white">
-                  Thread Balasan Diskusi ({replies.length})
-                </h3>
+                <div>
+                  <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
+                    <span>Balasan Diskusi</span>
+                    <span className="text-sm font-mono text-[#00F0FF] font-bold">({replies.length})</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Opini sesama warga & kurator
+                  </p>
+                </div>
               </div>
-              <span className="text-xs text-slate-400">
-                Opini sesama warga & kurator
-              </span>
+
+              <div className="flex items-center gap-2 text-xs text-slate-400">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-medium text-slate-300">
+                  <MessageSquare className="w-3.5 h-3.5 text-[#00F0FF]" />
+                  <span>{topLevelReplies.length} balasan</span>
+                  {replies.length > topLevelReplies.length && (
+                    <span className="text-[#00F0FF] font-mono">
+                      • {replies.length - topLevelReplies.length} sub-balasan
+                    </span>
+                  )}
+                </span>
+                <span className="hidden sm:inline text-slate-500">• Percakapan berjenjang</span>
+              </div>
             </div>
 
             {/* Reply Input Box */}
             <div
               id="buzz-reply-composer"
-              className="p-5 rounded-3xl bg-[#151628] border border-slate-800 shadow-xl space-y-3"
+              className="p-5 rounded-3xl bg-[#151628] border border-slate-800 shadow-xl space-y-3 transition-all"
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
@@ -466,7 +533,7 @@ export const BuzzDetailPage: React.FC = () => {
                   )}
                   <div className="min-w-0">
                     <span className="text-xs font-bold text-white block truncate">
-                      {isLoggedIn ? `Membalas sebagai ${currentUser.name}` : 'Tamu Cinephile'}
+                      {isLoggedIn ? `Menanggapi sebagai ${currentUser.name}` : 'Tamu Cinephile'}
                     </span>
                     <span className="text-[10px] text-[#00F0FF] font-mono">
                       {isLoggedIn ? `${currentUser.handle} • ${currentUser.roleTitle}` : 'Silakan masuk untuk membalas'}
@@ -486,21 +553,34 @@ export const BuzzDetailPage: React.FC = () => {
                 )}
               </div>
 
-              {replyingTo && (
-                <div className="flex items-center justify-between gap-2 px-3.5 py-2 rounded-2xl bg-[#00F0FF]/10 border border-[#00F0FF]/30 text-xs text-[#00F0FF] animate-in fade-in">
+              {replyingTo ? (
+                <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-2xl bg-[#00F0FF]/10 border border-[#00F0FF]/30 text-xs text-[#00F0FF] animate-in fade-in">
                   <div className="flex items-center gap-2 min-w-0">
-                    <CornerDownRight className="w-4 h-4 shrink-0" />
-                    <span className="font-bold truncate">
-                      Membalas Utas @{replyingTo.user.handle.replace('@', '')} ({replyingTo.user.name})
-                    </span>
+                    <CornerDownRight className="w-4 h-4 shrink-0 text-[#00F0FF]" />
+                    <div className="truncate">
+                      <span className="font-bold">
+                        Membalas komentar @{replyingTo.user.handle.replace('@', '')}
+                      </span>
+                      <span className="text-slate-400 ml-1.5 hidden sm:inline">
+                        ({replyingTo.user.name}) • Balasan akan tersusun di bawah komentar ini
+                      </span>
+                    </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => setReplyingTo(null)}
-                    className="text-slate-400 hover:text-white transition-colors"
+                    className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors shrink-0"
+                    title="Batal membalas komentar ini"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/70 border border-slate-800 text-[11px] text-slate-400">
+                  <CornerDownRight className="w-3.5 h-3.5 text-[#00F0FF] shrink-0" />
+                  <span>
+                    Membalas langsung ke <span className="text-[#00F0FF] font-semibold">Utas Utama</span>
+                  </span>
                 </div>
               )}
 
@@ -510,8 +590,8 @@ export const BuzzDetailPage: React.FC = () => {
                   onChange={setReplyText}
                   placeholder={
                     replyingTo
-                      ? `Tulis balasan khusus kepada @${replyingTo.user.handle.replace('@', '')}... (Gunakan '@' untuk mention warga)`
-                      : `Tulis balasan atau argumen sotoy kamu kepada ${buzz.author.name}... (Gunakan '@' untuk mention)`
+                      ? `Tulis balasan kepada @${replyingTo.user.handle.replace('@', '')}... (Gunakan '@' untuk mention)`
+                      : `Tulis tanggapan untuk utas @${buzz.author.handle.replace('@', '')}... (Gunakan '@' untuk mention)`
                   }
                   rows={3}
                   className="w-full bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF] transition-colors resize-none"
@@ -531,7 +611,7 @@ export const BuzzDetailPage: React.FC = () => {
                       className="hover:text-[#00F0FF] transition-colors text-[11px] font-mono flex items-center gap-1 bg-slate-900 border border-slate-800 px-2 py-1 rounded-lg"
                     >
                       <AtSign className="w-3 h-3 text-[#00F0FF]" />
-                      <span>Mention Penulis</span>
+                      <span>Mention Penulis Utas</span>
                     </button>
                   </div>
 
@@ -541,7 +621,13 @@ export const BuzzDetailPage: React.FC = () => {
                     className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#00F0FF] to-[#3B82F6] text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-[#00F0FF]/20 hover:brightness-110 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 transition-all"
                   >
                     <Send className="w-3.5 h-3.5" />
-                    <span>{isSubmitting ? 'Mengirim...' : 'Kirim Balasan'}</span>
+                    <span>
+                      {isSubmitting
+                        ? 'Mengirim...'
+                        : replyingTo
+                          ? 'Kirim Balasan'
+                          : 'Kirim Tanggapan'}
+                    </span>
                   </button>
                 </div>
               </form>
@@ -553,135 +639,258 @@ export const BuzzDetailPage: React.FC = () => {
                 <div className="w-12 h-12 rounded-2xl bg-[#00F0FF]/10 text-[#00F0FF] flex items-center justify-center mx-auto">
                   <MessageSquare className="w-6 h-6" />
                 </div>
-                <h4 className="font-bold text-white text-base">Belum Ada Balasan di Thread Ini</h4>
+                <h4 className="font-bold text-white text-base">Belum Ada Balasan</h4>
                 <p className="text-slate-400 text-xs max-w-sm mx-auto">
-                  Jadilah orang pertama yang menanggapi argumen atau opini sinema dari {buzz.author.name}!
+                  Jadilah orang pertama yang menanggapi argumen atau opini di Utas Utama dari {buzz.author.name}!
                 </p>
               </div>
             ) : (
-              <div className="space-y-5">
+              <div className="space-y-6">
                 {topLevelReplies.map(topReply => {
-                  const renderReplyNode = (reply: BuzzReply, isChild = false) => {
+                  const renderReplyNode = (
+                    reply: BuzzReply,
+                    depth = 0,
+                    isLastChild = false,
+                    parentReply?: BuzzReply
+                  ): React.ReactNode => {
                     const childReplies = childRepliesMap[reply.id] || [];
+                    const hasChildren = childReplies.length > 0;
+                    const isCollapsed = Boolean(collapsedThreads[reply.id]);
+                    const isReplyingToThis = replyingTo?.replyId === reply.id;
+                    const isHighlighted = highlightedReplyId === reply.id;
+
+                    // Resolve replied-to target author
+                    const targetUser = reply.replyToUser || (parentReply ? {
+                      id: parentReply.author.id,
+                      name: parentReply.author.name,
+                      handle: parentReply.author.handle,
+                    } : null);
+
+                    // Hierarchy styling depending on thread depth
+                    const cardBg = depth === 0
+                      ? 'bg-slate-900/90 border-slate-800/90 hover:border-slate-700 shadow-lg border-l-4 border-l-[#00F0FF]'
+                      : depth === 1
+                        ? 'bg-[#131428] border-slate-800/80 hover:border-[#00F0FF]/40 shadow-md border-l-2 border-l-[#00F0FF]/60'
+                        : 'bg-[#0f101f] border-slate-800/70 hover:border-purple-500/40 shadow-sm border-l-2 border-l-purple-500/60';
+
+                    const avatarSize = depth === 0
+                      ? 'w-9 h-9 sm:w-10 sm:h-10'
+                      : depth === 1
+                        ? 'w-8 h-8 sm:w-9 sm:h-9'
+                        : 'w-7.5 h-7.5 sm:w-8 sm:h-8';
 
                     return (
-                      <div key={reply.id} className="space-y-3">
-                        <div
-                          id={`buzz-reply-card-${reply.id}`}
-                          className={`p-4 sm:p-5 rounded-2xl border transition-all space-y-3 relative group ${
-                            isChild
-                              ? 'bg-[#141528] border-slate-800/80 hover:border-[#00F0FF]/40 shadow-md'
-                              : 'bg-slate-900/80 border-slate-800/90 hover:border-slate-700'
-                          }`}
-                        >
-                          {/* If replying to a user directly */}
-                          {reply.replyToUser && (
-                            <div className="flex items-center gap-1.5 text-[11px] text-[#00F0FF] font-mono font-semibold bg-[#00F0FF]/10 border border-[#00F0FF]/25 px-2.5 py-0.5 rounded-lg w-fit">
-                              <CornerDownRight className="w-3 h-3 shrink-0" />
-                              <span>Membalas @{reply.replyToUser.handle.replace('@', '')} ({reply.replyToUser.name})</span>
+                      <div key={reply.id} className="relative group/replyNode">
+                        {/* Nested Tree Connectors (Vertical Trunk Line + Horizontal Curved Elbow) */}
+                        {depth > 0 && (
+                          <>
+                            {/* Vertical trunk line from ancestor */}
+                            <div
+                              className={`absolute left-0 top-0 w-[2px] bg-slate-700/80 group-hover/replyNode:bg-[#00F0FF]/60 transition-colors pointer-events-none ${
+                                isLastChild ? 'h-6 sm:h-7' : 'bottom-0'
+                              }`}
+                              aria-hidden="true"
+                            />
+                            {/* Curved elbow branch turning right into this comment card */}
+                            <div
+                              className="absolute left-0 top-5 sm:top-6 w-3.5 sm:w-6 h-4 sm:h-5 border-b-2 border-l-2 border-slate-700/80 rounded-bl-xl group-hover/replyNode:border-[#00F0FF]/80 transition-colors pointer-events-none"
+                              aria-hidden="true"
+                            />
+                          </>
+                        )}
+
+                        <div className={depth > 0 ? 'pl-3.5 sm:pl-6' : ''}>
+                          <div
+                            id={`buzz-reply-card-${reply.id}`}
+                            className={`p-4 sm:p-5 rounded-2xl border transition-all duration-300 space-y-3 relative ${cardBg} ${
+                              isReplyingToThis
+                                ? 'ring-2 ring-[#00F0FF] shadow-lg shadow-[#00F0FF]/25 bg-[#161838]'
+                                : isHighlighted
+                                  ? 'ring-2 ring-[#00F0FF] shadow-xl shadow-[#00F0FF]/30 scale-[1.006]'
+                                  : ''
+                            }`}
+                          >
+                            {/* Header Context / In-reply-to Chip */}
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              {targetUser ? (
+                                <button
+                                  type="button"
+                                  onClick={() => reply.parentId && jumpToParentReply(reply.parentId)}
+                                  className="inline-flex items-center gap-1.5 text-[11px] text-[#00F0FF] hover:text-white font-mono font-medium bg-[#00F0FF]/10 hover:bg-[#00F0FF]/20 border border-[#00F0FF]/25 px-2.5 py-0.5 rounded-lg transition-all group/chip"
+                                  title="Klik untuk melompat ke komentar induk"
+                                >
+                                  <CornerDownRight className="w-3 h-3 shrink-0 text-[#00F0FF] group-hover/chip:translate-x-0.5 transition-transform" />
+                                  <span>
+                                    Membalas <span className="font-bold text-white">@{targetUser.handle.replace('@', '')}</span>
+                                  </span>
+                                  {reply.parentId && (
+                                    <span className="text-[10px] text-slate-400 group-hover/chip:text-[#00F0FF] transition-colors ml-1">
+                                      ↑ Ke Komentar Induk
+                                    </span>
+                                  )}
+                                </button>
+                              ) : null}
                             </div>
-                          )}
 
-                          {/* Header Author Reply */}
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <button
-                                onClick={() => navigateTo('user-profile', { userId: reply.author.id })}
-                                className="shrink-0"
-                                title={`Lihat profil ${reply.author.name}`}
-                              >
-                                <img
-                                  src={reply.author.avatar}
-                                  alt={reply.author.name}
-                                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover ring-2 ring-slate-800 hover:ring-[#00F0FF] transition-all"
-                                />
-                              </button>
+                            {/* Author Row */}
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <button
+                                  onClick={() => navigateTo('user-profile', { userId: reply.author.id })}
+                                  className="shrink-0 group/avatar"
+                                  title={`Lihat profil ${reply.author.name}`}
+                                >
+                                  <img
+                                    src={reply.author.avatar}
+                                    alt={reply.author.name}
+                                    className={`${avatarSize} rounded-xl object-cover ring-2 ring-slate-800 group-hover/avatar:ring-[#00F0FF] transition-all shadow-md`}
+                                  />
+                                </button>
 
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <button
-                                    onClick={() => navigateTo('user-profile', { userId: reply.author.id })}
-                                    className="font-bold text-sm text-white hover:text-[#00F0FF] transition-colors truncate"
-                                  >
-                                    {reply.author.name}
-                                  </button>
-                                  <RoleBadge role={reply.author.role || 'warga_sotoy'} size="xs" />
-                                </div>
-                                <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                                  <span className="font-mono">{reply.author.handle}</span>
-                                  <span>•</span>
-                                  <span title={formatFullDateTime(reply.createdAt)}>{formatRelativeTime(reply.createdAt)}</span>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <button
+                                      onClick={() => navigateTo('user-profile', { userId: reply.author.id })}
+                                      className="font-bold text-sm text-white hover:text-[#00F0FF] transition-colors truncate"
+                                    >
+                                      {reply.author.name}
+                                    </button>
+                                    <RoleBadge role={reply.author.role || 'warga_sotoy'} size="xs" />
+                                  </div>
+                                  <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                                    <span className="font-mono">{reply.author.handle}</span>
+                                    <span>•</span>
+                                    <span title={formatFullDateTime(reply.createdAt)}>{formatRelativeTime(reply.createdAt)}</span>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </div>
 
-                          {/* Reply Content */}
-                          <div className="text-slate-200 text-sm leading-relaxed whitespace-pre-line pl-1 sm:pl-2">
-                            <MentionText content={reply.content} />
-                          </div>
-
-                          {/* Quick quote / mention / delete button */}
-                          <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between text-xs text-slate-400">
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => handleStartReply(reply.id, reply.author)}
-                                className="flex items-center gap-1 text-[11px] font-bold text-[#00F0FF] hover:bg-[#00F0FF]/15 px-2.5 py-1 rounded-lg transition-colors"
-                              >
-                                <CornerDownRight className="w-3.5 h-3.5" />
-                                <span>Balas Utas @{reply.author.handle.replace('@', '')}</span>
-                              </button>
-
-                              <button
-                                onClick={() => likeBuzzReply(buzz.id, reply.id)}
-                                className={`flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg transition-colors ${
-                                  reply.likedByMe
-                                    ? 'text-rose-400 bg-rose-500/15'
-                                    : 'text-slate-400 hover:text-rose-300 hover:bg-rose-500/10'
-                                }`}
-                              >
-                                <Heart className={`w-3.5 h-3.5 ${reply.likedByMe ? 'fill-current' : ''}`} />
-                                <span>{reply.likes || 0}</span>
-                              </button>
-
-                              {isLoggedIn && currentUser?.id === reply.author.id && (
+                              {/* Subthread collapse toggle (if this comment has replies beneath it) */}
+                              {hasChildren && (
                                 <button
-                                  onClick={async () => {
-                                    if (window.confirm('Hapus balasan ini?')) {
-                                      await deleteBuzzReply(buzz.id, reply.id);
-                                    }
-                                  }}
-                                  className="flex items-center gap-1 text-[11px] font-bold text-red-400 hover:bg-red-500/10 px-2.5 py-1 rounded-lg transition-colors"
+                                  type="button"
+                                  onClick={() => toggleThreadCollapse(reply.id)}
+                                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 transition-all shrink-0 shadow-sm cursor-pointer"
+                                  title={isCollapsed ? 'Buka balasan' : 'Sembunyikan balasan'}
                                 >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                  <span>Hapus</span>
+                                  <GitBranch className="w-3.5 h-3.5 text-[#00F0FF]" />
+                                  <span className="hidden xs:inline">{childReplies.length} Balasan</span>
+                                  <span className="xs:hidden">{childReplies.length}</span>
+                                  {isCollapsed ? (
+                                    <ChevronDown className="w-3 h-3 text-[#00F0FF]" />
+                                  ) : (
+                                    <ChevronUp className="w-3 h-3 text-slate-400" />
+                                  )}
                                 </button>
                               )}
                             </div>
 
-                            <button
-                              onClick={() => {
-                                navigator.clipboard.writeText(`"${reply.content}" - ${reply.author.name} di Sotoy Film`);
-                                showToast('Teks balasan disalin ke clipboard!');
-                              }}
-                              className="text-[10px] text-slate-400 hover:text-white transition-colors"
-                            >
-                              Salin Kutipan
-                            </button>
-                          </div>
-                        </div>
+                            {/* Reply Content */}
+                            <div className="text-slate-200 text-sm leading-relaxed whitespace-pre-line pl-1 sm:pl-2">
+                              <MentionText content={reply.content} />
+                            </div>
 
-                        {/* Render Sub-threads / Child Replies indented */}
-                        {childReplies.length > 0 && (
-                          <div className="border-l-2 border-[#00F0FF]/30 ml-3 sm:ml-6 pl-3 sm:pl-5 space-y-3 pt-1">
-                            {childReplies.map(child => renderReplyNode(child, true))}
+                            {/* Actions Toolbar */}
+                            <div className="pt-2.5 border-t border-slate-800/60 flex items-center justify-between gap-2 text-xs text-slate-400 flex-wrap">
+                              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                                <button
+                                  onClick={() => handleStartReply(reply.id, reply.author)}
+                                  className={`flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                                    isReplyingToThis
+                                      ? 'bg-[#00F0FF] text-slate-950 shadow-md shadow-[#00F0FF]/30'
+                                      : 'text-[#00F0FF] hover:bg-[#00F0FF]/15 bg-[#00F0FF]/5 border border-[#00F0FF]/20'
+                                  }`}
+                                  title={`Balas komentar @${reply.author.handle.replace('@', '')}`}
+                                >
+                                  <CornerDownRight className="w-3.5 h-3.5" />
+                                  <span>Balas</span>
+                                </button>
+
+                                <button
+                                  onClick={() => likeBuzzReply(buzz.id, reply.id)}
+                                  className={`flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg transition-colors border ${
+                                    reply.likedByMe
+                                      ? 'text-rose-400 bg-rose-500/15 border-rose-500/30'
+                                      : 'text-slate-400 hover:text-rose-300 hover:bg-rose-500/10 border-slate-800'
+                                  }`}
+                                >
+                                  <Heart className={`w-3.5 h-3.5 ${reply.likedByMe ? 'fill-current' : ''}`} />
+                                  <span>{reply.likes || 0}</span>
+                                </button>
+
+                                {isLoggedIn && currentUser?.id === reply.author.id && (
+                                  <button
+                                    onClick={async () => {
+                                      if (window.confirm('Hapus balasan ini?')) {
+                                        await deleteBuzzReply(buzz.id, reply.id);
+                                      }
+                                    }}
+                                    className="flex items-center gap-1 text-[11px] font-bold text-red-400 hover:bg-red-500/10 px-2 py-1 rounded-lg transition-colors border border-transparent hover:border-red-500/20 cursor-pointer"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <span>Hapus</span>
+                                  </button>
+                                )}
+                              </div>
+
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(`"${reply.content}" - ${reply.author.name} di Sotoy Film`);
+                                  showToast('Teks balasan disalin ke clipboard!');
+                                }}
+                                className="text-[10px] text-slate-400 hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
+                                title="Salin kutipan komentar ini"
+                              >
+                                <Quote className="w-3 h-3" />
+                                <span>Salin Kutipan</span>
+                              </button>
+                            </div>
                           </div>
-                        )}
+
+                          {/* Sub-threads / Child Replies indented with connecting tree branches */}
+                          {hasChildren && (
+                            <div className="mt-3">
+                              {isCollapsed ? (
+                                /* Collapsed Sub-thread Banner */
+                                <button
+                                  type="button"
+                                  onClick={() => toggleThreadCollapse(reply.id)}
+                                  className="w-full my-2 p-2.5 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-dashed border-slate-800 hover:border-[#00F0FF]/50 text-xs text-slate-400 hover:text-[#00F0FF] flex items-center justify-between gap-3 transition-all cursor-pointer group/collapsed"
+                                >
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <GitBranch className="w-3.5 h-3.5 text-[#00F0FF] shrink-0" />
+                                    <span className="font-semibold truncate">
+                                      Balasan disembunyikan ({childReplies.length} balasan)
+                                    </span>
+                                  </div>
+                                  <span className="text-[11px] text-slate-500 group-hover/collapsed:text-[#00F0FF] font-medium shrink-0 flex items-center gap-1">
+                                    <span>Buka balasan</span>
+                                    <ChevronDown className="w-3.5 h-3.5" />
+                                  </span>
+                                </button>
+                              ) : (
+                                /* Expanded Child Replies Branch */
+                                <div
+                                  className={`space-y-3 pt-1 relative ${
+                                    depth === 0
+                                      ? 'ml-2 sm:ml-4'
+                                      : 'ml-1 sm:ml-2'
+                                  }`}
+                                >
+                                  {childReplies.map((child, idx) => {
+                                    const isLast = idx === childReplies.length - 1;
+                                    return renderReplyNode(child, depth + 1, isLast, reply);
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   };
 
-                  return renderReplyNode(topReply, false);
+                  return renderReplyNode(topReply, 0, false, undefined);
                 })}
               </div>
             )}
