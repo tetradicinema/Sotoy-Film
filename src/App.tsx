@@ -195,6 +195,14 @@ const AppContent: React.FC = () => {
             }
           />
           <Route
+            path="/admin/analytics"
+            element={
+              <React.Suspense fallback={<PageLoadingFallback />}>
+                <AdminDashboard />
+              </React.Suspense>
+            }
+          />
+          <Route
             path="/admin/users"
             element={
               <React.Suspense fallback={<PageLoadingFallback />}>

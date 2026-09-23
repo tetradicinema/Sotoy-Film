@@ -1,5 +1,6 @@
 import React from 'react';
-import { Users, FileText, MessageSquare, Film, TrendingUp, Sparkles, Shield, Award, PenSquare } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Users, FileText, MessageSquare, Film, TrendingUp, Sparkles, Shield, Award, PenSquare, ArrowUpRight } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
 
@@ -34,17 +35,23 @@ export const AdminStatsOverview: React.FC = () => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* 1. Total Warga & Kritikus */}
-      <div className="bg-[#121324] border border-slate-800/80 hover:border-cyan-500/40 rounded-2xl p-5 shadow-lg relative overflow-hidden group transition-all">
-        <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl pointer-events-none" />
+      <Link 
+        to="/admin/analytics" 
+        className="bg-[#121324] border border-slate-800/80 hover:border-cyan-500/60 rounded-2xl p-5 shadow-lg relative overflow-hidden group transition-all block cursor-pointer"
+      >
+        <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 group-hover:bg-cyan-500/10 rounded-full blur-2xl pointer-events-none transition-all" />
         <div className="flex items-start justify-between">
           <div>
-            <span className="text-xs font-semibold text-slate-400 block">Total Warga & Kritikus</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-slate-400 block group-hover:text-cyan-300 transition-colors">Total Warga & Kritikus</span>
+              <ArrowUpRight className="w-3.5 h-3.5 text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-3xl font-black text-white tracking-tight">{totalUsers}</span>
               <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">User Aktif</span>
             </div>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-[#00F0FF] shrink-0">
+          <div className="w-11 h-11 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-[#00F0FF] shrink-0 group-hover:scale-105 transition-transform">
             <Users className="w-5 h-5" />
           </div>
         </div>
@@ -64,7 +71,7 @@ export const AdminStatsOverview: React.FC = () => {
             {adminCount} Admin
           </span>
         </div>
-      </div>
+      </Link>
 
       {/* 2. Total Artikel Terbit & Draft */}
       <div className="bg-[#121324] border border-slate-800/80 hover:border-pink-500/40 rounded-2xl p-5 shadow-lg relative overflow-hidden group transition-all">

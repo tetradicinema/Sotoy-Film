@@ -1,5 +1,5 @@
 /**
- * Automated Mock Test Suite for Vercel Edge Middleware (middleware.ts)
+ * Automated Mock Test Suite for Vercel Middleware (middleware.ts - Node.js Runtime)
  * 
  * Simulates various User-Agent headers (bots vs human visitors) and route requests
  * to validate that:

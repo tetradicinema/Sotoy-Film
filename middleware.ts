@@ -7,13 +7,13 @@ import { injectMetaTags, FALLBACK_HTML_TEMPLATE } from './src/lib/edge/metaInjec
 export { isBotUserAgent };
 
 export const config = {
-  runtime: 'edge',
+  runtime: 'nodejs',
   matcher: ['/film/:path*', '/artikel/:path*'],
 };
 
 /**
- * Safely invokes Vercel Edge next() with fallback to raw x-middleware-next header
- * if @vercel/edge helper throws an unexpected runtime error.
+ * Safely invokes Vercel next() with fallback to raw x-middleware-next header
+ * if helper throws an unexpected runtime error.
  */
 function safeNext(): Response {
   try {
@@ -26,7 +26,7 @@ function safeNext(): Response {
 }
 
 /**
- * Vercel Edge Middleware entrypoint.
+ * Vercel Routing Middleware entrypoint (Node.js runtime).
  * Intercepts incoming requests from search engine bots and social media crawlers
  * to serve dynamically injected OpenGraph, Twitter, and Search Engine meta tags.
  */

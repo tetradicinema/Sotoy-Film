@@ -11,7 +11,8 @@ import {
   CheckCircle2,
   FileText,
   ExternalLink,
-  ScrollText
+  ScrollText,
+  BarChart3
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { AdminStatsOverview } from './AdminStatsOverview';
@@ -22,8 +23,9 @@ import { AdminCatalogManager } from './AdminCatalogManager';
 import { AdminStorageFiles } from './AdminStorageFiles';
 import { AdminAppeals } from './AdminAppeals';
 import { AdminAuditLog } from './AdminAuditLog';
+import { AdminAnalyticsDashboard } from './AdminAnalyticsDashboard';
 
-type AdminTab = 'users' | 'moderation' | 'catalog' | 'storage' | 'appeals' | 'audit';
+type AdminTab = 'analytics' | 'users' | 'moderation' | 'catalog' | 'storage' | 'appeals' | 'audit';
 
 export const AdminDashboard: React.FC = () => {
   const { 
@@ -39,6 +41,7 @@ export const AdminDashboard: React.FC = () => {
 
   // Determine active view directly from standalone URL pathname
   const getActiveTab = (): AdminTab => {
+    if (location.pathname === '/admin/analytics') return 'analytics';
     if (location.pathname === '/admin/moderation') return 'moderation';
     if (location.pathname === '/admin/catalog') return 'catalog';
     if (location.pathname === '/admin/storage') return 'storage';
@@ -207,6 +210,20 @@ export const AdminDashboard: React.FC = () => {
           className="admin-navigation-list flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-800 scrollbar-none"
           aria-label="Admin Navigation List"
         >
+          {/* Link 0: Community Analytics */}
+          <Link
+            to="/admin/analytics"
+            id="admin-tab-analytics"
+            className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
+              activeTab === 'analytics'
+                ? 'bg-gradient-to-r from-cyan-500/20 to-blue-600/10 text-[#00F0FF] border border-cyan-500/40 shadow-lg shadow-cyan-950/30'
+                : 'text-slate-400 hover:text-white hover:bg-slate-850 border border-transparent'
+            }`}
+          >
+            <BarChart3 className={`w-4 h-4 ${activeTab === 'analytics' ? 'text-[#00F0FF]' : 'text-slate-400'}`} />
+            <span>Analisis Pertumbuhan</span>
+          </Link>
+
           {/* Link 1: User Management */}
           <Link
             to="/admin/users"
@@ -339,6 +356,7 @@ export const AdminDashboard: React.FC = () => {
 
         {/* Section Contents Rendered based on Standalone URL */}
         <div className="pt-2">
+          {activeTab === 'analytics' && <AdminAnalyticsDashboard />}
           {activeTab === 'users' && <AdminUserManagement />}
           {activeTab === 'moderation' && <AdminModeration />}
           {activeTab === 'catalog' && <AdminCatalogManager />}
