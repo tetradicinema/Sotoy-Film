@@ -58,8 +58,8 @@ import { BuzzImageAttachment } from '../Buzz/BuzzImageAttachment';
 export const FEED_RANKING_WEIGHTS = {
   RECENCY: 0.35,          // Weight for recency / freshness
   INTEREST_OVERLAP: 0.40, // Weight for user interest profile match
-  AUTHOR_AFFINITY: 0.30,  // Weight for followed accounts / network affinity
-  ENGAGEMENT: 0.15,       // Weight for reactions & replies volume
+  AUTHOR_AFFINITY: 0.22,  // Rebalanced from 0.30: followed accounts / network affinity
+  ENGAGEMENT: 0.23,       // Rebalanced from 0.15: reactions & replies volume
 } as const;
 
 // Helper to safely parse any post timestamp into epoch milliseconds
@@ -89,6 +89,49 @@ const getPostAgeInHours = (createdAt: string): number => {
   return Math.max(0.01, diffHours);
 };
 
+/**
+ * Applies an author diversity / anti-clustering pass on a score-ranked list of posts.
+ * Prevents any single author from appearing more than once within any window of 3
+ * consecutive positions in the feed (i.e. not in the immediate last 2 positions of the output).
+ * If the pool contains fewer than 3 distinct authors, it guarantees that no two consecutive
+ * adjacent positions share the same author (alternating pattern), preserving score hierarchy.
+ */
+function applyAuthorDiversity(
+  scoreRankedList: BuzzPost[],
+  windowSize = 3
+): BuzzPost[] {
+  if (scoreRankedList.length <= 2) return scoreRankedList;
+
+  const remaining = [...scoreRankedList];
+  const diversified: BuzzPost[] = [];
+  const lookbackCount = Math.max(1, windowSize - 1); // For window of 3, inspect last 2 positions
+
+  while (remaining.length > 0) {
+    // 1. First priority: Find highest-scoring post whose author is not in the last (windowSize - 1) positions
+    const recentAuthorIds = new Set(
+      diversified.slice(-lookbackCount).map(post => post.author.id)
+    );
+    let nextIndex = remaining.findIndex(post => !recentAuthorIds.has(post.author.id));
+
+    // 2. Second priority: If no candidate exists from a 3rd distinct author (e.g. only 2 authors present),
+    // prevent adjacent back-to-back clustering by avoiding the immediate previous author
+    if (nextIndex === -1 && diversified.length > 0) {
+      const immediatePreviousAuthorId = diversified[diversified.length - 1].author.id;
+      nextIndex = remaining.findIndex(post => post.author.id !== immediatePreviousAuthorId);
+    }
+
+    // 3. Fallback: If all remaining candidates belong to the only remaining author in the pool
+    if (nextIndex === -1) {
+      nextIndex = 0;
+    }
+
+    const [selectedPost] = remaining.splice(nextIndex, 1);
+    diversified.push(selectedPost);
+  }
+
+  return diversified;
+}
+
 export const CommunityFeedPage: React.FC = () => {
   // =========================================================================
   // RANKING WEIGHT CONSTANTS (FOR-YOU FEED ALGORITHM)
@@ -100,8 +143,8 @@ export const CommunityFeedPage: React.FC = () => {
   // =========================================================================
   const WEIGHT_RECENCY = FEED_RANKING_WEIGHTS.RECENCY; // 0.35
   const WEIGHT_INTEREST_OVERLAP = FEED_RANKING_WEIGHTS.INTEREST_OVERLAP; // 0.40
-  const WEIGHT_AUTHOR_AFFINITY = FEED_RANKING_WEIGHTS.AUTHOR_AFFINITY; // 0.30
-  const WEIGHT_ENGAGEMENT = FEED_RANKING_WEIGHTS.ENGAGEMENT; // 0.15
+  const WEIGHT_AUTHOR_AFFINITY = FEED_RANKING_WEIGHTS.AUTHOR_AFFINITY; // 0.22 (rebalanced from 0.30)
+  const WEIGHT_ENGAGEMENT = FEED_RANKING_WEIGHTS.ENGAGEMENT; // 0.23 (rebalanced from 0.15)
 
   const {
     buzzList,
@@ -287,7 +330,7 @@ export const CommunityFeedPage: React.FC = () => {
     }
 
     // Default 'for-you' tab: Multi-signal personalized feed scoring
-    return list
+    const scoredList = list
       .map(post => {
         // A. Recency Score (smooth decay over time, scale 0 to 100)
         const ageHours = getPostAgeInHours(post.createdAt);
@@ -302,10 +345,14 @@ export const CommunityFeedPage: React.FC = () => {
           : (post.repliesCount || 0);
         const engagementScore = Math.min(60, (totalReactions * 2) + (repliesCount * 4));
 
-        // C. Author Affinity Score (followed creator boost, scale 0 to 35)
+        // C. Author Affinity Score with time decay (scale 0 to 35)
+        // Author affinity naturally fades the older the post gets, so older posts from followed
+        // authors don't perpetually crowd out fresh, relevant community conversations.
         const isFollowedAuthor = followingIds.includes(post.author.id);
         const isOwnPost = Boolean(currentUser?.id && post.author.id === currentUser.id);
-        const authorAffinityScore = isFollowedAuthor ? 35 : (isOwnPost ? 20 : 0);
+        const affinityDecayFactor = 1 / (1 + Math.pow(ageHours / 24, 1.25));
+        const rawAuthorAffinity = isFollowedAuthor ? 35 : (isOwnPost ? 20 : 0);
+        const authorAffinityScore = rawAuthorAffinity * affinityDecayFactor;
 
         // D. Interest Match Score (overlap between post topics and user interest profile)
         const postTopics: string[] = [];
@@ -352,6 +399,14 @@ export const CommunityFeedPage: React.FC = () => {
 
         // F. Generate explainable recommendation badge
         let recommendationSignal: RecommendationSignal | undefined = undefined;
+
+        // Calculate affinity contribution relative to total feedScore
+        const affinityContributionFraction = feedScore > 0
+          ? (authorAffinityScore * WEIGHT_AUTHOR_AFFINITY) / feedScore
+          : 0;
+        // Only show 'following' badge when affinity is genuinely a dominant driver of this post's ranking
+        const isAffinityDominant = isFollowedAuthor && affinityContributionFraction >= 0.28;
+
         if (interestScore >= 18 && topMatchedTag) {
           recommendationSignal = {
             type: 'interest',
@@ -359,7 +414,7 @@ export const CommunityFeedPage: React.FC = () => {
             matchedTag: topMatchedTag,
             score: feedScore,
           };
-        } else if (isFollowedAuthor) {
+        } else if (isAffinityDominant) {
           recommendationSignal = {
             type: 'following',
             label: 'Dari kreator yang kamu ikuti',
@@ -380,6 +435,10 @@ export const CommunityFeedPage: React.FC = () => {
         };
       })
       .sort((a, b) => (b.feedScore || 0) - (a.feedScore || 0));
+
+    // Apply author diversity / anti-clustering pass so no author appears more than once
+    // within any window of 3 consecutive positions in the final feed.
+    return applyAuthorDiversity(scoredList, 3);
   }, [buzzList, buzzFeedTab, followingIds, savedBuzzIds, activeTagFilter, interestProfile, currentUser?.id]);
 
   const handleShareBuzz = (post: typeof buzzList[0]) => {
