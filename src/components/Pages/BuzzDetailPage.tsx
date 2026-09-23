@@ -28,6 +28,7 @@ import { MentionText } from '../Common/MentionText';
 import { MentionInput } from '../Common/MentionInput';
 import { BuzzReply } from '../../types';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
+import { BuzzImageAttachment } from '../Buzz/BuzzImageAttachment';
 
 export const BuzzDetailPage: React.FC = () => {
   const {
@@ -293,6 +294,9 @@ export const BuzzDetailPage: React.FC = () => {
             <div className="text-slate-100 text-base sm:text-lg leading-relaxed whitespace-pre-line font-normal">
               <MentionText content={buzz.content} />
             </div>
+
+            {/* Attached Photo */}
+            <BuzzImageAttachment src={buzz.image} alt={`Foto postingan ${buzz.author.name}`} />
 
             {/* Hashtags */}
             {buzz.tags.length > 0 && (

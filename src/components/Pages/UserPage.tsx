@@ -56,6 +56,7 @@ import { User, UserTab, UserSettings } from '../../types';
 import { StarRating } from '../Common/StarRating';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
+import { BuzzImageAttachment } from '../Buzz/BuzzImageAttachment';
 
 const AdminDashboard = React.lazy(() =>
   import('../Admin/AdminDashboard').then(m => ({ default: m.AdminDashboard }))
@@ -837,6 +838,8 @@ export const UserPage: React.FC = () => {
                       <p className="text-slate-200 text-xs sm:text-sm leading-relaxed whitespace-pre-line">
                         {buzz.content}
                       </p>
+
+                      <BuzzImageAttachment src={buzz.image} alt={`Foto postingan ${buzz.author.name}`} />
 
                       {buzz.taggedFilm && (
                         <div

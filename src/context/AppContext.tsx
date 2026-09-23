@@ -125,7 +125,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup
 } from 'firebase/auth';
-import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 
 export const ADMIN_UIDS = [
   'QkNGf1ZfhsMyUEk90a6Iz8ZplZS2', // User ID Admin 1
@@ -286,7 +286,8 @@ interface AppContextType {
     content: string,
     taggedFilmId?: string,
     skorSotoy?: number,
-    taggedArticleId?: string
+    taggedArticleId?: string,
+    imageDataUrl?: string
   ) => Promise<void>;
   likeBuzzPost: (buzzId: string) => Promise<void>;
   reactToBuzzPost: (buzzId: string, reaction: ReactionType) => Promise<void>;
@@ -2415,7 +2416,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     content: string,
     taggedFilmId?: string,
     skorSotoy?: number,
-    taggedArticleId?: string
+    taggedArticleId?: string,
+    imageDataUrl?: string
   ) => {
     if (!content.trim()) return;
 
@@ -2486,6 +2488,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     if (skorSotoy !== undefined && !isNaN(skorSotoy)) {
       newBuzz.skorSotoyMention = skorSotoy;
+    }
+
+    // Upload image to Firebase Storage if an image data URL is provided
+    if (imageDataUrl && imageDataUrl.startsWith('data:')) {
+      try {
+        const storagePath = `buzz_media/${authorId}/${buzzId}/${Date.now()}.jpg`;
+        const storageRef = ref(storage, storagePath);
+        await uploadString(storageRef, imageDataUrl, 'data_url');
+        const downloadUrl = await getDownloadURL(storageRef);
+        newBuzz.image = downloadUrl;
+      } catch (storageErr: any) {
+        console.warn('[Storage] Firebase Storage unavailable or upload failed for buzz media:', storageErr?.message || storageErr);
+      }
     }
 
     // 1. Optimistic UI update so user immediately sees their post at top of feed & profile
@@ -3701,6 +3716,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteBuzzPost = async (buzzId: string): Promise<boolean> => {
+    // 1. Cleanup image attachment from Firebase Storage if present
+    const postToDelete = rawBuzzList.find(b => b.id === buzzId) || buzzList.find(b => b.id === buzzId);
+    if (postToDelete?.image) {
+      try {
+        const imageRef = ref(storage, postToDelete.image);
+        await deleteObject(imageRef);
+      } catch (storageErr) {
+        console.warn('[Storage] Failed to delete buzz media from Firebase Storage:', storageErr);
+      }
+    }
+
     try {
       await deleteDoc(doc(db, 'buzz', buzzId));
       setRawBuzzList(prev => prev.filter(b => b.id !== buzzId));

@@ -42,6 +42,7 @@
 
 ### 3. 💬 Forum Komunitas "Buzz"
 - Ruang obrolan mikro dan ruang diskusi film instan (*micro-blogging*).
+- **Lampiran Foto:** Pengguna dapat melampirkan 1 foto per postingan dengan kompresi otomatis client-side (*browser-image-compression*) sebelum diunggah ke Firebase Storage, dilengkapi pratinjau thumbnail dan mode lightbox interaktif.
 - Fitur *tagging* film atau artikel terkait ke dalam postingan.
 - Utas percakapan bersarang (*threaded replies*), sistem vote skor/reaksi, dan *anti-spam client safeguards*.
 

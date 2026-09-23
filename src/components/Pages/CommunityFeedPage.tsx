@@ -31,6 +31,8 @@ import {
   Plus,
   User as UserIcon,
   Trash2,
+  Image as ImageIcon,
+  Loader2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
@@ -42,6 +44,8 @@ import { BuzzFeedSidebar, BuzzFeedTab } from '../Navigation/BuzzFeedSidebar';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
 import { MentionText } from '../Common/MentionText';
 import { MentionInput } from '../Common/MentionInput';
+import { isAllowedImageType, compressBuzzImage } from '../../utils/imageCompression';
+import { BuzzImageAttachment } from '../Buzz/BuzzImageAttachment';
 
 // ==========================================
 // FEED RANKING WEIGHT CONSTANTS
@@ -130,6 +134,13 @@ export const CommunityFeedPage: React.FC = () => {
   const [skorMention, setSkorMention] = useState<number | undefined>(undefined);
   const [activeTagFilter, setActiveTagFilter] = useState<string>('all');
 
+  // Photo Attachment state
+  const [attachedImageDataUrl, setAttachedImageDataUrl] = useState<string | null>(null);
+  const [attachedImagePreview, setAttachedImagePreview] = useState<string | null>(null);
+  const [isCompressingImage, setIsCompressingImage] = useState(false);
+  const [isSubmittingPost, setIsSubmittingPost] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Search dropdown state
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [tagMode, setTagMode] = useState<'film' | 'article'>('film');
@@ -150,31 +161,73 @@ export const CommunityFeedPage: React.FC = () => {
   const selectedFilm = films.find(f => f.id === selectedFilmId);
   const selectedArticle = articles.find(a => a.id === selectedArticleId);
 
-  const handlePostSubmit = (e: React.FormEvent) => {
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate image MIME type and file extension strictly
+    if (!isAllowedImageType(file)) {
+      showToast('Format file tidak didukung! Harap pilih gambar dengan format JPG, JPEG, PNG, WEBP, atau HEIC.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    setIsCompressingImage(true);
+    try {
+      const compressedDataUrl = await compressBuzzImage(file);
+      setAttachedImageDataUrl(compressedDataUrl);
+      setAttachedImagePreview(compressedDataUrl);
+      showToast('Foto berhasil disiapkan & dikompresi!');
+    } catch (err) {
+      console.error('[Image Compression Error]', err);
+      showToast('Gagal memproses gambar. Kamu tetap dapat mengirim postingan tanpa foto.');
+      setAttachedImageDataUrl(null);
+      setAttachedImagePreview(null);
+    } finally {
+      setIsCompressingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setAttachedImageDataUrl(null);
+    setAttachedImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handlePostSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isLoggedIn) {
       setLoginModalOpen(true);
       showToast('Silakan Masuk (Log In) terlebih dahulu untuk memposting buzz!');
       return;
     }
-    if (!postContent.trim()) return;
+    if (!postContent.trim() || isCompressingImage || isSubmittingPost) return;
 
-    addBuzzPost(
-      postContent,
-      selectedFilmId || undefined,
-      skorMention,
-      selectedArticleId || undefined
-    );
+    try {
+      setIsSubmittingPost(true);
+      await addBuzzPost(
+        postContent,
+        selectedFilmId || undefined,
+        skorMention,
+        selectedArticleId || undefined,
+        attachedImageDataUrl || undefined
+      );
 
-    setPostContent('');
-    setSelectedFilmId(null);
-    setSelectedArticleId(null);
-    setSkorMention(undefined);
-    setDropdownOpen(false);
-    setSearchQuery('');
-    // Switch to main feed and reset tag filter so the new post is immediately in view
-    setBuzzFeedTab('for-you');
-    setActiveTagFilter('all');
+      setPostContent('');
+      setSelectedFilmId(null);
+      setSelectedArticleId(null);
+      setSkorMention(undefined);
+      setAttachedImageDataUrl(null);
+      setAttachedImagePreview(null);
+      setDropdownOpen(false);
+      setSearchQuery('');
+      // Switch to main feed and reset tag filter so the new post is immediately in view
+      setBuzzFeedTab('for-you');
+      setActiveTagFilter('all');
+    } finally {
+      setIsSubmittingPost(false);
+    }
   };
 
   const allTags = useMemo(() => {
@@ -584,9 +637,73 @@ export const CommunityFeedPage: React.FC = () => {
                 </div>
               )}
 
+              {/* Photo Attachment Preview / Compressing indicator */}
+              {isCompressingImage ? (
+                <div className="flex items-center gap-3 p-3 bg-slate-900/90 border border-slate-800 rounded-2xl animate-pulse">
+                  <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center shrink-0">
+                    <Loader2 className="w-5 h-5 text-[#FF2E7E] animate-spin" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold text-white">Mengompres & Menyiapkan Foto...</p>
+                    <p className="text-[11px] text-slate-400">Kompresi client-side browser sedang berlangsung.</p>
+                  </div>
+                </div>
+              ) : attachedImagePreview ? (
+                <div className="relative rounded-2xl overflow-hidden border border-slate-700 bg-slate-900 group max-w-sm shadow-md">
+                  <img
+                    src={attachedImagePreview}
+                    alt="Preview foto lampiran"
+                    className="w-full h-36 object-cover rounded-2xl"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 hover:bg-red-500 text-white transition-colors shadow-lg cursor-pointer"
+                    title="Hapus foto lampiran"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  <span className="absolute bottom-2 left-2 text-[10px] font-semibold bg-black/60 backdrop-blur-sm text-slate-300 px-2 py-0.5 rounded-md flex items-center gap-1">
+                    <ImageIcon className="w-3 h-3 text-[#FF2E7E]" />
+                    Foto terlampir
+                  </span>
+                </div>
+              ) : null}
+
               {/* Tag Controls & Submit Button */}
               <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800/80 relative">
                 
+                {/* Hidden File Input for Photo Attachment */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif"
+                  onChange={handleImageSelect}
+                  className="hidden"
+                />
+
+                {/* Photo Attachment Trigger Button */}
+                <button
+                  type="button"
+                  id="buzz-attach-photo-btn"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isCompressingImage || isSubmittingPost}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                    attachedImageDataUrl
+                      ? 'bg-[#FF2E7E]/15 border-[#FF2E7E]/50 text-[#FF2E7E]'
+                      : 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-slate-300'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  title="Lampirkan 1 foto (JPG, PNG, WEBP, HEIC)"
+                >
+                  {isCompressingImage ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#FF2E7E]" />
+                  ) : (
+                    <ImageIcon className="w-3.5 h-3.5 text-[#FF2E7E]" />
+                  )}
+                  <span>{isCompressingImage ? 'Mengompres...' : attachedImageDataUrl ? 'Ganti Foto' : '+ Foto'}</span>
+                </button>
+
                 {/* Searchable Dropdown Trigger */}
                 <div className="relative" ref={dropdownRef}>
                   <button
@@ -743,11 +860,20 @@ export const CommunityFeedPage: React.FC = () => {
                 <button
                   id="submit-buzz-post-btn"
                   onClick={handlePostSubmit}
-                  disabled={!postContent.trim()}
-                  className="ml-auto bg-gradient-to-r from-[#FF2E7E] to-[#FFD000] hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-black text-xs uppercase tracking-wider px-5 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-[#FF2E7E]/20 transition-transform active:scale-95"
+                  disabled={!postContent.trim() || isCompressingImage || isSubmittingPost}
+                  className="ml-auto bg-gradient-to-r from-[#FF2E7E] to-[#FFD000] hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-black text-xs uppercase tracking-wider px-5 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-[#FF2E7E]/20 transition-transform active:scale-95 cursor-pointer"
                 >
-                  <span>Kirim Buzz</span>
-                  <Send className="w-3.5 h-3.5" />
+                  {isSubmittingPost ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Mengirim...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Kirim Buzz</span>
+                      <Send className="w-3.5 h-3.5" />
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -924,6 +1050,9 @@ export const CommunityFeedPage: React.FC = () => {
                 <p className="text-slate-200 text-sm sm:text-base leading-relaxed whitespace-pre-line">
                   <MentionText content={post.content} />
                 </p>
+
+                {/* Attached Photo */}
+                <BuzzImageAttachment src={post.image} alt={`Foto postingan oleh ${post.author.name}`} />
 
                 {/* Hashtags */}
                 {post.tags.length > 0 && (
