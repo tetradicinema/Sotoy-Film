@@ -205,6 +205,10 @@ interface AppContextType {
   publishedArticles: Article[];
   films: FilmItem[];
   buzzList: BuzzPost[];
+  isLoadingArticles: boolean;
+  isLoadingFilms: boolean;
+  isLoadingBuzz: boolean;
+  isInitialLoading: boolean;
   ratings: UserRating[];
   criticSubmissions: CriticSubmission[];
   addCriticSubmission: (sub: Omit<CriticSubmission, 'id' | 'status' | 'date'>) => Promise<boolean>;
@@ -427,6 +431,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [articles, setArticles] = useState<Article[]>([]);
   const [films, setFilms] = useState<FilmItem[]>([]);
   const [rawBuzzList, setRawBuzzList] = useState<BuzzPost[]>([]);
+  const [isLoadingArticles, setIsLoadingArticles] = useState<boolean>(true);
+  const [isLoadingFilms, setIsLoadingFilms] = useState<boolean>(true);
+  const [isLoadingBuzz, setIsLoadingBuzz] = useState<boolean>(true);
   const [ratings, setRatings] = useState<UserRating[]>([]);
   const [criticSubmissions, setCriticSubmissions] = useState<CriticSubmission[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -709,11 +716,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         const merged = Array.from(filmMap.values()).filter(f => !deletedIds.has(f.id));
         setFilms(merged.sort((a, b) => (a.trendingRank || 99) - (b.trendingRank || 99)));
+        setIsLoadingFilms(false);
       },
       (err) => {
         console.warn('[Firestore] films subscription fallback to initial mock:', err.message);
         const deletedIds = getDeletedFilmIds();
         setFilms(INITIAL_FILMS.filter(f => !deletedIds.has(f.id)));
+        setIsLoadingFilms(false);
       }
     );
 
@@ -735,10 +744,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         const merged = Array.from(articleMap.values());
         setArticles(merged.sort((a, b) => b.id.localeCompare(a.id)));
+        setIsLoadingArticles(false);
       },
       (err) => {
         console.warn('[Firestore] articles subscription fallback to initial mock:', err.message);
         setArticles(INITIAL_ARTICLES);
+        setIsLoadingArticles(false);
       }
     );
 
@@ -774,10 +785,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         const merged = Array.from(buzzMap.values());
         setRawBuzzList(merged.sort((a, b) => getSortTimestamp(b) - getSortTimestamp(a)));
+        setIsLoadingBuzz(false);
       },
       (err) => {
         console.warn('[Firestore] buzz subscription fallback to initial mock:', err.message);
         setRawBuzzList(INITIAL_BUZZ);
+        setIsLoadingBuzz(false);
       }
     );
 
@@ -3838,6 +3851,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         publishedArticles,
         films,
         buzzList,
+        isLoadingArticles,
+        isLoadingFilms,
+        isLoadingBuzz,
+        isInitialLoading: isLoadingArticles || isLoadingFilms || isLoadingBuzz,
         ratings,
         criticSubmissions,
         addCriticSubmission,

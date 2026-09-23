@@ -37,6 +37,7 @@ import { StarRating } from '../Common/StarRating';
 import { RateFilmModal } from '../Modals/RateFilmModal';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
+import { FilmCardSkeleton, FilmDatabaseSkeleton } from '../Skeletons';
 
 export interface GenreCategory {
   id: string;
@@ -166,6 +167,7 @@ export const matchesGenre = (film: FilmItem, genreId: string): boolean => {
 export const FilmDatabasePage: React.FC = () => {
   const {
     films,
+    isLoadingFilms,
     ratings,
     navigateTo,
     currentUser,
@@ -641,7 +643,13 @@ export const FilmDatabasePage: React.FC = () => {
               )}
             </div>
 
-            {sortedSearchResults.length === 0 ? (
+            {isLoadingFilms && films.length === 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <FilmCardSkeleton key={`search-film-skeleton-${i}`} />
+                ))}
+              </div>
+            ) : sortedSearchResults.length === 0 ? (
               <div className="text-center py-12 bg-slate-900/50 rounded-2xl border border-slate-800">
                 <p className="text-slate-400 text-sm">
                   Tidak ada film {selectedGenre !== 'all' ? `dengan genre "${selectedGenre}"` : ''} yang cocok dengan filter pencarian.
@@ -798,7 +806,13 @@ export const FilmDatabasePage: React.FC = () => {
             </span>
           </div>
 
-          {filteredRecentReleased.length === 0 ? (
+          {isLoadingFilms && films.length === 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <FilmCardSkeleton key={`recent-film-skeleton-${i}`} />
+              ))}
+            </div>
+          ) : filteredRecentReleased.length === 0 ? (
             <div className="text-center py-8 bg-slate-900/30 rounded-2xl border border-slate-800/80">
               <p className="text-slate-400 text-xs">
                 Tidak ada film rilis baru untuk genre <strong className="text-white">{activeCategoryConfig.name}</strong>.
@@ -889,7 +903,13 @@ export const FilmDatabasePage: React.FC = () => {
             </span>
           </div>
 
-          {filteredPopularReleased.length === 0 ? (
+          {isLoadingFilms && films.length === 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <FilmCardSkeleton key={`popular-film-skeleton-${i}`} />
+              ))}
+            </div>
+          ) : filteredPopularReleased.length === 0 ? (
             <div className="text-center py-8 bg-slate-900/30 rounded-2xl border border-slate-800/80">
               <p className="text-slate-400 text-xs">
                 Belum ada film populer dalam kurasi untuk genre <strong className="text-white">{activeCategoryConfig.name}</strong>.
@@ -980,7 +1000,13 @@ export const FilmDatabasePage: React.FC = () => {
             </span>
           </div>
 
-          {filteredPopularThisWeek.length === 0 ? (
+          {isLoadingFilms && films.length === 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <FilmCardSkeleton key={`trending-film-skeleton-${i}`} />
+              ))}
+            </div>
+          ) : filteredPopularThisWeek.length === 0 ? (
             <div className="text-center py-8 bg-slate-900/30 rounded-2xl border border-slate-800/80">
               <p className="text-slate-400 text-xs">
                 Tidak ada film trending pekan ini untuk genre <strong className="text-white">{activeCategoryConfig.name}</strong>.

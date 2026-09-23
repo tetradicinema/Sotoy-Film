@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sparkles, MessageCircle, Clock, ArrowUpRight, Flame } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { ArticleCardSkeleton } from '../Skeletons';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
 import { Article } from '../../types';
 
@@ -121,7 +122,7 @@ const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo
 };
 
 export const FeaturedNews: React.FC = () => {
-  const { publishedArticles, navigateTo } = useApp();
+  const { publishedArticles, isLoadingArticles, navigateTo } = useApp();
 
   // Pick articles with featured: true that are not heroSlider, plus others
   const featuredArticles = publishedArticles.filter(a => a.featured && !a.heroSlider).slice(0, 3);
@@ -164,9 +165,15 @@ export const FeaturedNews: React.FC = () => {
 
         {/* 3-Column Grid for Featured Stories */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {featuredArticles.map((article) => (
-            <FeaturedNewsCard key={article.id} article={article} navigateTo={navigateTo} />
-          ))}
+          {isLoadingArticles && publishedArticles.length === 0 ? (
+            Array.from({ length: 3 }).map((_, index) => (
+              <ArticleCardSkeleton key={`featured-article-skeleton-${index}`} />
+            ))
+          ) : (
+            featuredArticles.map((article) => (
+              <FeaturedNewsCard key={article.id} article={article} navigateTo={navigateTo} />
+            ))
+          )}
         </div>
       </div>
     </section>

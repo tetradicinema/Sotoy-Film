@@ -46,6 +46,7 @@ import { MentionText } from '../Common/MentionText';
 import { MentionInput } from '../Common/MentionInput';
 import { isAllowedImageType, compressBuzzImage } from '../../utils/imageCompression';
 import { BuzzImageAttachment } from '../Buzz/BuzzImageAttachment';
+import { BuzzFeedSkeleton } from '../Skeletons';
 
 // ==========================================
 // FEED RANKING WEIGHT CONSTANTS
@@ -148,6 +149,7 @@ export const CommunityFeedPage: React.FC = () => {
 
   const {
     buzzList,
+    isLoadingBuzz,
     films,
     articles,
     currentUser,
@@ -973,8 +975,11 @@ export const CommunityFeedPage: React.FC = () => {
         {/* BUZZ POSTS STREAM WITH RICH PREVIEW CARDS */}
         {/* ========================================================================= */}
         <div className="space-y-4">
-          <AnimatePresence mode="popLayout" initial={false}>
-            {filteredBuzz.map((post: BuzzPost) => {
+          {isLoadingBuzz && buzzList.length === 0 ? (
+            <BuzzFeedSkeleton count={4} />
+          ) : (
+            <AnimatePresence mode="popLayout" initial={false}>
+              {filteredBuzz.map((post: BuzzPost) => {
               // Find full film details if tagged
               const postFilm = post.taggedFilm
                 ? films.find(f => f.id === post.taggedFilm?.id) || post.taggedFilm
@@ -1384,6 +1389,7 @@ export const CommunityFeedPage: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+      )}
     </div>
   </div>
 

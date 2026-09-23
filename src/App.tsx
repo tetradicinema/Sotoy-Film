@@ -49,21 +49,10 @@ const CMSPage = React.lazy(() =>
   import('./components/Pages/CMSPage').then(m => ({ default: m.CMSPage }))
 );
 
-// Fallback loader matching Sotoy Film aesthetic
-const PageLoadingFallback: React.FC = () => (
-  <div className="min-h-[60vh] flex flex-col items-center justify-center py-16 px-4">
-    <div className="relative mb-6">
-      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FF2E7E]/20 to-[#00F0FF]/20 border border-[#FF2E7E]/40 flex items-center justify-center animate-pulse">
-        <div className="w-6 h-6 border-2 border-[#FF2E7E] border-t-transparent rounded-full animate-spin" />
-      </div>
-      <div className="absolute -inset-1 bg-[#FF2E7E]/20 rounded-2xl blur-lg pointer-events-none animate-pulse" />
-    </div>
-    <div className="text-center space-y-1">
-      <p className="text-sm font-black text-white tracking-wide">Memuat Halaman...</p>
-      <p className="text-xs text-slate-400">Menyiapkan antarmuka dasbor Sotoy Film</p>
-    </div>
-  </div>
-);
+import { GenericPageSkeleton } from './components/Skeletons';
+
+// Fallback loader matching Sotoy Film aesthetic using structured skeleton
+const PageLoadingFallback: React.FC = () => <GenericPageSkeleton />;
 
 // Standard Home Page view aggregating hero, news, recommendations, and categories
 const HomeView: React.FC = () => (

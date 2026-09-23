@@ -19,12 +19,14 @@ import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { SEOHead } from '../SEO/SEOHead';
 import { generateBreadcrumbSchema } from '../../utils/schemaHelpers';
 import { BreadcrumbNavigation } from '../Navigation/BreadcrumbNavigation';
+import { ArticleListSkeleton } from '../Skeletons';
 
 export const CategoryPage: React.FC = () => {
   const {
     activeCategory,
     activeSubCategory,
     publishedArticles,
+    isLoadingArticles,
     navigateTo,
   } = useApp();
 
@@ -223,7 +225,9 @@ export const CategoryPage: React.FC = () => {
         <AdBannerSlot variant="leaderboard" />
 
         {/* Articles Grid for this category */}
-        {filteredArticles.length === 0 ? (
+        {isLoadingArticles && publishedArticles.length === 0 ? (
+          <ArticleListSkeleton count={6} showHeroBanner={false} />
+        ) : filteredArticles.length === 0 ? (
           <div className="text-center py-16 bg-[#121324] rounded-3xl border border-slate-800">
             <p className="text-slate-400 text-sm">Belum ada artikel untuk sub-kategori ini saat ini.</p>
           </div>

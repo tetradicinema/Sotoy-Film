@@ -43,6 +43,7 @@ import { RateFilmModal } from '../Modals/RateFilmModal';
 import { FullCastCrewModal } from '../Modals/FullCastCrewModal';
 import { PersonAvatar } from '../Common/PersonAvatar';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
+import { FilmDetailSkeleton } from '../Skeletons';
 import { BreadcrumbNavigation } from '../Navigation/BreadcrumbNavigation';
 import { fetchFullTmdbCredits } from '../../utils/tmdbHelper';
 
@@ -163,12 +164,27 @@ export const FilmDetailPage: React.FC = () => {
     };
   }, [film?.id, film?.tmdbId, film?.title]);
 
-  if (films.length === 0 || !film) {
+  if (films.length === 0) {
+    return <FilmDetailSkeleton />;
+  }
+
+  if (!film) {
     return (
-      <div className="min-h-screen py-8 flex items-center justify-center bg-[#090a10]">
-        <div className="text-center space-y-4">
-          <div className="w-12 h-12 border-4 border-[#00F0FF] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-slate-400 font-bold">Memuat Detail Film...</p>
+      <div className="min-h-[60vh] py-16 flex items-center justify-center">
+        <div className="text-center space-y-4 max-w-md mx-auto px-4">
+          <div className="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-400 mx-auto flex items-center justify-center">
+            <Clapperboard className="w-7 h-7" />
+          </div>
+          <h2 className="text-xl font-display font-black text-white">Film Tidak Ditemukan</h2>
+          <p className="text-slate-400 text-xs leading-relaxed">
+            Data film atau tayangan yang Anda tuju tidak tersedia dalam katalog Sotoy Film.
+          </p>
+          <button
+            onClick={() => navigateTo('film-database')}
+            className="px-5 py-2.5 rounded-xl bg-white text-slate-950 text-xs font-bold hover:bg-slate-200 transition-colors"
+          >
+            Lihat Database Film
+          </button>
         </div>
       </div>
     );

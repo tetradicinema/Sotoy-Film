@@ -21,6 +21,7 @@ import {
   Plus,
   UserPlus,
   Edit3,
+  MessageSquare,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
@@ -31,6 +32,7 @@ import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { BreadcrumbNavigation } from '../Navigation/BreadcrumbNavigation';
 import { EditorialSidebar } from '../Common/EditorialSidebar';
 import { RateFilmModal } from '../Modals/RateFilmModal';
+import { ArticleDetailSkeleton } from '../Skeletons';
 
 export const ArticleDetailPage: React.FC = () => {
   const {
@@ -77,12 +79,27 @@ export const ArticleDetailPage: React.FC = () => {
     },
   ]);
 
-  if (articles.length === 0 || !article) {
+  if (articles.length === 0) {
+    return <ArticleDetailSkeleton />;
+  }
+
+  if (!article) {
     return (
-      <div className="min-h-screen py-8 flex items-center justify-center bg-[#090a10]">
-        <div className="text-center space-y-4">
-          <div className="w-12 h-12 border-4 border-[#FF2E7E] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-slate-400 font-bold">Memuat Artikel...</p>
+      <div className="min-h-[60vh] py-16 flex items-center justify-center">
+        <div className="text-center space-y-4 max-w-md mx-auto px-4">
+          <div className="w-14 h-14 rounded-2xl bg-rose-500/20 text-rose-400 mx-auto flex items-center justify-center">
+            <MessageSquare className="w-7 h-7" />
+          </div>
+          <h2 className="text-xl font-display font-black text-white">Artikel Tidak Ditemukan</h2>
+          <p className="text-slate-400 text-xs leading-relaxed">
+            Artikel yang Anda cari mungkin telah dihapus, diarsipkan, atau tautan yang Anda tuju salah.
+          </p>
+          <button
+            onClick={() => navigateTo('home')}
+            className="px-5 py-2.5 rounded-xl bg-white text-slate-950 text-xs font-bold hover:bg-slate-200 transition-colors"
+          >
+            Kembali ke Beranda
+          </button>
         </div>
       </div>
     );
