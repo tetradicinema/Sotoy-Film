@@ -104,24 +104,11 @@ export async function fetchCollectionDocuments(
 
       const res = await fetchWithTimeout(endpoint, { headers: { Accept: 'application/json' } }, 2500);
       if (!res.ok) {
-        if (collection === 'articles') {
-          console.log('[Diagnostic] articles Strategy A GET response status:', res.status);
-        }
         // If GET endpoint returns non-200, break out to runQuery
         break;
       }
 
       const data = await res.json();
-      if (collection === 'articles') {
-        console.log(
-          '[Diagnostic] articles Strategy A GET response status:',
-          res.status,
-          'documents count:',
-          data.documents ? data.documents.length : 'undefined/no documents key',
-          'raw data:',
-          JSON.stringify(data).slice(0, 500)
-        );
-      }
       if (Array.isArray(data.documents)) {
         allDocs.push(...data.documents);
       }
@@ -162,15 +149,6 @@ export async function fetchCollectionDocuments(
       // ignore
     }
 
-    if (collection === 'articles') {
-      console.log(
-        '[Diagnostic] articles Strategy B runQuery status:',
-        queryRes.status,
-        'raw results:',
-        JSON.stringify(results).slice(0, 500)
-      );
-    }
-
     if (queryRes.ok && Array.isArray(results)) {
       return results
         .filter((r: any) => r && r.document)
@@ -192,10 +170,6 @@ export async function fetchEntityData(
   collection: 'films' | 'articles',
   slug: string
 ): Promise<Record<string, any> | null> {
-  if (collection === 'articles') {
-    console.log('[Diagnostic] articles fetchEntityData searching for slug:', slug);
-  }
-
   // 1. Direct document GET if slug happens to be the document ID
   try {
     const directRes = await fetchWithTimeout(
@@ -231,15 +205,6 @@ export async function fetchEntityData(
       if (isMatch) {
         return parsed;
       }
-    }
-
-    if (collection === 'articles') {
-      console.log(
-        '[Diagnostic] articles fetchEntityData total documents checked:',
-        docs.length,
-        'against slug:',
-        slug
-      );
     }
   } catch (err) {
     console.error('[Edge Firestore] Entity lookup error:', err);
