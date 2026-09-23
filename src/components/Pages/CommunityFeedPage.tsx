@@ -30,8 +30,6 @@ import {
   UserCheck,
   Plus,
   User as UserIcon,
-  ArrowBigUp,
-  ArrowBigDown,
   Trash2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -110,7 +108,6 @@ export const CommunityFeedPage: React.FC = () => {
     setLoginModalOpen,
     addBuzzPost,
     likeBuzzPost,
-    voteBuzzPost,
     deleteBuzzPost,
     navigateTo,
     showToast,
@@ -1062,45 +1059,9 @@ export const CommunityFeedPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Footer Controls: Quick Reaction Bar, Replies, Share, Voting */}
+                {/* Footer Controls: Quick Reaction Bar, Replies, Share, Save */}
                 <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-4 text-xs text-slate-400">
-                  <div className="flex items-center gap-1 bg-slate-950/50 border border-slate-800 rounded-xl p-0.5 shadow-inner shrink-0">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        voteBuzzPost(post.id, 'up');
-                      }}
-                      className={`p-1.5 rounded-lg transition-all ${
-                        (post as any).myVote === 'up'
-                          ? 'bg-emerald-500/20 text-emerald-400'
-                          : 'hover:bg-slate-800 hover:text-white'
-                      }`}
-                      title="Upvote"
-                    >
-                      <ArrowBigUp className={`w-4 h-4 ${(post as any).myVote === 'up' ? 'fill-current' : ''}`} />
-                    </button>
-                    <span className={`px-0.5 font-black text-xs min-w-[1.2rem] text-center ${
-                      (post.score || 0) > 0 ? 'text-emerald-400' : (post.score || 0) < 0 ? 'text-red-400' : 'text-slate-400'
-                    }`}>
-                      {post.score || 0}
-                    </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        voteBuzzPost(post.id, 'down');
-                      }}
-                      className={`p-1.5 rounded-lg transition-all ${
-                        (post as any).myVote === 'down'
-                          ? 'bg-red-500/20 text-red-400'
-                          : 'hover:bg-slate-800 hover:text-white'
-                      }`}
-                      title="Downvote"
-                    >
-                      <ArrowBigDown className={`w-4 h-4 ${(post as any).myVote === 'down' ? 'fill-current' : ''}`} />
-                    </button>
-                  </div>
-
-                  <div className="overflow-x-auto scrollbar-none min-w-0 flex-1 px-1">
+                  <div className="overflow-x-auto scrollbar-none min-w-0 flex-1">
                     <QuickReactionBar
                       buzzId={post.id}
                       reactions={post.reactions}

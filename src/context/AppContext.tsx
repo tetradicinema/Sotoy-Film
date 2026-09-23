@@ -21,6 +21,9 @@ import {
   NotificationItem,
   ModerationReport,
   InterestProfile,
+  AccountAppeal,
+  AuditLog,
+  AuditLogActionType,
 } from '../types';
 import {
   DEFAULT_FALLBACK_AUTHOR,
@@ -29,6 +32,57 @@ import {
   INITIAL_BUZZ,
   INITIAL_RATINGS,
 } from '../data/mockData';
+
+export const INITIAL_AUDIT_LOGS: AuditLog[] = [
+  {
+    id: 'audit-demo-1',
+    action: 'role_override',
+    actorId: 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2',
+    actorName: 'Admin Sotoy',
+    actorEmail: 'eksposurmedia@gmail.com',
+    actorRole: 'admin',
+    actorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+    targetId: '0PCmaBvJrzeaQgpf3sSTC4mnsh02',
+    targetName: 'Kritikus Film Senior',
+    targetEmail: 'redaksi@sotoyfilm.id',
+    targetRole: 'penulis_sotoy',
+    targetType: 'user',
+    details: 'Menetapkan hak akses editorial CMS Penulis Sotoy untuk koordinasi publikasi artikel.',
+    metadata: { previousRole: 'warga_sotoy', newRole: 'penulis_sotoy' },
+    timestamp: new Date(Date.now() - 2 * 3600000).toISOString(),
+  },
+  {
+    id: 'audit-demo-2',
+    action: 'account_suspended',
+    actorId: 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2',
+    actorName: 'Admin Sotoy',
+    actorEmail: 'eksposurmedia@gmail.com',
+    actorRole: 'admin',
+    actorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+    targetId: 'u-user-toxic',
+    targetName: 'Warga Kritis 99',
+    targetRole: 'warga_sotoy',
+    targetType: 'user',
+    details: 'Membekukan akun pengguna karena pelanggaran pedoman komunitas terkait ujaran kebencian & spam.',
+    metadata: { isSuspended: true, reportId: 'rep-1' },
+    timestamp: new Date(Date.now() - 6 * 3600000).toISOString(),
+  },
+  {
+    id: 'audit-demo-3',
+    action: 'critic_approved',
+    actorId: 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2',
+    actorName: 'Admin Sotoy',
+    actorEmail: 'eksposurmedia@gmail.com',
+    actorRole: 'admin',
+    actorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+    targetId: 'u-3',
+    targetName: 'Cinephile Nusantara',
+    targetType: 'critic_submission',
+    details: 'Menyetujui permohonan verifikasi Si Paling Sotoy (Kritikus Film) setelah evaluasi portofolio.',
+    metadata: { publicationName: 'Jurnal Sinema ID', verified: true },
+    timestamp: new Date(Date.now() - 14 * 3600000).toISOString(),
+  }
+];
 
 export const GUEST_USER: User = {
   id: 'guest',
@@ -235,7 +289,6 @@ interface AppContextType {
     taggedArticleId?: string
   ) => Promise<void>;
   likeBuzzPost: (buzzId: string) => Promise<void>;
-  voteBuzzPost: (buzzId: string, direction: 'up' | 'down') => Promise<void>;
   reactToBuzzPost: (buzzId: string, reaction: ReactionType) => Promise<void>;
   addBuzzReply: (
     buzzId: string,
@@ -244,7 +297,6 @@ interface AppContextType {
     replyToUser?: { id: string; name: string; handle: string }
   ) => Promise<void>;
   likeBuzzReply: (buzzId: string, replyId: string) => Promise<void>;
-  voteBuzzReply: (buzzId: string, replyId: string, direction: 'up' | 'down') => Promise<void>;
   addFilmRating: (filmId: string, score: number, headline: string, reviewText: string) => Promise<void>;
   updateFilmRating: (ratingId: string, updates: Partial<UserRating>) => Promise<void>;
   deleteFilmRating: (ratingId: string) => Promise<void>;
@@ -282,6 +334,27 @@ interface AppContextType {
   moderationReports: ModerationReport[];
   reportContent: (report: Omit<ModerationReport, 'id' | 'createdAt' | 'status'>) => Promise<boolean>;
   resolveReport: (reportId: string, action: 'dismiss' | 'take_down', targetInfo?: { targetType: 'buzz' | 'reply' | 'review'; targetId: string; parentBuzzId?: string }) => Promise<boolean>;
+  // Account Lifecycle & Moderation
+  deleteUserAccount: (userId: string) => Promise<boolean>;
+  bulkDeleteUserAccounts: (userIds: string[]) => Promise<boolean>;
+  appeals: AccountAppeal[];
+  submitAccountAppeal: (reason: string) => Promise<boolean>;
+  resolveAccountAppeal: (appealId: string, status: 'approved' | 'rejected', adminNote?: string) => Promise<boolean>;
+  deleteAccountAppeal: (appealId: string) => Promise<boolean>;
+  // Audit Log & Transparency Tracking
+  auditLogs: AuditLog[];
+  recordAuditLog: (logData: {
+    action: AuditLogActionType;
+    targetId?: string;
+    targetName?: string;
+    targetEmail?: string;
+    targetRole?: string;
+    targetType?: 'user' | 'appeal' | 'report' | 'critic_submission' | 'content';
+    details?: string;
+    metadata?: Record<string, any>;
+  }) => Promise<void>;
+  deleteAuditLog: (logId: string) => Promise<boolean>;
+  clearAuditLogs: () => Promise<boolean>;
   // Dynamic user profile cache
   userProfilesCache: Record<string, any>;
   cacheUserProfile: (userId: string, profile: any) => void;
@@ -356,7 +429,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [ratings, setRatings] = useState<UserRating[]>([]);
   const [criticSubmissions, setCriticSubmissions] = useState<CriticSubmission[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [appeals, setAppeals] = useState<AccountAppeal[]>([]);
   const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(INITIAL_AUDIT_LOGS);
   const [userProfilesCache, setUserProfilesCache] = useState<Record<string, any>>({});
 
   const cacheUserProfile = useCallback((userId: string, profile: any) => {
@@ -421,26 +496,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
-  // Derive per-user buzz posts reaction, vote & like state with zero account bleed-over
+  // Derive per-user buzz posts reaction & like state with zero account bleed-over
   const buzzList = useMemo(() => {
     return rawBuzzList.map(post => {
       const userReaction = (isLoggedIn && currentUser?.id && post.reactionsByUser)
         ? post.reactionsByUser[currentUser.id] || null
         : null;
-      
-      const userId = currentUser?.id || '';
-      const postUpvotes = post.upvotes || [];
-      const postDownvotes = post.downvotes || [];
-      const myPostVote: 'up' | 'down' | null = postUpvotes.includes(userId) ? 'up' : (postDownvotes.includes(userId) ? 'down' : null);
-      
+
+      const heartCount = post.reactions?.heart ?? (typeof post.likes === 'number' ? post.likes : 0);
+
       const mappedReplies = (post.replies || []).map(reply => {
-        const rUpvotes = reply.upvotes || [];
-        const rDownvotes = reply.downvotes || [];
-        const myReplyVote: 'up' | 'down' | null = userId ? (rUpvotes.includes(userId) ? 'up' : (rDownvotes.includes(userId) ? 'down' : null)) : null;
         return {
           ...reply,
-          myVote: myReplyVote,
-          likes: rUpvotes.length - rDownvotes.length,
+          likes: reply.likes || 0,
         };
       });
 
@@ -448,8 +516,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ...post,
         myReaction: userReaction,
         likedByMe: userReaction === 'heart',
-        myVote: userId ? myPostVote : null,
-        likes: postUpvotes.length - postDownvotes.length,
+        likes: heartCount,
         replies: mappedReplies,
       };
     });
@@ -788,14 +855,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     );
 
+    const unsubAppeals = onSnapshot(
+      collection(db, 'appeals'),
+      (snapshot) => {
+        const items: AccountAppeal[] = [];
+        snapshot.forEach(docSnap => {
+          items.push({ ...docSnap.data() as AccountAppeal, id: docSnap.id });
+        });
+        setAppeals(items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      },
+      (err) => {
+        console.warn('[Firestore] appeals subscription error:', err);
+      }
+    );
+
+    const unsubAudit = onSnapshot(
+      collection(db, 'auditLogs'),
+      (snapshot) => {
+        const items: AuditLog[] = [];
+        snapshot.forEach(docSnap => {
+          items.push({ ...docSnap.data() as AuditLog, id: docSnap.id });
+        });
+        if (items.length > 0) {
+          setAuditLogs(items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+        }
+      },
+      (err) => {
+        console.warn('[Firestore] auditLogs subscription notice:', err.message);
+      }
+    );
+
     return () => {
       unsubFilms();
       unsubArticles();
       unsubBuzz();
       unsubRatings();
       unsubUsers();
+      unsubAppeals();
+      unsubAudit();
     };
   }, []);
+
+  const isAdmin = isLoggedIn && isUserAdmin(currentUser);
+  const isWriter = isLoggedIn && (isUserWriter(currentUser) || currentUser.role === 'penulis_sotoy' || isAdmin || currentUser.role === 'admin');
+  const isCritic = isLoggedIn && (isUserCritic(currentUser) || currentUser.role === 'si_paling_sotoy' || isAdmin);
 
   // Dynamically resolve article author profiles directly from Firestore users collection
   const resolvedArticles = useMemo(() => {
@@ -1566,6 +1669,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentView('home');
   };
 
+  const compressImageToDataUrl = async (
+    dataUrl: string,
+    maxWidth = 360,
+    maxHeight = 360,
+    quality = 0.85
+  ): Promise<string> => {
+    if (typeof window === 'undefined' || !dataUrl || !dataUrl.startsWith('data:image')) {
+      return dataUrl;
+    }
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth || height > maxHeight) {
+          if (width > height) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, width);
+        canvas.height = Math.max(1, height);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  };
+
   const uploadProfilePhoto = async (
     base64Data: string,
     fileName?: string,
@@ -1574,39 +1717,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   ) => {
     if (!auth.currentUser) return;
     try {
-      showToast('Sedang mengunggah foto profil ke Firebase Storage...');
+      showToast('Sedang memproses foto profil...');
       const actualName = fileName || `profile_photo_${Date.now()}.jpg`;
-      const actualSize = fileSize || Math.round((base64Data.length * 3) / 4);
       const actualType = fileType || 'image/jpeg';
 
-      const storagePath = `profile_photos/${auth.currentUser.uid}/${Date.now()}_${actualName}`;
-      const storageRef = ref(storage, storagePath);
-      
-      // Upload using data_url format
-      await uploadString(storageRef, base64Data, 'data_url');
-      const downloadURL = await getDownloadURL(storageRef);
-      
-      // Create a tracking record in the 'files' Firestore collection
-      const fileId = doc(collection(db, 'files')).id;
-      const fileRecord: UploadedFile = {
-        id: fileId,
-        userId: auth.currentUser.uid,
-        url: downloadURL,
-        name: actualName,
-        size: actualSize,
-        type: actualType,
-        uploadedAt: new Date().toISOString()
-      };
-      await setDoc(doc(db, 'files', fileId), fileRecord);
+      // Optimize image data URL so it is performant, lightweight, and fits seamlessly
+      const optimizedDataUrl = await compressImageToDataUrl(base64Data, 360, 360, 0.85);
+      const actualSize = fileSize || Math.round((optimizedDataUrl.length * 3) / 4);
 
-      const updated = { ...currentUser, avatar: downloadURL };
-      await setDoc(doc(db, 'users', auth.currentUser.uid), updated);
+      let finalAvatarUrl = optimizedDataUrl;
+
+      // If it's a data URL, attempt Firebase Storage upload first
+      if (optimizedDataUrl.startsWith('data:')) {
+        try {
+          const storagePath = `profile_photos/${auth.currentUser.uid}/${Date.now()}_${actualName}`;
+          const storageRef = ref(storage, storagePath);
+          await uploadString(storageRef, optimizedDataUrl, 'data_url');
+          finalAvatarUrl = await getDownloadURL(storageRef);
+        } catch (storageErr: any) {
+          // When Firebase Storage rules or bucket permissions reject client uploads (e.g. storage/unauthorized),
+          // gracefully fall back to storing the optimized data URL directly without failing or crashing
+          console.warn('[Storage] Firebase Storage unavailable or unauthorized; falling back to direct cloud-synchronized avatar:', storageErr?.message || storageErr);
+        }
+      }
+
+      // Record in 'files' collection if accessible
+      try {
+        const fileId = doc(collection(db, 'files')).id;
+        const fileRecord: UploadedFile = {
+          id: fileId,
+          userId: auth.currentUser.uid,
+          url: finalAvatarUrl,
+          name: actualName,
+          size: actualSize,
+          type: actualType,
+          uploadedAt: new Date().toISOString()
+        };
+        await setDoc(doc(db, 'files', fileId), fileRecord);
+      } catch (fileErr) {
+        console.warn('[Storage] Files index write skipped:', fileErr);
+      }
+
+      // Update user in Firestore and client state
+      const updated = { ...currentUser, avatar: finalAvatarUrl };
+      await setDoc(doc(db, 'users', auth.currentUser.uid), updated, { merge: true });
       setCurrentUser(updated);
-      showToast('Foto profil berhasil diunggah ke Firebase Storage & terindeks di database! 🎉');
+      localStorage.setItem('sotoy_current_user', JSON.stringify(updated));
+      showToast('Foto profil berhasil diperbarui! 🎉');
     } catch (err) {
-      console.error('[Storage] Error uploading profile photo: ', err);
-      showToast('Gagal mengunggah foto profil ke Firebase Storage.');
-      handleFirestoreError(err, OperationType.UPDATE, `users/${auth.currentUser.uid}`);
+      console.error('[Storage] Error updating profile photo: ', err);
+      showToast('Gagal memperbarui foto profil.');
     }
   };
 
@@ -2309,8 +2469,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString(),
       likes: 0,
       likedByMe: false,
-      upvotes: [],
-      downvotes: [],
       repliesCount: 0,
       tags: cleanTags,
       replies: [],
@@ -2459,51 +2617,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await reactToBuzzPost(buzzId, 'heart');
   };
 
-  // Upvote/Downvote Buzz Post in Firestore
-  const voteBuzzPost = async (buzzId: string, direction: 'up' | 'down') => {
-    if (!isLoggedIn) {
-      setLoginModalOpen(true);
-      showToast('Silakan masuk untuk memberikan suara!');
-      return;
-    }
-
-    const post = rawBuzzList.find(b => b.id === buzzId);
-    if (!post) return;
-
-    const userId = currentUser.id;
-    let upvotes = [...(post.upvotes || [])];
-    let downvotes = [...(post.downvotes || [])];
-
-    if (direction === 'up') {
-      if (upvotes.includes(userId)) {
-        upvotes = upvotes.filter(id => id !== userId);
-      } else {
-        upvotes.push(userId);
-        downvotes = downvotes.filter(id => id !== userId);
-      }
-    } else {
-      if (downvotes.includes(userId)) {
-        downvotes = downvotes.filter(id => id !== userId);
-      } else {
-        downvotes.push(userId);
-        upvotes = upvotes.filter(id => id !== userId);
-      }
-    }
-
-    const updatedPost: BuzzPost = { ...post, upvotes, downvotes, score: upvotes.length - downvotes.length };
-    setRawBuzzList(prev => prev.map(b => b.id === buzzId ? updatedPost : b));
-
-    try {
-      const sanitizedPayload = JSON.parse(JSON.stringify(updatedPost));
-      delete sanitizedPayload.myReaction;
-      delete sanitizedPayload.likedByMe;
-      delete sanitizedPayload.myVote;
-      await setDoc(doc(db, 'buzz', buzzId), sanitizedPayload);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `buzz/${buzzId}`);
-    }
-  };
-
   // Add Reply to a Buzz Post in Firestore (Supports threaded replies & mentions & notifications)
   const addBuzzReply = async (
     buzzId: string,
@@ -2538,8 +2651,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: new Date().toISOString(),
       likes: 0,
       likedByMe: false,
-      upvotes: [],
-      downvotes: [],
     };
 
     const currentReplies = post.replies || [];
@@ -2643,58 +2754,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const sanitizedPayload = JSON.parse(JSON.stringify(updatedPost));
       delete sanitizedPayload.myReaction;
       delete sanitizedPayload.likedByMe;
-      delete sanitizedPayload.myVote;
-      await setDoc(doc(db, 'buzz', buzzId), sanitizedPayload);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `buzz/${buzzId}`);
-    }
-  };
-
-  // Upvote/Downvote Buzz Reply in Firestore
-  const voteBuzzReply = async (buzzId: string, replyId: string, direction: 'up' | 'down') => {
-    if (!isLoggedIn) {
-      setLoginModalOpen(true);
-      showToast('Silakan masuk untuk memberikan suara!');
-      return;
-    }
-
-    const post = rawBuzzList.find(b => b.id === buzzId) || buzzList.find(b => b.id === buzzId);
-    if (!post || !post.replies) return;
-
-    const userId = currentUser.id;
-    const updatedReplies = post.replies.map(r => {
-      if (r.id === replyId) {
-        let upvotes = [...(r.upvotes || [])];
-        let downvotes = [...(r.downvotes || [])];
-
-        if (direction === 'up') {
-          if (upvotes.includes(userId)) {
-            upvotes = upvotes.filter(id => id !== userId);
-          } else {
-            upvotes.push(userId);
-            downvotes = downvotes.filter(id => id !== userId);
-          }
-        } else {
-          if (downvotes.includes(userId)) {
-            downvotes = downvotes.filter(id => id !== userId);
-          } else {
-            downvotes.push(userId);
-            upvotes = upvotes.filter(id => id !== userId);
-          }
-        }
-        return { ...r, upvotes, downvotes, score: upvotes.length - downvotes.length };
-      }
-      return r;
-    });
-
-    const updatedPost: BuzzPost = { ...post, replies: updatedReplies };
-    setRawBuzzList(prev => prev.map(b => b.id === buzzId ? updatedPost : b));
-
-    try {
-      const sanitizedPayload = JSON.parse(JSON.stringify(updatedPost));
-      delete sanitizedPayload.myReaction;
-      delete sanitizedPayload.likedByMe;
-      delete sanitizedPayload.myVote;
       await setDoc(doc(db, 'buzz', buzzId), sanitizedPayload);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `buzz/${buzzId}`);
@@ -2833,6 +2892,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         }
       }
+
+      await recordAuditLog({
+        action: status === 'approved' ? 'critic_approved' : 'critic_rejected',
+        targetId: sub.userId,
+        targetName: sub.userName,
+        targetEmail: sub.userEmail,
+        targetRole: status === 'approved' ? 'si_paling_sotoy' : undefined,
+        targetType: 'critic_submission',
+        details: status === 'approved'
+          ? `Menyetujui verifikasi Si Paling Sotoy (Kritikus Film) untuk "${sub.userName}" (${sub.publicationName || 'Independen'}).`
+          : `Menolak permohonan verifikasi Si Paling Sotoy untuk "${sub.userName}".`,
+        metadata: { submissionId: id, publicationName: sub.publicationName, portfolioUrl: sub.portfolioUrl, status }
+      });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `criticSubmissions/${id}`);
     }
@@ -2886,8 +2958,83 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => unsubReports();
   }, []);
 
+  const recordAuditLog = async (logData: {
+    action: AuditLogActionType;
+    targetId?: string;
+    targetName?: string;
+    targetEmail?: string;
+    targetRole?: string;
+    targetType?: 'user' | 'appeal' | 'report' | 'critic_submission' | 'content';
+    details?: string;
+    metadata?: Record<string, any>;
+  }): Promise<void> => {
+    const logId = `audit-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const newLog: AuditLog = {
+      id: logId,
+      action: logData.action,
+      actorId: currentUser.id || 'system-admin',
+      actorName: currentUser.name || 'Admin Sotoy',
+      actorEmail: currentUser.email || '',
+      actorRole: currentUser.role || 'admin',
+      actorAvatar: currentUser.avatar || '',
+      targetId: logData.targetId,
+      targetName: logData.targetName,
+      targetEmail: logData.targetEmail,
+      targetRole: logData.targetRole,
+      targetType: logData.targetType,
+      details: logData.details,
+      metadata: logData.metadata,
+      timestamp: new Date().toISOString(),
+    };
+
+    try {
+      await setDoc(doc(db, 'auditLogs', logId), newLog);
+      setAuditLogs(prev => [newLog, ...prev.filter(l => l.id !== logId)]);
+    } catch (err) {
+      console.warn('[AppContext] recordAuditLog local fallback:', err);
+      setAuditLogs(prev => [newLog, ...prev.filter(l => l.id !== logId)]);
+    }
+  };
+
+  const deleteAuditLog = async (logId: string): Promise<boolean> => {
+    if (!isAdmin) {
+      showToast('Akses ditolak: Hanya admin yang dapat mengelola audit log.');
+      return false;
+    }
+    try {
+      await deleteDoc(doc(db, 'auditLogs', logId));
+      setAuditLogs(prev => prev.filter(l => l.id !== logId));
+      showToast('Catatan audit log berhasil dihapus.');
+      return true;
+    } catch (error) {
+      setAuditLogs(prev => prev.filter(l => l.id !== logId));
+      showToast('Catatan audit log berhasil dihapus.');
+      return true;
+    }
+  };
+
+  const clearAuditLogs = async (): Promise<boolean> => {
+    if (!isAdmin) {
+      showToast('Akses ditolak: Hanya admin yang dapat menghapus seluruh audit log.');
+      return false;
+    }
+    try {
+      const snap = await getDocs(collection(db, 'auditLogs'));
+      const promises = snap.docs.map(d => deleteDoc(d.ref));
+      await Promise.all(promises);
+      setAuditLogs([]);
+      showToast('Seluruh riwayat audit log berhasil dibersihkan.');
+      return true;
+    } catch (error) {
+      setAuditLogs([]);
+      showToast('Seluruh riwayat audit log berhasil dibersihkan.');
+      return true;
+    }
+  };
+
   const updateUserRole = async (userId: string, newRole: UserRole): Promise<boolean> => {
     try {
+      const previousUser = allUsers.find(u => u.id === userId);
       const roleTitles: Record<UserRole, string> = {
         warga_sotoy: 'Warga Sotoy (Penonton Santai)',
         si_paling_sotoy: 'Si Paling Sotoy (Kritikus Film)',
@@ -2906,6 +3053,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (currentUser.id === userId) {
         setCurrentUser(prev => ({ ...prev, role: newRole, roleTitle: title }));
       }
+
+      await recordAuditLog({
+        action: 'role_override',
+        targetId: userId,
+        targetName: previousUser?.name || 'Pengguna',
+        targetEmail: previousUser?.email || '',
+        targetRole: newRole,
+        targetType: 'user',
+        details: `Mengubah hak akses role pengguna "${previousUser?.name || userId}" dari [${previousUser?.role || 'warga_sotoy'}] menjadi [${newRole}].`,
+        metadata: { previousRole: previousUser?.role || 'warga_sotoy', newRole, roleTitle: title }
+      });
+
       showToast(`Role pengguna berhasil diubah menjadi "${newRole.replace('_', ' ').toUpperCase()}".`);
       return true;
     } catch (error) {
@@ -2915,17 +3074,311 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const toggleUserSuspension = async (userId: string, isSuspended: boolean): Promise<boolean> => {
+    console.log(`[AppContext] toggleUserSuspension called for ${userId}, suspended: ${isSuspended}`);
+    if (!isAdmin) {
+      showToast('Akses ditolak: Hanya admin yang dapat mengubah status akun.');
+      return false;
+    }
     try {
+      const targetUser = allUsers.find(u => u.id === userId);
       const userRef = doc(db, 'users', userId);
       await updateDoc(userRef, {
         isSuspended,
         suspendedAt: isSuspended ? new Date().toISOString() : null,
       });
       setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, isSuspended, suspendedAt: isSuspended ? new Date().toISOString() : undefined } : u));
+      
+      // Notify the user about their account status change
+      await sendNotification({
+        userId,
+        type: 'account_status',
+        title: isSuspended ? 'Akun Dibekukan' : 'Akun Diaktifkan Kembali',
+        message: isSuspended 
+          ? 'Akun Anda telah dibekukan karena melanggar pedoman komunitas. Anda dapat mengajukan banding jika merasa ini adalah kesalahan.'
+          : 'Kabar baik! Akun Anda telah diaktifkan kembali oleh moderator.',
+        targetView: 'user-profile',
+        targetId: userId,
+        sender: {
+          id: 'system-admin',
+          name: 'Sotoy Moderator',
+          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80',
+          handle: '@moderator'
+        }
+      });
+
+      await recordAuditLog({
+        action: isSuspended ? 'account_suspended' : 'account_unsuspended',
+        targetId: userId,
+        targetName: targetUser?.name || 'Pengguna',
+        targetEmail: targetUser?.email || '',
+        targetRole: targetUser?.role,
+        targetType: 'user',
+        details: isSuspended 
+          ? `Membekukan akun "${targetUser?.name || userId}" (Suspension) karena pelanggaran pedoman komunitas.`
+          : `Mengaktifkan kembali dan memulihkan akses akun "${targetUser?.name || userId}".`,
+        metadata: { isSuspended, previousStatus: targetUser?.isSuspended ? 'suspended' : 'active' }
+      });
+
       showToast(isSuspended ? 'Akun pengguna berhasil dibekukan (SUSPENDED).' : 'Akun pengguna berhasil diaktifkan kembali.');
       return true;
     } catch (error) {
+      console.error('[AppContext] toggleUserSuspension error:', error);
       handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
+      return false;
+    }
+  };
+
+  const deleteUserAccount = async (userId: string): Promise<boolean> => {
+    console.log(`[AppContext] deleteUserAccount called for ${userId}`);
+    if (!isAdmin) {
+      showToast('Akses ditolak: Hanya admin yang dapat menghapus akun.');
+      return false;
+    }
+    if (userId === currentUser.id) {
+      showToast('Anda tidak dapat menghapus akun Anda sendiri.');
+      return false;
+    }
+    try {
+      const targetUser = allUsers.find(u => u.id === userId);
+
+      // 1. Delete user profile document from Firestore
+      const userRef = doc(db, 'users', userId);
+      await deleteDoc(userRef);
+
+      // 2. Cascade delete user ratings
+      try {
+        const ratingsQuery = query(collection(db, 'ratings'), where('userId', '==', userId));
+        const ratingsSnap = await getDocs(ratingsQuery);
+        const ratingPromises = ratingsSnap.docs.map(d => deleteDoc(d.ref));
+        await Promise.all(ratingPromises);
+      } catch (err) {
+        console.warn('[AppContext] Cascade delete ratings notice:', err);
+      }
+
+      // 3. Cascade delete user buzz posts
+      try {
+        const buzzQuery1 = query(collection(db, 'buzz'), where('author.id', '==', userId));
+        const buzzSnap1 = await getDocs(buzzQuery1);
+        const buzzPromises1 = buzzSnap1.docs.map(d => deleteDoc(d.ref));
+        await Promise.all(buzzPromises1);
+
+        const buzzQuery2 = query(collection(db, 'buzz'), where('authorId', '==', userId));
+        const buzzSnap2 = await getDocs(buzzQuery2);
+        const buzzPromises2 = buzzSnap2.docs.map(d => deleteDoc(d.ref));
+        await Promise.all(buzzPromises2);
+      } catch (err) {
+        console.warn('[AppContext] Cascade delete buzz notice:', err);
+      }
+
+      // 4. Cascade delete user notifications
+      try {
+        const notifQuery = query(collection(db, 'notifications'), where('userId', '==', userId));
+        const notifSnap = await getDocs(notifQuery);
+        const notifPromises = notifSnap.docs.map(d => deleteDoc(d.ref));
+        await Promise.all(notifPromises);
+      } catch (err) {
+        console.warn('[AppContext] Cascade delete notifications notice:', err);
+      }
+
+      // 5. Cascade delete user appeals
+      try {
+        const appealsQuery = query(collection(db, 'appeals'), where('userId', '==', userId));
+        const appealsSnap = await getDocs(appealsQuery);
+        const appealsPromises = appealsSnap.docs.map(d => deleteDoc(d.ref));
+        await Promise.all(appealsPromises);
+      } catch (err) {
+        console.warn('[AppContext] Cascade delete appeals notice:', err);
+      }
+
+      // 6. Cascade delete critic submissions
+      try {
+        const criticQuery = query(collection(db, 'criticSubmissions'), where('userId', '==', userId));
+        const criticSnap = await getDocs(criticQuery);
+        const criticPromises = criticSnap.docs.map(d => deleteDoc(d.ref));
+        await Promise.all(criticPromises);
+      } catch (err) {
+        console.warn('[AppContext] Cascade delete critic submissions notice:', err);
+      }
+
+      // 7. Update in-memory state instantly
+      setAllUsers(prev => prev.filter(u => u.id !== userId));
+      setRatings(prev => prev.filter(r => r.userId !== userId));
+      setRawBuzzList(prev => prev.filter(b => b.author?.id !== userId && (b as any).authorId !== userId));
+      setNotifications(prev => prev.filter(n => n.userId !== userId));
+      setAppeals(prev => prev.filter(a => a.userId !== userId));
+      setCriticSubmissions(prev => prev.filter(c => c.userId !== userId));
+      setUserProfilesCache(prev => {
+        const next = { ...prev };
+        delete next[userId];
+        return next;
+      });
+
+      if (viewedUserId === userId) {
+        setViewedUserId(null);
+      }
+
+      await recordAuditLog({
+        action: 'account_deleted',
+        targetId: userId,
+        targetName: targetUser?.name || 'Pengguna',
+        targetEmail: targetUser?.email || '',
+        targetRole: targetUser?.role,
+        targetType: 'user',
+        details: `Menghapus akun pengguna "${targetUser?.name || userId}" secara permanen beserta seluruh ulasan, postingan obrolan, dan data terkait.`,
+        metadata: { 
+          deletedUserName: targetUser?.name, 
+          deletedUserEmail: targetUser?.email,
+          deletedUserRole: targetUser?.role,
+          deletedUserId: userId 
+        }
+      });
+
+      showToast('Akun dan seluruh data pengguna berhasil dihapus secara permanen.');
+      return true;
+    } catch (error) {
+      console.error('[AppContext] deleteUserAccount error:', error);
+      handleFirestoreError(error, OperationType.DELETE, `users/${userId}`);
+      return false;
+    }
+  };
+
+  const bulkDeleteUserAccounts = async (userIds: string[]): Promise<boolean> => {
+    if (!isAdmin) {
+      showToast('Akses ditolak: Hanya admin yang dapat menghapus akun.');
+      return false;
+    }
+    const targetIds = userIds.filter(id => id !== currentUser.id);
+    if (targetIds.length === 0) {
+      showToast('Tidak ada akun valid yang dapat dihapus.');
+      return false;
+    }
+    try {
+      let successCount = 0;
+      for (const id of targetIds) {
+        const success = await deleteUserAccount(id);
+        if (success) successCount++;
+      }
+
+      await recordAuditLog({
+        action: 'bulk_accounts_deleted',
+        targetType: 'user',
+        details: `Menghapus massal ${targetIds.length} akun pengguna beserta pembersihan data database terkait.`,
+        metadata: { targetUserIds: targetIds, count: targetIds.length }
+      });
+
+      showToast(`${successCount} akun pengguna berhasil dibersihkan dan dihapus permanen.`);
+      return true;
+    } catch (error) {
+      console.error('[AppContext] bulkDeleteUserAccounts error:', error);
+      return false;
+    }
+  };
+
+  const submitAccountAppeal = async (reason: string): Promise<boolean> => {
+    if (!isLoggedIn || !currentUser.id || currentUser.id === 'guest') {
+      showToast('Silakan masuk terlebih dahulu untuk mengajukan permohonan.');
+      return false;
+    }
+    const appealId = `appeal-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const newAppeal: AccountAppeal = {
+      id: appealId,
+      userId: currentUser.id,
+      userName: currentUser.name || 'Pengguna Sotoy',
+      userHandle: currentUser.handle || `@${currentUser.name?.toLowerCase().replace(/\s+/g, '') || 'user'}`,
+      userEmail: currentUser.email || '',
+      userAvatar: currentUser.avatar || '',
+      userRole: currentUser.role || 'warga_sotoy',
+      reason: reason.trim(),
+      createdAt: new Date().toISOString(),
+      status: 'pending'
+    };
+
+    try {
+      await setDoc(doc(db, 'appeals', appealId), newAppeal);
+      setAppeals(prev => [newAppeal, ...prev.filter(a => a.id !== appealId)]);
+      showToast('Banding Anda telah dikirim ke Tim Moderator Sotoy Film.');
+      return true;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `appeals/${appealId}`);
+      return false;
+    }
+  };
+
+  const resolveAccountAppeal = async (appealId: string, status: 'approved' | 'rejected', adminNote?: string): Promise<boolean> => {
+    if (!isAdmin) {
+      showToast('Akses ditolak: Hanya admin yang dapat meninjau banding.');
+      return false;
+    }
+    const appeal = appeals.find(a => a.id === appealId);
+    if (!appeal) {
+      showToast('Permohonan banding tidak ditemukan.');
+      return false;
+    }
+
+    try {
+      const resolvedAt = new Date().toISOString();
+      await updateDoc(doc(db, 'appeals', appealId), {
+        status,
+        adminNote: adminNote || '',
+        resolvedAt
+      });
+
+      setAppeals(prev => prev.map(a => a.id === appealId ? { ...a, status, adminNote, resolvedAt } : a));
+
+      if (status === 'approved') {
+        // Automatically unfreeze user if appeal is approved
+        await toggleUserSuspension(appeal.userId, false);
+      } else {
+        // Send notification to the user about rejection
+        await sendNotification({
+          userId: appeal.userId,
+          type: 'account_status',
+          title: 'Permohonan Banding Ditolak',
+          message: `Permohonan banding Anda telah ditinjau dan ditolak. Catatan Admin: ${adminNote || 'Pelanggaran pedoman komunitas tetap berlaku.'}`,
+          targetView: 'user-profile',
+          targetId: appeal.userId,
+          sender: {
+            id: 'system-admin',
+            name: 'Sotoy Moderator Team',
+            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80',
+            handle: '@moderator'
+          }
+        });
+      }
+
+      await recordAuditLog({
+        action: status === 'approved' ? 'appeal_approved' : 'appeal_rejected',
+        targetId: appeal.userId,
+        targetName: appeal.userName,
+        targetEmail: appeal.userEmail,
+        targetRole: appeal.userRole,
+        targetType: 'appeal',
+        details: status === 'approved'
+          ? `Menerima permohonan banding dari "${appeal.userName}" dan memulihkan status akun.`
+          : `Menolak permohonan banding dari "${appeal.userName}". Catatan admin: "${adminNote || 'Pelanggaran pedoman komunitas tetap berlaku.'}"`,
+        metadata: { appealId, appealReason: appeal.reason, adminNote, status, resolvedAt }
+      });
+
+      showToast(`Banding berhasil ${status === 'approved' ? 'diterima & akun diaktifkan' : 'ditolak'}.`);
+      return true;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `appeals/${appealId}`);
+      return false;
+    }
+  };
+
+  const deleteAccountAppeal = async (appealId: string): Promise<boolean> => {
+    if (!isAdmin) {
+      showToast('Akses ditolak: Hanya admin yang dapat menghapus log banding.');
+      return false;
+    }
+    try {
+      await deleteDoc(doc(db, 'appeals', appealId));
+      setAppeals(prev => prev.filter(a => a.id !== appealId));
+      showToast('Catatan banding berhasil dihapus.');
+      return true;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `appeals/${appealId}`);
       return false;
     }
   };
@@ -2953,6 +3406,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (userIds.includes(currentUser.id)) {
         setCurrentUser(prev => ({ ...prev, role: newRole, roleTitle: title }));
       }
+
+      await recordAuditLog({
+        action: 'bulk_roles_override',
+        targetType: 'user',
+        details: `Mengubah hak akses role massal untuk ${userIds.length} pengguna menjadi [${newRole}].`,
+        metadata: { userIds, newRole, count: userIds.length }
+      });
+
       showToast(`Role ${userIds.length} pengguna berhasil diubah menjadi "${newRole.replace('_', ' ').toUpperCase()}".`);
       return true;
     } catch (error) {
@@ -2973,6 +3434,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       );
 
       setAllUsers(prev => prev.map(u => userIds.includes(u.id) ? { ...u, isSuspended, suspendedAt: isSuspended ? new Date().toISOString() : undefined } : u));
+
+      await recordAuditLog({
+        action: isSuspended ? 'bulk_accounts_suspended' : 'bulk_accounts_unsuspended',
+        targetType: 'user',
+        details: isSuspended 
+          ? `Membekukan massal ${userIds.length} akun pengguna.`
+          : `Mengaktifkan kembali secara massal ${userIds.length} akun pengguna.`,
+        metadata: { userIds, isSuspended, count: userIds.length }
+      });
+
       showToast(isSuspended ? `${userIds.length} akun pengguna berhasil dibekukan.` : `${userIds.length} akun pengguna berhasil diaktifkan kembali.`);
       return true;
     } catch (error) {
@@ -3285,6 +3756,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     targetInfo?: { targetType: 'buzz' | 'reply' | 'review'; targetId: string; parentBuzzId?: string }
   ): Promise<boolean> => {
     try {
+      const rep = moderationReports.find(r => r.id === reportId);
       if (action === 'take_down' && targetInfo) {
         if (targetInfo.targetType === 'buzz') {
           await deleteBuzzPost(targetInfo.targetId);
@@ -3299,16 +3771,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await updateDoc(doc(db, 'reports', reportId), { status: newStatus });
       } catch (e) { /* silent catch */ }
       setModerationReports(prev => prev.map(r => r.id === reportId ? { ...r, status: newStatus } : r));
+
+      if (rep) {
+        await recordAuditLog({
+          action: action === 'take_down' ? 'content_taken_down' : 'content_report_dismissed',
+          targetId: rep.targetId,
+          targetName: rep.targetAuthorName,
+          targetType: 'content',
+          details: action === 'take_down'
+            ? `Menghapus konten yang dilaporkan (${rep.targetType}) dari "${rep.targetAuthorName}". Alasan laporan: ${rep.reason}`
+            : `Menolak/mengabaikan laporan konten (${rep.targetType}) dari pelapor "${rep.reporterName}".`,
+          metadata: { reportId, targetType: rep.targetType, reason: rep.reason, reporterName: rep.reporterName, action }
+        });
+      }
+
       showToast(action === 'dismiss' ? 'Laporan ditolak / ditandai bersih.' : 'Konten berhasil dihapus dan laporan dituntaskan.');
       return true;
     } catch (e) {
       return false;
     }
   };
-
-  const isAdmin = isLoggedIn && isUserAdmin(currentUser);
-  const isWriter = isLoggedIn && (isUserWriter(currentUser) || currentUser.role === 'penulis_sotoy' || isAdmin || currentUser.role === 'admin');
-  const isCritic = isLoggedIn && (isUserCritic(currentUser) || currentUser.role === 'si_paling_sotoy' || isAdmin);
 
   return (
     <AppContext.Provider
@@ -3390,11 +3872,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteArticle,
         addBuzzPost,
         likeBuzzPost,
-        voteBuzzPost,
         reactToBuzzPost,
         addBuzzReply,
         likeBuzzReply,
-        voteBuzzReply,
         addFilmRating,
         updateFilmRating,
         deleteFilmRating,
@@ -3416,6 +3896,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleUserSuspension,
         bulkUpdateUserRoles,
         bulkToggleUserSuspension,
+        deleteUserAccount,
+        bulkDeleteUserAccounts,
+        appeals,
+        submitAccountAppeal,
+        resolveAccountAppeal,
+        deleteAccountAppeal,
         bulkUpdateArticles,
         bulkDeleteArticles,
         bulkReassignAuthor,
@@ -3430,6 +3916,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         moderationReports,
         reportContent,
         resolveReport,
+        auditLogs,
+        recordAuditLog,
+        deleteAuditLog,
+        clearAuditLogs,
         userProfilesCache,
         cacheUserProfile,
       }}

@@ -17,8 +17,6 @@ import {
   X,
   AtSign,
   User as UserIcon,
-  ArrowBigUp,
-  ArrowBigDown,
   Trash2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -40,10 +38,8 @@ export const BuzzDetailPage: React.FC = () => {
     setLoginModalOpen,
     navigateTo,
     likeBuzzPost,
-    voteBuzzPost,
     addBuzzReply,
     likeBuzzReply,
-    voteBuzzReply,
     deleteBuzzPost,
     deleteBuzzReply,
     openShareModal,
@@ -400,39 +396,9 @@ export const BuzzDetailPage: React.FC = () => {
               </div>
             )}
 
-            {/* Interaction Action Bar with Quick Reactions and Voting */}
+            {/* Interaction Action Bar with Quick Reactions */}
             <div className="pt-4 border-t border-slate-800 flex items-center justify-between gap-4 text-xs text-slate-400">
-              <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-2xl p-1 shadow-inner shrink-0">
-                <button
-                  onClick={() => voteBuzzPost(buzz.id, 'up')}
-                  className={`p-1.5 rounded-xl transition-all ${
-                    buzz.myVote === 'up'
-                      ? 'bg-emerald-500/20 text-emerald-400'
-                      : 'hover:bg-slate-800 hover:text-white'
-                  }`}
-                  title="Upvote"
-                >
-                  <ArrowBigUp className={`w-5 h-5 ${buzz.myVote === 'up' ? 'fill-current' : ''}`} />
-                </button>
-                <span className={`px-1 font-black text-sm min-w-[1.5rem] text-center ${
-                  (buzz.score || 0) > 0 ? 'text-emerald-400' : (buzz.score || 0) < 0 ? 'text-red-400' : 'text-slate-300'
-                }`}>
-                  {buzz.score || 0}
-                </span>
-                <button
-                  onClick={() => voteBuzzPost(buzz.id, 'down')}
-                  className={`p-1.5 rounded-xl transition-all ${
-                    buzz.myVote === 'down'
-                      ? 'bg-red-500/20 text-red-400'
-                      : 'hover:bg-slate-800 hover:text-white'
-                  }`}
-                  title="Downvote"
-                >
-                  <ArrowBigDown className={`w-5 h-5 ${buzz.myVote === 'down' ? 'fill-current' : ''}`} />
-                </button>
-              </div>
-
-              <div className="overflow-x-auto scrollbar-none min-w-0 flex-1 px-1">
+              <div className="overflow-x-auto scrollbar-none min-w-0 flex-1">
                 <QuickReactionBar
                   buzzId={buzz.id}
                   reactions={buzz.reactions}
@@ -644,37 +610,6 @@ export const BuzzDetailPage: React.FC = () => {
                                 </div>
                               </div>
                             </div>
-
-                            {/* Reply Upvote/Downvote Actions */}
-                            <div className="flex items-center gap-1 bg-black/30 border border-slate-800 rounded-xl p-0.5 shrink-0">
-                              <button
-                                onClick={() => voteBuzzReply(buzz.id, reply.id, 'up')}
-                                className={`p-1 rounded-lg transition-all ${
-                                  (reply as any).myVote === 'up'
-                                    ? 'text-emerald-400 bg-emerald-500/10'
-                                    : 'text-slate-500 hover:text-white'
-                                }`}
-                                title="Upvote"
-                              >
-                                <ArrowBigUp className={`w-4 h-4 ${(reply as any).myVote === 'up' ? 'fill-current' : ''}`} />
-                              </button>
-                              <span className={`px-0.5 font-bold text-xs min-w-[1rem] text-center ${
-                                (reply.score || 0) > 0 ? 'text-emerald-400' : (reply.score || 0) < 0 ? 'text-red-400' : 'text-slate-400'
-                              }`}>
-                                {reply.score || 0}
-                              </span>
-                              <button
-                                onClick={() => voteBuzzReply(buzz.id, reply.id, 'down')}
-                                className={`p-1 rounded-lg transition-all ${
-                                  (reply as any).myVote === 'down'
-                                    ? 'text-red-400 bg-red-500/10'
-                                    : 'text-slate-500 hover:text-white'
-                                }`}
-                                title="Downvote"
-                              >
-                                <ArrowBigDown className={`w-4 h-4 ${(reply as any).myVote === 'down' ? 'fill-current' : ''}`} />
-                              </button>
-                            </div>
                           </div>
 
                           {/* Reply Content */}
@@ -793,12 +728,6 @@ export const BuzzDetailPage: React.FC = () => {
                     <span className="flex items-center gap-1">
                       <Heart className="w-3 h-3 text-[#FF2E7E]" />
                       {item.likes || 0}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <ArrowBigUp className="w-3 h-3 text-emerald-500" />
-                      <span className={item.likes > 0 ? 'text-emerald-400' : item.likes < 0 ? 'text-red-400' : ''}>
-                        {item.likes}
-                      </span>
                     </span>
                     <span className="flex items-center gap-1 text-[#00F0FF] font-bold group-hover:translate-x-0.5 transition-transform">
                       <MessageSquare className="w-3 h-3" />

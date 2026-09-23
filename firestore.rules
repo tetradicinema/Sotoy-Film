@@ -48,6 +48,12 @@ service cloud.firestore {
       );
     }
 
+    function isSuspended() {
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             getUserData().get('isSuspended', false) == true;
+    }
+
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
@@ -129,7 +135,7 @@ service cloud.firestore {
       return data.keys().hasAll(['id', 'userId', 'type', 'title', 'message', 'targetView', 'isRead', 'createdAt', 'sender']) &&
         data.id is string && data.id.size() <= 128 &&
         data.userId is string && data.userId.size() <= 128 &&
-        data.type in ['comment', 'like', 'mention', 'reply', 'editor_request', 'follow', 'reaction'] &&
+        data.type in ['comment', 'like', 'mention', 'reply', 'editor_request', 'follow', 'reaction', 'account_status'] &&
         data.title is string && data.title.size() <= 200 &&
         data.message is string && data.message.size() <= 1000 &&
         data.targetView is string && data.targetView.size() <= 128 &&
@@ -274,21 +280,21 @@ service cloud.firestore {
 
     match /articles/{articleId} {
       allow read: if true;
-      allow create: if isSignedIn() && isValidId(articleId) && isValidArticle(incoming()) && (
+      allow create: if isSignedIn() && !isSuspended() && isValidId(articleId) && isValidArticle(incoming()) && (
         isWriter() ||
         isAdmin() ||
         request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' ||
         request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' ||
         incoming().author.id == request.auth.uid
       );
-      allow update: if isSignedIn() && isValidId(articleId) && isValidArticle(incoming()) && (
+      allow update: if isSignedIn() && !isSuspended() && isValidId(articleId) && isValidArticle(incoming()) && (
         isOwner(existing().author.id) || 
         isAdmin() || 
         isWriter() ||
         (request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' && (existing().author.id == request.auth.uid || incoming().author.id == request.auth.uid)) ||
         (request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' && (existing().author.id == request.auth.uid || incoming().author.id == request.auth.uid))
       );
-      allow delete: if isSignedIn() && (
+      allow delete: if isSignedIn() && !isSuspended() && (
         isOwner(existing().author.id) || 
         isAdmin() || 
         isWriter() ||
@@ -305,10 +311,10 @@ service cloud.firestore {
 
     match /buzz/{buzzId} {
       allow read: if true;
-      allow create: if isSignedIn() && isValidId(buzzId) && isValidBuzzPost(incoming());
-      allow update: if isSignedIn() && isValidId(buzzId) && (
-        (isOwner(existing().author.id) && isValidBuzzPost(incoming())) ||
-        (incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'reactions', 'reactionsByUser', 'replies', 'repliesCount', 'upvotes', 'downvotes']) && (
+      allow create: if isSignedIn() && !isSuspended() && isValidId(buzzId) && isValidBuzzPost(incoming());
+      allow update: if isSignedIn() && (
+        (!isSuspended() && isOwner(existing().author.id) && isValidBuzzPost(incoming())) ||
+        (!isSuspended() && incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'reactions', 'reactionsByUser', 'replies', 'repliesCount', 'upvotes', 'downvotes']) && (
           !('reactionsByUser' in incoming().diff(existing()).affectedKeys()) || isValidReactionsByUserUpdate()
         ) && (
           !('reactions' in incoming().diff(existing()).affectedKeys()) || isValidReactionsAggregateUpdate()
@@ -325,11 +331,11 @@ service cloud.firestore {
 
     match /ratings/{ratingId} {
       allow read: if true;
-      allow create: if isSignedIn() && isValidId(ratingId) && isValidUserRating(incoming());
-      allow update: if isSignedIn() && isValidId(ratingId) && (
-        (isOwner(existing().userId) && isValidUserRating(incoming())) ||
-        (incoming().diff(existing()).affectedKeys().hasOnly(['likes']) && isValidLikesDelta()) ||
-        (isCritic() && isOwner(existing().userId))
+      allow create: if isSignedIn() && !isSuspended() && isValidId(ratingId) && isValidUserRating(incoming());
+      allow update: if isSignedIn() && (
+        (!isSuspended() && isOwner(existing().userId) && isValidUserRating(incoming())) ||
+        (!isSuspended() && incoming().diff(existing()).affectedKeys().hasOnly(['likes']) && isValidLikesDelta()) ||
+        (isCritic() && isOwner(existing().userId) && !isSuspended())
       );
       allow delete: if isSignedIn() && (isOwner(existing().userId) || isAdmin() || isWriter() || (isCritic() && isOwner(existing().userId)));
     }
@@ -353,13 +359,25 @@ service cloud.firestore {
 
     match /notifications/{notificationId} {
       allow read, list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin() || isWriter());
-      allow create: if isSignedIn() && isValidId(notificationId) && isValidNotification(incoming()) && (incoming().sender.id == request.auth.uid || isAdmin() || isWriter());
+      allow create: if isSignedIn() && !isSuspended() && isValidId(notificationId) && isValidNotification(incoming()) && (incoming().sender.id == request.auth.uid || isAdmin() || isWriter());
       allow update: if isSignedIn() && isValidId(notificationId) && (
         (resource.data.userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['isRead'])) ||
         isAdmin() ||
         isWriter()
       );
       allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin() || isWriter());
+    }
+
+    match /appeals/{appealId} {
+      allow read: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin() || isWriter());
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && incoming().status == 'pending';
+      allow update, delete: if isAdmin() || isWriter();
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if isSignedIn() && (isAdmin() || isWriter());
+      allow create: if isSignedIn() && (isAdmin() || isWriter());
+      allow update, delete: if isAdmin();
     }
   }
 }

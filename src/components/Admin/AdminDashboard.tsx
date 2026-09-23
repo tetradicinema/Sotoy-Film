@@ -10,7 +10,8 @@ import {
   Eye, 
   CheckCircle2,
   FileText,
-  ExternalLink
+  ExternalLink,
+  ScrollText
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { AdminStatsOverview } from './AdminStatsOverview';
@@ -19,8 +20,10 @@ import { AdminModeration } from './AdminModeration';
 import { CMSAnalyticsCard } from '../CMS/CMSAnalyticsCard';
 import { AdminCatalogManager } from './AdminCatalogManager';
 import { AdminStorageFiles } from './AdminStorageFiles';
+import { AdminAppeals } from './AdminAppeals';
+import { AdminAuditLog } from './AdminAuditLog';
 
-type AdminTab = 'users' | 'moderation' | 'catalog' | 'storage';
+type AdminTab = 'users' | 'moderation' | 'catalog' | 'storage' | 'appeals' | 'audit';
 
 export const AdminDashboard: React.FC = () => {
   const { 
@@ -28,7 +31,8 @@ export const AdminDashboard: React.FC = () => {
     isAdmin, 
     isWriter,
     criticSubmissions, 
-    moderationReports 
+    moderationReports,
+    appeals
   } = useApp();
 
   const location = useLocation();
@@ -38,6 +42,8 @@ export const AdminDashboard: React.FC = () => {
     if (location.pathname === '/admin/moderation') return 'moderation';
     if (location.pathname === '/admin/catalog') return 'catalog';
     if (location.pathname === '/admin/storage') return 'storage';
+    if (location.pathname === '/admin/appeals') return 'appeals';
+    if (location.pathname === '/admin/audit') return 'audit';
     return 'users'; // default for /admin or /admin/users
   };
 
@@ -45,6 +51,7 @@ export const AdminDashboard: React.FC = () => {
 
   const pendingCriticsCount = criticSubmissions.filter(s => s.status === 'pending').length;
   const pendingReportsCount = moderationReports.filter(r => r.status === 'pending').length;
+  const pendingAppealsCount = appeals.filter(a => a.status === 'pending').length;
 
   const isUserAdminAuthorized = isAdmin || currentUser.role === 'admin' || currentUser.email === 'eksposurmedia@gmail.com';
 
@@ -261,7 +268,40 @@ export const AdminDashboard: React.FC = () => {
             <span>Arsip Media & Berkas</span>
           </Link>
 
-          {/* Link 5: Full Control CMS Standalone URL */}
+          {/* Link 5: Appeals */}
+          <Link
+            to="/admin/appeals"
+            id="admin-tab-appeals"
+            className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 relative ${
+              activeTab === 'appeals'
+                ? 'bg-gradient-to-r from-purple-500/20 to-purple-600/10 text-purple-300 border border-purple-500/40 shadow-lg shadow-purple-950/30'
+                : 'text-slate-400 hover:text-white hover:bg-slate-850 border border-transparent'
+            }`}
+          >
+            <ShieldCheck className={`w-4 h-4 ${activeTab === 'appeals' ? 'text-purple-400' : 'text-slate-400'}`} />
+            <span>Banding Akun</span>
+            {pendingAppealsCount > 0 && (
+              <span className="w-5 h-5 rounded-full bg-purple-500 text-slate-950 font-black text-[10px] flex items-center justify-center">
+                {pendingAppealsCount}
+              </span>
+            )}
+          </Link>
+
+          {/* Link 6: Audit Log Moderasi */}
+          <Link
+            to="/admin/audit"
+            id="admin-tab-audit"
+            className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
+              activeTab === 'audit'
+                ? 'bg-gradient-to-r from-indigo-500/20 to-indigo-600/10 text-indigo-300 border border-indigo-500/40 shadow-lg shadow-indigo-950/30'
+                : 'text-slate-400 hover:text-white hover:bg-slate-850 border border-transparent'
+            }`}
+          >
+            <ScrollText className={`w-4 h-4 ${activeTab === 'audit' ? 'text-indigo-400' : 'text-slate-400'}`} />
+            <span>Audit Log Moderasi</span>
+          </Link>
+
+          {/* Link 7: Full Control CMS Standalone URL */}
           <Link
             to="/admin/cms"
             id="admin-tab-cms"
@@ -276,7 +316,7 @@ export const AdminDashboard: React.FC = () => {
             <ExternalLink className="w-3 h-3 text-purple-400" />
           </Link>
 
-          {/* Link 6: Critic Submissions Standalone URL */}
+          {/* Link 8: Critic Submissions Standalone URL */}
           <Link
             to="/admin/submissions"
             id="admin-tab-submissions"
@@ -303,6 +343,8 @@ export const AdminDashboard: React.FC = () => {
           {activeTab === 'moderation' && <AdminModeration />}
           {activeTab === 'catalog' && <AdminCatalogManager />}
           {activeTab === 'storage' && <AdminStorageFiles />}
+          {activeTab === 'appeals' && <AdminAppeals />}
+          {activeTab === 'audit' && <AdminAuditLog />}
         </div>
       </div>
 

@@ -13,6 +13,8 @@
         "roleTitle": { "type": "string" },
         "bio": { "type": "string" },
         "email": { "type": "string" },
+        "isSuspended": { "type": "boolean" },
+        "suspendedAt": { "type": "string" },
         "totalReviews": { "type": "integer" },
         "totalBuzz": { "type": "integer" },
         "followers": { "type": "array" },
@@ -156,7 +158,7 @@
       "properties": {
         "id": { "type": "string" },
         "userId": { "type": "string" },
-        "type": { "type": "string", "enum": ["comment", "like", "mention", "reply", "editor_request", "follow"] },
+        "type": { "type": "string", "enum": ["comment", "like", "mention", "reply", "editor_request", "follow", "reaction", "account_status"] },
         "title": { "type": "string" },
         "message": { "type": "string" },
         "targetView": { "type": "string" },
@@ -166,9 +168,56 @@
         "sender": { "type": "object" }
       },
       "required": ["id", "userId", "type", "title", "message", "targetView", "isRead", "createdAt", "sender"]
+    },
+    "AccountAppeal": {
+      "title": "AccountAppeal",
+      "description": "Appeals from suspended users",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userHandle": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userAvatar": { "type": "string" },
+        "userRole": { "type": "string" },
+        "reason": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "adminNote": { "type": "string" },
+        "resolvedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "userName", "reason", "createdAt", "status"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "System and moderation audit logs for tracking administrative actions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "action": { "type": "string" },
+        "actorId": { "type": "string" },
+        "actorName": { "type": "string" },
+        "actorEmail": { "type": "string" },
+        "actorRole": { "type": "string" },
+        "actorAvatar": { "type": "string" },
+        "targetId": { "type": "string" },
+        "targetName": { "type": "string" },
+        "targetEmail": { "type": "string" },
+        "targetRole": { "type": "string" },
+        "targetType": { "type": "string" },
+        "details": { "type": "string" },
+        "metadata": { "type": "object" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "action", "actorId", "actorName", "timestamp"]
     }
   },
   "firestore": {
+    "/auditLogs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Administrative audit logs"
+    },
     "/notifications/{notificationId}": {
       "schema": "Notification",
       "description": "User notifications"
@@ -204,6 +253,10 @@
     "/criticSubmissions/{submissionId}": {
       "schema": "CriticSubmission",
       "description": "Critic submissions"
+    },
+    "/appeals/{appealId}": {
+      "schema": "AccountAppeal",
+      "description": "Account suspension appeals"
     }
   }
 }

@@ -21,7 +21,11 @@ import {
   MinusSquare,
   X,
   UserCheck,
-  Layers
+  Layers,
+  Trash2,
+  AlertTriangle,
+  RefreshCw,
+  Info
 } from 'lucide-react';
 import { useApp, ADMIN_UIDS } from '../../context/AppContext';
 import { User, UserRole } from '../../types';
@@ -35,6 +39,8 @@ export const AdminUserManagement: React.FC = () => {
     toggleUserSuspension, 
     bulkUpdateUserRoles,
     bulkToggleUserSuspension,
+    deleteUserAccount,
+    bulkDeleteUserAccounts,
     showToast, 
     currentUser, 
     navigateTo 
@@ -47,6 +53,13 @@ export const AdminUserManagement: React.FC = () => {
   // Bulk Selection State
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [isBulkOperating, setIsBulkOperating] = useState(false);
+
+  // Dedicated In-App Action Modals
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const [isBulkSuspendModalOpen, setIsBulkSuspendModalOpen] = useState<{ isOpen: boolean; isSuspending: boolean } | null>(null);
+  const [userToSuspend, setUserToSuspend] = useState<{ user: User; isSuspending: boolean } | null>(null);
+  const [isProcessingAction, setIsProcessingAction] = useState(false);
 
   // Filtered Users List
   const filteredUsers = allUsers.filter(user => {
@@ -109,21 +122,85 @@ export const AdminUserManagement: React.FC = () => {
 
   const handleBulkToggleSuspension = async (suspend: boolean) => {
     if (selectedUserIds.length === 0) return;
-    // Don't suspend current user
     const filteredUids = suspend ? selectedUserIds.filter(id => id !== currentUser.id) : selectedUserIds;
     if (filteredUids.length === 0) {
       showToast('Tidak ada pengguna valid yang dapat dibekukan.');
       return;
     }
+    setIsBulkSuspendModalOpen({ isOpen: true, isSuspending: suspend });
+  };
 
-    setIsBulkOperating(true);
+  const handleExecuteBulkSuspension = async () => {
+    if (!isBulkSuspendModalOpen) return;
+    const { isSuspending } = isBulkSuspendModalOpen;
+    const filteredUids = isSuspending ? selectedUserIds.filter(id => id !== currentUser.id) : selectedUserIds;
+    if (filteredUids.length === 0) {
+      showToast('Tidak ada akun valid untuk diproses.');
+      setIsBulkSuspendModalOpen(null);
+      return;
+    }
+
+    setIsProcessingAction(true);
     try {
-      await bulkToggleUserSuspension(filteredUids, suspend);
+      await bulkToggleUserSuspension(filteredUids, isSuspending);
       setSelectedUserIds([]);
+      setIsBulkSuspendModalOpen(null);
     } catch (err: any) {
-      showToast('Gagal memproses status pengguna: ' + (err?.message || 'Error'));
+      showToast('Gagal memproses status pengguna massal: ' + (err?.message || 'Error'));
     } finally {
-      setIsBulkOperating(false);
+      setIsProcessingAction(false);
+    }
+  };
+
+  const handleExecuteBulkDelete = async () => {
+    if (selectedUserIds.length === 0) return;
+    const filteredUids = selectedUserIds.filter(id => id !== currentUser.id);
+    if (filteredUids.length === 0) {
+      showToast('Anda tidak dapat menghapus akun Anda sendiri.');
+      setIsBulkDeleteModalOpen(false);
+      return;
+    }
+
+    setIsProcessingAction(true);
+    try {
+      await bulkDeleteUserAccounts(filteredUids);
+      setSelectedUserIds([]);
+      setIsBulkDeleteModalOpen(false);
+    } catch (err: any) {
+      showToast('Gagal menghapus akun terpilih: ' + (err?.message || 'Error'));
+    } finally {
+      setIsProcessingAction(false);
+    }
+  };
+
+  const handleExecuteSingleDelete = async () => {
+    if (!userToDelete) return;
+    if (userToDelete.id === currentUser.id) {
+      showToast('Anda tidak dapat menghapus akun sendiri.');
+      setUserToDelete(null);
+      return;
+    }
+
+    setIsProcessingAction(true);
+    try {
+      const success = await deleteUserAccount(userToDelete.id);
+      if (success) {
+        setUserToDelete(null);
+        setSelectedUserIds(prev => prev.filter(id => id !== userToDelete.id));
+      }
+    } finally {
+      setIsProcessingAction(false);
+    }
+  };
+
+  const handleExecuteSuspend = async () => {
+    if (!userToSuspend) return;
+    setIsProcessingAction(true);
+    try {
+      await toggleUserSuspension(userToSuspend.user.id, userToSuspend.isSuspending);
+      setUserToSuspend(null);
+    } finally {
+      setIsProcessingAction(false);
     }
   };
 
@@ -142,29 +219,7 @@ export const AdminUserManagement: React.FC = () => {
 
   const handleRoleChange = async (user: User, newRole: UserRole) => {
     if (user.role === newRole) return;
-    
-    // Prevent self-demotion accidentally
-    if (user.id === currentUser.id && newRole !== 'admin') {
-      if (!window.confirm('PERINGATAN: Anda sedang mengubah role Anda sendiri dari Admin. Lanjutkan?')) {
-        return;
-      }
-    }
-
     await updateUserRole(user.id, newRole);
-  };
-
-  const handleToggleSuspend = async (user: User) => {
-    const isSuspending = !user.isSuspended;
-    const actionLabel = isSuspending ? 'membekukan (BANNED)' : 'mengaktifkan kembali';
-    
-    if (user.id === currentUser.id) {
-      showToast('Anda tidak dapat membekukan akun sendiri.');
-      return;
-    }
-
-    if (window.confirm(`Yakin ingin ${actionLabel} akun pengguna "${user.name}" (@${user.handle || user.id.slice(0, 5)})?`)) {
-      await toggleUserSuspension(user.id, isSuspending);
-    }
   };
 
   const formatDate = (isoString?: string) => {
@@ -193,7 +248,7 @@ export const AdminUserManagement: React.FC = () => {
             </span>
           </h2>
           <p className="text-slate-400 text-xs mt-1">
-            Ubah hak akses role secara instan, salin UID otentikasi Firebase, dan bekukan akun yang melanggar pedoman komunitas.
+            Ubah hak akses role secara instan, kelola penangguhan akun, dan bersihkan akun pengguna beserta ulasan dan postingan mereka secara permanen.
           </p>
         </div>
       </div>
@@ -334,22 +389,33 @@ export const AdminUserManagement: React.FC = () => {
               <button
                 type="button"
                 disabled={isBulkOperating}
-                onClick={() => handleBulkToggleSuspension(true)}
+                onClick={() => setIsBulkSuspendModalOpen({ isOpen: true, isSuspending: true })}
                 className="px-3 py-1.5 bg-red-500/15 hover:bg-red-500/25 text-red-300 border border-red-500/30 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
               >
                 <Lock className="w-3.5 h-3.5" />
-                <span>Bekukan Akun</span>
+                <span>Bekukan Akun ({selectedUserIds.filter(id => id !== currentUser.id).length})</span>
               </button>
 
               {/* Bulk Unsuspend */}
               <button
                 type="button"
                 disabled={isBulkOperating}
-                onClick={() => handleBulkToggleSuspension(false)}
+                onClick={() => setIsBulkSuspendModalOpen({ isOpen: true, isSuspending: false })}
                 className="px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
               >
                 <Unlock className="w-3.5 h-3.5" />
-                <span>Buka Blokir</span>
+                <span>Buka Blokir ({selectedUserIds.length})</span>
+              </button>
+
+              {/* Bulk Delete */}
+              <button
+                type="button"
+                disabled={isBulkOperating}
+                onClick={() => setIsBulkDeleteModalOpen(true)}
+                className="px-3 py-1.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/40 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Hapus Akun ({selectedUserIds.length})</span>
               </button>
 
               {/* Copy all UIDs */}
@@ -379,45 +445,44 @@ export const AdminUserManagement: React.FC = () => {
                     title={isAllSelected ? "Batal pilih semua" : "Pilih semua pengguna di halaman ini"}
                   >
                     {isAllSelected ? (
-                      <CheckSquare className="w-4 h-4 text-[#00F0FF]" />
+                      <CheckSquare className="w-4 h-4 text-purple-400" />
                     ) : isSomeSelected ? (
                       <MinusSquare className="w-4 h-4 text-purple-400" />
                     ) : (
-                      <Square className="w-4 h-4 text-slate-500" />
+                      <Square className="w-4 h-4 text-slate-600" />
                     )}
                   </button>
                 </th>
-                <th className="p-3.5 min-w-[240px]">Profil Pengguna</th>
-                <th className="p-3.5 min-w-[180px]">UID & Email Akun</th>
-                <th className="p-3.5 min-w-[120px]">Bergabung</th>
-                <th className="p-3.5 min-w-[120px]">Aktivitas</th>
-                <th className="p-3.5 min-w-[180px]">Ubah Role Instant</th>
-                <th className="p-3.5 min-w-[140px] text-right">Status Akun</th>
+                <th className="p-3.5">Pengguna & Akun</th>
+                <th className="p-3.5">Role Platform</th>
+                <th className="p-3.5">Firebase UID</th>
+                <th className="p-3.5">Bergabung</th>
+                <th className="p-3.5">Aktivitas</th>
+                <th className="p-3.5">Ubah Role</th>
+                <th className="p-3.5 text-right">Moderasi & Tindakan</th>
               </tr>
             </thead>
-
-            <tbody className="divide-y divide-slate-850/80 bg-[#111220]">
+            <tbody className="divide-y divide-slate-800/60 font-medium">
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-500 text-xs">
-                    Tidak ada pengguna yang cocok dengan kueri pencarian atau filter role.
+                  <td colSpan={8} className="p-8 text-center text-slate-500">
+                    <Users className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                    Tidak ada pengguna yang cocok dengan filter atau pencarian.
                   </td>
                 </tr>
               ) : (
                 filteredUsers.map(user => {
-                  const isAdminUser = user.role === 'admin' || ADMIN_UIDS.includes(user.id);
                   const isSuspended = !!user.isSuspended;
-                  const roleStyle = getRoleBadgeStyle(user.role);
+                  const isCurrentAdmin = user.id === currentUser.id;
+                  const isHardcodedAdmin = ADMIN_UIDS.includes(user.id);
                   const isSelected = selectedUserIds.includes(user.id);
 
                   return (
-                    <tr 
-                      key={user.id} 
-                      className={`hover:bg-slate-850/40 transition-colors ${
-                        isSelected 
-                          ? 'bg-purple-950/30 ring-1 ring-inset ring-purple-500/30' 
-                          : isSuspended ? 'bg-red-950/10' : ''
-                      }`}
+                    <tr
+                      key={user.id}
+                      className={`hover:bg-slate-850/60 transition-colors ${
+                        isSuspended ? 'bg-red-950/15' : ''
+                      } ${isSelected ? 'bg-purple-950/20' : ''}`}
                     >
                       {/* Checkbox */}
                       <td className="p-3.5 text-center">
@@ -427,78 +492,79 @@ export const AdminUserManagement: React.FC = () => {
                           className="text-slate-400 hover:text-white transition-colors cursor-pointer"
                         >
                           {isSelected ? (
-                            <CheckSquare className="w-4 h-4 text-[#00F0FF]" />
+                            <CheckSquare className="w-4 h-4 text-purple-400" />
                           ) : (
-                            <Square className="w-4 h-4 text-slate-600" />
+                            <Square className="w-4 h-4 text-slate-600 hover:text-slate-400" />
                           )}
                         </button>
                       </td>
 
-                      {/* Avatar & Name & Handle */}
+                      {/* User Avatar & Info */}
                       <td className="p-3.5">
                         <div className="flex items-center gap-3">
                           <img
-                            src={user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}
+                            src={
+                              user.avatar ||
+                              'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'
+                            }
                             alt={user.name}
-                            className="w-10 h-10 rounded-xl object-cover ring-1 ring-slate-750 shrink-0"
+                            className={`w-9 h-9 rounded-full object-cover shrink-0 border ${
+                              isSuspended ? 'border-red-500/50 grayscale' : 'border-slate-700'
+                            }`}
                           />
                           <div className="min-w-0">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span 
+                            <div className="flex items-center gap-1.5">
+                              <button
                                 onClick={() => navigateTo('user-profile', { userId: user.id })}
-                                className="font-bold text-white hover:text-[#00F0FF] cursor-pointer transition-colors text-xs truncate max-w-[160px]"
+                                className="font-bold text-white hover:text-[#00F0FF] transition-colors truncate text-left max-w-[150px] sm:max-w-[200px]"
                               >
                                 {user.name}
-                              </span>
-                              {user.id === currentUser.id && (
-                                <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-500/20 text-[#00F0FF] font-bold">
+                              </button>
+                              {isCurrentAdmin && (
+                                <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40 shrink-0">
                                   Anda
                                 </span>
                               )}
                             </div>
-                            <div className="text-[10px] text-slate-400 truncate mt-0.5">
-                              {user.handle || `@user_${user.id.slice(0, 5)}`}
-                            </div>
-                            <div className="mt-1">
-                              <RoleBadge role={user.role} size="xs" showTooltip={false} />
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* UID & Email */}
-                      <td className="p-3.5">
-                        <div className="space-y-1">
-                          {/* UID Copy Button */}
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-mono text-[10px] bg-slate-900 border border-slate-800 px-1.5 py-0.5 rounded text-slate-300 truncate max-w-[130px]">
-                              {user.id}
-                            </span>
-                            <button
-                              onClick={() => handleCopyUid(user.id)}
-                              className="p-1 rounded bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition-colors"
-                              title="Salin UID Akun"
-                            >
-                              {copiedUid === user.id ? (
-                                <Check className="w-3 h-3 text-emerald-400" />
-                              ) : (
-                                <Copy className="w-3 h-3" />
+                            <div className="text-[11px] text-slate-500 truncate flex items-center gap-1">
+                              <span>{user.handle || `@${user.name.toLowerCase().replace(/\s+/g, '')}`}</span>
+                              {user.email && (
+                                <span className="text-slate-400/80 truncate hidden sm:inline">
+                                  • {user.email}
+                                </span>
                               )}
-                            </button>
-                          </div>
-
-                          {/* Email */}
-                          <div className="text-[10px] text-slate-400 flex items-center gap-1 truncate max-w-[170px]">
-                            <Mail className="w-3 h-3 text-slate-500 shrink-0" />
-                            <span>{user.email || 'Belum terhubung'}</span>
+                            </div>
                           </div>
                         </div>
                       </td>
 
-                      {/* Created At */}
-                      <td className="p-3.5 text-[11px] text-slate-400 whitespace-nowrap">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3 text-slate-500" />
+                      {/* Role Badge */}
+                      <td className="p-3.5">
+                        <RoleBadge role={user.role} size="sm" />
+                      </td>
+
+                      {/* UID Copy */}
+                      <td className="p-3.5 font-mono text-[10px] text-slate-400">
+                        <div className="flex items-center gap-1.5 bg-slate-900/80 px-2 py-1 rounded-lg border border-slate-800 w-fit">
+                          <span className="truncate max-w-[90px]">{user.id}</span>
+                          <button
+                            onClick={() => handleCopyUid(user.id)}
+                            className="text-slate-500 hover:text-white transition-colors p-0.5"
+                            title="Salin UID pengguna"
+                          >
+                            {copiedUid === user.id ? (
+                              <Check className="w-3 h-3 text-emerald-400" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                          </button>
+                        </div>
+                      </td>
+
+                      {/* Joined Date */}
+                      <td className="p-3.5 text-slate-400 text-[11px] whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="w-3 h-3 text-slate-500 shrink-0" />
                           <span>{formatDate(user.createdAt)}</span>
                         </div>
                       </td>
@@ -549,7 +615,7 @@ export const AdminUserManagement: React.FC = () => {
                         </div>
                       </td>
 
-                      {/* Suspend / Ban Toggle */}
+                      {/* Suspend / Ban & Delete Actions */}
                       <td className="p-3.5 text-right">
                         <div className="flex items-center justify-end gap-2">
                           {isSuspended ? (
@@ -564,7 +630,7 @@ export const AdminUserManagement: React.FC = () => {
                           )}
 
                           <button
-                            onClick={() => handleToggleSuspend(user)}
+                            onClick={() => setUserToSuspend({ user, isSuspending: !isSuspended })}
                             className={`p-1.5 rounded-lg border text-xs font-bold transition-colors flex items-center gap-1 ${
                               isSuspended
                                 ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
@@ -584,6 +650,15 @@ export const AdminUserManagement: React.FC = () => {
                               </>
                             )}
                           </button>
+
+                          <button
+                            onClick={() => setUserToDelete(user)}
+                            className="p-1.5 rounded-lg border bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 border-slate-700 hover:border-red-500/30 text-xs font-bold transition-colors flex items-center gap-1"
+                            title="Hapus Akun & Data Pengguna Secara Permanen"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span className="hidden lg:inline text-[10px]">Hapus</span>
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -594,6 +669,363 @@ export const AdminUserManagement: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* MODAL 1: SINGLE USER DELETE CONFIRMATION */}
+      {userToDelete && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-lg bg-[#121324] border-2 border-red-500/40 rounded-3xl overflow-hidden shadow-2xl shadow-red-950/40 animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="bg-red-500/15 border-b border-red-500/30 p-6 flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-400 shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-display font-black text-xl text-white">Hapus Akun Pengguna</h3>
+                <p className="text-red-300 text-xs mt-1">
+                  Tindakan ini permanen dan akan membersihkan seluruh data pengguna dari database Firestore.
+                </p>
+              </div>
+              <button
+                onClick={() => setUserToDelete(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Target User Details */}
+            <div className="p-6 space-y-5">
+              <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex items-center gap-3">
+                <img
+                  src={userToDelete.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}
+                  alt={userToDelete.name}
+                  className="w-12 h-12 rounded-full object-cover border border-slate-700"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-white text-sm truncate">{userToDelete.name}</span>
+                    <RoleBadge role={userToDelete.role} size="sm" />
+                  </div>
+                  <div className="text-slate-400 text-xs truncate">
+                    {userToDelete.handle || `@${userToDelete.name.toLowerCase().replace(/\s+/g, '')}`}
+                    {userToDelete.email ? ` • ${userToDelete.email}` : ''}
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-mono mt-0.5">UID: {userToDelete.id}</div>
+                </div>
+              </div>
+
+              {/* Data Cleanup Checklist */}
+              <div className="bg-red-950/20 border border-red-500/20 rounded-2xl p-4 space-y-2">
+                <div className="text-xs font-bold text-red-300 flex items-center gap-1.5">
+                  <Trash2 className="w-4 h-4 text-red-400" />
+                  <span>Data yang akan dibersihkan secara menyeluruh:</span>
+                </div>
+                <ul className="text-[11px] text-slate-300 space-y-1 pl-5 list-disc">
+                  <li>Dokumen profil pengguna (<code className="text-red-300 font-mono">users/{userToDelete.id}</code>)</li>
+                  <li>Semua ulasan & rating film pengguna (<code className="text-red-300 font-mono">ratings</code>)</li>
+                  <li>Semua postingan Buzz dan balasan (<code className="text-red-300 font-mono">buzz</code>)</li>
+                  <li>Notifikasi dan catatan permohonan banding</li>
+                </ul>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setUserToDelete(null)}
+                  disabled={isProcessingAction}
+                  className="px-4 py-2.5 rounded-xl border border-slate-750 text-slate-300 hover:bg-slate-800 text-xs font-bold transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExecuteSingleDelete}
+                  disabled={isProcessingAction}
+                  className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-lg shadow-red-600/30 flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {isProcessingAction ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Menghapus Data...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Hapus Permanen Akun & Data</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: BULK USERS DELETE CONFIRMATION */}
+      {isBulkDeleteModalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-lg bg-[#121324] border-2 border-red-500/40 rounded-3xl overflow-hidden shadow-2xl shadow-red-950/40 animate-in zoom-in-95 duration-200">
+            <div className="bg-red-500/15 border-b border-red-500/30 p-6 flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-400 shrink-0">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-display font-black text-xl text-white">
+                  Hapus Massal {selectedUserIds.length} Akun Pengguna
+                </h3>
+                <p className="text-red-300 text-xs mt-1">
+                  Seluruh akun yang dipilih beserta ulasan dan postingan mereka akan dihapus permanen.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsBulkDeleteModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 max-h-48 overflow-y-auto space-y-2">
+                {selectedUserIds.map(uid => {
+                  const targetUser = allUsers.find(u => u.id === uid);
+                  return (
+                    <div key={uid} className="flex items-center justify-between text-xs py-1.5 px-3 rounded-lg bg-slate-950/50 border border-slate-850">
+                      <span className="font-bold text-white truncate max-w-[200px]">{targetUser?.name || uid}</span>
+                      <span className="text-[10px] text-slate-500 font-mono">{uid.slice(0, 8)}...</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsBulkDeleteModalOpen(false)}
+                  disabled={isProcessingAction}
+                  className="px-4 py-2.5 rounded-xl border border-slate-750 text-slate-300 hover:bg-slate-800 text-xs font-bold transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExecuteBulkDelete}
+                  disabled={isProcessingAction}
+                  className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-lg shadow-red-600/30 flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {isProcessingAction ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Menghapus Massal...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Hapus {selectedUserIds.length} Akun Permanen</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: SUSPENSION CONFIRMATION */}
+      {userToSuspend && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-[#121324] border border-slate-750 rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className={`p-6 border-b flex items-start gap-4 ${
+              userToSuspend.isSuspending ? 'bg-red-500/10 border-red-500/20' : 'bg-emerald-500/10 border-emerald-500/20'
+            }`}>
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${
+                userToSuspend.isSuspending ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+              }`}>
+                {userToSuspend.isSuspending ? <Lock className="w-6 h-6" /> : <Unlock className="w-6 h-6" />}
+              </div>
+              <div>
+                <h3 className="font-display font-black text-lg text-white">
+                  {userToSuspend.isSuspending ? 'Bekukan Akun Pengguna' : 'Buka Blokir Akun'}
+                </h3>
+                <p className="text-slate-400 text-xs mt-1">
+                  {userToSuspend.isSuspending 
+                    ? `Akun "${userToSuspend.user.name}" akan dibatasi dari membuat ulasan dan postingan.`
+                    : `Akun "${userToSuspend.user.name}" akan dipulihkan dan dapat kembali beraktivitas.`}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setUserToSuspend(null)}
+                disabled={isProcessingAction}
+                className="px-4 py-2.5 rounded-xl border border-slate-750 text-slate-300 hover:bg-slate-800 text-xs font-bold transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteSuspend}
+                disabled={isProcessingAction}
+                className={`px-5 py-2.5 rounded-xl text-white text-xs font-bold shadow-lg flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer ${
+                  userToSuspend.isSuspending 
+                    ? 'bg-red-600 hover:bg-red-500 shadow-red-600/30' 
+                    : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
+                }`}
+              >
+                {isProcessingAction ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : userToSuspend.isSuspending ? (
+                  <Lock className="w-3.5 h-3.5" />
+                ) : (
+                  <Unlock className="w-3.5 h-3.5" />
+                )}
+                <span>{userToSuspend.isSuspending ? 'Konfirmasi Pembekuan' : 'Konfirmasi Buka Blokir'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: BULK SUSPENSION CONFIRMATION */}
+      {isBulkSuspendModalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-lg bg-[#121324] border-2 border-slate-750 rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className={`p-6 border-b flex items-start gap-4 ${
+              isBulkSuspendModalOpen.isSuspending ? 'bg-red-500/15 border-red-500/30' : 'bg-emerald-500/15 border-emerald-500/30'
+            }`}>
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${
+                isBulkSuspendModalOpen.isSuspending 
+                  ? 'bg-red-500/20 text-red-400 border-red-500/30' 
+                  : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+              }`}>
+                {isBulkSuspendModalOpen.isSuspending ? <Lock className="w-6 h-6" /> : <Unlock className="w-6 h-6" />}
+              </div>
+              <div className="flex-1">
+                <h3 className="font-display font-black text-xl text-white">
+                  {isBulkSuspendModalOpen.isSuspending ? 'Bekukan Massal Akun Pengguna' : 'Buka Blokir Massal Pengguna'}
+                </h3>
+                <p className="text-slate-300 text-xs mt-1">
+                  {isBulkSuspendModalOpen.isSuspending 
+                    ? `Membekukan ${selectedUserIds.filter(id => id !== currentUser.id).length} akun pengguna terpilih secara bersamaan.`
+                    : `Mengaktifkan kembali ${selectedUserIds.length} akun pengguna terpilih.`}
+                </p>
+              </div>
+              <button
+                onClick={() => setIsBulkSuspendModalOpen(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* List of Target Users */}
+            <div className="p-6 space-y-4">
+              <div className="text-xs font-bold text-slate-300 flex items-center justify-between">
+                <span>Daftar Akun Terpilih:</span>
+                <span className="text-slate-400 text-[11px]">
+                  {selectedUserIds.length} Pengguna
+                </span>
+              </div>
+
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 max-h-52 overflow-y-auto space-y-2">
+                {selectedUserIds.map(uid => {
+                  const targetUser = allUsers.find(u => u.id === uid);
+                  const isSelf = uid === currentUser.id;
+
+                  return (
+                    <div 
+                      key={uid} 
+                      className={`flex items-center justify-between text-xs py-2 px-3 rounded-xl border ${
+                        isSelf 
+                          ? 'bg-slate-900/60 border-slate-750 opacity-60' 
+                          : 'bg-slate-950/60 border-slate-850'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <img
+                          src={targetUser?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}
+                          alt={targetUser?.name || 'User'}
+                          className="w-7 h-7 rounded-full object-cover shrink-0 border border-slate-700"
+                        />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-white truncate max-w-[160px]">
+                              {targetUser?.name || uid}
+                            </span>
+                            {isSelf && (
+                              <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                                Akun Anda (Dilewati)
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-slate-500 font-mono">
+                            {targetUser?.email || uid.slice(0, 10) + '...'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 flex items-center gap-2">
+                        {targetUser?.isSuspended ? (
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30">
+                            Terkunci
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                            Aktif
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsBulkSuspendModalOpen(null)}
+                  disabled={isProcessingAction}
+                  className="px-4 py-2.5 rounded-xl border border-slate-750 text-slate-300 hover:bg-slate-800 text-xs font-bold transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExecuteBulkSuspension}
+                  disabled={isProcessingAction}
+                  className={`px-5 py-2.5 rounded-xl text-white text-xs font-bold shadow-lg flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer ${
+                    isBulkSuspendModalOpen.isSuspending 
+                      ? 'bg-red-600 hover:bg-red-500 shadow-red-600/30' 
+                      : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
+                  }`}
+                >
+                  {isProcessingAction ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Memproses...</span>
+                    </>
+                  ) : isBulkSuspendModalOpen.isSuspending ? (
+                    <>
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>Bekukan {selectedUserIds.filter(id => id !== currentUser.id).length} Akun</span>
+                    </>
+                  ) : (
+                    <>
+                      <Unlock className="w-3.5 h-3.5" />
+                      <span>Buka Blokir {selectedUserIds.length} Akun</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

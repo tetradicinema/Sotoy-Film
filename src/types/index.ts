@@ -317,7 +317,22 @@ export interface UploadedFile {
   uploadedAt: string;
 }
 
-export type NotificationType = 'comment' | 'like' | 'mention' | 'reply' | 'editor_request' | 'follow' | 'reaction';
+export interface AccountAppeal {
+  id: string;
+  userId: string;
+  userName: string;
+  userHandle?: string;
+  userEmail?: string;
+  userAvatar?: string;
+  userRole?: UserRole;
+  reason: string;
+  createdAt: string;
+  status: 'pending' | 'approved' | 'rejected';
+  adminNote?: string;
+  resolvedAt?: string;
+}
+
+export type NotificationType = 'comment' | 'like' | 'mention' | 'reply' | 'editor_request' | 'follow' | 'reaction' | 'account_status';
 
 export interface NotificationSender {
   id: string;
@@ -338,4 +353,40 @@ export interface NotificationItem {
   createdAt: string;
   sender: NotificationSender;
 }
+
+export type AuditLogActionType = 
+  | 'account_deleted'
+  | 'bulk_accounts_deleted'
+  | 'account_suspended'
+  | 'account_unsuspended'
+  | 'bulk_accounts_suspended'
+  | 'bulk_accounts_unsuspended'
+  | 'role_override'
+  | 'bulk_roles_override'
+  | 'appeal_approved'
+  | 'appeal_rejected'
+  | 'content_taken_down'
+  | 'content_report_dismissed'
+  | 'critic_approved'
+  | 'critic_rejected'
+  | 'custom_badge_override';
+
+export interface AuditLog {
+  id: string;
+  action: AuditLogActionType;
+  actorId: string;
+  actorName: string;
+  actorEmail?: string;
+  actorRole: UserRole;
+  actorAvatar?: string;
+  targetId?: string;
+  targetName?: string;
+  targetEmail?: string;
+  targetRole?: string;
+  targetType?: 'user' | 'appeal' | 'report' | 'critic_submission' | 'content';
+  details?: string;
+  metadata?: Record<string, any>;
+  timestamp: string;
+}
+
 

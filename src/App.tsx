@@ -31,6 +31,7 @@ import { OnboardingPage } from './components/Pages/OnboardingPage';
 import { LoginModal } from './components/Modals/LoginModal';
 import { SocialShareModal } from './components/Modals/SocialShareModal';
 import { ComposeBuzzModal } from './components/Modals/ComposeBuzzModal';
+import { SuspendedAccountModal } from './components/Modals/SuspendedAccountModal';
 import { MobileBottomNav } from './components/Navigation/MobileBottomNav';
 import { Sparkles, CheckCircle, X } from 'lucide-react';
 
@@ -116,6 +117,9 @@ const AppContent: React.FC = () => {
 
       {/* Compose Buzz Modal */}
       <ComposeBuzzModal />
+
+      {/* Suspended Account Blocking Modal & Appeal Form */}
+      <SuspendedAccountModal />
 
       {/* Main Navigation Bar */}
       {!isOnboarding && <Navbar />}
@@ -216,6 +220,22 @@ const AppContent: React.FC = () => {
           />
           <Route
             path="/admin/storage"
+            element={
+              <React.Suspense fallback={<PageLoadingFallback />}>
+                <AdminDashboard />
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/admin/appeals"
+            element={
+              <React.Suspense fallback={<PageLoadingFallback />}>
+                <AdminDashboard />
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/admin/audit"
             element={
               <React.Suspense fallback={<PageLoadingFallback />}>
                 <AdminDashboard />
