@@ -23,7 +23,6 @@ import {
   Bookmark,
   Settings,
   Sliders,
-  ShieldCheck,
   Home,
   Users,
   Heart,
@@ -296,26 +295,7 @@ export const Navbar: React.FC = () => {
               <NotificationBell mode="global" />
             )}
 
-            {/* ADMIN MODE Pill Button for Admin (Ungu #7928CA) */}
-            {(isAdmin || currentUser.role === 'admin') ? (
-              <Link
-                to="/admin"
-                id="navbar-admin-mode-pill"
-                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-black tracking-wider transition-all duration-200 border shadow-sm ${
-                  currentView === 'admin-dashboard'
-                    ? 'bg-[#7928CA] text-white border-[#7928CA] shadow-purple-900/50 ring-2 ring-purple-400/40'
-                    : 'bg-[#7928CA]/20 text-purple-300 border-[#7928CA]/60 hover:bg-[#7928CA] hover:text-white'
-                }`}
-                title="Sotoy Admin Control Center"
-              >
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-300"></span>
-                </span>
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">ADMIN MODE</span>
-              </Link>
-            ) : (isWriter || currentUser.role === 'penulis_sotoy' || currentUser.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02') ? (
+            {!(isAdmin || currentUser.role === 'admin') && (isWriter || currentUser.role === 'penulis_sotoy' || currentUser.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02') && (
               <button
                 id="navbar-writer-mode-pill"
                 onClick={() => navigateTo('writer-dashboard')}
@@ -333,7 +313,7 @@ export const Navbar: React.FC = () => {
                 <PenSquare className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">DASBOR PENULIS</span>
               </button>
-            ) : null}
+            )}
 
             {/* Unified Menu Trigger: Circular Profile Photo Avatar Button */}
             <div className="relative" ref={userMenuRef}>
@@ -408,7 +388,7 @@ export const Navbar: React.FC = () => {
 
                   {/* Section 1: Navigasi Situs Utama */}
                   <div className="py-2.5 space-y-1 border-b border-slate-800">
-                    <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-1 mb-1">
+                    <div className="text-slate-400 text-xs font-semibold px-1 mb-1">
                       Navigasi Utama
                     </div>
 
@@ -424,7 +404,7 @@ export const Navbar: React.FC = () => {
                       }`}
                     >
                       <Home className="w-4 h-4 text-[#FF2E7E]" />
-                      <span>Beranda Utama</span>
+                      <span>Beranda</span>
                     </button>
 
                     <button
@@ -439,7 +419,7 @@ export const Navbar: React.FC = () => {
                       }`}
                     >
                       <Film className="w-4 h-4 text-[#FFD000]" />
-                      <span>Database Film</span>
+                      <span>Film</span>
                     </button>
 
                     <button
@@ -454,7 +434,7 @@ export const Navbar: React.FC = () => {
                       }`}
                     >
                       <MessageSquare className="w-4 h-4 text-[#00F0FF]" />
-                      <span>Buzz Komunitas</span>
+                      <span>Komunitas</span>
                     </button>
 
                     <button
@@ -469,7 +449,7 @@ export const Navbar: React.FC = () => {
                       }`}
                     >
                       <Sparkles className="w-4 h-4 text-amber-400" />
-                      <span>Rekomendasi Film AI</span>
+                      <span>Rekomendasi</span>
                     </button>
 
                     <button
@@ -484,14 +464,14 @@ export const Navbar: React.FC = () => {
                       }`}
                     >
                       <Search className="w-4 h-4 text-pink-400" />
-                      <span>Pencarian Lengkap</span>
+                      <span>Cari</span>
                     </button>
                   </div>
 
                   {/* Section 2: Menu Pengguna (Jika Logged In) */}
                   {isLoggedIn && (
                     <div className="py-2.5 space-y-1 border-b border-slate-800">
-                      <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-1 mb-1">
+                      <div className="text-slate-400 text-xs font-semibold px-1 mb-1">
                         Fitur Akun Saya
                       </div>
 
@@ -507,10 +487,7 @@ export const Navbar: React.FC = () => {
                             : 'hover:bg-slate-800/80 text-slate-200'
                         }`}
                       >
-                        <div className="flex items-center gap-2.5">
-                          <UserIcon className="w-4 h-4 text-[#00F0FF]" />
-                          <span>Profil & Dashboard</span>
-                        </div>
+                        <span>Profil</span>
                         <span className="text-xs text-slate-500">→</span>
                       </button>
 
@@ -526,29 +503,9 @@ export const Navbar: React.FC = () => {
                             : 'hover:bg-slate-800/80 text-slate-200'
                         }`}
                       >
-                        <div className="flex items-center gap-2.5">
-                          <Bookmark className="w-4 h-4 text-emerald-400" />
-                          <span>Perpustakaan & Watchlist</span>
-                        </div>
+                        <span>Watchlist</span>
                         <span className="bg-emerald-500/20 text-emerald-300 font-bold text-[10px] px-2 py-0.5 rounded-full">
                           {watchlist.length + savedArticles.length}
-                        </span>
-                      </button>
-
-                      <button
-                        id="menu-reviews-btn"
-                        onClick={() => {
-                          navigateTo('user-profile', { userId: currentUser.id, userTab: 'reviews' });
-                          setRoleDropdownOpen(false);
-                        }}
-                        className="w-full text-left p-2 rounded-xl text-xs flex items-center justify-between hover:bg-slate-800 text-slate-200 transition-colors"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <Star className="w-4 h-4 text-[#FFD000] fill-current" />
-                          <span>Skor & Review Saya</span>
-                        </div>
-                        <span className="bg-amber-500/20 text-[#FFD000] font-bold text-[10px] px-2 py-0.5 rounded-full">
-                          {ratings.filter(r => r.userId === currentUser.id).length}
                         </span>
                       </button>
 
@@ -564,10 +521,7 @@ export const Navbar: React.FC = () => {
                             : 'hover:bg-slate-800/80 text-slate-200'
                         }`}
                       >
-                        <div className="flex items-center gap-2.5">
-                          <Settings className="w-4 h-4 text-purple-400" />
-                          <span>Pengaturan Akun</span>
-                        </div>
+                        <span>Pengaturan</span>
                         <span className="text-xs text-slate-500">→</span>
                       </button>
 
@@ -579,20 +533,13 @@ export const Navbar: React.FC = () => {
                           }}
                           className="w-full text-left p-2 rounded-xl text-xs flex items-center justify-between border border-dashed border-[#FFD000]/30 hover:bg-[#FFD000]/10 text-[#FFD000] font-bold transition-colors"
                         >
-                          <div className="flex items-center gap-2.5">
-                            <Star className="w-4 h-4 fill-current text-[#FFD000]" />
-                            <span>Daftar Si Paling Sotoy</span>
-                          </div>
+                          <span>Daftar Si Paling Sotoy</span>
                           <span>→</span>
                         </button>
                       )}
 
                       {(currentUser.role === 'si_paling_sotoy' || isCritic) && (
-                        <div className="pt-1.5 border-t border-slate-800/50 mt-1.5 space-y-1">
-                          <div className={`text-[9px] font-black uppercase tracking-widest ${getRoleBadgeStyle('si_paling_sotoy').text} px-1 mb-1 flex items-center justify-between`}>
-                            <span>Ruang Kritikus</span>
-                            <RoleBadge role="si_paling_sotoy" size="xs" showTooltip={false} />
-                          </div>
+                        <div className="pt-1.5 border-t border-slate-800/50 mt-1.5">
                           <button
                             id="menu-critic-dashboard-btn"
                             onClick={() => {
@@ -605,9 +552,9 @@ export const Navbar: React.FC = () => {
                                 : 'hover:bg-amber-500/10 text-[#FFD000] font-bold border border-amber-500/30'
                             }`}
                           >
-                            <div className="flex items-center gap-2.5">
-                              <Award className="w-4 h-4 text-[#FFD000]" />
-                              <span>Dasbor Kritikus & Workspace</span>
+                            <div className="flex items-center gap-2">
+                              <span>Kritikus</span>
+                              <RoleBadge role="si_paling_sotoy" size="xs" showTooltip={false} />
                             </div>
                             <span className="text-xs text-[#FFD000]">→</span>
                           </button>
@@ -616,8 +563,8 @@ export const Navbar: React.FC = () => {
 
                       {(currentUser.role === 'penulis_sotoy' || currentUser.role === 'admin' || isWriter || isAdmin || currentUser.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02') && (
                         <div className="pt-1.5 border-t border-slate-800/50 mt-1.5 space-y-1">
-                          <div className={`text-[9px] font-black uppercase tracking-widest ${getRoleBadgeStyle(currentUser.role === 'admin' ? 'admin' : 'penulis_sotoy').text} px-1 mb-1 flex items-center justify-between`}>
-                            <span>CMS Artikel & Redaksi</span>
+                          <div className="text-slate-400 text-xs font-semibold px-1 mb-1 flex items-center justify-between">
+                            <span>CMS Artikel</span>
                             <RoleBadge role={currentUser.role === 'admin' ? 'admin' : 'penulis_sotoy'} size="xs" showTooltip={false} />
                           </div>
                           {(currentUser.role === 'admin' || currentUser.role === 'penulis_sotoy') && (
@@ -633,10 +580,7 @@ export const Navbar: React.FC = () => {
                                   : 'hover:bg-pink-500/10 text-[#FF2E7E] font-bold border border-pink-500/30'
                               }`}
                             >
-                              <div className="flex items-center gap-2.5">
-                                <PenSquare className="w-4 h-4 text-[#FF2E7E]" />
-                                <span>My Workspace (CMS)</span>
-                              </div>
+                              <span>Workspace Penulis</span>
                               <span className="text-xs text-[#FF2E7E]">→</span>
                             </button>
                           )}
@@ -652,10 +596,7 @@ export const Navbar: React.FC = () => {
                                 : 'hover:bg-purple-500/10 text-purple-300 hover:text-white border border-purple-500/20'
                             }`}
                           >
-                            <div className="flex items-center gap-2.5">
-                              <ShieldCheck className="w-4 h-4 text-purple-400" />
-                              <span>{currentUser.role === 'admin' ? 'Full Control CMS (Halaman Khusus)' : 'Workspace CMS (Halaman Khusus)'}</span>
-                            </div>
+                            <span>Halaman CMS</span>
                             <span className="text-xs text-purple-400">→</span>
                           </button>
                           <button
@@ -666,10 +607,7 @@ export const Navbar: React.FC = () => {
                             }}
                             className="w-full text-left p-2 rounded-xl text-xs flex items-center justify-between hover:bg-slate-800 text-slate-200 transition-colors"
                           >
-                            <div className="flex items-center gap-2.5">
-                              <BookOpen className="w-4 h-4 text-emerald-400" />
-                              <span>+ Tulis Artikel Baru</span>
-                            </div>
+                            <span>Tulis Artikel Baru</span>
                             <span className="text-xs text-slate-400">→</span>
                           </button>
                         </div>
@@ -677,8 +615,8 @@ export const Navbar: React.FC = () => {
 
                       {(currentUser.role === 'admin' || isAdmin) && (
                         <div className="pt-1.5 border-t border-slate-800/50 mt-1.5 space-y-1">
-                          <div className={`text-[9px] font-black uppercase tracking-widest ${getRoleBadgeStyle('admin').text} px-1 mb-1 flex items-center justify-between`}>
-                            <span>Akses Admin Panel</span>
+                          <div className="text-slate-400 text-xs font-semibold px-1 mb-1 flex items-center justify-between">
+                            <span>Admin</span>
                             <RoleBadge role="admin" size="xs" showTooltip={false} />
                           </div>
                           <Link
@@ -691,10 +629,7 @@ export const Navbar: React.FC = () => {
                                 : 'hover:bg-purple-500/10 text-purple-300 font-bold border border-purple-500/30'
                             }`}
                           >
-                            <div className="flex items-center gap-2.5">
-                              <ShieldCheck className="w-4 h-4 text-purple-400" />
-                              <span>Sotoy Admin Control Center</span>
-                            </div>
+                            <span>Admin</span>
                             <span className="text-xs text-purple-300">→</span>
                           </Link>
                           <Link
@@ -707,10 +642,7 @@ export const Navbar: React.FC = () => {
                                 : 'hover:bg-purple-500/10 text-purple-300 font-bold border border-purple-500/30'
                             }`}
                           >
-                            <div className="flex items-center gap-2.5">
-                              <FileText className="w-4 h-4 text-purple-400" />
-                              <span>Full Control CMS (Halaman Khusus)</span>
-                            </div>
+                            <span>CMS</span>
                             <span className="text-xs text-purple-300">→</span>
                           </Link>
                           <Link
@@ -723,10 +655,7 @@ export const Navbar: React.FC = () => {
                                 : 'hover:bg-red-500/10 text-red-400 font-bold border border-red-500/30'
                             }`}
                           >
-                            <div className="flex items-center gap-2.5">
-                              <ShieldCheck className="w-4 h-4 text-red-400" />
-                              <span>Verifikasi Kritikus Film</span>
-                            </div>
+                            <span>Verifikasi Kritikus</span>
                             <span className="text-xs text-red-400">→</span>
                           </Link>
                         </div>
@@ -744,10 +673,10 @@ export const Navbar: React.FC = () => {
                           logout();
                           setRoleDropdownOpen(false);
                         }}
-                        className="w-full text-left p-2 rounded-xl text-xs text-red-400 hover:bg-red-500/10 flex items-center gap-2 font-bold transition-colors"
+                        className="w-full text-left p-2 rounded-xl text-xs text-red-400 hover:bg-red-500/10 flex items-center justify-between font-bold transition-colors"
                       >
-                        <LogOut className="w-3.5 h-3.5" />
-                        <span>Keluar (Log Out)</span>
+                        <span>Keluar</span>
+                        <span className="text-xs text-red-400/70">→</span>
                       </button>
                     </div>
                   )}

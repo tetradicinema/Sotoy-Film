@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
@@ -49,6 +49,7 @@ import {
   Loader2,
   Repeat2,
   CornerDownRight,
+  MoreHorizontal,
 } from 'lucide-react';
 import { useApp, GUEST_USER } from '../../context/AppContext';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
@@ -176,6 +177,25 @@ export const UserPage: React.FC = () => {
   const [modalSearchQuery, setModalSearchQuery] = useState('');
   const [librarySubTab, setLibrarySubTab] = useState<'films' | 'articles'>('films');
 
+  // Overflow / 'Lainnya' tabs dropdown state
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
+        setMoreMenuOpen(false);
+      }
+    };
+    if (moreMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [moreMenuOpen]);
+
   // Ensure activeUserTab defaults away from legacy 'community' or 'media' tab
   useEffect(() => {
     if ((activeUserTab as string) === 'community' || (activeUserTab as string) === 'media') {
@@ -270,6 +290,11 @@ export const UserPage: React.FC = () => {
 
   const myWatchlistFilms = films.filter(f => targetWatchlistIds.includes(f.id));
   const mySavedArticles = articles.filter(a => targetSavedArticleIds.includes(a.id));
+
+  // Determine visibility for secondary tabs in overflow menu
+  const showArticlesTab = Boolean(targetUser.role === 'penulis_sotoy' || targetUser.role === 'admin' || isWriter || isAdmin || myArticles.length > 0);
+  const showAdminTab = isOwnProfile && Boolean(currentUser.role === 'admin' || currentUser.id === 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' || currentUser.email === 'eksposurmedia@gmail.com' || isAdmin);
+  const isSecondaryActive = activeUserTab === 'reposts' || activeUserTab === 'articles' || activeUserTab === 'admin';
 
   // Compute stats for the target user
   const averageScore = myReviews.length > 0
@@ -631,10 +656,10 @@ export const UserPage: React.FC = () => {
         </div>
 
         {/* ========================================================================= */}
-        {/* MAIN USER NAVIGATION TABS */}
+        {/* MAIN USER NAVIGATION TABS (PRIMARY + OVERFLOW 'LAINNYA') */}
         {/* ========================================================================= */}
-        <div className="user-profile-tab-wrapper">
-          <div className="user-profile-tab-list flex items-stretch gap-1.5 md:gap-2 pb-1 border-b border-slate-800 w-full overflow-x-auto md:overflow-visible scrollbar-none flex-nowrap">
+        <div className={`user-profile-tab-wrapper ${moreMenuOpen ? 'dropdown-open' : ''}`}>
+          <div className={`user-profile-tab-list flex items-stretch gap-1.5 md:gap-2 pb-1 border-b border-slate-800 w-full scrollbar-none flex-nowrap ${moreMenuOpen ? 'dropdown-open overflow-visible' : 'overflow-x-auto md:overflow-visible'}`}>
             {/* TAB 1: BUZZ (TAB UTAMA DASHBOARD) */}
             <button
               id="user-tab-buzz"
@@ -663,21 +688,7 @@ export const UserPage: React.FC = () => {
               <span>Replies ({myReplies.length})</span>
             </button>
 
-            {/* TAB 3: REPOSTS */}
-            <button
-              id="user-tab-reposts"
-              onClick={() => setActiveUserTab('reposts')}
-              className={`flex-1 min-w-fit px-3 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap ${
-                activeUserTab === 'reposts'
-                  ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Repeat2 className="w-3.5 h-3.5" />
-              <span>Reposts ({myReposts.length})</span>
-            </button>
-
-            {/* TAB 4: SKOR & ULASAN */}
+            {/* TAB 3: SKOR & ULASAN */}
             <button
               id="user-tab-reviews"
               onClick={() => setActiveUserTab('reviews')}
@@ -691,7 +702,7 @@ export const UserPage: React.FC = () => {
               <span>Skor ({myReviews.length})</span>
             </button>
 
-            {/* TAB 5: WATCHLIST & PERPUSTAKAAN */}
+            {/* TAB 4: WATCHLIST & PERPUSTAKAAN */}
             <button
               id="user-tab-watchlist"
               onClick={() => setActiveUserTab('watchlist')}
@@ -704,6 +715,102 @@ export const UserPage: React.FC = () => {
               <Bookmark className="w-3.5 h-3.5" />
               <span>Watchlist ({myWatchlistFilms.length + mySavedArticles.length})</span>
             </button>
+
+            {/* TAB 5: LAINNYA OVERFLOW MENU (REPOSTS, ARTIKEL, ADMIN) */}
+            <div className="relative shrink-0 flex items-stretch" ref={moreMenuRef}>
+              <button
+                id="user-tab-more"
+                onClick={() => setMoreMenuOpen(prev => !prev)}
+                className={`min-w-fit px-3 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap ${
+                  isSecondaryActive || moreMenuOpen
+                    ? 'bg-gradient-to-r from-purple-500/20 to-indigo-500/20 text-purple-300 border border-purple-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                aria-expanded={moreMenuOpen}
+                aria-haspopup="true"
+                title="Menu Tab Lainnya"
+              >
+                <MoreHorizontal className="w-3.5 h-3.5" />
+                <span>Lainnya</span>
+                {isSecondaryActive && (
+                  <span className="w-2 h-2 rounded-full bg-[#00F0FF] ring-2 ring-[#0D0E15]" />
+                )}
+              </button>
+
+              {moreMenuOpen && (
+                <div className="absolute right-0 top-full mt-2 w-56 sm:w-60 bg-[#121324] border border-slate-700/80 rounded-2xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150">
+                  {/* Secondary Tab: Reposts */}
+                  <button
+                    id="user-tab-reposts"
+                    onClick={() => {
+                      setActiveUserTab('reposts');
+                      setMoreMenuOpen(false);
+                    }}
+                    className={`w-full text-left p-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
+                      activeUserTab === 'reposts'
+                        ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-300 border border-emerald-500/40'
+                        : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Repeat2 className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Reposts</span>
+                    </div>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">
+                      {myReposts.length}
+                    </span>
+                  </button>
+
+                  {/* Secondary Tab: Articles (if writer/admin or has articles) */}
+                  {showArticlesTab && (
+                    <button
+                      id="user-tab-articles"
+                      onClick={() => {
+                        setActiveUserTab('articles');
+                        setMoreMenuOpen(false);
+                      }}
+                      className={`w-full text-left p-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
+                        activeUserTab === 'articles'
+                          ? 'bg-pink-500/20 text-pink-300 border border-pink-500/40'
+                          : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <PenSquare className="w-3.5 h-3.5 text-[#FF2E7E]" />
+                        <span>Artikel</span>
+                      </div>
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 font-bold">
+                        {myArticles.length}
+                      </span>
+                    </button>
+                  )}
+
+                  {/* Secondary Tab: Admin Dashboard (when admin) */}
+                  {showAdminTab && (
+                    <button
+                      id="user-tab-admin"
+                      onClick={() => {
+                        setActiveUserTab('admin');
+                        setMoreMenuOpen(false);
+                      }}
+                      className={`w-full text-left p-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
+                        activeUserTab === 'admin'
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                          : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Shield className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Dasbor Admin</span>
+                      </div>
+                      <span className="text-[10px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-black">
+                        ADMIN
+                      </span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

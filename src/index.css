@@ -48,6 +48,10 @@
   border-bottom-right-radius: 0.5rem;
 }
 
+.user-profile-tab-wrapper.dropdown-open::after {
+  display: none;
+}
+
 @media (min-width: 768px) {
   .user-profile-tab-wrapper::after {
     display: none;
@@ -63,6 +67,10 @@
   scrollbar-width: none;
   -ms-overflow-style: none;
   width: 100%;
+}
+
+.user-profile-tab-list.dropdown-open {
+  overflow: visible !important;
 }
 
 .user-profile-tab-list::-webkit-scrollbar {
