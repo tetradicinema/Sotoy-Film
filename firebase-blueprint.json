@@ -80,6 +80,8 @@
         "createdAt": { "type": "string" },
         "likes": { "type": "integer" },
         "repliesCount": { "type": "integer" },
+        "repostsCount": { "type": "integer" },
+        "repostedByUsers": { "type": "object" },
         "tags": { "type": "array" }
       },
       "required": ["id", "author", "content", "createdAt"]

@@ -43,7 +43,7 @@ export interface ModerationReport {
   status: 'pending' | 'resolved' | 'dismissed';
 }
 
-export type UserTab = 'buzz' | 'reviews' | 'watchlist' | 'articles' | 'community' | 'activity' | 'settings' | 'admin' | 'writer';
+export type UserTab = 'buzz' | 'replies' | 'reposts' | 'reviews' | 'watchlist' | 'articles' | 'activity' | 'settings' | 'admin' | 'writer';
 
 export type SettingsSubPage =
   | 'profile'
@@ -277,6 +277,18 @@ export interface BuzzPost {
   myReaction?: ReactionType | null;
   repliesCount: number;
   replies?: BuzzReply[];
+  repostsCount?: number;
+  repostedByUsers?: Record<string, string>; // map of userId -> ISO timestamp
+  isRepost?: boolean;
+  repostedBy?: {
+    id: string;
+    name: string;
+    handle: string;
+    avatar: string;
+    role?: UserRole;
+  };
+  repostedAt?: string;
+  feedKey?: string;
   tags: string[];
   recommendationSignal?: RecommendationSignal;
   feedScore?: number;
@@ -332,7 +344,7 @@ export interface AccountAppeal {
   resolvedAt?: string;
 }
 
-export type NotificationType = 'comment' | 'like' | 'mention' | 'reply' | 'editor_request' | 'follow' | 'reaction' | 'account_status';
+export type NotificationType = 'comment' | 'like' | 'mention' | 'reply' | 'editor_request' | 'follow' | 'reaction' | 'account_status' | 'repost';
 
 export interface NotificationSender {
   id: string;

@@ -29,3 +29,75 @@
   background: #FF2E7E;
 }
 
+/* User Profile Tab List - Flex layouts, overflow indicator & tactile hover scale feedback */
+.user-profile-tab-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.user-profile-tab-wrapper::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 4px;
+  width: 2rem;
+  background: linear-gradient(to left, #0D0E15 15%, rgba(13, 14, 21, 0.8) 50%, transparent 100%);
+  pointer-events: none;
+  z-index: 10;
+  border-bottom-right-radius: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .user-profile-tab-wrapper::after {
+    display: none;
+  }
+}
+
+.user-profile-tab-list {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  width: 100%;
+}
+
+.user-profile-tab-list::-webkit-scrollbar {
+  display: none;
+}
+
+.user-profile-tab-list button {
+  flex: 1 0 auto; /* Keep comfortable min-width on small screens and allow scrolling */
+  min-width: max-content;
+  white-space: nowrap;
+  text-align: center;
+  justify-content: center;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.user-profile-tab-list button:hover {
+  transform: scale(1.03) translateY(-1px);
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Global scrollbar-none utility for scrollable swipe bars */
+.scrollbar-none {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important;  /* IE and Edge */
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari, Opera */
+}
+
+/* Enable touch gestures on overflow elements globally */
+.overflow-x-auto {
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  scroll-behavior: smooth;
+}
+
+

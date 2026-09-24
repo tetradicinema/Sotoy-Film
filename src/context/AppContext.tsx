@@ -295,6 +295,7 @@ interface AppContextType {
   ) => Promise<void>;
   likeBuzzPost: (buzzId: string) => Promise<void>;
   reactToBuzzPost: (buzzId: string, reaction: ReactionType) => Promise<void>;
+  toggleRepostBuzzPost: (buzzId: string) => Promise<boolean>;
   addBuzzReply: (
     buzzId: string,
     content: string,
@@ -525,6 +526,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         myReaction: userReaction,
         likedByMe: userReaction === 'heart',
         likes: heartCount,
+        repostsCount: post.repostsCount || 0,
+        repostedByUsers: post.repostedByUsers || {},
         replies: mappedReplies,
       };
     });
@@ -2485,6 +2488,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       likes: 0,
       likedByMe: false,
       repliesCount: 0,
+      repostsCount: 0,
+      repostedByUsers: {},
       tags: cleanTags,
       replies: [],
       reactions: {
@@ -2643,6 +2648,87 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Like/Unlike Buzz Post in Firestore
   const likeBuzzPost = async (buzzId: string) => {
     await reactToBuzzPost(buzzId, 'heart');
+  };
+
+  // Toggle Repost on a Buzz Post
+  const toggleRepostBuzzPost = async (buzzId: string): Promise<boolean> => {
+    if (!isLoggedIn || !currentUser.id || currentUser.id === GUEST_USER.id) {
+      setLoginModalOpen(true);
+      showToast('Silakan masuk terlebih dahulu untuk me-repost!');
+      return false;
+    }
+
+    const post = rawBuzzList.find(b => b.id === buzzId) || buzzList.find(b => b.id === buzzId);
+    if (!post) return false;
+
+    // Users should not be able to repost their own post
+    if (post.author?.id === currentUser.id) {
+      showToast('Kamu tidak bisa me-repost postinganmu sendiri.', 'info');
+      return false;
+    }
+
+    const currentRepostsMap = post.repostedByUsers ? { ...post.repostedByUsers } : {};
+    const isAlreadyReposted = currentUser.id in currentRepostsMap;
+
+    let updatedRepostsMap: Record<string, string>;
+    let nextCount: number;
+
+    if (isAlreadyReposted) {
+      updatedRepostsMap = { ...currentRepostsMap };
+      delete updatedRepostsMap[currentUser.id];
+      nextCount = Math.max(0, (post.repostsCount || 0) - 1);
+    } else {
+      updatedRepostsMap = {
+        ...currentRepostsMap,
+        [currentUser.id]: new Date().toISOString(),
+      };
+      nextCount = (post.repostsCount || 0) + 1;
+    }
+
+    const updatedPost: BuzzPost = {
+      ...post,
+      repostedByUsers: updatedRepostsMap,
+      repostsCount: nextCount,
+    };
+
+    // Optimistic UI update
+    setRawBuzzList(prev => prev.map(b => b.id === buzzId ? updatedPost : b));
+
+    showToast(
+      !isAlreadyReposted
+        ? 'Postingan berhasil di-repost ke profilmu!'
+        : 'Repost dibatalkan.'
+    );
+
+    try {
+      const sanitizedPayload = JSON.parse(JSON.stringify(updatedPost));
+      delete sanitizedPayload.myReaction;
+      delete sanitizedPayload.likedByMe;
+      delete sanitizedPayload.myVote;
+      await setDoc(doc(db, 'buzz', buzzId), sanitizedPayload);
+
+      // Send notification to author if newly reposted and not self
+      if (!isAlreadyReposted && post.author?.id && post.author.id !== currentUser.id) {
+        await sendNotification({
+          userId: post.author.id,
+          type: 'repost',
+          title: 'Repost Baru di Buzz',
+          message: 'me-repost postingan Anda.',
+          targetView: 'buzz-detail',
+          targetId: buzzId,
+          sender: {
+            id: currentUser.id,
+            name: currentUser.name,
+            avatar: currentUser.avatar,
+            handle: currentUser.handle,
+          },
+        });
+      }
+      return true;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `buzz/${buzzId}`);
+      return false;
+    }
   };
 
   // Add Reply to a Buzz Post in Firestore (Supports threaded replies & mentions & notifications)
@@ -3916,6 +4002,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addBuzzPost,
         likeBuzzPost,
         reactToBuzzPost,
+        toggleRepostBuzzPost,
         addBuzzReply,
         likeBuzzReply,
         addFilmRating,

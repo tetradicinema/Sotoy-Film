@@ -21,6 +21,7 @@ import {
   AtSign,
   User as UserIcon,
   Trash2,
+  Repeat2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
@@ -42,6 +43,7 @@ export const BuzzDetailPage: React.FC = () => {
     setLoginModalOpen,
     navigateTo,
     likeBuzzPost,
+    toggleRepostBuzzPost,
     addBuzzReply,
     likeBuzzReply,
     deleteBuzzPost,
@@ -466,6 +468,31 @@ export const BuzzDetailPage: React.FC = () => {
                   <MessageSquare className="w-3.5 h-3.5 text-[#00F0FF]" />
                   <span>{replies.length} <span className="hidden xs:inline">Balasan</span></span>
                 </div>
+
+                <button
+                  id={`buzz-detail-repost-${buzz.id}`}
+                  onClick={() => toggleRepostBuzzPost(buzz.id)}
+                  disabled={currentUser?.id === buzz.author?.id}
+                  className={`flex items-center gap-1 sm:gap-1.5 transition-colors border p-1.5 sm:px-3 sm:py-1.5 rounded-xl text-xs shrink-0 ${
+                    currentUser?.id && buzz.repostedByUsers?.[currentUser.id]
+                      ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 font-bold'
+                      : currentUser?.id === buzz.author?.id
+                        ? 'bg-slate-900/40 border-slate-800 text-slate-600 cursor-not-allowed opacity-50'
+                        : 'bg-slate-900 border border-slate-800 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-400'
+                  }`}
+                  title={
+                    currentUser?.id === buzz.author?.id
+                      ? 'Kamu tidak bisa me-repost postinganmu sendiri'
+                      : currentUser?.id && buzz.repostedByUsers?.[currentUser.id]
+                        ? 'Batalkan Repost'
+                        : 'Repost — akan muncul di feed pengikutmu'
+                  }
+                >
+                  <Repeat2 className={`w-3.5 h-3.5 ${currentUser?.id && buzz.repostedByUsers?.[currentUser.id] ? 'text-emerald-400 stroke-[2.5]' : ''}`} />
+                  <span className="font-semibold">
+                    {buzz.repostsCount || 0} <span className="hidden sm:inline">Repost</span>
+                  </span>
+                </button>
 
                 <button
                   onClick={handleShare}

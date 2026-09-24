@@ -113,7 +113,9 @@ service cloud.firestore {
         data.author is map &&
         data.author.id is string &&
         (!('upvotes' in data) || data.upvotes is list) &&
-        (!('downvotes' in data) || data.downvotes is list);
+        (!('downvotes' in data) || data.downvotes is list) &&
+        (!('repostsCount' in data) || (data.repostsCount is int || data.repostsCount is number)) &&
+        (!('repostedByUsers' in data) || data.repostedByUsers is map);
     }
 
     function isValidUserRating(data) {
@@ -135,7 +137,7 @@ service cloud.firestore {
       return data.keys().hasAll(['id', 'userId', 'type', 'title', 'message', 'targetView', 'isRead', 'createdAt', 'sender']) &&
         data.id is string && data.id.size() <= 128 &&
         data.userId is string && data.userId.size() <= 128 &&
-        data.type in ['comment', 'like', 'mention', 'reply', 'editor_request', 'follow', 'reaction', 'account_status'] &&
+        data.type in ['comment', 'like', 'mention', 'reply', 'editor_request', 'follow', 'reaction', 'account_status', 'repost'] &&
         data.title is string && data.title.size() <= 200 &&
         data.message is string && data.message.size() <= 1000 &&
         data.targetView is string && data.targetView.size() <= 128 &&
@@ -177,6 +179,19 @@ service cloud.firestore {
       let next = ('reactionsByUser' in incoming()) ? incoming().reactionsByUser : {};
       return next.diff(prev).affectedKeys().hasOnly([request.auth.uid]) &&
              (!(request.auth.uid in next) || (next[request.auth.uid] in ['heart', 'mindblown', 'fire', 'laugh', 'clap']));
+    }
+
+    function isValidRepostedByUsersUpdate() {
+      let prev = ('repostedByUsers' in existing()) ? existing().repostedByUsers : {};
+      let next = ('repostedByUsers' in incoming()) ? incoming().repostedByUsers : {};
+      return next.diff(prev).affectedKeys().hasOnly([request.auth.uid]) &&
+             (!(request.auth.uid in next) || (next[request.auth.uid] is string && next[request.auth.uid].size() <= 64));
+    }
+
+    function isValidRepostsCountDelta() {
+      let prev = ('repostsCount' in existing()) ? existing().repostsCount : 0;
+      let next = incoming().repostsCount;
+      return next == prev + 1 || next == prev - 1;
     }
 
     function isValidRepliesCountDelta() {
@@ -314,7 +329,7 @@ service cloud.firestore {
       allow create: if isSignedIn() && !isSuspended() && isValidId(buzzId) && isValidBuzzPost(incoming());
       allow update: if isSignedIn() && (
         (!isSuspended() && isOwner(existing().author.id) && isValidBuzzPost(incoming())) ||
-        (!isSuspended() && incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'reactions', 'reactionsByUser', 'replies', 'repliesCount', 'upvotes', 'downvotes']) && (
+        (!isSuspended() && incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'reactions', 'reactionsByUser', 'replies', 'repliesCount', 'upvotes', 'downvotes', 'repostsCount', 'repostedByUsers']) && (
           !('reactionsByUser' in incoming().diff(existing()).affectedKeys()) || isValidReactionsByUserUpdate()
         ) && (
           !('reactions' in incoming().diff(existing()).affectedKeys()) || isValidReactionsAggregateUpdate()
@@ -322,6 +337,10 @@ service cloud.firestore {
           !('upvotes' in incoming().diff(existing()).affectedKeys() || 'downvotes' in incoming().diff(existing()).affectedKeys() || 'likes' in incoming().diff(existing()).affectedKeys()) || isValidVotesUpdate()
         ) && (
           !('repliesCount' in incoming().diff(existing()).affectedKeys()) || isValidRepliesCountDelta()
+        ) && (
+          !('repostsCount' in incoming().diff(existing()).affectedKeys()) || isValidRepostsCountDelta()
+        ) && (
+          !('repostedByUsers' in incoming().diff(existing()).affectedKeys()) || isValidRepostedByUsersUpdate()
         )) ||
         isAdmin() ||
         isWriter()

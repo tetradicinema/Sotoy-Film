@@ -11,7 +11,8 @@ import {
   Trash2, 
   X,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  Repeat2
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { NotificationItem, NotificationType, User } from '../../types';
@@ -141,6 +142,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ mode = 'glob
         return <PenTool className="w-4 h-4 text-amber-500" />;
       case 'follow':
         return <UserPlus className="w-4 h-4 text-emerald-500" />;
+      case 'repost':
+        return <Repeat2 className="w-4 h-4 text-emerald-400" />;
       default:
         return <Award className="w-4 h-4 text-red-500" />;
     }

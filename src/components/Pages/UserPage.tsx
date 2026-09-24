@@ -47,12 +47,14 @@ import {
   X,
   Search,
   Loader2,
+  Repeat2,
+  CornerDownRight,
 } from 'lucide-react';
 import { useApp, GUEST_USER } from '../../context/AppContext';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
 import { RoleBadge } from '../Common/RoleBadge';
 import { QuickReactionBar } from '../Common/QuickReactionBar';
-import { User, UserTab, UserSettings } from '../../types';
+import { User, UserTab, UserSettings, BuzzReply, BuzzPost } from '../../types';
 import { StarRating } from '../Common/StarRating';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
@@ -85,6 +87,7 @@ export const UserPage: React.FC = () => {
     updateUserProfile,
     addBuzzPost,
     likeBuzzPost,
+    toggleRepostBuzzPost,
     navigateTo,
     showToast,
     followingIds,
@@ -171,9 +174,14 @@ export const UserPage: React.FC = () => {
   // Follow Modal State: 'followers' | 'following' | 'discover' | null
   const [followModalType, setFollowModalType] = useState<'followers' | 'following' | 'discover' | null>(null);
   const [modalSearchQuery, setModalSearchQuery] = useState('');
-  const [communityFilter, setCommunityFilter] = useState<'all' | 'following' | 'followers'>('all');
-  const [communitySearch, setCommunitySearch] = useState('');
   const [librarySubTab, setLibrarySubTab] = useState<'films' | 'articles'>('films');
+
+  // Ensure activeUserTab defaults away from legacy 'community' or 'media' tab
+  useEffect(() => {
+    if ((activeUserTab as string) === 'community' || (activeUserTab as string) === 'media') {
+      setActiveUserTab('buzz');
+    }
+  }, [activeUserTab, setActiveUserTab]);
 
   // Settings local form state
   const [profileForm, setProfileForm] = useState({
@@ -221,6 +229,33 @@ export const UserPage: React.FC = () => {
          (targetUser.name && r.userName && r.userName.toLowerCase() === targetUser.name.toLowerCase())
   );
   const myArticles = articles.filter(a => a.author.id === targetUser.id || a.author.name === targetUser.name);
+
+  // Derived lists for Replies and Reposts
+  const myReplies = React.useMemo(() => {
+    const list: { reply: BuzzReply; parentPost: BuzzPost }[] = [];
+    buzzList.forEach(post => {
+      if (Array.isArray(post.replies)) {
+        post.replies.forEach(rep => {
+          const isMatch = rep.author?.id === targetUser.id || 
+            (targetUser.handle && rep.author?.handle && rep.author.handle.toLowerCase() === targetUser.handle.toLowerCase());
+          if (isMatch) {
+            list.push({ reply: rep, parentPost: post });
+          }
+        });
+      }
+    });
+    return list.sort((a, b) => new Date(b.reply.createdAt).getTime() - new Date(a.reply.createdAt).getTime());
+  }, [buzzList, targetUser.id, targetUser.handle]);
+
+  const myReposts = React.useMemo(() => {
+    return buzzList
+      .filter(post => post.repostedByUsers && targetUser.id in post.repostedByUsers)
+      .sort((a, b) => {
+        const timeA = new Date(a.repostedByUsers?.[targetUser.id] || a.createdAt).getTime();
+        const timeB = new Date(b.repostedByUsers?.[targetUser.id] || b.createdAt).getTime();
+        return timeB - timeA;
+      });
+  }, [buzzList, targetUser.id]);
 
   // Watchlist & saved items perspective:
   // If viewing own profile, use currentUser's state; if viewing another user, use targetUser.watchlist
@@ -598,97 +633,78 @@ export const UserPage: React.FC = () => {
         {/* ========================================================================= */}
         {/* MAIN USER NAVIGATION TABS */}
         {/* ========================================================================= */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none border-b border-slate-800 flex-nowrap">
-          {/* TAB 1: BUZZ (TAB UTAMA DASHBOARD) */}
-          <button
-            id="user-tab-buzz"
-            onClick={() => setActiveUserTab('buzz')}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all shrink-0 ${
-              activeUserTab === 'buzz'
-                ? 'bg-gradient-to-r from-pink-500/20 to-rose-500/20 text-[#FF2E7E] border border-pink-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-slate-900'
-            }`}
-          >
-            <MessageSquare className="w-4 h-4" />
-            <span>{isOwnProfile ? 'Buzz & Opini' : `Buzz @${targetUser.handle.replace('@', '')}`} ({myBuzz.length})</span>
-          </button>
-
-          {/* TAB 2: SKOR & ULASAN */}
-          <button
-            id="user-tab-reviews"
-            onClick={() => setActiveUserTab('reviews')}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all shrink-0 ${
-              activeUserTab === 'reviews'
-                ? 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-[#FFD000] border border-amber-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-slate-900'
-            }`}
-          >
-            <Star className="w-4 h-4" />
-            <span>Skor & Ulasan ({myReviews.length})</span>
-          </button>
-
-          {/* TAB 3: WATCHLIST & PERPUSTAKAAN */}
-          <button
-            id="user-tab-watchlist"
-            onClick={() => setActiveUserTab('watchlist')}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all shrink-0 ${
-              activeUserTab === 'watchlist'
-                ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-slate-900'
-            }`}
-          >
-            <Bookmark className="w-4 h-4" />
-            <span>{isOwnProfile ? 'Watchlist & Library' : 'Watchlist Publik'} ({myWatchlistFilms.length + mySavedArticles.length})</span>
-          </button>
-
-          {/* TAB 4: ARTIKEL EDITORIAL (IF ANY OR WRITER/ADMIN) */}
-          {(myArticles.length > 0 || targetUser.role === 'penulis_sotoy' || targetUser.role === 'admin') && (
+        <div className="user-profile-tab-wrapper">
+          <div className="user-profile-tab-list flex items-stretch gap-1.5 md:gap-2 pb-1 border-b border-slate-800 w-full overflow-x-auto md:overflow-visible scrollbar-none flex-nowrap">
+            {/* TAB 1: BUZZ (TAB UTAMA DASHBOARD) */}
             <button
-              id="user-tab-articles"
-              onClick={() => setActiveUserTab('articles')}
-              className={`px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all shrink-0 ${
-                activeUserTab === 'articles'
-                  ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 border border-purple-500/40 shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-900'
+              id="user-tab-buzz"
+              onClick={() => setActiveUserTab('buzz')}
+              className={`flex-1 min-w-fit px-3 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap ${
+                activeUserTab === 'buzz'
+                  ? 'bg-gradient-to-r from-pink-500/20 to-rose-500/20 text-[#FF2E7E] border border-pink-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
-              <PenSquare className="w-4 h-4" />
-              <span>Artikel Editorial ({myArticles.length})</span>
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>Buzz ({myBuzz.length})</span>
             </button>
-          )}
 
-          {/* TAB 5: KOMUNITAS */}
-          <button
-            id="user-tab-community"
-            onClick={() => setActiveUserTab('community')}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all shrink-0 ${
-              activeUserTab === 'community'
-                ? 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-[#00F0FF] border border-cyan-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-slate-900'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>Komunitas Cinephile</span>
-          </button>
-
-          {/* TAB 6: ADMIN DASHBOARD VIEW (ONLY FOR ADMIN USER) */}
-          {isOwnProfile && (currentUser.role === 'admin' || isAdmin || currentUser.id === 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' || currentUser.email === 'eksposurmedia@gmail.com') && (
+            {/* TAB 2: REPLIES (BALASAN) */}
             <button
-              id="user-tab-admin-dashboard"
-              onClick={() => setActiveUserTab('admin')}
-              className={`px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all shrink-0 ${
-                activeUserTab === 'admin'
-                  ? 'bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-300 border border-amber-500/50 shadow-sm'
-                  : 'text-amber-400/80 hover:text-amber-300 hover:bg-amber-950/20'
+              id="user-tab-replies"
+              onClick={() => setActiveUserTab('replies')}
+              className={`flex-1 min-w-fit px-3 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap ${
+                activeUserTab === 'replies'
+                  ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-[#00F0FF] border border-cyan-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
-              <Shield className="w-4 h-4 text-amber-400" />
-              <span>Dasbor Admin</span>
-              <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500 text-slate-950">
-                Admin View
-              </span>
+              <CornerDownRight className="w-3.5 h-3.5" />
+              <span>Replies ({myReplies.length})</span>
             </button>
-          )}
+
+            {/* TAB 3: REPOSTS */}
+            <button
+              id="user-tab-reposts"
+              onClick={() => setActiveUserTab('reposts')}
+              className={`flex-1 min-w-fit px-3 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap ${
+                activeUserTab === 'reposts'
+                  ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Repeat2 className="w-3.5 h-3.5" />
+              <span>Reposts ({myReposts.length})</span>
+            </button>
+
+            {/* TAB 4: SKOR & ULASAN */}
+            <button
+              id="user-tab-reviews"
+              onClick={() => setActiveUserTab('reviews')}
+              className={`flex-1 min-w-fit px-3 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap ${
+                activeUserTab === 'reviews'
+                  ? 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-[#FFD000] border border-amber-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Star className="w-3.5 h-3.5" />
+              <span>Skor ({myReviews.length})</span>
+            </button>
+
+            {/* TAB 5: WATCHLIST & PERPUSTAKAAN */}
+            <button
+              id="user-tab-watchlist"
+              onClick={() => setActiveUserTab('watchlist')}
+              className={`flex-1 min-w-fit px-3 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap ${
+                activeUserTab === 'watchlist'
+                  ? 'bg-gradient-to-r from-teal-500/20 to-emerald-500/20 text-teal-300 border border-teal-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Bookmark className="w-3.5 h-3.5" />
+              <span>Watchlist ({myWatchlistFilms.length + mySavedArticles.length})</span>
+            </button>
+          </div>
         </div>
 
         {/* ========================================================================= */}
@@ -861,13 +877,312 @@ export const UserPage: React.FC = () => {
                             myReaction={buzz.myReaction}
                           />
                         </div>
-                        <button
-                          onClick={() => navigateTo('buzz-detail', { buzzId: buzz.id })}
-                          className="flex items-center gap-1 sm:gap-1.5 hover:text-[#00F0FF] text-slate-300 transition-colors bg-slate-900 border border-slate-800 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl font-semibold shrink-0 text-xs"
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            onClick={() => navigateTo('buzz-detail', { buzzId: buzz.id })}
+                            className="flex items-center gap-1 sm:gap-1.5 hover:text-[#00F0FF] text-slate-300 transition-colors bg-slate-900 border border-slate-800 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl font-semibold shrink-0 text-xs"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5 text-[#00F0FF]" />
+                            <span>{buzz.repliesCount || 0} <span className="hidden xs:inline">Balasan</span></span>
+                          </button>
+
+                          <button
+                            id={`user-page-repost-${buzz.id}`}
+                            onClick={() => toggleRepostBuzzPost(buzz.id)}
+                            disabled={currentUser?.id === buzz.author?.id}
+                            className={`flex items-center gap-1 sm:gap-1.5 transition-colors border p-1.5 sm:px-3 sm:py-1.5 rounded-xl text-xs shrink-0 ${
+                              currentUser?.id && buzz.repostedByUsers?.[currentUser.id]
+                                ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 font-bold'
+                                : currentUser?.id === buzz.author?.id
+                                  ? 'bg-slate-900/40 border-slate-800 text-slate-600 cursor-not-allowed opacity-50'
+                                  : 'bg-slate-900 border border-slate-800 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-400'
+                            }`}
+                            title={
+                              currentUser?.id === buzz.author?.id
+                                ? 'Kamu tidak bisa me-repost postinganmu sendiri'
+                                : currentUser?.id && buzz.repostedByUsers?.[currentUser.id]
+                                  ? 'Batalkan Repost'
+                                  : 'Repost — akan muncul di feed pengikutmu'
+                            }
+                          >
+                            <Repeat2 className={`w-3.5 h-3.5 ${currentUser?.id && buzz.repostedByUsers?.[currentUser.id] ? 'text-emerald-400 stroke-[2.5]' : ''}`} />
+                            <span className="font-semibold">
+                              {buzz.repostsCount || 0} <span className="hidden sm:inline">Repost</span>
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB 2: REPLIES & BALASAN DISKUSI */}
+        {/* ========================================================================= */}
+        {activeUserTab === 'replies' && (
+          <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+              <div>
+                <h3 className="font-display font-black text-xl text-white flex items-center gap-2.5">
+                  <CornerDownRight className="w-5 h-5 text-[#00F0FF]" />
+                  <span>{isOwnProfile ? 'Balasan & Komentar Saya' : `Balasan Diskusi ${targetUser.name}`}</span>
+                </h3>
+                <p className="text-slate-400 text-xs mt-1">
+                  {isOwnProfile
+                    ? 'Semua tanggapan dan partisipasi kamu di thread buzz komunitas'
+                    : `Semua tanggapan dan opini yang dibagikan ${targetUser.name} di thread komunitas`}
+                </p>
+              </div>
+              <button
+                onClick={() => navigateTo('community-feed')}
+                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-bold text-xs flex items-center gap-1.5 self-start sm:self-auto transition-colors"
+              >
+                <MessageSquare className="w-3.5 h-3.5 text-[#00F0FF]" />
+                <span>Jelajahi Buzz Feed</span>
+              </button>
+            </div>
+
+            {myReplies.length === 0 ? (
+              <div className="text-center py-16 bg-slate-900/50 rounded-2xl border border-slate-800 space-y-4">
+                <CornerDownRight className="w-12 h-12 text-slate-600 mx-auto" />
+                <div className="space-y-1">
+                  <h4 className="font-display font-bold text-white text-base">
+                    {isOwnProfile ? 'Belum ada balasan' : `${targetUser.name} belum membalas buzz apapun`}
+                  </h4>
+                  <p className="text-slate-400 text-xs max-w-sm mx-auto">
+                    {isOwnProfile
+                      ? 'Ikuti diskusi seru di komunitas dan berikan tanggapanmu terhadap opini film lainnya.'
+                      : 'Pengguna ini belum memberikan komentar atau tanggapan di diskusi manapun.'}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {myReplies.map(({ reply, parentPost }) => {
+                  const replyAuthorAvatar = reply.author?.avatar || targetUser.avatar;
+                  const replyAuthorName = reply.author?.name || targetUser.name;
+                  const replyAuthorRole = reply.author?.role || targetUser.role;
+
+                  return (
+                    <div
+                      key={reply.id}
+                      onClick={() => navigateTo('buzz-detail', { buzzId: parentPost.id })}
+                      className="bg-slate-900/80 border border-slate-800 hover:border-cyan-500/40 rounded-2xl p-5 space-y-3.5 transition-all cursor-pointer group"
+                    >
+                      {/* Context badge: Replying to ... */}
+                      <div className="flex items-center justify-between text-xs text-slate-400 pb-2.5 border-b border-slate-800/60">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <CornerDownRight className="w-3.5 h-3.5 text-[#00F0FF] shrink-0" />
+                          <span>
+                            {reply.replyToUser ? (
+                              <>
+                                Membalas <span className="font-bold text-slate-200">@{reply.replyToUser.handle?.replace('@', '') || reply.replyToUser.name}</span>
+                              </>
+                            ) : (
+                              <>
+                                Membalas postingan <span className="font-bold text-slate-200">{parentPost.author?.name || 'Pengguna'}</span>
+                              </>
+                            )}
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-slate-500" title={formatFullDateTime(reply.createdAt)}>
+                          {formatRelativeTime(reply.createdAt)}
+                        </span>
+                      </div>
+
+                      {/* Parent post snippet */}
+                      <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3 text-xs text-slate-400 line-clamp-2">
+                        <span className="font-bold text-slate-300 block mb-0.5">
+                          {parentPost.author?.name}:
+                        </span>
+                        <span className="text-slate-400 italic">
+                          "{parentPost.content.length > 140 ? parentPost.content.slice(0, 140) + '...' : parentPost.content}"
+                        </span>
+                      </div>
+
+                      {/* User's Reply Content */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2.5">
+                          <img
+                            src={replyAuthorAvatar}
+                            alt={replyAuthorName}
+                            className="w-7 h-7 rounded-lg object-cover ring-1 ring-slate-700"
+                          />
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-xs text-white">{replyAuthorName}</span>
+                            <RoleBadge role={replyAuthorRole} size="sm" />
+                          </div>
+                        </div>
+
+                        <p className="text-slate-200 text-xs sm:text-sm leading-relaxed whitespace-pre-line pl-1">
+                          {reply.content}
+                        </p>
+                      </div>
+
+                      {/* Reply Footer: Likes count and View thread button */}
+                      <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between text-xs text-slate-400">
+                        <div className="flex items-center gap-1.5 text-rose-400 font-semibold">
+                          <Heart className="w-3.5 h-3.5 fill-rose-500/20 text-rose-500" />
+                          <span>{reply.likes || 0} Suka</span>
+                        </div>
+
+                        <span className="text-slate-400 group-hover:text-[#00F0FF] transition-colors flex items-center gap-1 font-semibold text-xs">
+                          <span>Lihat di Utas Lengkap</span>
+                          <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB 3: REPOSTS */}
+        {/* ========================================================================= */}
+        {activeUserTab === 'reposts' && (
+          <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+              <div>
+                <h3 className="font-display font-black text-xl text-white flex items-center gap-2.5">
+                  <Repeat2 className="w-5 h-5 text-emerald-400" />
+                  <span>{isOwnProfile ? 'Postingan yang Saya Repost' : `Repost ${targetUser.name}`}</span>
+                </h3>
+                <p className="text-slate-400 text-xs mt-1">
+                  {isOwnProfile
+                    ? 'Arsip semua buzz menarik dari kurator lain yang kamu bagikan ulang ke profilmu'
+                    : `Postingan buzz dari komunitas yang di-repost oleh ${targetUser.name}`}
+                </p>
+              </div>
+              <button
+                onClick={() => navigateTo('community-feed')}
+                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-bold text-xs flex items-center gap-1.5 self-start sm:self-auto transition-colors"
+              >
+                <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Jelajahi Buzz Feed</span>
+              </button>
+            </div>
+
+            {myReposts.length === 0 ? (
+              <div className="text-center py-16 bg-slate-900/50 rounded-2xl border border-slate-800 space-y-4">
+                <Repeat2 className="w-12 h-12 text-slate-600 mx-auto" />
+                <div className="space-y-1">
+                  <h4 className="font-display font-bold text-white text-base">
+                    {isOwnProfile ? 'Belum ada postingan yang di-repost' : `${targetUser.name} belum me-repost apapun`}
+                  </h4>
+                  <p className="text-slate-400 text-xs max-w-sm mx-auto">
+                    {isOwnProfile
+                      ? 'Temukan opini film atau teori menarik di Buzz Feed dan tekan tombol Repost untuk membagikannya di sini.'
+                      : 'Pengguna ini belum me-repost opini atau diskusi buzz dari kurator lain.'}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {myReposts.map(buzz => {
+                  const authorAvatar = buzz.author?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
+                  const authorName = buzz.author?.name || 'Pengguna Sotoy';
+
+                  return (
+                    <div
+                      key={`repost-${buzz.id}`}
+                      className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-3 hover:border-slate-700 transition-colors"
+                    >
+                      {/* Repost Header Indicator */}
+                      <div className="flex items-center gap-1.5 text-xs text-emerald-400/90 font-bold mb-1 pl-0.5">
+                        <Repeat2 className="w-3.5 h-3.5" />
+                        <span>Direpost oleh {isOwnProfile ? 'kamu' : targetUser.name}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div
+                          onClick={() => navigateTo('user-profile', { userId: buzz.author?.id || targetUser.id })}
+                          className="flex items-center gap-2.5 cursor-pointer group"
                         >
-                          <MessageSquare className="w-3.5 h-3.5 text-[#00F0FF]" />
-                          <span>{buzz.repliesCount} <span className="hidden xs:inline">Balasan</span></span>
-                        </button>
+                          <img
+                            src={authorAvatar}
+                            alt={authorName}
+                            className="w-8 h-8 rounded-xl object-cover ring-1 ring-slate-700 group-hover:ring-[#FF2E7E] transition-all"
+                          />
+                          <div>
+                            <span className="font-bold text-xs text-white block group-hover:text-[#FF2E7E] transition-colors">{authorName}</span>
+                            <span className="text-[10px] text-slate-400" title={formatFullDateTime(buzz.createdAt)}>{formatRelativeTime(buzz.createdAt)}</span>
+                          </div>
+                        </div>
+                        {buzz.skorSotoyMention && (
+                          <div className="bg-black/60 border border-[#FFD000]/40 px-2.5 py-1 rounded-xl text-[#FFD000] font-black text-xs flex items-center gap-1">
+                            <Star className="w-3 h-3 fill-current" />
+                            <span>{buzz.skorSotoyMention.toFixed(1)}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <p className="text-slate-200 text-xs sm:text-sm leading-relaxed whitespace-pre-line">
+                        {buzz.content}
+                      </p>
+
+                      <BuzzImageAttachment src={buzz.image} alt={`Foto postingan ${buzz.author?.name}`} />
+
+                      {buzz.taggedFilm && (
+                        <div
+                          onClick={() => navigateTo('film-detail', { filmId: buzz.taggedFilm!.id })}
+                          className="p-2.5 rounded-xl bg-black/40 border border-slate-800 flex items-center justify-between hover:border-slate-700 cursor-pointer"
+                        >
+                          <span className="text-xs font-bold text-[#00F0FF]">
+                            🎬 {buzz.taggedFilm.title} ({buzz.taggedFilm.year})
+                          </span>
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+                        </div>
+                      )}
+
+                      <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-2 text-xs text-slate-400">
+                        <div className="overflow-x-auto scrollbar-none min-w-0 flex-1 pr-1">
+                          <QuickReactionBar
+                            buzzId={buzz.id}
+                            reactions={buzz.reactions}
+                            myReaction={buzz.myReaction}
+                          />
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            onClick={() => navigateTo('buzz-detail', { buzzId: buzz.id })}
+                            className="flex items-center gap-1 sm:gap-1.5 hover:text-[#00F0FF] text-slate-300 transition-colors bg-slate-900 border border-slate-800 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl font-semibold shrink-0 text-xs"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5 text-[#00F0FF]" />
+                            <span>{buzz.repliesCount || 0} <span className="hidden xs:inline">Balasan</span></span>
+                          </button>
+
+                          <button
+                            id={`repost-tab-action-${buzz.id}`}
+                            onClick={() => toggleRepostBuzzPost(buzz.id)}
+                            disabled={currentUser?.id === buzz.author?.id}
+                            className={`flex items-center gap-1 sm:gap-1.5 transition-colors border p-1.5 sm:px-3 sm:py-1.5 rounded-xl text-xs shrink-0 ${
+                              currentUser?.id && buzz.repostedByUsers?.[currentUser.id]
+                                ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 font-bold'
+                                : currentUser?.id === buzz.author?.id
+                                  ? 'bg-slate-900/40 border-slate-800 text-slate-600 cursor-not-allowed opacity-50'
+                                  : 'bg-slate-900 border border-slate-800 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-400'
+                            }`}
+                            title={
+                              currentUser?.id === buzz.author?.id
+                                ? 'Kamu tidak bisa me-repost postinganmu sendiri'
+                                : currentUser?.id && buzz.repostedByUsers?.[currentUser.id]
+                                  ? 'Batalkan Repost'
+                                  : 'Repost — akan muncul di feed pengikutmu'
+                            }
+                          >
+                            <Repeat2 className={`w-3.5 h-3.5 ${currentUser?.id && buzz.repostedByUsers?.[currentUser.id] ? 'text-emerald-400 stroke-[2.5]' : ''}`} />
+                            <span className="font-semibold">
+                              {buzz.repostsCount || 0} <span className="hidden sm:inline">Repost</span>
+                            </span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -1381,226 +1696,7 @@ export const UserPage: React.FC = () => {
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 5: JARINGAN CINEPHILE (SALING FOLLOW) */}
-        {/* ========================================================================= */}
-        {activeUserTab === 'community' && (
-          <div className="space-y-6">
-            {/* Header & Description */}
-            <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="space-y-1">
-                <h3 className="font-display font-black text-xl text-white flex items-center gap-2.5">
-                  <Users className="w-5 h-5 text-[#00F0FF]" />
-                  <span>Jaringan Komunitas & Saling Follow</span>
-                </h3>
-                <p className="text-slate-400 text-xs">
-                  Temukan sesama penikmat film, kurator sotoy, dan kritikus sinema. Saling follow untuk bertukar sudut pandang ulasan.
-                </p>
-              </div>
-
-              {/* Quick stats pills */}
-              <div className="flex items-center gap-2 self-start md:self-auto">
-                <button
-                  onClick={() => setFollowModalType('followers')}
-                  className="px-3.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 hover:border-slate-700 transition-colors flex items-center gap-1.5"
-                >
-                  <span className="text-[#00F0FF] font-black">{targetFollowersCount}</span>
-                  <span>Pengikut</span>
-                </button>
-                <button
-                  onClick={() => setFollowModalType('following')}
-                  className="px-3.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 hover:border-slate-700 transition-colors flex items-center gap-1.5"
-                >
-                  <span className="text-[#FF2E7E] font-black">{targetFollowingCount}</span>
-                  <span>Mengikuti</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Filter & Search Bar */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="flex items-center gap-2 bg-slate-900/80 p-1 rounded-2xl border border-slate-800 w-full sm:w-auto">
-                <button
-                  onClick={() => setCommunityFilter('all')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    communityFilter === 'all'
-                      ? 'bg-gradient-to-r from-blue-500/30 to-cyan-500/30 text-[#00F0FF] border border-cyan-500/40 shadow-sm'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Semua Kurator ({allUsers.length})
-                </button>
-                <button
-                  onClick={() => setCommunityFilter('following')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    communityFilter === 'following'
-                      ? 'bg-gradient-to-r from-pink-500/30 to-rose-500/30 text-[#FF2E7E] border border-pink-500/40 shadow-sm'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Sedang Diikuti ({followingIds.length})
-                </button>
-                <button
-                  onClick={() => setCommunityFilter('followers')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    communityFilter === 'followers'
-                      ? 'bg-gradient-to-r from-amber-500/30 to-yellow-500/30 text-[#FFD000] border border-amber-500/40 shadow-sm'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Pengikut ({followersIds.length})
-                </button>
-              </div>
-
-              {/* Search user */}
-              <div className="relative w-full sm:w-72">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Cari kurator, nama, @handle..."
-                  value={communitySearch}
-                  onChange={e => setCommunitySearch(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF]"
-                />
-              </div>
-            </div>
-
-            {/* Users Grid */}
-            {(() => {
-              const baseList = allUsers.filter(u => {
-                if (communityFilter === 'following') return followingIds.includes(u.id);
-                if (communityFilter === 'followers') return followersIds.includes(u.id);
-                return true;
-              });
-
-              const filtered = baseList.filter(u =>
-                u.name.toLowerCase().includes(communitySearch.toLowerCase()) ||
-                u.handle.toLowerCase().includes(communitySearch.toLowerCase()) ||
-                u.bio.toLowerCase().includes(communitySearch.toLowerCase()) ||
-                u.roleTitle.toLowerCase().includes(communitySearch.toLowerCase())
-              );
-
-              if (filtered.length === 0) {
-                return (
-                  <div className="bg-[#121324] border border-slate-800 rounded-3xl p-10 text-center space-y-3">
-                    <Users className="w-10 h-10 text-slate-600 mx-auto" />
-                    <h4 className="text-sm font-bold text-white">Tidak Ada Kurator Ditemukan</h4>
-                    <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                      {communityFilter === 'following'
-                        ? 'Kamu belum mengikuti siapapun. Jelajahi daftar kurator dan klik "+ Ikuti" untuk mulai membangun jaringan sinemamu.'
-                        : 'Tidak ada kurator yang cocok dengan pencarian kata kunci tersebut.'}
-                    </p>
-                  </div>
-                );
-              }
-
-              return (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filtered.map(u => {
-                    const isSelf = u.id === currentUser.id;
-                    const following = isFollowing(u.id);
-
-                    return (
-                      <div
-                        key={u.id}
-                        className="bg-[#121324] border border-slate-800 hover:border-[#00F0FF]/40 rounded-2xl p-4 transition-all flex flex-col justify-between gap-4 shadow-lg group"
-                      >
-                        <div className="space-y-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div
-                              onClick={() => navigateTo('user-profile', { userId: u.id })}
-                              className="flex items-center gap-3 cursor-pointer"
-                              title={`Kunjungi profil ${u.name}`}
-                            >
-                              <img
-                                src={u.avatar}
-                                alt={u.name}
-                                className="w-12 h-12 rounded-xl object-cover ring-2 ring-slate-700 group-hover:ring-[#00F0FF] transition-all"
-                              />
-                              <div>
-                                <div className="text-sm font-bold text-white group-hover:text-[#00F0FF] transition-colors flex items-center gap-1.5">
-                                  <span>{u.name}</span>
-                                  {isSelf && (
-                                    <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-bold">
-                                      Kamu
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-xs text-slate-400">{u.handle}</div>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="inline-block text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider bg-slate-900 border border-slate-800 text-slate-300">
-                            {u.roleTitle}
-                          </div>
-
-                          <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">
-                            {u.bio || 'Penikmat sinema aktif di Sotoy Film.'}
-                          </p>
-                        </div>
-
-                        <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                            <span>
-                              <b className="text-white">{u.followersCount ?? u.followers?.length ?? 12}</b> Pengikut
-                            </span>
-                            <span>•</span>
-                            <span>
-                              <b className="text-white">{u.totalReviews}</b> Ulasan
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              onClick={() => navigateTo('user-profile', { userId: u.id })}
-                              className="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 text-xs font-bold transition-colors"
-                              title="Buka halaman profil"
-                            >
-                              Lihat
-                            </button>
-
-                            {!isSelf && (
-                              <button
-                                onClick={() => {
-                                  if (!isLoggedIn) {
-                                    setLoginModalOpen(true);
-                                    showToast(`Silakan masuk untuk mengikuti ${u.name}!`);
-                                    return;
-                                  }
-                                  toggleFollowUser(u.id);
-                                }}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                                  following
-                                    ? 'bg-slate-800 text-slate-300 border border-slate-700 hover:bg-red-500/20 hover:text-red-400'
-                                    : 'bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] text-white shadow-md hover:brightness-110 active:scale-95'
-                                }`}
-                              >
-                                {following ? (
-                                  <>
-                                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                                    <span>Mengikuti</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <UserPlus className="w-3.5 h-3.5" />
-                                    <span>+ Ikuti</span>
-                                  </>
-                                )}
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })()}
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* TAB 6: ADMIN DASHBOARD (KHUSUS ADMIN USER VIEW) */}
+        {/* ADMIN DASHBOARD (KHUSUS ADMIN USER VIEW) */}
         {/* ========================================================================= */}
         {activeUserTab === 'admin' && (isOwnProfile && (currentUser.role === 'admin' || currentUser.id === 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' || currentUser.email === 'eksposurmedia@gmail.com')) && (
           <div className="pt-2">

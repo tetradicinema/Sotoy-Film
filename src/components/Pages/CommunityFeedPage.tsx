@@ -33,6 +33,7 @@ import {
   Trash2,
   Image as ImageIcon,
   Loader2,
+  Repeat2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
@@ -92,10 +93,10 @@ const getPostAgeInHours = (createdAt: string): number => {
 
 /**
  * Applies an author diversity / anti-clustering pass on a score-ranked list of posts.
- * Prevents any single author from appearing more than once within any window of 3
+ * Prevents any single author/reposter from appearing more than once within any window of 3
  * consecutive positions in the feed (i.e. not in the immediate last 2 positions of the output).
- * If the pool contains fewer than 3 distinct authors, it guarantees that no two consecutive
- * adjacent positions share the same author (alternating pattern), preserving score hierarchy.
+ * If the pool contains fewer than 3 distinct actors, it guarantees that no two consecutive
+ * adjacent positions share the same actor (alternating pattern), preserving score hierarchy.
  */
 function applyAuthorDiversity(
   scoreRankedList: BuzzPost[],
@@ -107,21 +108,23 @@ function applyAuthorDiversity(
   const diversified: BuzzPost[] = [];
   const lookbackCount = Math.max(1, windowSize - 1); // For window of 3, inspect last 2 positions
 
-  while (remaining.length > 0) {
-    // 1. First priority: Find highest-scoring post whose author is not in the last (windowSize - 1) positions
-    const recentAuthorIds = new Set(
-      diversified.slice(-lookbackCount).map(post => post.author.id)
-    );
-    let nextIndex = remaining.findIndex(post => !recentAuthorIds.has(post.author.id));
+  const getActorId = (post: BuzzPost) =>
+    post.isRepost && post.repostedBy ? post.repostedBy.id : post.author.id;
 
-    // 2. Second priority: If no candidate exists from a 3rd distinct author (e.g. only 2 authors present),
-    // prevent adjacent back-to-back clustering by avoiding the immediate previous author
+  while (remaining.length > 0) {
+    // 1. First priority: Find highest-scoring post whose author/reposter is not in the last (windowSize - 1) positions
+    const recentActorIds = new Set(
+      diversified.slice(-lookbackCount).map(getActorId)
+    );
+    let nextIndex = remaining.findIndex(post => !recentActorIds.has(getActorId(post)));
+
+    // 2. Second priority: If no candidate exists from a 3rd distinct actor, prevent adjacent back-to-back clustering
     if (nextIndex === -1 && diversified.length > 0) {
-      const immediatePreviousAuthorId = diversified[diversified.length - 1].author.id;
-      nextIndex = remaining.findIndex(post => post.author.id !== immediatePreviousAuthorId);
+      const immediatePreviousActorId = getActorId(diversified[diversified.length - 1]);
+      nextIndex = remaining.findIndex(post => getActorId(post) !== immediatePreviousActorId);
     }
 
-    // 3. Fallback: If all remaining candidates belong to the only remaining author in the pool
+    // 3. Fallback: If all remaining candidates belong to the only remaining actor in the pool
     if (nextIndex === -1) {
       nextIndex = 0;
     }
@@ -157,6 +160,7 @@ export const CommunityFeedPage: React.FC = () => {
     setLoginModalOpen,
     addBuzzPost,
     likeBuzzPost,
+    toggleRepostBuzzPost,
     deleteBuzzPost,
     navigateTo,
     showToast,
@@ -293,9 +297,46 @@ export const CommunityFeedPage: React.FC = () => {
   }, [buzzList, activeTagFilter]);
 
   const filteredBuzz = useMemo(() => {
-    let list = [...buzzList];
+    // 1. Synthesize repost entries for each (post, reposterId, repostTimestamp) combination
+    const synthesizedPool: BuzzPost[] = [];
 
-    // 1. Tag filtering (if active tag filter is chosen)
+    buzzList.forEach(post => {
+      // Original post entry
+      synthesizedPool.push({
+        ...post,
+        isRepost: false,
+        feedKey: post.id,
+      });
+
+      // Synthetic repost entries
+      if (post.repostedByUsers) {
+        Object.entries(post.repostedByUsers).forEach(([reposterId, repostTimestamp]) => {
+          const reposterUser =
+            allUsers.find(u => u.id === reposterId) ||
+            (currentUser?.id === reposterId ? currentUser : null);
+
+          synthesizedPool.push({
+            ...post,
+            isRepost: true,
+            repostedBy: {
+              id: reposterId,
+              name: reposterUser?.name || 'Pengguna Sotoy',
+              handle: reposterUser?.handle || '@user',
+              avatar:
+                reposterUser?.avatar ||
+                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+              role: reposterUser?.role,
+            },
+            repostedAt: repostTimestamp,
+            feedKey: `${post.id}-repost-${reposterId}`,
+          });
+        });
+      }
+    });
+
+    let list = synthesizedPool;
+
+    // 2. Tag filtering (if active tag filter is chosen)
     if (activeTagFilter !== 'all') {
       const target = activeTagFilter.toLowerCase().replace(/^#/, '');
       list = list.filter(b => {
@@ -305,24 +346,39 @@ export const CommunityFeedPage: React.FC = () => {
       });
     }
 
-    // 2. Tab view filtering & scoring
+    // 3. Tab view filtering & scoring
     if (buzzFeedTab === 'following') {
-      // Predictable, reverse-chronological feed of only followed accounts
+      // "FOLLOWING" TAB: Include if author is followed OR reposter is followed
       return list
-        .filter(b => followingIds.includes(b.author.id))
-        .sort((a, b) => getPostTimestampMs(b.createdAt) - getPostTimestampMs(a.createdAt));
+        .filter(item => {
+          if (item.isRepost && item.repostedBy) {
+            return followingIds.includes(item.repostedBy.id);
+          }
+          return followingIds.includes(item.author.id);
+        })
+        .sort((a, b) => {
+          const aTime =
+            a.isRepost && a.repostedAt
+              ? getPostTimestampMs(a.repostedAt)
+              : getPostTimestampMs(a.createdAt);
+          const bTime =
+            b.isRepost && b.repostedAt
+              ? getPostTimestampMs(b.repostedAt)
+              : getPostTimestampMs(b.createdAt);
+          return bTime - aTime;
+        });
     }
 
     if (buzzFeedTab === 'saved') {
-      return list.filter(b => savedBuzzIds.includes(b.id));
+      return buzzList.filter(b => savedBuzzIds.includes(b.id));
     }
 
     if (buzzFeedTab === 'liked') {
-      return list.filter(b => b.likedByMe || (b.myReaction !== undefined && b.myReaction !== null));
+      return buzzList.filter(b => b.likedByMe || (b.myReaction !== undefined && b.myReaction !== null));
     }
 
     if (buzzFeedTab === 'trending') {
-      return list.sort((a, b) => {
+      return [...buzzList].sort((a, b) => {
         const aReactions = a.reactions ? Object.values(a.reactions).reduce((s, v) => s + (v || 0), 0) : (a.likes || 0);
         const bReactions = b.reactions ? Object.values(b.reactions).reduce((s, v) => s + (v || 0), 0) : (b.likes || 0);
         const aScore = aReactions + (a.repliesCount || 0) * 2;
@@ -331,14 +387,16 @@ export const CommunityFeedPage: React.FC = () => {
       });
     }
 
-    // Default 'for-you' tab: Multi-signal personalized feed scoring
+    // Default 'for-you' tab: Multi-signal personalized feed scoring across original posts and repost entries
     const scoredList = list
       .map(post => {
-        // A. Recency Score (smooth decay over time, scale 0 to 100)
-        const ageHours = getPostAgeInHours(post.createdAt);
+        // A. Recency Score (use repost timestamp if repost, otherwise original post timestamp)
+        const effectiveTimestamp =
+          post.isRepost && post.repostedAt ? post.repostedAt : post.createdAt;
+        const ageHours = getPostAgeInHours(effectiveTimestamp);
         const recencyScore = 100 / (1 + Math.pow(ageHours / 20, 1.25));
 
-        // B. Engagement Score (reactions + replies, scale 0 to 60)
+        // B. Engagement Score (reactions + replies from original post)
         const totalReactions = post.reactions
           ? Object.values(post.reactions).reduce((sum, v) => sum + (v || 0), 0)
           : (post.likes || 0);
@@ -348,12 +406,13 @@ export const CommunityFeedPage: React.FC = () => {
         const engagementScore = Math.min(60, (totalReactions * 2) + (repliesCount * 4));
 
         // C. Author Affinity Score with time decay (scale 0 to 35)
-        // Author affinity naturally fades the older the post gets, so older posts from followed
-        // authors don't perpetually crowd out fresh, relevant community conversations.
-        const isFollowedAuthor = followingIds.includes(post.author.id);
-        const isOwnPost = Boolean(currentUser?.id && post.author.id === currentUser.id);
+        // Score using the REPOSTER for repost entries, or the ORIGINAL AUTHOR for normal posts
+        const actorId =
+          post.isRepost && post.repostedBy ? post.repostedBy.id : post.author.id;
+        const isFollowedActor = followingIds.includes(actorId);
+        const isOwnActor = Boolean(currentUser?.id && actorId === currentUser.id);
         const affinityDecayFactor = 1 / (1 + Math.pow(ageHours / 24, 1.25));
-        const rawAuthorAffinity = isFollowedAuthor ? 35 : (isOwnPost ? 20 : 0);
+        const rawAuthorAffinity = isFollowedActor ? 35 : (isOwnActor ? 20 : 0);
         const authorAffinityScore = rawAuthorAffinity * affinityDecayFactor;
 
         // D. Interest Match Score (overlap between post topics and user interest profile)
@@ -407,7 +466,7 @@ export const CommunityFeedPage: React.FC = () => {
           ? (authorAffinityScore * WEIGHT_AUTHOR_AFFINITY) / feedScore
           : 0;
         // Only show 'following' badge when affinity is genuinely a dominant driver of this post's ranking
-        const isAffinityDominant = isFollowedAuthor && affinityContributionFraction >= 0.28;
+        const isAffinityDominant = isFollowedActor && affinityContributionFraction >= 0.28;
 
         if (interestScore >= 18 && topMatchedTag) {
           recommendationSignal = {
@@ -419,7 +478,10 @@ export const CommunityFeedPage: React.FC = () => {
         } else if (isAffinityDominant) {
           recommendationSignal = {
             type: 'following',
-            label: 'Dari kreator yang kamu ikuti',
+            label:
+              post.isRepost && post.repostedBy
+                ? `Direpost oleh ${post.repostedBy.name}`
+                : 'Dari kreator yang kamu ikuti',
             score: feedScore,
           };
         } else if (engagementScore >= 35) {
@@ -438,10 +500,9 @@ export const CommunityFeedPage: React.FC = () => {
       })
       .sort((a, b) => (b.feedScore || 0) - (a.feedScore || 0));
 
-    // Apply author diversity / anti-clustering pass so no author appears more than once
-    // within any window of 3 consecutive positions in the final feed.
+    // Apply author/reposter diversity anti-clustering pass
     return applyAuthorDiversity(scoredList, 3);
-  }, [buzzList, buzzFeedTab, followingIds, savedBuzzIds, activeTagFilter, interestProfile, currentUser?.id]);
+  }, [buzzList, allUsers, buzzFeedTab, followingIds, savedBuzzIds, activeTagFilter, interestProfile, currentUser?.id]);
 
   const handleShareBuzz = (post: typeof buzzList[0]) => {
     const postFilm = post.taggedFilm ? films.find(f => f.id === post.taggedFilm?.id) || post.taggedFilm : null;
@@ -992,7 +1053,7 @@ export const CommunityFeedPage: React.FC = () => {
 
               return (
                 <motion.div
-                  key={post.id}
+                  key={post.feedKey || post.id}
                   layout="position"
                   initial={{ opacity: 0, y: 16, scale: 0.98 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1003,9 +1064,34 @@ export const CommunityFeedPage: React.FC = () => {
                     y: { duration: 0.22, ease: 'easeOut' },
                     scale: { duration: 0.22, ease: 'easeOut' },
                   }}
-                  id={`buzz-feed-card-${post.id}`}
+                  id={`buzz-feed-card-${post.feedKey || post.id}`}
                   className="bg-[#121324] border border-slate-800/80 hover:border-slate-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl transition-colors space-y-3.5 sm:space-y-4"
                 >
+                {/* Repost Indicator Header */}
+                {post.isRepost && post.repostedBy && (
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigateTo('user-profile', { userId: post.repostedBy!.id });
+                    }}
+                    className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-emerald-400 cursor-pointer transition-colors pb-2 border-b border-slate-800/60 group/repost"
+                    title={`Lihat profil ${post.repostedBy.name}`}
+                  >
+                    <Repeat2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 stroke-[2.2]" />
+                    <span>
+                      Direpost oleh{' '}
+                      <span className="text-slate-200 group-hover/repost:text-emerald-300 font-bold hover:underline">
+                        {post.repostedBy.name}
+                      </span>
+                    </span>
+                    {post.repostedAt && (
+                      <span className="text-[11px] text-slate-500 font-normal">
+                        • {formatRelativeTime(post.repostedAt)}
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 {/* Post Author Info */}
                 <div className="flex items-center justify-between gap-2.5">
                   <div
@@ -1272,6 +1358,31 @@ export const CommunityFeedPage: React.FC = () => {
                       <MessageSquare className="w-3.5 h-3.5 text-[#00F0FF] group-hover:scale-110 transition-transform" />
                       <span className="font-semibold">
                         {(post.replies && post.replies.length > 0 ? post.replies.length : post.repliesCount) || 0} <span className="hidden xs:inline">Balasan</span>
+                      </span>
+                    </button>
+
+                    <button
+                      id={`buzz-repost-${post.id}`}
+                      onClick={() => toggleRepostBuzzPost(post.id)}
+                      disabled={currentUser?.id === post.author?.id}
+                      className={`flex items-center gap-1 sm:gap-1.5 transition-colors border p-1.5 sm:px-3 sm:py-1.5 rounded-xl text-xs shrink-0 ${
+                        currentUser?.id && post.repostedByUsers?.[currentUser.id]
+                          ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 font-bold'
+                          : currentUser?.id === post.author?.id
+                            ? 'bg-slate-900/40 border-slate-800 text-slate-600 cursor-not-allowed opacity-50'
+                            : 'bg-slate-900/80 hover:bg-slate-800 border-slate-800 text-slate-300 hover:text-emerald-400'
+                      }`}
+                      title={
+                        currentUser?.id === post.author?.id
+                          ? 'Kamu tidak bisa me-repost postinganmu sendiri'
+                          : currentUser?.id && post.repostedByUsers?.[currentUser.id]
+                            ? 'Batalkan Repost'
+                            : 'Repost — akan muncul di feed pengikutmu'
+                      }
+                    >
+                      <Repeat2 className={`w-3.5 h-3.5 ${currentUser?.id && post.repostedByUsers?.[currentUser.id] ? 'text-emerald-400 stroke-[2.5]' : ''}`} />
+                      <span className="font-semibold">
+                        {post.repostsCount || 0} <span className="hidden sm:inline">Repost</span>
                       </span>
                     </button>
 
