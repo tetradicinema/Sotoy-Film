@@ -2,14 +2,14 @@
 
 @layer base {
   body {
-    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Plus Jakarta Sans', 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
     background-color: #0D0E15;
     color: #f1f5f9;
   }
   
   h1, h2, h3, h4, h5, h6, .font-display {
-    font-family: 'Poppins', sans-serif;
-    letter-spacing: -0.02em;
+    font-family: 'Outfit', 'Poppins', sans-serif;
+    letter-spacing: -0.025em;
   }
 }
 

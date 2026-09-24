@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, MessageCircle, Clock, ArrowUpRight, Flame } from 'lucide-react';
+import { Clock, ArrowUpRight, Flame, MessageCircle, Eye } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { ArticleCardSkeleton } from '../Skeletons';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
@@ -17,104 +17,84 @@ const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo
     <article
       id={`featured-news-card-${article.id}`}
       onClick={() => navigateTo('article-detail', { articleId: article.id })}
-      className="bg-[#121324] border border-slate-800/80 rounded-3xl overflow-hidden group hover:border-[#FF2E7E]/60 transition-all duration-300 flex flex-col cursor-pointer shadow-lg hover:shadow-2xl hover:shadow-[#FF2E7E]/10"
+      className="bg-[#121320] border border-white/[0.08] hover:border-white/20 rounded-3xl overflow-hidden group transition-all duration-300 flex flex-col cursor-pointer shadow-lg hover:shadow-2xl hover:shadow-black/50"
     >
-      {/* Card Cover Image */}
-      <div className="relative h-48 w-full overflow-hidden">
+      {/* Editorial Card Cover Image */}
+      <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-900">
         <img
           src={article.coverImage}
           alt={article.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#121324] via-transparent to-transparent" />
-
-        {/* Badges */}
-        <div className="absolute top-3 left-3 flex items-center gap-1.5">
-          <span className="bg-[#FF2E7E] text-white text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full tracking-wider">
-            {article.category}
-          </span>
-          <span className="bg-slate-900/80 backdrop-blur text-slate-300 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full">
-            {article.subCategory}
-          </span>
-        </div>
-
-        {/* Likes indicator */}
-        <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-pink-500/30 text-pink-400 text-xs font-bold flex items-center gap-1">
-          <span>♥ {article.likes}</span>
-        </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-[#121320] via-transparent to-transparent opacity-60" />
       </div>
 
-      {/* Card Body */}
-      <div className="p-5 flex-1 flex flex-col justify-between">
+      {/* Editorial Card Body */}
+      <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between">
         <div>
-          {/* Dynamic Author Bar with Skeleton Loading */}
-          {author.loading ? (
-            <div className="flex items-center gap-2 mb-2.5 animate-pulse">
-              <div className="w-5 h-5 rounded-full bg-slate-800 shrink-0" />
-              <div className="h-3 w-20 bg-slate-800 rounded" />
-              <div className="h-3 w-14 bg-slate-800/60 rounded" />
-            </div>
-          ) : (
-            <div className="flex items-center justify-between gap-2 mb-2.5">
-              <div
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigateTo('user-profile', { userId: author.id });
-                }}
-                className="flex items-center gap-2 text-slate-400 text-xs group/author cursor-pointer hover:text-[#00F0FF] transition-colors"
-                title={`Kunjungi profil ${author.displayName || author.name}`}
-              >
-                <img
-                  src={author.avatarURL || author.avatar}
-                  alt={author.displayName || author.name}
-                  className="w-5 h-5 rounded-full object-cover border border-slate-700 group-hover/author:border-[#00F0FF] transition-colors"
-                />
-                <span className="text-white font-medium group-hover/author:text-[#00F0FF] transition-colors truncate max-w-[110px] sm:max-w-none">
-                  {author.displayName || author.name}
-                </span>
-                {author.customBadge && (
-                  <span className="bg-[#FF2E7E]/20 text-[#FF2E7E] text-[9px] font-black px-1.5 py-0.2 rounded border border-[#FF2E7E]/30 uppercase tracking-wider shrink-0">
-                    {author.customBadge}
-                  </span>
-                )}
-              </div>
-
-              <span className="text-[10px] font-semibold text-slate-400 bg-slate-900/80 px-2 py-0.5 rounded-full border border-slate-800 shrink-0">
-                {author.articleCount} {author.articleCount === 1 ? 'artikel' : 'artikel'}
-              </span>
-            </div>
-          )}
-
-          <div className="flex items-center gap-2 text-slate-400 text-xs mb-2">
-            <span className="flex items-center gap-1 text-[11px]">
-              <Clock className="w-3 h-3 text-[#00F0FF]" />
-              {article.readTime}
+          {/* Clean Unboxed Kicker Metadata */}
+          <div className="flex items-center gap-2 text-xs text-slate-400 mb-2.5">
+            <span className="text-[#FF2E7E] font-semibold uppercase tracking-wider text-[11px]">
+              {article.category}
             </span>
-            <span>•</span>
-            <span className="text-[11px] text-slate-400">{article.publishedAt}</span>
+            <span className="text-slate-600" aria-hidden="true">·</span>
+            <span className="capitalize">{article.subCategory}</span>
+            <span className="text-slate-600" aria-hidden="true">·</span>
+            <span className="flex items-center gap-1 text-[11px]">
+              <Clock className="w-3 h-3 text-slate-500" />
+              <span>{article.readTime}</span>
+            </span>
           </div>
 
-          <h3 className="font-display font-bold text-base sm:text-lg text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-2 leading-snug mb-2">
+          {/* Card Title */}
+          <h3 className="font-display font-bold text-base sm:text-lg text-white group-hover:text-amber-200 transition-colors line-clamp-2 leading-snug mb-2.5">
             {article.title}
           </h3>
 
-          <p className="text-slate-400 text-xs line-clamp-2 leading-relaxed mb-4">
+          {/* Excerpt */}
+          <p className="text-slate-400 text-xs sm:text-[13px] line-clamp-2 leading-relaxed mb-4">
             {article.excerpt}
           </p>
         </div>
 
-        {/* Footer Meta */}
-        <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-          <div className="flex items-center gap-3">
+        {/* Card Footer: Attributable Author & Engagement */}
+        <div className="pt-4 border-t border-white/[0.08] flex items-center justify-between text-xs text-slate-400">
+          {/* Author Block */}
+          {author.loading ? (
+            <div className="flex items-center gap-2 animate-pulse">
+              <div className="w-6 h-6 rounded-full bg-slate-800" />
+              <div className="h-3 w-20 bg-slate-800 rounded" />
+            </div>
+          ) : (
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+                navigateTo('user-profile', { userId: author.id });
+              }}
+              className="flex items-center gap-2 group/author cursor-pointer hover:text-white transition-colors"
+              title={`Kunjungi profil ${author.displayName || author.name}`}
+            >
+              <img
+                src={author.avatarURL || author.avatar}
+                alt={author.displayName || author.name}
+                className="w-6 h-6 rounded-full object-cover ring-1 ring-white/10 group-hover/author:ring-[#FF2E7E] transition-all"
+              />
+              <span className="text-slate-300 font-medium text-xs group-hover/author:text-white transition-colors truncate max-w-[120px]">
+                {author.displayName || author.name}
+              </span>
+            </div>
+          )}
+
+          {/* Read affordance */}
+          <div className="flex items-center gap-3 font-mono tabular-nums text-[11px] text-slate-400">
             <span className="flex items-center gap-1">
-              <MessageCircle className="w-3.5 h-3.5 text-slate-500" />
-              {article.commentsCount}
+              <Eye className="w-3.5 h-3.5 text-slate-500" />
+              <span>{article.views.toLocaleString()}</span>
             </span>
-            <span>{article.views.toLocaleString()} views</span>
+            <span className="text-[#FF2E7E] font-sans font-semibold group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
+              Baca →
+            </span>
           </div>
-          <span className="text-[#00F0FF] font-bold group-hover:translate-x-1 transition-transform flex items-center gap-0.5">
-            Baca →
-          </span>
         </div>
       </div>
     </article>
@@ -124,42 +104,33 @@ const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo
 export const FeaturedNews: React.FC = () => {
   const { publishedArticles, isLoadingArticles, navigateTo } = useApp();
 
-  // Pick articles with featured: true that are not heroSlider, plus others
+  // Pick articles with featured: true that are not heroSlider
   const featuredArticles = publishedArticles.filter(a => a.featured && !a.heroSlider).slice(0, 3);
-  const secondaryNews = publishedArticles.filter(a => a.subCategory === 'news' && !a.heroSlider).slice(0, 3);
 
   return (
-    <section id="featured-news-section" className="py-8">
+    <section id="featured-news-section" className="py-6 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-3 border-b border-slate-800">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#FF2E7E]/20 flex items-center justify-center text-[#FF2E7E] shrink-0">
-              <Flame className="w-4 h-4" />
+        <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 mb-6 pb-4 border-b border-white/[0.08]">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-4 bg-[#FF2E7E] rounded-full inline-block" />
+              <h2 className="font-display font-black text-xl sm:text-2xl text-white tracking-tight">
+                Sorotan Liputan & Berita Utama
+              </h2>
             </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="font-display font-black text-lg sm:text-2xl text-white tracking-tight">
-                  Featured News & Hot Scoop
-                </h2>
-                <span className="flex h-2 w-2 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF2E7E] opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FF2E7E]"></span>
-                </span>
-              </div>
-              <p className="text-slate-400 text-xs mt-0.5">
-                Kabar terpanas industri perfilman, box office, dan pengumuman festival terkini
-              </p>
-            </div>
+            <p className="text-slate-400 text-xs sm:text-[13px] mt-1 ml-3.5">
+              Liputan industri film global, pengumuman festival, dan analisis mendalam dari meja redaksi.
+            </p>
           </div>
 
           <button
             id="see-all-news-btn"
             onClick={() => navigateTo('category', { category: 'movies', subCategory: 'news' })}
-            className="self-start sm:self-auto text-xs font-bold text-[#FFD000] hover:text-white flex items-center gap-1 transition-colors bg-slate-900/60 sm:bg-transparent px-3 sm:px-0 py-1.5 sm:py-0 rounded-xl sm:rounded-none border border-slate-800 sm:border-0"
+            className="self-start sm:self-auto text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1 transition-colors"
           >
-            <span>Lihat Semua Berita</span>
-            <ArrowUpRight className="w-4 h-4" />
+            <span>Semua Berita</span>
+            <ArrowUpRight className="w-3.5 h-3.5 text-[#FF2E7E]" />
           </button>
         </div>
 

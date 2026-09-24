@@ -8,13 +8,12 @@ import {
   Star,
   Clock,
   ArrowRight,
-  Sparkles,
-  Layers,
   PenSquare,
+  Sparkles,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
-import { StarRating } from '../Common/StarRating';
+import { GEAR_ADDICT_ITEMS } from '../../data/mockData';
 
 const HeroActiveAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }> = ({ authorId, defaultAuthor }) => {
   const author = useDynamicArticleAuthor(authorId, defaultAuthor);
@@ -23,7 +22,7 @@ const HeroActiveAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }
   if (author.loading) {
     return (
       <div className="flex items-center gap-2 animate-pulse">
-        <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-slate-800 shrink-0" />
+        <div className="w-6 h-6 rounded-full bg-slate-800 shrink-0" />
         <div className="h-3 w-20 bg-slate-800 rounded" />
       </div>
     );
@@ -35,31 +34,27 @@ const HeroActiveAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }
         e.stopPropagation();
         navigateTo('user-profile', { userId: author.id });
       }}
-      className="flex items-center gap-2 group/author cursor-pointer hover:opacity-90 transition-all"
+      className="flex items-center gap-2.5 group/author cursor-pointer"
       title={`Kunjungi profil ${author.displayName || author.name}`}
     >
       <img
         src={author.avatarURL || author.avatar}
         alt={author.displayName || author.name}
-        className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover ring-1 ring-[#FFD000] group-hover/author:ring-[#00F0FF] transition-all"
+        className="w-6 h-6 rounded-full object-cover ring-1 ring-white/20 group-hover/author:ring-[#FF2E7E] transition-all"
       />
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <span className="font-semibold text-white group-hover/author:text-[#00F0FF] transition-colors truncate max-w-[120px] sm:max-w-none">
+      <div className="flex items-center gap-2 text-xs text-slate-300">
+        <span className="font-semibold text-white group-hover/author:text-[#FF2E7E] transition-colors truncate max-w-[140px] sm:max-w-none">
           {author.displayName || author.name}
         </span>
         {author.customBadge && (
-          <span className="bg-[#FFD000]/20 text-[#FFD000] text-[9px] font-black px-1.5 py-0.2 rounded border border-[#FFD000]/30 uppercase tracking-wider">
-            {author.customBadge}
+          <span className="text-[10px] text-amber-400 font-medium">
+            · {author.customBadge}
           </span>
         )}
-        <span className="text-[10px] text-slate-400 font-normal">
-          ({author.articleCount} {author.articleCount === 1 ? 'artikel' : 'artikel'})
-        </span>
       </div>
     </div>
   );
 };
-import { GEAR_ADDICT_ITEMS } from '../../data/mockData';
 
 export const HeroSection: React.FC = () => {
   const { publishedArticles, films, navigateTo, currentUser, isLoggedIn } = useApp();
@@ -82,19 +77,19 @@ export const HeroSection: React.FC = () => {
 
   if (publishedArticles.length === 0 || !activeArticle) {
     return (
-      <section id="home-hero-section" className="relative pt-6 pb-4">
+      <section id="home-hero-section" className="relative pt-6 pb-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-stretch">
-            <div className="lg:col-span-8 flex flex-col">
-              <div className="animate-pulse w-full flex-1 min-h-[420px] sm:min-h-[520px] rounded-2xl sm:rounded-3xl border border-slate-800 bg-[#121324] flex items-center justify-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+            <div className="lg:col-span-8">
+              <div className="animate-pulse w-full min-h-[480px] rounded-3xl border border-white/[0.06] bg-[#121320] flex items-center justify-center">
                 <div className="text-center space-y-3">
-                  <div className="w-10 h-10 border-4 border-[#FF2E7E] border-t-transparent rounded-full animate-spin mx-auto" />
-                  <span className="text-slate-500 font-bold block">Memuat Ulasan Headline...</span>
+                  <div className="w-8 h-8 border-2 border-[#FF2E7E] border-t-transparent rounded-full animate-spin mx-auto" />
+                  <span className="text-slate-400 text-xs font-medium">Memuat Ulasan Headline...</span>
                 </div>
               </div>
             </div>
-            <div className="lg:col-span-4 flex flex-col">
-              <div className="animate-pulse w-full flex-1 rounded-2xl sm:rounded-3xl border border-slate-800 bg-[#121324]" />
+            <div className="lg:col-span-4">
+              <div className="animate-pulse w-full h-full min-h-[480px] rounded-3xl border border-white/[0.06] bg-[#121320]" />
             </div>
           </div>
         </div>
@@ -119,148 +114,134 @@ export const HeroSection: React.FC = () => {
   const toWatchFilms = films.filter(f => f.featuredRecommendation).slice(0, 4);
 
   return (
-    <section id="home-hero-section" className="relative pt-6 pb-4">
+    <section id="home-hero-section" className="relative pt-4 sm:pt-6 pb-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Editorial Creator Action Banner for Penulis Sotoy & Admin */}
+        {/* Editorial Action Strip for Penulis & Admin */}
         {isLoggedIn && (currentUser.role === 'penulis_sotoy' || currentUser.role === 'admin') && (
           <div
             id="author-editorial-quick-banner"
-            className="mb-4 sm:mb-6 bg-gradient-to-r from-[#1b122e] via-[#1a1435] to-[#121428] border border-[#FF2E7E]/40 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 animate-in fade-in slide-in-from-top-3 duration-300"
+            className="mb-5 sm:mb-6 bg-[#131522]/90 border border-white/[0.08] rounded-2xl p-3.5 sm:p-4 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 backdrop-blur-md"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-[#FF2E7E] to-[#FFD000] p-0.5 shadow-lg shadow-[#FF2E7E]/25 shrink-0">
-                <img
-                  src={currentUser.avatar}
-                  alt={currentUser.name}
-                  className="w-full h-full object-cover rounded-[10px] sm:rounded-[14px]"
-                />
-              </div>
+              <img
+                src={currentUser.avatar}
+                alt={currentUser.name}
+                className="w-9 h-9 rounded-full object-cover ring-1 ring-[#FF2E7E]/40 shrink-0"
+              />
               <div className="min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-white font-bold text-sm sm:text-base truncate">
-                    Halo, {currentUser.name}!
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-white font-semibold truncate">
+                    {currentUser.name}
                   </span>
-                  <span className="text-[9px] sm:text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#FF2E7E]/20 text-[#FF2E7E] border border-[#FF2E7E]/30">
-                    {currentUser.role === 'admin' ? 'Admin' : 'Penulis'}
+                  <span className="text-slate-500">·</span>
+                  <span className="text-[#FF2E7E] font-medium text-[11px] uppercase tracking-wider">
+                    {currentUser.role === 'admin' ? 'Pemimpin Redaksi' : 'Penulis Redaksi'}
                   </span>
                 </div>
-                <p className="text-slate-400 text-[11px] sm:text-xs mt-0.5 line-clamp-1 sm:line-clamp-none">
-                  Tulis berita eksklusif, analisis teknis, atau kurasi film terbaru.
+                <p className="text-slate-400 text-[11px] mt-0.5">
+                  Publikasikan liputan festival, ulasan teknis sinema, atau hot take terkini.
                 </p>
               </div>
             </div>
 
-            <div className="w-full sm:w-auto shrink-0">
-              <button
-                id="quick-write-article-hero-btn"
-                onClick={() => navigateTo('write-article')}
-                className="w-full sm:w-auto px-4 sm:px-5 py-2.5 bg-gradient-to-r from-[#FF2E7E] via-[#FF8008] to-[#FFD000] text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-[#FF2E7E]/25 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2"
-              >
-                <PenSquare className="w-4 h-4" />
-                <span>+ Tulis Artikel Baru</span>
-              </button>
-            </div>
+            <button
+              id="quick-write-article-hero-btn"
+              onClick={() => navigateTo('write-article')}
+              className="w-full sm:w-auto px-4 py-2 bg-[#FF2E7E] hover:bg-[#e6206d] text-white font-semibold text-xs rounded-xl shadow-lg shadow-[#FF2E7E]/20 active:scale-95 transition-all flex items-center justify-center gap-2 whitespace-nowrap"
+            >
+              <PenSquare className="w-3.5 h-3.5" />
+              <span>Tulis Artikel Baru</span>
+            </button>
           </div>
         )}
 
-        {/* Two-column grid: Big Slider on Left, Tabs on Right */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-stretch">
+        {/* Master 2-Column Hero: 8-Column Cinematic Showcase + 4-Column Curated Tangga */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
           
-          {/* LEFT: BIG SLIDER (8 Columns) */}
+          {/* LEFT: CINEMATIC COVER SLIDER (8 Columns) */}
           <div className="lg:col-span-8 flex flex-col">
-            <div className="relative w-full flex-1 min-h-[420px] sm:min-h-[520px] rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-800 shadow-2xl bg-[#121324] group">
-              {/* Background Backdrop Image */}
+            <div className="relative w-full flex-1 min-h-[460px] sm:min-h-[540px] rounded-3xl overflow-hidden border border-white/[0.08] shadow-2xl bg-[#0D0E15] group">
+              {/* Background Cover Image with cinematic pan/zoom */}
               <img
                 src={activeArticle.coverImage}
                 alt={activeArticle.title}
                 className="absolute inset-0 w-full h-full object-cover object-center transform transition-transform duration-1000 scale-100 group-hover:scale-105"
               />
 
-              {/* Gradient Overlays for optimal readability */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0D0E15] via-[#0D0E15]/70 to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#0D0E15]/90 via-[#0D0E15]/40 to-transparent" />
+              {/* Measured contrast scrim: at least 4.5:1 text contrast across entire image */}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0A0B10] via-[#0A0B10]/75 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#0A0B10]/90 via-[#0A0B10]/40 to-transparent" />
 
-              {/* Top Bar on Slider: Category Tag & Skor Sotoy */}
-              <div className="absolute top-3 sm:top-6 left-3 sm:left-6 right-3 sm:right-6 flex items-center justify-between z-10">
-                <div className="flex items-center gap-2">
-                  <span className="bg-[#FF2E7E] text-white font-black text-[10px] sm:text-xs uppercase px-2.5 sm:px-3 py-1 rounded-full tracking-wider shadow-md shadow-[#FF2E7E]/30 flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-[#FFD000]" />
-                    <span>{activeArticle.category}</span>
-                    <span className="hidden sm:inline">• {activeArticle.subCategory}</span>
+              {/* Top Row: Clean Unboxed Editorial Kicker & Reading Endorsement */}
+              <div className="absolute top-5 sm:top-7 left-5 sm:left-7 right-5 sm:right-7 flex items-center justify-between z-10">
+                <div className="flex items-center gap-2 text-xs text-slate-300 font-medium tracking-wide">
+                  <span className="text-[#FF2E7E] font-bold uppercase tracking-wider text-[11px]">
+                    {activeArticle.category}
                   </span>
-                  <span className="hidden md:inline-block bg-black/60 backdrop-blur-md text-slate-300 text-xs px-2.5 py-1 rounded-full border border-white/10 font-medium">
-                    Headline Pilihan
-                  </span>
+                  <span className="text-slate-500" aria-hidden="true">·</span>
+                  <span className="capitalize">{activeArticle.subCategory}</span>
+                  <span className="hidden sm:inline text-slate-500" aria-hidden="true">·</span>
+                  <span className="hidden sm:inline text-slate-400">Headline Pilihan</span>
                 </div>
 
-                <div className="bg-black/80 backdrop-blur-md px-2.5 sm:px-3 py-1 rounded-full border border-pink-500/40 shadow-lg text-pink-400 text-xs font-bold flex items-center gap-1.5">
-                  <span>♥ {activeArticle.likes}</span>
+                <div className="flex items-center gap-1.5 text-xs text-slate-300/90 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 font-mono tabular-nums">
+                  <span className="text-rose-400">♥</span>
+                  <span>{activeArticle.likes.toLocaleString()}</span>
                 </div>
               </div>
 
-              {/* Slider Content Bottom Overlay */}
-              <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-8 z-10 flex flex-col justify-end">
-                {/* Author info & Read time */}
-                <div className="flex items-center flex-wrap gap-2 mb-2 sm:mb-3 text-xs text-slate-300">
+              {/* Bottom Editorial Presentation */}
+              <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-8 z-10 flex flex-col justify-end">
+                {/* Author attribution & Read time */}
+                <div className="flex items-center flex-wrap gap-2.5 mb-3 text-xs text-slate-300">
                   <HeroActiveAuthorBadge authorId={activeArticle.authorId} defaultAuthor={activeArticle.author} />
-                  <span className="bg-[#FF2E7E]/20 text-[#FF2E7E] text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded border border-[#FF2E7E]/30 uppercase shrink-0">
-                    Penulis
+                  <span className="text-slate-500" aria-hidden="true">·</span>
+                  <span className="flex items-center gap-1 text-slate-400 text-xs">
+                    <Clock className="w-3.5 h-3.5 text-slate-500" />
+                    <span>{activeArticle.readTime}</span>
                   </span>
-                  <span className="text-slate-500">•</span>
-                  <span className="flex items-center gap-1 text-slate-400 shrink-0 text-[11px] sm:text-xs">
-                    <Clock className="w-3 h-3" />
-                    {activeArticle.readTime}
-                  </span>
+                  <span className="text-slate-500" aria-hidden="true">·</span>
+                  <span className="text-slate-400 text-xs">{activeArticle.publishedAt}</span>
                 </div>
 
-                {/* Main Headline */}
+                {/* Primary Headline */}
                 <h1
                   onClick={() => navigateTo('article-detail', { articleId: activeArticle.id })}
-                  className="font-display font-black text-lg sm:text-3xl md:text-4xl text-white leading-snug sm:leading-tight mb-2 sm:mb-3 cursor-pointer hover:text-[#FFD000] transition-colors line-clamp-3"
+                  className="font-display font-black text-2xl sm:text-3xl md:text-4xl text-white leading-tight mb-3 cursor-pointer hover:text-amber-200 transition-colors line-clamp-3 text-balance"
                 >
                   {activeArticle.title}
                 </h1>
 
                 {/* Excerpt */}
-                <p className="text-slate-300 text-xs sm:text-sm line-clamp-2 max-w-2xl mb-4 sm:mb-5 leading-relaxed">
+                <p className="text-slate-300 text-xs sm:text-sm line-clamp-2 max-w-2xl mb-6 leading-relaxed">
                   {activeArticle.excerpt}
                 </p>
 
-                {/* Actions & Navigation Controls */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-slate-800/80">
+                {/* Footer Controls & Slider Navigation */}
+                <div className="flex items-center justify-between gap-4 pt-4 border-t border-white/[0.08]">
                   <button
                     id="hero-read-article-btn"
                     onClick={() => navigateTo('article-detail', { articleId: activeArticle.id })}
-                    className="bg-gradient-to-r from-[#FF2E7E] to-[#FFD000] text-slate-950 font-black text-xs sm:text-sm uppercase tracking-wider px-4 sm:px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-transform active:scale-95 shadow-lg shadow-[#FF2E7E]/20 hover:brightness-110"
+                    className="bg-[#FF2E7E] hover:bg-[#e6206d] text-white font-semibold text-xs sm:text-sm px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-[#FF2E7E]/25"
                   >
                     <span>Baca Ulasan Lengkap</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
 
-                  {/* Slider Arrows & Dots */}
-                  <div className="flex items-center justify-between sm:justify-end gap-2">
-                    <div className="flex items-center gap-1.5 mr-2">
-                      {sliderArticles.map((_, idx) => (
-                        <button
-                          key={idx}
-                          id={`hero-slide-dot-${idx}`}
-                          onClick={() => setCurrentSlide(idx)}
-                          className={`h-2 rounded-full transition-all ${
-                            currentSlide === idx
-                              ? 'w-6 bg-[#FFD000]'
-                              : 'w-2 bg-slate-600 hover:bg-slate-400'
-                          }`}
-                          aria-label={`Slide ${idx + 1}`}
-                        />
-                      ))}
+                  {/* Minimalist Slide Progress & Controls */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 text-xs font-mono text-slate-400 tabular-nums">
+                      <span className="text-white font-bold">{String(currentSlide + 1).padStart(2, '0')}</span>
+                      <span>/</span>
+                      <span>{String(sliderArticles.length).padStart(2, '0')}</span>
                     </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1">
                       <button
                         id="hero-slider-prev"
                         onClick={handlePrevSlide}
-                        className="w-8 h-8 rounded-lg bg-black/60 hover:bg-[#FF2E7E] text-white border border-white/10 flex items-center justify-center transition-colors"
+                        className="w-8 h-8 rounded-lg bg-black/40 hover:bg-white/10 text-white border border-white/10 flex items-center justify-center transition-colors"
                         aria-label="Previous Slide"
                       >
                         <ChevronLeft className="w-4 h-4" />
@@ -268,7 +249,7 @@ export const HeroSection: React.FC = () => {
                       <button
                         id="hero-slider-next"
                         onClick={handleNextSlide}
-                        className="w-8 h-8 rounded-lg bg-black/60 hover:bg-[#FF2E7E] text-white border border-white/10 flex items-center justify-center transition-colors"
+                        className="w-8 h-8 rounded-lg bg-black/40 hover:bg-white/10 text-white border border-white/10 flex items-center justify-center transition-colors"
                         aria-label="Next Slide"
                       >
                         <ChevronRight className="w-4 h-4" />
@@ -280,100 +261,93 @@ export const HeroSection: React.FC = () => {
             </div>
           </div>
 
-          {/* RIGHT: TABS COMPONENT (Trending, To Watch, Gear Addict) (4 Columns) */}
+          {/* RIGHT: CURATED TANGGA & SELEKSI SINEMA (4 Columns) */}
           <div className="lg:col-span-4 flex flex-col">
-            <div className="bg-[#121324] border border-slate-800 rounded-3xl p-4 sm:p-5 flex-1 flex flex-col shadow-xl">
-              {/* Tabs Navigation Header */}
-              <div className="flex items-center bg-slate-900/90 p-1 rounded-2xl border border-slate-800 mb-4">
+            <div className="bg-[#121320] border border-white/[0.08] rounded-3xl p-5 flex-1 flex flex-col shadow-xl">
+              
+              {/* Segmented Control Filter Tabs */}
+              <div className="flex items-center p-1 bg-black/40 rounded-xl border border-white/[0.06] mb-4">
                 <button
                   id="hero-tab-trending"
                   onClick={() => setActiveTab('trending')}
-                  className={`flex-1 py-2 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
+                  className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
                     activeTab === 'trending'
-                      ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/30'
+                      ? 'bg-white/[0.12] text-white shadow-sm'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  <Flame className="w-3.5 h-3.5" />
+                  <Flame className="w-3.5 h-3.5 text-[#FF2E7E]" />
                   <span>Trending</span>
                 </button>
 
                 <button
                   id="hero-tab-towatch"
                   onClick={() => setActiveTab('to-watch')}
-                  className={`flex-1 py-2 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
+                  className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
                     activeTab === 'to-watch'
-                      ? 'bg-[#00F0FF] text-slate-950 shadow-md shadow-[#00F0FF]/30'
+                      ? 'bg-white/[0.12] text-white shadow-sm'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  <Bookmark className="w-3.5 h-3.5" />
+                  <Bookmark className="w-3.5 h-3.5 text-sky-400" />
                   <span>To Watch</span>
                 </button>
 
                 <button
                   id="hero-tab-gearaddict"
                   onClick={() => setActiveTab('gear-addict')}
-                  className={`flex-1 py-2 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
+                  className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
                     activeTab === 'gear-addict'
-                      ? 'bg-[#FFD000] text-slate-950 shadow-md shadow-[#FFD000]/30'
+                      ? 'bg-white/[0.12] text-white shadow-sm'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  <Camera className="w-3.5 h-3.5" />
-                  <span>Gear Addict</span>
+                  <Camera className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Gear</span>
                 </button>
               </div>
 
               {/* Tab Content 1: TRENDING */}
               {activeTab === 'trending' && (
                 <div className="flex-1 flex flex-col justify-between space-y-3">
-                  <div className="space-y-2.5">
+                  <div className="space-y-2">
                     {trendingFilms.map((film, index) => (
                       <div
                         key={film.id}
                         id={`trending-film-item-${film.id}`}
                         onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                        className="group flex items-center gap-3 p-2.5 rounded-2xl bg-slate-900/50 hover:bg-slate-800/80 border border-slate-800/70 hover:border-[#FFD000]/60 hover:shadow-[0_0_16px_rgba(255,208,0,0.12)] hover:scale-[1.01] transition-all cursor-pointer"
+                        className="group flex items-center gap-3 p-2 rounded-2xl hover:bg-white/[0.04] border border-transparent hover:border-white/[0.06] transition-all cursor-pointer"
                       >
-                        {/* Rank Badge */}
-                        <div
-                          className={`w-7 h-7 rounded-xl font-display font-black text-xs flex items-center justify-center shrink-0 ${
-                            index === 0
-                              ? 'bg-[#FFD000] text-slate-950'
-                              : index === 1
-                              ? 'bg-slate-300 text-slate-950'
-                              : index === 2
-                              ? 'bg-amber-700 text-white'
-                              : 'bg-slate-800 text-slate-400'
-                          }`}
-                        >
-                          #{index + 1}
-                        </div>
+                        {/* Tabular Rank Number */}
+                        <span className={`w-6 font-mono tabular-nums text-xs font-bold text-center ${
+                          index === 0 ? 'text-amber-400' : 'text-slate-500'
+                        }`}>
+                          {String(index + 1).padStart(2, '0')}
+                        </span>
 
-                        {/* Mini Poster */}
+                        {/* Poster */}
                         <img
                           src={film.poster}
                           alt={film.title}
-                          className="w-11 h-14 object-cover rounded-lg shrink-0 group-hover:scale-105 transition-transform"
+                          className="w-10 h-14 object-cover rounded-lg shrink-0 border border-white/10 group-hover:scale-105 transition-transform"
                         />
 
-                        {/* Film Details */}
+                        {/* Metadata & Scores */}
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-white font-bold text-xs truncate group-hover:text-[#FF2E7E] transition-colors">
+                          <h4 className="text-white font-semibold text-xs truncate group-hover:text-amber-200 transition-colors">
                             {film.title}
                           </h4>
-                          <p className="text-slate-400 text-[11px] truncate">
-                            {film.year} • {film.genres.slice(0, 2).join(', ')}
+                          <p className="text-slate-400 text-[11px] truncate mt-0.5">
+                            {film.year} · {film.genres.slice(0, 2).join(', ')}
                           </p>
-                          <div className="mt-1 flex items-center gap-1.5">
-                            <span className="text-[10px] font-medium text-[#FFD000] bg-[#FFD000]/15 px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                              <Star className="w-2.5 h-2.5 fill-current" />
+                          <div className="mt-1 flex items-center gap-2 text-[11px] font-mono tabular-nums">
+                            <span className="text-amber-400 font-medium flex items-center gap-0.5">
+                              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                               <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
-                              <span className="text-[8px] font-bold text-amber-300">Critics</span>
                             </span>
-                            <span className="text-[10px] text-slate-400 font-medium">
-                              ★ {film.skorSotoy.toFixed(1)}
+                            <span className="text-slate-500">·</span>
+                            <span className="text-slate-400 text-[10px]">
+                              Skor Sotoy {film.skorSotoy.toFixed(1)}
                             </span>
                           </div>
                         </div>
@@ -386,7 +360,7 @@ export const HeroSection: React.FC = () => {
                   <button
                     id="see-all-trending-btn"
                     onClick={() => navigateTo('film-database')}
-                    className="w-full py-2.5 rounded-xl border border-slate-800 hover:border-[#FF2E7E] text-slate-300 hover:text-white text-xs font-bold text-center transition-colors flex items-center justify-center gap-1 mt-2"
+                    className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 mt-2"
                   >
                     <span>Jelajahi Tangga Skor Sotoy Lengkap</span>
                     <ArrowRight className="w-3 h-3 text-[#FF2E7E]" />
@@ -397,37 +371,38 @@ export const HeroSection: React.FC = () => {
               {/* Tab Content 2: TO WATCH */}
               {activeTab === 'to-watch' && (
                 <div className="flex-1 flex flex-col justify-between space-y-3">
-                  <div className="space-y-2.5">
+                  <div className="space-y-2">
                     {toWatchFilms.map(film => (
                       <div
                         key={film.id}
                         id={`towatch-film-item-${film.id}`}
                         onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                        className="group flex items-center gap-3 p-2.5 rounded-2xl bg-slate-900/50 hover:bg-slate-800/80 border border-slate-800/70 hover:border-[#FFD000]/60 hover:shadow-[0_0_16px_rgba(255,208,0,0.12)] hover:scale-[1.01] transition-all cursor-pointer"
+                        className="group flex items-center gap-3 p-2 rounded-2xl hover:bg-white/[0.04] border border-transparent hover:border-white/[0.06] transition-all cursor-pointer"
                       >
                         <img
                           src={film.poster}
                           alt={film.title}
-                          className="w-11 h-14 object-cover rounded-lg shrink-0 group-hover:scale-105 transition-transform"
+                          className="w-10 h-14 object-cover rounded-lg shrink-0 border border-white/10 group-hover:scale-105 transition-transform"
                         />
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-white font-bold text-xs truncate group-hover:text-[#00F0FF] transition-colors">
+                          <h4 className="text-white font-semibold text-xs truncate group-hover:text-sky-300 transition-colors">
                             {film.title}
                           </h4>
-                          <p className="text-slate-400 text-[11px] line-clamp-1">
+                          <p className="text-slate-400 text-[11px] line-clamp-1 mt-0.5">
                             {film.curatorNote || film.synopsis}
                           </p>
-                          <div className="mt-1 flex items-center gap-1.5">
+                          <div className="mt-1 flex items-center gap-2 text-[11px]">
                             {film.whereToWatch.slice(0, 1).map((w, idx) => (
                               <span
                                 key={idx}
-                                className="text-[9px] font-black uppercase px-2 py-0.5 rounded text-slate-950 bg-[#00F0FF]"
+                                className="text-sky-400 text-[10px] font-medium"
                               >
                                 {w.platform}
                               </span>
                             ))}
-                            <span className="text-[10px] font-medium text-[#FFD000] ml-auto flex items-center gap-0.5">
-                              <Star className="w-2.5 h-2.5 fill-current" />
+                            <span className="text-slate-600">·</span>
+                            <span className="font-mono tabular-nums text-amber-400 text-[11px] flex items-center gap-0.5">
+                              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                               <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
                             </span>
                           </div>
@@ -439,10 +414,10 @@ export const HeroSection: React.FC = () => {
                   <button
                     id="see-all-towatch-btn"
                     onClick={() => navigateTo('film-recommendations')}
-                    className="w-full py-2.5 rounded-xl border border-slate-800 hover:border-[#00F0FF] text-slate-300 hover:text-white text-xs font-bold text-center transition-colors flex items-center justify-center gap-1 mt-2"
+                    className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 mt-2"
                   >
                     <span>Buka Generator Rekomendasi Film</span>
-                    <ArrowRight className="w-3 h-3 text-[#00F0FF]" />
+                    <ArrowRight className="w-3 h-3 text-sky-400" />
                   </button>
                 </div>
               )}
@@ -450,29 +425,29 @@ export const HeroSection: React.FC = () => {
               {/* Tab Content 3: GEAR ADDICT */}
               {activeTab === 'gear-addict' && (
                 <div className="flex-1 flex flex-col justify-between space-y-3">
-                  <div className="space-y-2.5">
+                  <div className="space-y-2">
                     {GEAR_ADDICT_ITEMS.map(gear => (
                       <div
                         key={gear.id}
                         id={`gear-addict-item-${gear.id}`}
                         onClick={() => navigateTo('category', { category: 'cinema-gear' })}
-                        className="group flex items-center gap-3 p-2.5 rounded-2xl bg-slate-900/50 hover:bg-slate-800/80 border border-slate-800/70 hover:border-[#FFD000]/50 transition-all cursor-pointer"
+                        className="group flex items-center gap-3 p-2 rounded-2xl hover:bg-white/[0.04] border border-transparent hover:border-white/[0.06] transition-all cursor-pointer"
                       >
                         <img
                           src={gear.image}
                           alt={gear.name}
-                          className="w-12 h-12 object-cover rounded-lg shrink-0 group-hover:scale-105 transition-transform"
+                          className="w-12 h-12 object-cover rounded-lg shrink-0 border border-white/10 group-hover:scale-105 transition-transform"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[9px] font-bold uppercase tracking-wider text-[#FFD000]">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-amber-400 font-medium">
                               {gear.badge}
                             </span>
-                            <span className="text-[10px] font-black text-white">
+                            <span className="font-mono tabular-nums text-white text-[11px]">
                               {gear.price}
                             </span>
                           </div>
-                          <h4 className="text-white font-bold text-xs truncate group-hover:text-[#FFD000] transition-colors">
+                          <h4 className="text-white font-semibold text-xs truncate group-hover:text-amber-200 transition-colors mt-0.5">
                             {gear.name}
                           </h4>
                           <p className="text-slate-400 text-[10px] truncate">
@@ -486,10 +461,10 @@ export const HeroSection: React.FC = () => {
                   <button
                     id="see-all-gear-btn"
                     onClick={() => navigateTo('category', { category: 'cinema-gear' })}
-                    className="w-full py-2.5 rounded-xl border border-slate-800 hover:border-[#FFD000] text-slate-300 hover:text-white text-xs font-bold text-center transition-colors flex items-center justify-center gap-1 mt-2"
+                    className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 mt-2"
                   >
                     <span>Lihat Semua Ulasan Cinema Gear</span>
-                    <ArrowRight className="w-3 h-3 text-[#FFD000]" />
+                    <ArrowRight className="w-3 h-3 text-amber-400" />
                   </button>
                 </div>
               )}
