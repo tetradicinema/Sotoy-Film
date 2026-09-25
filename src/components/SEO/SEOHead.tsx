@@ -55,7 +55,7 @@ export interface SEOHeadProps {
 const DEFAULT_TITLE = 'Sotoy Film - Ulasan & Kritik Film Terpercaya';
 const DEFAULT_DESC = 'Platform komunitas & media pop-culture film, series, anime, cinema gear, dan film studies dengan ulasan Skor Sotoy dan diskusi buzz.';
 const DEFAULT_KEYWORDS = 'ulasan film, kritik film, film indonesia, skor sotoy, cinema gear, anime, pop culture';
-const DEFAULT_IMAGE = 'https://www.sotoyfilm.my.id/og-default.jpg';
+const DEFAULT_IMAGE = '/sotoy-logo-full.png';
 const DEFAULT_URL = 'https://www.sotoyfilm.my.id';
 
 /**

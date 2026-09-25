@@ -7,7 +7,6 @@ import {
   PenSquare,
   ChevronDown,
   Search,
-  Clapperboard,
   LogIn,
   User as UserIcon,
   Home,
@@ -130,24 +129,13 @@ export const Navbar: React.FC = () => {
           <div
             id="brand-logo"
             onClick={() => navigateTo('home')}
-            className="flex items-center gap-2.5 cursor-pointer group shrink-0"
+            className="flex items-center cursor-pointer group shrink-0 select-none transition-transform active:scale-95"
           >
-            <div className="w-10 h-10 rounded-xl bg-[#171A1F] border border-white/10 flex items-center justify-center text-[#FF2E7E] transition-all group-hover:border-[#FF2E7E]/50 group-active:scale-95 shadow-sm">
-              <Clapperboard className="w-5 h-5 text-[#FF2E7E] transition-transform group-hover:scale-105" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1 font-display tracking-tight text-xl font-black">
-                <span className="text-white transition-colors">
-                  SOTOY
-                </span>
-                <span className="text-[#FF2E7E]">
-                  FILM
-                </span>
-              </div>
-              <span className="text-[9px] font-semibold tracking-wider text-slate-400 uppercase block -mt-1 font-mono">
-                Pop-Culture & Cinema
-              </span>
-            </div>
+            <img
+              src="/sotoy-logo-full.png"
+              alt="Sotoy Film — Pop-Culture & Cinema"
+              className="h-14 md:h-[68px] w-auto -my-2 object-contain transition-transform duration-300 group-hover:scale-[1.015]"
+            />
           </div>
 
           {/* Desktop Category Navigation */}

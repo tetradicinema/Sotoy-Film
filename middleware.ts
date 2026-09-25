@@ -74,7 +74,7 @@ export default async function middleware(request: Request): Promise<Response> {
 
     let title = 'Sotoy Film';
     let description = 'Platform komunitas & media pop-culture film, series, anime, dan ulasan Skor Sotoy.';
-    let image = 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=1200&q=80';
+    let image = `${baseUrl}/sotoy-logo-full.png`;
     const type = collection === 'films' ? 'video.movie' : 'article';
 
     if (collection === 'films') {
