@@ -203,153 +203,161 @@ export const AdminDashboard: React.FC = () => {
       {/* 3. MODUL MANAGEMENT UTAMA (STANDALONE URLS NAVIGATION LIST) */}
       <div className="space-y-6">
         {/* Navigation Tabs Bar pointing to Standalone URLs */}
-        <nav 
-          className="admin-navigation-list flex items-center gap-2 overflow-x-auto pb-2 border-b border-white/10 scrollbar-none"
-          aria-label="Admin Navigation List"
-        >
-          {/* Link 0: Community Analytics */}
-          <Link
-            to="/admin/analytics"
-            id="admin-tab-analytics"
-            className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
-              activeTab === 'analytics'
-                ? 'bg-[#FF2E7E] text-white shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
-            }`}
+        <div className="relative">
+          <nav 
+            className="admin-navigation-list flex items-center gap-2 overflow-x-auto pb-3 border-b border-white/10 flex-nowrap scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
+            aria-label="Admin Navigation List"
+            style={{
+              scrollbarWidth: 'thin',
+              WebkitOverflowScrolling: 'touch',
+            }}
           >
-            <BarChart3 className="w-4 h-4" />
-            <span>Analisis Pertumbuhan</span>
-          </Link>
+            {/* Link 0: Community Analytics */}
+            <Link
+              to="/admin/analytics"
+              id="admin-tab-analytics"
+              className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
+                activeTab === 'analytics'
+                  ? 'bg-[#FF2E7E] text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4" />
+              <span>Analisis Pertumbuhan</span>
+            </Link>
 
-          {/* Link 1: User Management */}
-          <Link
-            to="/admin/users"
-            id="admin-tab-users"
-            className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
-              activeTab === 'users'
-                ? 'bg-[#FF2E7E] text-white shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>Manajemen Pengguna & Role</span>
-          </Link>
+            {/* Link 1: User Management */}
+            <Link
+              to="/admin/users"
+              id="admin-tab-users"
+              className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
+                activeTab === 'users'
+                  ? 'bg-[#FF2E7E] text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span>Manajemen Pengguna & Role</span>
+            </Link>
 
-          {/* Link 2: Moderation */}
-          <Link
-            to="/admin/moderation"
-            id="admin-tab-moderation"
-            className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 relative ${
-              activeTab === 'moderation'
-                ? 'bg-[#FF2E7E] text-white shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
-            }`}
-          >
-            <ShieldAlert className="w-4 h-4" />
-            <span>Moderasi Komunitas</span>
-            {pendingReportsCount > 0 && (
-              <span className="w-5 h-5 rounded-full bg-white text-slate-950 font-black text-[10px] flex items-center justify-center">
-                {pendingReportsCount}
-              </span>
-            )}
-          </Link>
+            {/* Link 2: Moderation */}
+            <Link
+              to="/admin/moderation"
+              id="admin-tab-moderation"
+              className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 relative ${
+                activeTab === 'moderation'
+                  ? 'bg-[#FF2E7E] text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
+              }`}
+            >
+              <ShieldAlert className="w-4 h-4" />
+              <span>Moderasi Komunitas</span>
+              {pendingReportsCount > 0 && (
+                <span className="w-5 h-5 rounded-full bg-white text-slate-950 font-black text-[10px] flex items-center justify-center">
+                  {pendingReportsCount}
+                </span>
+              )}
+            </Link>
 
-          {/* Link 3: Catalog Manager */}
-          <Link
-            to="/admin/catalog"
-            id="admin-tab-catalog"
-            className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
-              activeTab === 'catalog'
-                ? 'bg-[#FF2E7E] text-white shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
-            }`}
-          >
-            <Film className="w-4 h-4" />
-            <span>Database Film & Series</span>
-          </Link>
+            {/* Link 3: Catalog Manager */}
+            <Link
+              to="/admin/catalog"
+              id="admin-tab-catalog"
+              className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
+                activeTab === 'catalog'
+                  ? 'bg-[#FF2E7E] text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
+              }`}
+            >
+              <Film className="w-4 h-4" />
+              <span>Database Film & Series</span>
+            </Link>
 
-          {/* Link 4: Storage Files */}
-          <Link
-            to="/admin/storage"
-            id="admin-tab-storage"
-            className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
-              activeTab === 'storage'
-                ? 'bg-[#FF2E7E] text-white shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
-            }`}
-          >
-            <HardDrive className="w-4 h-4" />
-            <span>Arsip Media & Berkas</span>
-          </Link>
+            {/* Link 4: Storage Files */}
+            <Link
+              to="/admin/storage"
+              id="admin-tab-storage"
+              className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
+                activeTab === 'storage'
+                  ? 'bg-[#FF2E7E] text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
+              }`}
+            >
+              <HardDrive className="w-4 h-4" />
+              <span>Arsip Media & Berkas</span>
+            </Link>
 
-          {/* Link 5: Appeals */}
-          <Link
-            to="/admin/appeals"
-            id="admin-tab-appeals"
-            className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 relative ${
-              activeTab === 'appeals'
-                ? 'bg-[#FF2E7E] text-white shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
-            }`}
-          >
-            <ShieldCheck className="w-4 h-4" />
-            <span>Banding Akun</span>
-            {pendingAppealsCount > 0 && (
-              <span className="w-5 h-5 rounded-full bg-white text-slate-950 font-black text-[10px] flex items-center justify-center">
-                {pendingAppealsCount}
-              </span>
-            )}
-          </Link>
+            {/* Link 5: Appeals */}
+            <Link
+              to="/admin/appeals"
+              id="admin-tab-appeals"
+              className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 relative ${
+                activeTab === 'appeals'
+                  ? 'bg-[#FF2E7E] text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>Banding Akun</span>
+              {pendingAppealsCount > 0 && (
+                <span className="w-5 h-5 rounded-full bg-white text-slate-950 font-black text-[10px] flex items-center justify-center">
+                  {pendingAppealsCount}
+                </span>
+              )}
+            </Link>
 
-          {/* Link 6: Audit Log Moderasi */}
-          <Link
-            to="/admin/audit"
-            id="admin-tab-audit"
-            className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
-              activeTab === 'audit'
-                ? 'bg-[#FF2E7E] text-white shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
-            }`}
-          >
-            <ScrollText className="w-4 h-4" />
-            <span>Audit Log Moderasi</span>
-          </Link>
+            {/* Link 6: Audit Log Moderasi */}
+            <Link
+              to="/admin/audit"
+              id="admin-tab-audit"
+              className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
+                activeTab === 'audit'
+                  ? 'bg-[#FF2E7E] text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
+              }`}
+            >
+              <ScrollText className="w-4 h-4" />
+              <span>Audit Log Moderasi</span>
+            </Link>
 
-          {/* Link 7: Full Control CMS Standalone URL */}
-          <Link
-            to="/admin/cms"
-            id="admin-tab-cms"
-            className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
-              location.pathname === '/admin/cms' || location.pathname === '/cms'
-                ? 'bg-[#FF2E7E] text-white shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-white/10'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            <span>Full Control CMS</span>
-            <ExternalLink className="w-3 h-3" />
-          </Link>
+            {/* Link 7: Full Control CMS Standalone URL */}
+            <Link
+              to="/admin/cms"
+              id="admin-tab-cms"
+              className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
+                location.pathname === '/admin/cms' || location.pathname === '/cms'
+                  ? 'bg-[#FF2E7E] text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-white/10'
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              <span>Full Control CMS</span>
+              <ExternalLink className="w-3 h-3" />
+            </Link>
 
-          {/* Link 8: Critic Submissions Standalone URL */}
-          <Link
-            to="/admin/submissions"
-            id="admin-tab-submissions"
-            className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
-              location.pathname === '/admin/submissions'
-                ? 'bg-[#FF2E7E] text-white shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-white/10'
-            }`}
-          >
-            <Award className="w-4 h-4" />
-            <span>Verifikasi Kritikus</span>
-            {pendingCriticsCount > 0 && (
-              <span className="w-5 h-5 rounded-full bg-white text-slate-950 font-black text-[10px] flex items-center justify-center">
-                {pendingCriticsCount}
-              </span>
-            )}
-            <ExternalLink className="w-3 h-3" />
-          </Link>
-        </nav>
+            {/* Link 8: Critic Submissions Standalone URL */}
+            <Link
+              to="/admin/submissions"
+              id="admin-tab-submissions"
+              className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
+                location.pathname === '/admin/submissions'
+                  ? 'bg-[#FF2E7E] text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-white/10'
+              }`}
+            >
+              <Award className="w-4 h-4" />
+              <span>Verifikasi Kritikus</span>
+              {pendingCriticsCount > 0 && (
+                <span className="w-5 h-5 rounded-full bg-white text-slate-950 font-black text-[10px] flex items-center justify-center">
+                  {pendingCriticsCount}
+                </span>
+              )}
+              <ExternalLink className="w-3 h-3" />
+            </Link>
+          </nav>
+          {/* Subtle Right Shadow/Gradient indicator to show there is overflow */}
+          <div className="absolute right-0 top-0 bottom-3 w-10 bg-gradient-to-l from-[#0E1013] to-transparent pointer-events-none opacity-80" />
+        </div>
 
         {/* Section Contents Rendered based on Standalone URL */}
         <div className="pt-2">

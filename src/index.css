@@ -110,6 +110,17 @@
   display: none;
 }
 
+.user-profile-tab-list {
+  scroll-snap-type: x mandatory;
+}
+
+@media (max-width: 767px) {
+  .user-profile-tab-list {
+    mask-image: linear-gradient(to right, black 85%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+  }
+}
+
 .user-profile-tab-list button {
   flex: 1 0 auto;
   min-width: max-content;
@@ -117,12 +128,17 @@
   text-align: center;
   justify-content: center;
   transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  scroll-snap-align: start;
 }
 
 .user-profile-tab-list button:hover {
   transform: translateY(-1px);
   background-color: rgba(255, 255, 255, 0.06) !important;
   box-shadow: 0 4px 12px rgba(14, 16, 19, 0.4);
+}
+
+.user-profile-tab-list > div > button {
+  scroll-snap-align: start;
 }
 
 /* Global scrollbar-none utility for scrollable swipe bars */
