@@ -129,12 +129,14 @@ export const Navbar: React.FC = () => {
           <div
             id="brand-logo"
             onClick={() => navigateTo('home')}
-            className="flex items-center cursor-pointer group shrink-0 select-none transition-transform active:scale-95"
+            className="flex items-center cursor-pointer group shrink-0 select-none transition-transform active:scale-95 p-2 -m-2"
           >
             <img
               src="/sotoy-logo-full.png"
               alt="Sotoy Film — Pop-Culture & Cinema"
-              className="h-14 md:h-[68px] w-auto -my-2 object-contain transition-transform duration-300 group-hover:scale-[1.015]"
+              loading="eager"
+              fetchPriority="high"
+              className="h-14 md:h-[68px] w-auto -my-2 object-contain transition-all duration-300 group-hover:scale-[1.015] group-hover:opacity-90"
             />
           </div>
 
