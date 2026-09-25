@@ -74,7 +74,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
     <aside id="editorial-home-sidebar" className="space-y-6">
       
       {/* SIDEBAR WIDGET 1: LIVE BUZZ & OPINI KOMUNITAS */}
-      <div id="sidebar-live-buzz" className="bg-[#121320] border border-white/[0.08] rounded-3xl p-5 shadow-xl">
+      <div id="sidebar-live-buzz" className="bg-[#171A1F] border border-white/[0.08] rounded-3xl p-5 shadow-xl">
         <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.08]">
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-3.5 bg-[#FF2E7E] rounded-full inline-block" />
@@ -135,7 +135,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
 
             <button
               type="submit"
-              className="bg-[#FF2E7E] hover:bg-[#e6206d] text-white text-xs font-semibold px-3 py-1 rounded-lg flex items-center gap-1 transition-all active:scale-95 shadow-md shadow-[#FF2E7E]/20"
+              className="bg-[#FF2E7E] hover:bg-[#e0266e] text-white text-xs font-semibold px-3 py-1 rounded-lg flex items-center gap-1 transition-all active:scale-95 shadow-md shadow-[#FF2E7E]/20"
             >
               <span>Buzz</span>
               <Send className="w-3 h-3" />
@@ -186,7 +186,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                   <Film className="w-3 h-3" />
                   <span>{post.taggedFilm.title}</span>
                   {post.skorSotoyMention && (
-                    <span className="text-amber-400 ml-1 font-mono tabular-nums font-semibold">★ {post.skorSotoyMention.toFixed(1)}</span>
+                    <span className="text-slate-300 ml-1 font-mono tabular-nums font-semibold">★ {post.skorSotoyMention.toFixed(1)}</span>
                   )}
                 </div>
               )}
@@ -239,9 +239,9 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
       </div>
 
       {/* SIDEBAR WIDGET 2: RECOMMENDED ARTICLES */}
-      <div id="sidebar-recommended-articles" className="bg-[#121320] border border-white/[0.08] rounded-3xl p-5 shadow-xl">
+      <div id="sidebar-recommended-articles" className="bg-[#171A1F] border border-white/[0.08] rounded-3xl p-5 shadow-xl">
         <div className="flex items-center gap-2 pb-3 mb-4 border-b border-white/[0.08]">
-          <span className="w-1.5 h-3.5 bg-amber-400 rounded-full inline-block" />
+          <span className="w-1.5 h-3.5 bg-slate-300 rounded-full inline-block" />
           <h3 className="font-display font-bold text-sm text-white">
             Rekomendasi Redaksi
           </h3>
@@ -254,7 +254,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
               onClick={() => navigateTo('article-detail', { articleId: rec.id })}
               className="flex items-center gap-3 p-2 rounded-2xl hover:bg-white/[0.04] transition-colors cursor-pointer group"
             >
-              <span className="font-mono tabular-nums font-bold text-xs text-slate-500 group-hover:text-amber-400 transition-colors w-5 text-center">
+              <span className="font-mono tabular-nums font-bold text-xs text-slate-500 group-hover:text-slate-300 transition-colors w-5 text-center">
                 {String(i + 1).padStart(2, '0')}
               </span>
               <img
@@ -263,7 +263,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                 className="w-12 h-12 object-cover rounded-xl shrink-0 border border-white/10"
               />
               <div className="flex-1 min-w-0">
-                <h4 className="text-xs font-semibold text-white group-hover:text-amber-200 transition-colors line-clamp-2 leading-snug">
+                <h4 className="text-xs font-semibold text-white group-hover:text-slate-200 transition-colors line-clamp-2 leading-snug">
                   {rec.title}
                 </h4>
                 <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
@@ -303,7 +303,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
       {/* SIDEBAR WIDGET 3: CTA BOX */}
       <div
         id="sidebar-community-cta"
-        className="bg-[#121320] border border-[#FF2E7E]/30 rounded-3xl p-5 shadow-xl relative overflow-hidden"
+        className="bg-[#171A1F] border border-[#FF2E7E]/30 rounded-3xl p-5 shadow-xl relative overflow-hidden"
       >
         <div className="text-[#FF2E7E] font-semibold text-xs uppercase tracking-wider mb-1">
           Warga Sotoy Club
@@ -326,7 +326,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
           />
           <button
             type="submit"
-            className="w-full bg-[#FF2E7E] hover:bg-[#e6206d] text-white font-semibold text-xs py-2.5 rounded-xl shadow-lg shadow-[#FF2E7E]/20 transition-all active:scale-95"
+            className="w-full bg-[#FF2E7E] hover:bg-[#e0266e] text-white font-semibold text-xs py-2.5 rounded-xl shadow-lg shadow-[#FF2E7E]/20 transition-all active:scale-95"
           >
             Berlangganan Gratis
           </button>

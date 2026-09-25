@@ -31,7 +31,7 @@ export const AboutUsPage: React.FC = () => {
           </div>
 
           <h1 className="font-display font-black text-3xl sm:text-5xl text-white tracking-tight leading-tight">
-            Berani Mengulas, Bebas Berpendapat, <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF2E7E] via-[#FFD000] to-[#00F0FF]">Tetap Sinematik.</span>
+            Berani Mengulas, Bebas Berpendapat, <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF2E7E] via-[#FF2E7E] to-[#FF2E7E]">Tetap Sinematik.</span>
           </h1>
 
           <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
@@ -43,11 +43,11 @@ export const AboutUsPage: React.FC = () => {
         <AdBannerSlot variant="leaderboard" />
 
         {/* Kisah Awal & Misi */}
-        <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-10 space-y-6 shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-72 h-72 bg-[#00F0FF]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-10 space-y-6 shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-72 h-72 bg-[#FF2E7E]/10 rounded-full blur-3xl pointer-events-none" />
           
           <h2 className="font-display font-black text-2xl text-white flex items-center gap-3">
-            <Sparkles className="w-6 h-6 text-[#FFD000]" />
+            <Sparkles className="w-6 h-6 text-[#FF2E7E]" />
             <span>Mengapa Bernama "Sotoy Film"?</span>
           </h2>
 
@@ -76,13 +76,13 @@ export const AboutUsPage: React.FC = () => {
             {[
               { score: '★ 1.0 - 2.0', label: 'Bencana Sinematik', desc: 'Naskah rapuh, teknis berantakan, atau manipulatif tanpa visi artistik yang jelas.', color: 'border-red-500/40 text-red-400' },
               { score: '★ 3.0 - 4.0', label: 'Kurang Matang', desc: 'Punya secuil potensi namun eksekusi membosankan dan pacing tersendat-sendat.', color: 'border-orange-500/40 text-orange-400' },
-              { score: '★ 5.0 - 6.0', label: 'Solid & Layak Tonton', desc: 'Menghibur, memenuhi ekspektasi genre, dan memiliki momen sinematik yang layak diapresiasi.', color: 'border-yellow-500/40 text-[#FFD000]' },
-              { score: '★ 7.0 - 8.0', label: 'Sangat Direkomendasikan', desc: 'Penyutradaraan prima, akting memikat, sinematografi indah, dan menyentuh emosi penonton.', color: 'border-cyan-500/40 text-[#00F0FF]' },
+              { score: '★ 5.0 - 6.0', label: 'Solid & Layak Tonton', desc: 'Menghibur, memenuhi ekspektasi genre, dan memiliki momen sinematik yang layak diapresiasi.', color: 'border-yellow-500/40 text-[#FF2E7E]' },
+              { score: '★ 7.0 - 8.0', label: 'Sangat Direkomendasikan', desc: 'Penyutradaraan prima, akting memikat, sinematografi indah, dan menyentuh emosi penonton.', color: 'border-cyan-500/40 text-[#FF2E7E]' },
               { score: '★ 9.0 - 10.0', label: 'Mahakarya Abadi', desc: 'Pencapaian sinematik langka yang mendefinisikan zaman dan layak dikenang sepanjang masa.', color: 'border-pink-500/40 text-[#FF2E7E]' },
             ].map((tier, idx) => (
               <div
                 key={idx}
-                className={`bg-[#121324] border ${tier.color} rounded-2xl p-4 flex flex-col justify-between space-y-3`}
+                className={`bg-[#171A1F] border ${tier.color} rounded-2xl p-4 flex flex-col justify-between space-y-3`}
               >
                 <div>
                   <div className="font-display font-black text-lg mb-1">{tier.score}</div>
@@ -95,7 +95,7 @@ export const AboutUsPage: React.FC = () => {
         </div>
 
         {/* 4 Pilar Ekosistem Peran */}
-        <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-10 space-y-8 shadow-xl">
+        <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-10 space-y-8 shadow-xl">
           <div className="max-w-2xl">
             <h2 className="font-display font-black text-2xl text-white mb-2">
               Struktur Peran Komunitas Kami
@@ -107,7 +107,7 @@ export const AboutUsPage: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-3">
-              <div className="flex items-center gap-2 text-[#00F0FF]">
+              <div className="flex items-center gap-2 text-[#FF2E7E]">
                 <Users className="w-5 h-5" />
                 <h3 className="font-display font-black text-base text-white">Warga Sotoy</h3>
               </div>
@@ -117,7 +117,7 @@ export const AboutUsPage: React.FC = () => {
             </div>
 
             <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-3">
-              <div className="flex items-center gap-2 text-[#FFD000]">
+              <div className="flex items-center gap-2 text-[#FF2E7E]">
                 <Award className="w-5 h-5" />
                 <h3 className="font-display font-black text-base text-white">Si Paling Sotoy (Verified Critic)</h3>
               </div>
@@ -149,7 +149,7 @@ export const AboutUsPage: React.FC = () => {
         </div>
 
         {/* CTA Bottom Box */}
-        <div className="p-8 rounded-3xl bg-gradient-to-r from-[#FF2E7E]/20 via-[#121324] to-[#00F0FF]/20 border border-slate-800 text-center space-y-4">
+        <div className="p-8 rounded-3xl bg-gradient-to-r from-[#FF2E7E]/20 via-[#171A1F] to-[#FF2E7E]/20 border border-slate-800 text-center space-y-4">
           <h3 className="font-display font-black text-2xl text-white">
             Ingin Berkolaborasi atau Bergabung Menjadi Penulis?
           </h3>
@@ -159,7 +159,7 @@ export const AboutUsPage: React.FC = () => {
           <div className="flex items-center justify-center gap-4 flex-wrap pt-2">
             <button
               onClick={() => navigateTo('business-inquiries')}
-              className="px-6 py-2.5 rounded-xl bg-[#00F0FF] hover:bg-cyan-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-transform active:scale-95 shadow-lg shadow-[#00F0FF]/20"
+              className="px-6 py-2.5 rounded-xl bg-[#FF2E7E] hover:bg-cyan-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-transform active:scale-95 shadow-lg shadow-[#FF2E7E]/20"
             >
               Hubungi Kemitraan Bisnis →
             </button>

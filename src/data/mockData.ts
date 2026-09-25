@@ -409,8 +409,8 @@ export const INITIAL_FILMS: FilmItem[] = [
     totalVotes: 3420,
     criticsSkorSotoy: 9.8,
     whereToWatch: [
-      { platform: 'Cinema XXI / IMAX', type: 'cinema', badgeColor: '#FF2E7E' },
-      { platform: 'HBO Max', type: 'stream', badgeColor: '#7928CA' },
+      { platform: 'Cinema XXI / IMAX', type: 'cinema', badgeColor: '#00F0FF' },
+      { platform: 'HBO Max', type: 'stream', badgeColor: '#00F0FF' },
     ],
     featuredRecommendation: true,
     trendingRank: 1,
@@ -459,7 +459,7 @@ export const INITIAL_FILMS: FilmItem[] = [
     criticsSkorSotoy: 9.8,
     whereToWatch: [
       { platform: 'Apple TV', type: 'rent', badgeColor: '#00F0FF' },
-      { platform: 'Catchplay+', type: 'stream', badgeColor: '#FFD000' },
+      { platform: 'Catchplay+', type: 'stream', badgeColor: '#00F0FF' },
     ],
     featuredRecommendation: true,
     trendingRank: 2,
@@ -526,7 +526,7 @@ export const INITIAL_FILMS: FilmItem[] = [
     totalVotes: 1890,
     criticsSkorSotoy: 9.2,
     whereToWatch: [
-      { platform: 'Segera di Bioskop', type: 'cinema', badgeColor: '#FF2E7E' },
+      { platform: 'Segera di Bioskop', type: 'cinema', badgeColor: '#00F0FF' },
     ],
     featuredRecommendation: false,
     trendingRank: 4,
@@ -550,7 +550,7 @@ export const INITIAL_FILMS: FilmItem[] = [
     totalVotes: 2980,
     criticsSkorSotoy: 9.6,
     whereToWatch: [
-      { platform: 'KlikFilm', type: 'stream', badgeColor: '#10B981' },
+      { platform: 'KlikFilm', type: 'stream', badgeColor: '#00F0FF' },
       { platform: 'Prime Video', type: 'stream', badgeColor: '#00F0FF' },
     ],
     featuredRecommendation: true,
@@ -575,7 +575,7 @@ export const INITIAL_FILMS: FilmItem[] = [
     totalVotes: 5120,
     criticsSkorSotoy: 9.8,
     whereToWatch: [
-      { platform: 'Netflix', type: 'stream', badgeColor: '#FF2E7E' },
+      { platform: 'Netflix', type: 'stream', badgeColor: '#00F0FF' },
     ],
     featuredRecommendation: true,
     trendingRank: 6,
@@ -599,7 +599,7 @@ export const INITIAL_FILMS: FilmItem[] = [
     totalVotes: 3540,
     criticsSkorSotoy: 9.4,
     whereToWatch: [
-      { platform: 'Netflix', type: 'stream', badgeColor: '#FF2E7E' },
+      { platform: 'Netflix', type: 'stream', badgeColor: '#00F0FF' },
     ],
     featuredRecommendation: true,
     trendingRank: 7,
@@ -626,7 +626,7 @@ export const INITIAL_FILMS: FilmItem[] = [
     totalVotes: 4410,
     criticsSkorSotoy: 9.6,
     whereToWatch: [
-      { platform: 'Catchplay+', type: 'stream', badgeColor: '#FFD000' },
+      { platform: 'Catchplay+', type: 'stream', badgeColor: '#00F0FF' },
     ],
     featuredRecommendation: true,
     trendingRank: 8,
@@ -653,7 +653,7 @@ export const INITIAL_FILMS: FilmItem[] = [
     totalVotes: 2310,
     criticsSkorSotoy: 9.2,
     whereToWatch: [
-      { platform: 'Cinema XXI', type: 'cinema', badgeColor: '#FF2E7E' },
+      { platform: 'Cinema XXI', type: 'cinema', badgeColor: '#00F0FF' },
     ],
     featuredRecommendation: false,
     trendingRank: 9,
@@ -677,7 +677,7 @@ export const INITIAL_FILMS: FilmItem[] = [
     totalVotes: 3950,
     criticsSkorSotoy: 9.8,
     whereToWatch: [
-      { platform: 'Netflix', type: 'stream', badgeColor: '#FF2E7E' },
+      { platform: 'Netflix', type: 'stream', badgeColor: '#00F0FF' },
     ],
     featuredRecommendation: true,
     trendingRank: 10,
@@ -702,7 +702,7 @@ export const INITIAL_FILMS: FilmItem[] = [
     totalVotes: 3620,
     criticsSkorSotoy: 9.4,
     whereToWatch: [
-      { platform: 'Netflix', type: 'stream', badgeColor: '#FF2E7E' },
+      { platform: 'Netflix', type: 'stream', badgeColor: '#00F0FF' },
     ],
     featuredRecommendation: false,
     trendingRank: 11,
@@ -751,7 +751,7 @@ export const INITIAL_FILMS: FilmItem[] = [
     totalVotes: 3200,
     criticsSkorSotoy: 9.8,
     whereToWatch: [
-      { platform: 'KlikFilm', type: 'stream', badgeColor: '#10B981' },
+      { platform: 'KlikFilm', type: 'stream', badgeColor: '#00F0FF' },
     ],
     featuredRecommendation: false,
     trendingRank: 13,

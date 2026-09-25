@@ -48,7 +48,7 @@ export const StarRating: React.FC<StarRatingProps> = ({
               key={i}
               id={`star-item-${i}`}
               onClick={() => handleStarClick(i)}
-              className={`relative ${interactive ? 'cursor-pointer transition-transform hover:scale-110' : ''}`}
+              className={`relative ${interactive ? 'cursor-pointer transition-transform hover:scale-110 active:scale-95' : ''}`}
             >
               {/* Background empty star */}
               <Star className={`${starSizes[size]} text-slate-700 fill-slate-800`} />
@@ -58,7 +58,7 @@ export const StarRating: React.FC<StarRatingProps> = ({
                   className="absolute inset-0 overflow-hidden"
                   style={{ width: `${fillAmount * 100}%` }}
                 >
-                  <Star className={`${starSizes[size]} text-[#FFD000] fill-[#FFD000] drop-shadow-[0_0_6px_rgba(255,208,0,0.5)]`} />
+                  <Star className={`${starSizes[size]} text-[#FFD000] fill-[#FFD000]`} />
                 </div>
               )}
             </div>
@@ -69,16 +69,16 @@ export const StarRating: React.FC<StarRatingProps> = ({
       {showNumber && (
         <span
           id="star-rating-score-badge"
-          className={`font-medium tracking-tight font-display text-[#FFD000] ${
+          className={`font-bold font-mono tabular-nums text-[#FFD000] ${
             size === 'lg' ? 'text-xl' : size === 'md' ? 'text-sm' : 'text-xs'
-          } bg-[#FFD000]/10 px-2 py-0.5 rounded border border-[#FFD000]/30`}
+          } bg-[#FFD000]/10 px-2 py-0.5 rounded-md border border-[#FFD000]/30`}
         >
-          {score.toFixed(1)} <span className="text-slate-400 font-normal text-[10px]">/ 10.0</span>
+          {score.toFixed(1)} <span className="text-[#FFD000]/70 font-normal text-[10px]">/ 10.0</span>
         </span>
       )}
 
       {label && (
-        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider hidden sm:inline-block">
+        <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider hidden sm:inline-block font-mono">
           {label}
         </span>
       )}

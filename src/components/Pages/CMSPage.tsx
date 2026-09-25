@@ -41,7 +41,7 @@ export const CMSPage: React.FC = () => {
           title="Akses CMS Terbatas - Sotoy Film" 
           description="Halaman CMS editorial artikel hanya dapat diakses oleh tim redaksi dan admin." 
         />
-        <div className="max-w-lg w-full bg-[#121324] border border-purple-500/30 rounded-3xl p-8 text-center space-y-6 shadow-2xl shadow-purple-950/40">
+        <div className="max-w-lg w-full bg-[#171A1F] border border-purple-500/30 rounded-3xl p-8 text-center space-y-6 shadow-2xl shadow-purple-950/40">
           <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center mx-auto text-purple-400">
             <ShieldAlert className="w-8 h-8" />
           </div>
@@ -112,7 +112,7 @@ export const CMSPage: React.FC = () => {
               </Link>
             )}
             <span>/</span>
-            <span className="text-[#00F0FF] font-bold">
+            <span className="text-[#FF2E7E] font-bold">
               {isUserAdmin ? 'Full Control CMS' : 'Editor Workspace'}
             </span>
           </div>
@@ -143,7 +143,7 @@ export const CMSPage: React.FC = () => {
               onClick={() => navigateTo('home')}
               className="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-750 text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer"
             >
-              <Eye className="w-3.5 h-3.5 text-[#00F0FF]" />
+              <Eye className="w-3.5 h-3.5 text-[#FF2E7E]" />
               <span>Tampilan Publik</span>
             </button>
             <button
@@ -158,13 +158,13 @@ export const CMSPage: React.FC = () => {
         </div>
 
         {/* Dedicated Page Hero Banner */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-[#170e2b] via-[#121324] to-[#1a0f2e] border-2 border-[#7928CA]/60 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-purple-950/40">
-          <div className="absolute top-0 right-1/4 w-80 h-80 bg-[#7928CA]/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#170e2b] via-[#171A1F] to-[#1a0f2e] border-2 border-[#FF2E7E]/60 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-purple-950/40">
+          <div className="absolute top-0 right-1/4 w-80 h-80 bg-[#FF2E7E]/15 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -bottom-10 -left-10 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="flex items-start sm:items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#7928CA] to-[#A855F7] p-0.5 shadow-xl shadow-purple-600/30 shrink-0">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#FF2E7E] to-[#A855F7] p-0.5 shadow-xl shadow-purple-600/30 shrink-0">
                 <div className="w-full h-full bg-[#110e1d] rounded-[14px] flex items-center justify-center">
                   <ShieldCheck className="w-8 h-8 text-[#C48BFF] animate-pulse" />
                 </div>
@@ -178,7 +178,7 @@ export const CMSPage: React.FC = () => {
 
                   <div className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-black uppercase tracking-widest rounded-full shadow-lg border ${
                     isUserAdmin
-                      ? 'bg-[#7928CA] text-white border-purple-400/40 shadow-purple-900/60'
+                      ? 'bg-[#FF2E7E] text-white border-purple-400/40 shadow-purple-900/60'
                       : 'bg-pink-500/20 text-[#FF2E7E] border-pink-500/40 shadow-pink-900/40'
                   }`}>
                     <span className="relative flex h-2 w-2">
@@ -230,7 +230,7 @@ export const CMSPage: React.FC = () => {
         </div>
 
         {/* The Full Featured CMS Article Workspace */}
-        <div className="bg-[#121324] border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-6">
+        <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-6">
           <CMSArticleWorkspace 
             mode={effectiveMode}
             title={isUserAdmin && adminScope === 'all' ? 'Katalog Seluruh Artikel Editorial' : 'Artikel & Draf Tulisan'}

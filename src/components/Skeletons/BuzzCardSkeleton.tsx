@@ -8,7 +8,7 @@ export const BuzzCardSkeleton: React.FC<BuzzCardSkeletonProps> = ({ hasMedia = f
   return (
     <div
       aria-hidden="true"
-      className="bg-[#121324] border border-slate-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl space-y-3.5 sm:space-y-4 animate-pulse select-none"
+      className="bg-[#171A1F] border border-white/[0.08]/80 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl space-y-3.5 sm:space-y-4 animate-pulse select-none"
     >
       {/* Post Author Info Row */}
       <div className="flex items-center justify-between gap-3">
@@ -43,7 +43,7 @@ export const BuzzCardSkeleton: React.FC<BuzzCardSkeletonProps> = ({ hasMedia = f
 
       {/* Optional Rich Media / Tagged Entity Card Skeleton */}
       {hasMedia && (
-        <div className="p-3 rounded-2xl bg-[#0D0E15]/80 border border-slate-800/60 flex items-center gap-3.5">
+        <div className="p-3 rounded-2xl bg-[#0E1013]/80 border border-white/[0.08]/60 flex items-center gap-3.5">
           <div className="w-12 h-16 rounded-xl bg-slate-800 shrink-0" />
           <div className="space-y-2 flex-1">
             <div className="h-3.5 w-3/4 bg-slate-800 rounded" />
@@ -63,7 +63,7 @@ export const BuzzCardSkeleton: React.FC<BuzzCardSkeletonProps> = ({ hasMedia = f
       </div>
 
       {/* Footer Controls Row */}
-      <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-4">
+      <div className="pt-3 border-t border-white/[0.08]/80 flex items-center justify-between gap-4">
         {/* Quick Reactions Skeleton */}
         <div className="flex items-center gap-1.5 overflow-hidden">
           <div className="h-7 w-20 sm:w-28 rounded-xl bg-slate-800/70" />

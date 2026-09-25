@@ -46,12 +46,12 @@ export const FilmRecommendationsPage: React.FC = () => {
         {/* Hero Header */}
         <div
           id="recommendation-header"
-          className="bg-gradient-to-r from-[#111A2E] via-[#162744] to-[#0E1524] border border-[#00F0FF]/40 rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden"
+          className="bg-gradient-to-r from-[#111A2E] via-[#162744] to-[#0E1524] border border-[#FF2E7E]/40 rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden"
         >
-          <div className="absolute -right-12 -bottom-12 w-72 h-72 bg-[#00F0FF]/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -right-12 -bottom-12 w-72 h-72 bg-[#FF2E7E]/15 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 max-w-2xl">
-            <span className="bg-[#00F0FF] text-slate-950 font-black text-xs uppercase px-3 py-1 rounded-full tracking-wider inline-flex items-center gap-1 mb-3">
+            <span className="bg-[#FF2E7E] text-slate-950 font-black text-xs uppercase px-3 py-1 rounded-full tracking-wider inline-flex items-center gap-1 mb-3">
               <Award className="w-3.5 h-3.5" />
               SOTOY CURATOR ENGINE
             </span>
@@ -74,7 +74,7 @@ export const FilmRecommendationsPage: React.FC = () => {
                     onClick={() => setSelectedMood(m.id)}
                     className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
                       isSelected
-                        ? 'bg-[#00F0FF] text-slate-950 font-black shadow-lg shadow-[#00F0FF]/25'
+                        ? 'bg-[#FF2E7E] text-slate-950 font-black shadow-lg shadow-[#FF2E7E]/25'
                         : 'bg-slate-900/90 text-slate-300 hover:text-white border border-slate-700'
                     }`}
                   >
@@ -124,7 +124,7 @@ export const FilmRecommendationsPage: React.FC = () => {
             <div
               key={film.id}
               id={`rec-card-${film.id}`}
-              className="bg-[#121324] border border-slate-800 hover:border-[#00F0FF]/60 rounded-3xl p-5 flex flex-col sm:flex-row gap-5 group transition-all duration-300 shadow-xl"
+              className="bg-[#171A1F] border border-slate-800 hover:border-[#FF2E7E]/60 rounded-3xl p-5 flex flex-col sm:flex-row gap-5 group transition-all duration-300 shadow-xl"
             >
               <img
                 src={film.poster}
@@ -135,16 +135,16 @@ export const FilmRecommendationsPage: React.FC = () => {
               <div className="flex-1 flex flex-col justify-between min-w-0">
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <span className="bg-[#00F0FF]/15 text-[#00F0FF] border border-[#00F0FF]/30 text-[10px] font-black uppercase px-2 py-0.5 rounded">
+                    <span className="bg-[#FF2E7E]/15 text-[#FF2E7E] border border-[#FF2E7E]/30 text-[10px] font-black uppercase px-2 py-0.5 rounded">
                       {film.type} • {film.year}
                     </span>
-                    <span className="text-[#FFD000] font-black text-xs flex items-center gap-1">
+                    <span className="text-[#FF2E7E] font-black text-xs flex items-center gap-1">
                       <Star className="w-3.5 h-3.5 fill-current" />
                       {film.skorSotoy.toFixed(1)} / 5.0
                     </span>
                   </div>
 
-                  <h3 className="font-display font-black text-lg text-white group-hover:text-[#00F0FF] transition-colors leading-tight mb-1">
+                  <h3 className="font-display font-black text-lg text-white group-hover:text-[#FF2E7E] transition-colors leading-tight mb-1">
                     {film.title}
                   </h3>
                   <p className="text-slate-400 text-xs mb-2">
@@ -152,8 +152,8 @@ export const FilmRecommendationsPage: React.FC = () => {
                   </p>
 
                   {film.curatorNote && (
-                    <div className="bg-slate-900/80 border-l-2 border-[#00F0FF] p-2.5 rounded-r-xl mb-3">
-                      <span className="text-[10px] font-bold text-[#00F0FF] uppercase block">
+                    <div className="bg-slate-900/80 border-l-2 border-[#FF2E7E] p-2.5 rounded-r-xl mb-3">
+                      <span className="text-[10px] font-bold text-[#FF2E7E] uppercase block">
                         Catatan Kurator:
                       </span>
                       <p className="text-slate-300 text-xs italic">"{film.curatorNote}"</p>
@@ -172,7 +172,7 @@ export const FilmRecommendationsPage: React.FC = () => {
 
                   <button
                     onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                    className="bg-[#00F0FF] hover:bg-[#3bf4ff] text-slate-950 font-black text-xs px-3.5 py-1.5 rounded-xl flex items-center gap-1 transition-transform active:scale-95 shadow"
+                    className="bg-[#FF2E7E] hover:bg-[#3bf4ff] text-slate-950 font-black text-xs px-3.5 py-1.5 rounded-xl flex items-center gap-1 transition-transform active:scale-95 shadow"
                   >
                     <span>Detail & Ulasan</span>
                     <ArrowRight className="w-3 h-3" />

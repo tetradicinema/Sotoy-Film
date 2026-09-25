@@ -46,19 +46,19 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
     // Headings
     html = html.replace(/^### (.*?)$/gm, '<h3 class="text-base font-black text-white mt-4 mb-2">$1</h3>');
-    html = html.replace(/^## (.*?)$/gm, '<h2 class="text-lg font-black text-[#FF2E7E] mt-5 mb-2">$1</h2>');
-    html = html.replace(/^# (.*?)$/gm, '<h1 class="text-xl font-black text-[#00F0FF] mt-6 mb-3">$1</h1>');
+    html = html.replace(/^## (.*?)$/gm, '<h2 class="text-lg font-black text-white mt-5 mb-2">$1</h2>');
+    html = html.replace(/^# (.*?)$/gm, '<h1 class="text-xl font-black text-white mt-6 mb-3">$1</h1>');
 
     // Bold & Italic
     html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-white">$1</strong>');
     html = html.replace(/\*(.*?)\*/g, '<em class="italic text-slate-300">$1</em>');
 
     // Blockquotes
-    html = html.replace(/^&gt;\s+(.*?)$/gm, '<blockquote class="border-l-4 border-pink-500 pl-4 py-1 italic bg-slate-900/40 text-slate-300 my-4 rounded-r-lg">$1</blockquote>');
+    html = html.replace(/^&gt;\s+(.*?)$/gm, '<blockquote class="border-l-4 border-[#FF2E7E] pl-4 py-1 italic bg-white/[0.03] text-slate-300 my-4 rounded-r-lg">$1</blockquote>');
 
     // Code Blocks & Inline Code
-    html = html.replace(/```([\s\S]*?)```/g, '<pre class="bg-slate-950 p-3 rounded-xl font-mono text-xs text-pink-300 overflow-x-auto my-4 border border-slate-800">$1</pre>');
-    html = html.replace(/`(.*?)`/g, '<code class="bg-slate-950 px-1.5 py-0.5 rounded font-mono text-xs text-pink-300">$1</code>');
+    html = html.replace(/```([\s\S]*?)```/g, '<pre class="bg-black/50 p-3 rounded-xl font-mono text-xs text-slate-200 overflow-x-auto my-4 border border-white/[0.08]">$1</pre>');
+    html = html.replace(/`(.*?)`/g, '<code class="bg-black/50 px-1.5 py-0.5 rounded font-mono text-xs text-slate-200 border border-white/[0.08]">$1</code>');
 
     // Unordered Lists
     html = html.replace(/^\s*-\s+(.*?)$/gm, '<li class="list-disc list-inside text-slate-300 ml-4 my-1">$1</li>');
@@ -67,7 +67,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     html = html.replace(/^\s*\d+\.\s+(.*?)$/gm, '<li class="list-decimal list-inside text-slate-300 ml-4 my-1">$1</li>');
 
     // Links
-    html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-[#00F0FF] hover:underline font-bold">$1</a>');
+    html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-[#FF2E7E] hover:underline font-semibold">$1</a>');
 
     // Split paragraphs
     const paragraphs = html.split(/\n{2,}/);
@@ -219,13 +219,13 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         {/* Tab Switchers & Right Actions */}
         <div className="flex items-center gap-2">
           {/* Write / Preview Tab Toggles */}
-          <div className="bg-slate-900 p-0.5 rounded-xl border border-slate-800 flex items-center">
+          <div className="bg-black/30 p-0.5 rounded-xl border border-white/10 flex items-center">
             <button
               type="button"
               onClick={() => setActiveTab('write')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'write'
-                  ? 'bg-pink-600 text-white'
+                  ? 'bg-[#FF2E7E] text-white shadow-sm'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -235,9 +235,9 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('preview')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'preview'
-                  ? 'bg-pink-600 text-white'
+                  ? 'bg-[#FF2E7E] text-white shadow-sm'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -246,14 +246,14 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             </button>
           </div>
 
-          <div className="h-4 w-px bg-slate-800 mx-1 hidden sm:block" />
+          <div className="h-4 w-px bg-white/10 mx-1 hidden sm:block" />
 
           {/* Help & Fullscreen Toggles */}
           <button
             type="button"
             onClick={() => setShowHelp(!showHelp)}
             className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-              showHelp ? 'text-pink-400 bg-slate-850' : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              showHelp ? 'text-[#FF2E7E] bg-white/[0.08]' : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
             }`}
             title="Markdown Help Guide"
           >
@@ -262,7 +262,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           <button
             type="button"
             onClick={() => setIsFullscreen(!isFullscreen)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.05] transition-colors cursor-pointer"
             title={isFullscreen ? 'Minimize' : 'Fullscreen Editor'}
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
@@ -272,24 +272,24 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
       {/* 2. HELP GUIDE */}
       {showHelp && (
-        <div className="p-4 bg-slate-950 border-b border-slate-800 text-slate-300 text-xs leading-relaxed space-y-2 grid grid-cols-2 gap-4">
+        <div className="p-4 bg-black/40 border-b border-white/[0.08] text-slate-300 text-xs leading-relaxed space-y-2 grid grid-cols-2 gap-4">
           <div>
-            <h4 className="font-bold text-pink-400 mb-1">Markdown Syntax</h4>
+            <h4 className="font-semibold text-white mb-1">Markdown Syntax</h4>
             <ul className="space-y-1 list-none">
-              <li><code className="bg-slate-900 px-1 py-0.5 rounded text-pink-300">**tebal**</code> &rarr; <strong>Tebal</strong></li>
-              <li><code className="bg-slate-900 px-1 py-0.5 rounded text-pink-300">*miring*</code> &rarr; <em>Miring</em></li>
-              <li><code className="bg-slate-900 px-1 py-0.5 rounded text-pink-300"># Judul</code> &rarr; Heading Besar</li>
-              <li><code className="bg-slate-900 px-1 py-0.5 rounded text-pink-300">## Subjudul</code> &rarr; Heading Medium</li>
-              <li><code className="bg-slate-900 px-1 py-0.5 rounded text-pink-300">&gt; Kutipan</code> &rarr; Blockquote</li>
+              <li><code className="bg-white/[0.06] px-1 py-0.5 rounded text-slate-200">**tebal**</code> &rarr; <strong>Tebal</strong></li>
+              <li><code className="bg-white/[0.06] px-1 py-0.5 rounded text-slate-200">*miring*</code> &rarr; <em>Miring</em></li>
+              <li><code className="bg-white/[0.06] px-1 py-0.5 rounded text-slate-200"># Judul</code> &rarr; Heading Besar</li>
+              <li><code className="bg-white/[0.06] px-1 py-0.5 rounded text-slate-200">## Subjudul</code> &rarr; Heading Medium</li>
+              <li><code className="bg-white/[0.06] px-1 py-0.5 rounded text-slate-200">&gt; Kutipan</code> &rarr; Blockquote</li>
             </ul>
           </div>
           <div>
-            <h4 className="font-bold text-cyan-400 mb-1">Lists & Links</h4>
+            <h4 className="font-semibold text-white mb-1">Lists & Links</h4>
             <ul className="space-y-1 list-none">
-              <li><code className="bg-slate-900 px-1 py-0.5 rounded text-pink-300">- item</code> &rarr; Bullet Point</li>
-              <li><code className="bg-slate-900 px-1 py-0.5 rounded text-pink-300">1. item</code> &rarr; Numbered List</li>
-              <li><code className="bg-slate-900 px-1 py-0.5 rounded text-pink-300">`kode`</code> &rarr; Code block</li>
-              <li><code className="bg-slate-900 px-1 py-0.5 rounded text-pink-300">[Teks](Link)</code> &rarr; Anchor Link</li>
+              <li><code className="bg-white/[0.06] px-1 py-0.5 rounded text-slate-200">- item</code> &rarr; Bullet Point</li>
+              <li><code className="bg-white/[0.06] px-1 py-0.5 rounded text-slate-200">1. item</code> &rarr; Numbered List</li>
+              <li><code className="bg-white/[0.06] px-1 py-0.5 rounded text-slate-200">`kode`</code> &rarr; Code block</li>
+              <li><code className="bg-white/[0.06] px-1 py-0.5 rounded text-slate-200">[Teks](Link)</code> &rarr; Anchor Link</li>
             </ul>
           </div>
         </div>
@@ -304,12 +304,12 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
-            className="w-full h-full min-h-[220px] bg-slate-900 text-slate-100 p-4 font-sans text-sm placeholder-slate-500 focus:outline-none resize-y"
+            className="w-full h-full min-h-[220px] bg-[#171A1F] text-slate-100 p-4 font-sans text-sm placeholder-slate-500 focus:outline-none resize-y"
             style={{ minHeight: isFullscreen ? 'calc(100vh - 150px)' : '240px' }}
           />
         ) : (
           <div
-            className="w-full h-full overflow-y-auto p-4 bg-slate-900 text-slate-100 markdown-body prose prose-invert prose-pink max-w-none text-sm leading-relaxed"
+            className="w-full h-full overflow-y-auto p-4 bg-[#171A1F] text-slate-100 markdown-body prose prose-invert max-w-none text-sm leading-relaxed"
             style={{ height: isFullscreen ? 'calc(100vh - 150px)' : '240px', minHeight: '240px' }}
             dangerouslySetInnerHTML={{ __html: parseMarkdown(value) }}
           />
@@ -317,15 +317,15 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       </div>
 
       {/* 4. METRICS / STATS FOOTER */}
-      <div className="flex items-center justify-between px-4 py-2 bg-slate-950 border-t border-slate-800 text-[10px] font-mono text-slate-500">
+      <div className="flex items-center justify-between px-4 py-2 bg-[#171A1F] border-t border-white/[0.08] text-[10px] font-mono text-slate-400">
         <div className="flex items-center gap-3">
-          <span>{wordCount} Kata</span>
+          <span className="tabular-nums">{wordCount} Kata</span>
           <span>•</span>
-          <span>{charCount} Karakter</span>
+          <span className="tabular-nums">{charCount} Karakter</span>
         </div>
-        <div className="flex items-center gap-1 text-[#00F0FF]/80">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span>Editor Aktif (Markdown + WYSIWYG)</span>
+        <div className="flex items-center gap-1.5 text-slate-300">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          <span>Editor Aktif (Markdown + Pratinjau)</span>
         </div>
       </div>
     </div>

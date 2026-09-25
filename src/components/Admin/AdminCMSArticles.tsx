@@ -446,7 +446,7 @@ export const AdminCMSArticles: React.FC = () => {
           <div>
             <h2 className="font-display font-black text-2xl text-white tracking-tight flex items-center gap-2.5">
               <span>CMS Artikel & Kurasi Editorial</span>
-              <span className="text-xs px-2.5 py-0.5 rounded-full bg-pink-500/20 text-[#FF2E7E] border border-pink-500/30 font-sans font-bold flex items-center gap-1">
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-white/[0.06] text-slate-300 border border-white/10 font-sans font-bold flex items-center gap-1">
                 <Layers className="w-3.5 h-3.5" />
                 WordPress Style CMS
               </span>
@@ -460,13 +460,13 @@ export const AdminCMSArticles: React.FC = () => {
           <div className="flex items-center gap-2.5 flex-wrap">
             <button
               onClick={() => setIsMigrationModalOpen(true)}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#7928CA] to-indigo-600 hover:from-[#8e38ea] hover:to-indigo-500 text-white text-xs font-bold transition-all flex items-center gap-2 shadow-lg shadow-purple-900/30 border border-purple-400/30"
+              className="px-3.5 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-white text-xs font-bold transition-all flex items-center gap-2 shadow-sm active:scale-[0.98]"
               title="Migrasikan seluruh artikel ke Akun Penulis Resmi (0PCmaBvJrzeaQgpf3sSTC4mnsh02)"
             >
-              <Zap className="w-3.5 h-3.5 text-amber-300 animate-bounce" />
-              <span>⚡ Migrasi Penulis (0PCmaBvJrzeaQgpf3sSTC4mnsh02)</span>
+              <Zap className="w-3.5 h-3.5 text-[#FF2E7E]" />
+              <span>⚡ Migrasi Penulis</span>
               {unmigratedArticles.length > 0 && (
-                <span className="bg-amber-400 text-slate-950 font-black px-1.5 py-0.2 rounded-full text-[10px]">
+                <span className="bg-[#FF2E7E] text-white font-black px-1.5 py-0.2 rounded-full text-[10px]">
                   {unmigratedArticles.length}
                 </span>
               )}
@@ -474,7 +474,7 @@ export const AdminCMSArticles: React.FC = () => {
 
             <button
               onClick={() => navigateTo('write-article')}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] text-white text-xs font-black hover:brightness-110 transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-pink-500/25 shrink-0"
+              className="px-4 py-2 rounded-xl bg-[#FF2E7E] hover:bg-[#e0266e] text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.98] shrink-0"
             >
               <Plus className="w-4 h-4" />
               <span>+ Tulis Artikel Baru</span>
@@ -485,7 +485,7 @@ export const AdminCMSArticles: React.FC = () => {
         {/* 4 WORDPRESS STATS CARDS */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
           {/* Total Articles */}
-          <div className="bg-[#121324] border border-slate-800/80 rounded-2xl p-4 flex items-center justify-between shadow-sm">
+          <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-4 flex items-center justify-between shadow-sm">
             <div>
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 Total Artikel
@@ -497,61 +497,61 @@ export const AdminCMSArticles: React.FC = () => {
                 {publishedCount} terbit aktif di portal
               </div>
             </div>
-            <div className="w-11 h-11 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+            <div className="w-11 h-11 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-[#FF2E7E]">
               <FileText className="w-5 h-5" />
             </div>
           </div>
 
           {/* Total Views */}
-          <div className="bg-[#121324] border border-slate-800/80 rounded-2xl p-4 flex items-center justify-between shadow-sm">
+          <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-4 flex items-center justify-between shadow-sm">
             <div>
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 Total Views
               </div>
-              <div className="text-2xl font-black text-cyan-400 font-display mt-1">
+              <div className="text-2xl font-black text-[#FF2E7E] font-display mt-1">
                 {totalViews.toLocaleString('id-ID')}
               </div>
               <div className="text-[10px] text-slate-500 mt-0.5">
                 Akumulasi seluruh pembaca
               </div>
             </div>
-            <div className="w-11 h-11 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+            <div className="w-11 h-11 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-[#FF2E7E]">
               <BarChart3 className="w-5 h-5" />
             </div>
           </div>
 
           {/* Total Drafts */}
-          <div className="bg-[#121324] border border-slate-800/80 rounded-2xl p-4 flex items-center justify-between shadow-sm">
+          <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-4 flex items-center justify-between shadow-sm">
             <div>
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 Total Draf
               </div>
-              <div className="text-2xl font-black text-amber-400 font-display mt-1">
+              <div className="text-2xl font-black text-cyan-400 font-display mt-1">
                 {draftCount}
               </div>
               <div className="text-[10px] text-slate-500 mt-0.5">
                 Menunggu finalisasi redaksi
               </div>
             </div>
-            <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+            <div className="w-11 h-11 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-cyan-400">
               <Edit3 className="w-5 h-5" />
             </div>
           </div>
 
           {/* Scheduled Articles */}
-          <div className="bg-[#121324] border border-slate-800/80 rounded-2xl p-4 flex items-center justify-between shadow-sm">
+          <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-4 flex items-center justify-between shadow-sm">
             <div>
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 Artikel Terjadwal
               </div>
-              <div className="text-2xl font-black text-blue-400 font-display mt-1">
+              <div className="text-2xl font-black text-slate-200 font-display mt-1">
                 {scheduledCount}
               </div>
               <div className="text-[10px] text-slate-500 mt-0.5">
                 Otomatis tayang sesuai tanggal
               </div>
             </div>
-            <div className="w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+            <div className="w-11 h-11 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-slate-300">
               <Clock className="w-5 h-5" />
             </div>
           </div>
@@ -559,7 +559,7 @@ export const AdminCMSArticles: React.FC = () => {
       </div>
 
       {/* 2. WORDPRESS STATUS TABS (ALL | PUBLISHED | DRAFTS | SCHEDULED | TRASH) */}
-      <div className="bg-[#121324] border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm">
+      <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm">
         
         {/* Status Filter Row */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-3.5">
@@ -603,12 +603,12 @@ export const AdminCMSArticles: React.FC = () => {
               onClick={() => setStatusFilter('draft')}
               className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap ${
                 statusFilter === 'draft'
-                  ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30'
-                  : 'text-slate-400 hover:text-amber-300 hover:bg-slate-800'
+                  ? 'bg-amber-500/20 text-cyan-300 font-bold border border-amber-500/30'
+                  : 'text-slate-400 hover:text-cyan-300 hover:bg-slate-800'
               }`}
             >
               <span>Draf</span>
-              <span className="text-[10px] bg-amber-950/70 px-1.5 py-0.2 rounded-full text-amber-300 font-mono">
+              <span className="text-[10px] bg-amber-950/70 px-1.5 py-0.2 rounded-full text-cyan-300 font-mono">
                 {draftCount}
               </span>
             </button>
@@ -831,7 +831,7 @@ export const AdminCMSArticles: React.FC = () => {
                           <div className="space-y-1">
                             <span 
                               onClick={() => navigateTo('article-detail', { articleId: article.id })}
-                              className="font-bold text-white hover:text-[#00F0FF] cursor-pointer transition-colors block text-xs line-clamp-1"
+                              className="font-bold text-white hover:text-[#FF2E7E] cursor-pointer transition-colors block text-xs line-clamp-1"
                             >
                               {article.title}
                             </span>
@@ -843,21 +843,21 @@ export const AdminCMSArticles: React.FC = () => {
                             <div className="flex items-center gap-2 pt-1 opacity-95 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-[10px] font-semibold">
                               <button
                                 onClick={() => startQuickEdit(article)}
-                                className="text-amber-400 hover:underline flex items-center gap-1"
+                                className="text-slate-300 hover:text-white hover:underline flex items-center gap-1"
                               >
                                 Sunting Cepat
                               </button>
                               <span className="text-slate-600">|</span>
                               <button
                                 onClick={() => navigateTo('write-article', { articleId: article.id })}
-                                className="text-[#00F0FF] hover:underline"
+                                className="text-slate-300 hover:text-white hover:underline"
                               >
                                 Edit Penuh
                               </button>
                               <span className="text-slate-600">|</span>
                               <button
                                 onClick={() => navigateTo('article-detail', { articleId: article.id })}
-                                className="text-emerald-400 hover:underline flex items-center gap-1"
+                                className="text-slate-300 hover:text-white hover:underline flex items-center gap-1"
                               >
                                 Lihat
                               </button>
@@ -957,7 +957,7 @@ export const AdminCMSArticles: React.FC = () => {
                             </span>
                           )}
                           {isDraft && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/15 text-cyan-300 border border-amber-500/30">
                               <span className="w-1.5 h-1.5 rounded-full bg-amber-300" />
                               Draf
                             </span>
@@ -1018,14 +1018,14 @@ export const AdminCMSArticles: React.FC = () => {
                           <div className="flex items-center justify-end gap-1.5">
                             <button
                               onClick={() => startQuickEdit(article)}
-                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-amber-500/20 text-slate-400 hover:text-amber-300 transition-colors"
+                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-amber-500/20 text-slate-400 hover:text-cyan-300 transition-colors"
                               title="Sunting Cepat (Quick Edit)"
                             >
                               <Edit3 className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => navigateTo('article-detail', { articleId: article.id })}
-                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-cyan-500/20 text-slate-400 hover:text-[#00F0FF] transition-colors"
+                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-white/[0.1] text-slate-400 hover:text-white transition-colors"
                               title="Lihat Artikel di Portal"
                             >
                               <Eye className="w-3.5 h-3.5" />
@@ -1048,11 +1048,11 @@ export const AdminCMSArticles: React.FC = () => {
 
                       {/* INLINE QUICK EDIT FORM (WORDPRESS STYLE) */}
                       {isQuickEditing && (
-                        <tr className="bg-slate-900/90 border-y-2 border-amber-400/60 animate-in fade-in duration-150">
+                        <tr className="bg-slate-900/90 border-y-2 border-[#00F0FF]/60 animate-in fade-in duration-150">
                           <td colSpan={8} className="p-4 sm:p-6">
                             <div className="space-y-4">
                               <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
-                                <span className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
+                                <span className="text-xs font-black uppercase tracking-wider text-cyan-400 flex items-center gap-2">
                                   <Edit3 className="w-4 h-4" />
                                   Sunting Cepat (Quick Edit Inline) — #{article.id}
                                 </span>
@@ -1071,7 +1071,7 @@ export const AdminCMSArticles: React.FC = () => {
                                     type="text"
                                     value={quickForm.title}
                                     onChange={e => setQuickForm({ ...quickForm, title: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 font-medium"
+                                    className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00F0FF] font-medium"
                                   />
                                 </div>
 
@@ -1084,7 +1084,7 @@ export const AdminCMSArticles: React.FC = () => {
                                     type="text"
                                     value={quickForm.slug}
                                     onChange={e => setQuickForm({ ...quickForm, slug: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3 py-2 text-xs text-amber-300 font-mono focus:outline-none focus:border-amber-400"
+                                    className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3 py-2 text-xs text-cyan-300 font-mono focus:outline-none focus:border-[#00F0FF]"
                                   />
                                 </div>
 
@@ -1100,7 +1100,7 @@ export const AdminCMSArticles: React.FC = () => {
                                       const defaultSub = SUBCATEGORIES_BY_CAT[newCat]?.[0]?.value || 'news';
                                       setQuickForm({ ...quickForm, category: newCat, subCategory: defaultSub });
                                     }}
-                                    className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                                    className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00F0FF]"
                                   >
                                     <option value="movies">Movies</option>
                                     <option value="series">Series</option>
@@ -1118,7 +1118,7 @@ export const AdminCMSArticles: React.FC = () => {
                                   <select
                                     value={quickForm.subCategory}
                                     onChange={e => setQuickForm({ ...quickForm, subCategory: e.target.value as SubCategory })}
-                                    className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                                    className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00F0FF]"
                                   >
                                     {SUBCATEGORIES_BY_CAT[quickForm.category]?.map(sub => (
                                       <option key={sub.value} value={sub.value}>{sub.label}</option>
@@ -1153,7 +1153,7 @@ export const AdminCMSArticles: React.FC = () => {
                                   <select
                                     value={quickForm.status}
                                     onChange={e => setQuickForm({ ...quickForm, status: e.target.value as any })}
-                                    className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                                    className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00F0FF]"
                                   >
                                     <option value="published">Terbit (Published)</option>
                                     <option value="draft">Simpan Draf (Draft)</option>
@@ -1173,7 +1173,7 @@ export const AdminCMSArticles: React.FC = () => {
                                     value={quickForm.tags}
                                     onChange={e => setQuickForm({ ...quickForm, tags: e.target.value })}
                                     placeholder="Sci-Fi, Denis Villeneuve, IMAX..."
-                                    className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                                    className="w-full bg-slate-950 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00F0FF]"
                                   />
                                 </div>
 
@@ -1204,7 +1204,7 @@ export const AdminCMSArticles: React.FC = () => {
                                 </button>
                                 <button
                                   onClick={() => saveQuickEdit(article.id)}
-                                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black transition-all flex items-center gap-1.5 shadow-md shadow-amber-500/25"
+                                  className="px-4 py-2 rounded-xl bg-[#FF2E7E] hover:bg-[#e0266e] text-white text-xs font-black transition-all flex items-center gap-1.5 shadow-md shadow-amber-500/25"
                                 >
                                   <Check className="w-3.5 h-3.5 stroke-[3]" />
                                   <span>Perbarui (Update)</span>
@@ -1223,23 +1223,20 @@ export const AdminCMSArticles: React.FC = () => {
         </div>
       </div>
 
-      {/* 5. DEDICATED ONE-CLICK MIGRATION MODAL (Jm0raI2h47TJG9ZtZAR1HLVcjSj2) */}
+      {/* 5. DEDICATED ONE-CLICK MIGRATION MODAL */}
       {isMigrationModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-[#121324] border-2 border-[#7928CA]/80 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl shadow-purple-950/60 space-y-6 relative overflow-hidden">
-            {/* Ambient background glow */}
-            <div className="absolute top-0 right-0 w-60 h-60 bg-[#7928CA]/20 rounded-full blur-3xl pointer-events-none" />
-
-            <div className="flex items-start justify-between gap-4 border-b border-slate-800 pb-4 relative z-10">
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[#171A1F] border border-white/10 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl space-y-6 relative overflow-hidden">
+            <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-4 relative z-10">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-[#C48BFF]">
-                  <Zap className="w-6 h-6 animate-pulse" />
+                <div className="w-12 h-12 rounded-2xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-[#FF2E7E]">
+                  <Zap className="w-6 h-6" />
                 </div>
                 <div>
                   <h3 className="font-display font-black text-white text-lg sm:text-xl">
                     Migrasi Penulis Artikel ke UID Target
                   </h3>
-                  <p className="text-purple-300 text-xs mt-0.5">
+                  <p className="text-slate-400 text-xs mt-0.5">
                     Re-assign seluruh artikel generated & mock lama ke akun resmi
                   </p>
                 </div>
@@ -1248,15 +1245,15 @@ export const AdminCMSArticles: React.FC = () => {
               <button 
                 onClick={() => !isMigrating && setIsMigrationModalOpen(false)}
                 disabled={isMigrating}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/[0.06] transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Target Account Summary Card */}
-            <div className="bg-slate-900/90 border border-purple-500/30 rounded-2xl p-4 space-y-3 relative z-10">
-              <div className="text-[11px] font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
+            <div className="bg-[#0E1013] border border-white/10 rounded-2xl p-4 space-y-3 relative z-10">
+              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                 <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Akun Penulis Tujuan (Target Author)</span>
               </div>
@@ -1265,16 +1262,16 @@ export const AdminCMSArticles: React.FC = () => {
                 <img
                   src={currentUser.avatar || DEFAULT_FALLBACK_AUTHOR.avatar}
                   alt={currentUser.name}
-                  className="w-12 h-12 rounded-2xl object-cover ring-2 ring-purple-500/60"
+                  className="w-12 h-12 rounded-2xl object-cover ring-2 ring-white/10"
                 />
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-bold text-white flex items-center gap-2">
                     <span>{currentUser.name} (Saya)</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-500/30 text-[#FF2E7E] border border-pink-400/30 font-bold">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#FF2E7E]/10 text-[#FF2E7E] border border-[#FF2E7E]/20 font-bold">
                       Akun Aktif
                     </span>
                   </div>
-                  <div className="text-xs font-mono text-purple-300 mt-1 bg-slate-950 px-2.5 py-1 rounded-lg border border-purple-500/20 inline-block">
+                  <div className="text-xs font-mono text-slate-400 mt-1 bg-white/[0.04] px-2.5 py-1 rounded-lg border border-white/10 inline-block">
                     UID: {currentUser.id}
                   </div>
                 </div>
@@ -1283,37 +1280,37 @@ export const AdminCMSArticles: React.FC = () => {
 
             {/* Migration Scope Details */}
             <div className="space-y-2 text-xs text-slate-300 leading-relaxed relative z-10">
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-[#0E1013] border border-white/10">
                 <span className="text-slate-400">Total Artikel di Sistem:</span>
-                <span className="font-bold text-white font-mono">{articles.length} artikel</span>
+                <span className="font-bold text-white font-mono tabular-nums">{articles.length} artikel</span>
               </div>
 
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-[#0E1013] border border-white/10">
                 <span className="text-slate-400">Artikel yang Perlu Dimigrasikan:</span>
-                <span className="font-bold text-amber-400 font-mono">
+                <span className="font-bold text-white font-mono tabular-nums">
                   {unmigratedArticles.length} artikel
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-[#0E1013] border border-white/10">
                 <span className="text-slate-400">Database Target:</span>
-                <span className="font-bold text-emerald-400">Cloud Firestore + Local State Sync</span>
+                <span className="font-bold text-slate-200">Cloud Firestore + Local State Sync</span>
               </div>
             </div>
 
             {/* Animated Progress Bar if Migrating */}
             {isMigrating && (
               <div className="space-y-2 relative z-10 animate-in fade-in duration-150">
-                <div className="flex items-center justify-between text-xs text-purple-300 font-bold">
+                <div className="flex items-center justify-between text-xs text-slate-300 font-bold">
                   <span className="flex items-center gap-2">
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#FF2E7E]" />
                     Sinkronisasi Firestore sedang berlangsung...
                   </span>
-                  <span>{migrationProgress}%</span>
+                  <span className="font-mono tabular-nums">{migrationProgress}%</span>
                 </div>
-                <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                <div className="w-full bg-[#0E1013] rounded-full h-2.5 overflow-hidden border border-white/10">
                   <div 
-                    className="bg-gradient-to-r from-[#7928CA] to-[#00F0FF] h-2.5 rounded-full transition-all duration-300"
+                    className="bg-[#FF2E7E] h-2.5 rounded-full transition-all duration-300"
                     style={{ width: `${migrationProgress}%` }}
                   />
                 </div>
@@ -1321,11 +1318,11 @@ export const AdminCMSArticles: React.FC = () => {
             )}
 
             {/* Modal Actions */}
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800 relative z-10">
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10 relative z-10">
               <button
                 onClick={() => setIsMigrationModalOpen(false)}
                 disabled={isMigrating}
-                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all disabled:opacity-50"
+                className="px-4 py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-slate-300 text-xs font-bold transition-all disabled:opacity-50"
               >
                 Batal
               </button>
@@ -1333,9 +1330,9 @@ export const AdminCMSArticles: React.FC = () => {
               <button
                 onClick={handleExecuteFullMigration}
                 disabled={isMigrating || unmigratedArticles.length === 0}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#7928CA] via-purple-600 to-indigo-600 hover:brightness-110 text-white text-xs font-black transition-all shadow-xl shadow-purple-900/50 flex items-center gap-2 disabled:opacity-50"
+                className="px-5 py-2.5 rounded-xl bg-[#FF2E7E] hover:bg-[#e0266e] text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2 disabled:opacity-50 active:scale-[0.98]"
               >
-                <Zap className="w-4 h-4 text-amber-300" />
+                <Zap className="w-4 h-4" />
                 <span>
                   {unmigratedArticles.length === 0 
                     ? 'Semua Sudah Terhubung' 
@@ -1350,8 +1347,8 @@ export const AdminCMSArticles: React.FC = () => {
       {/* 6. MODAL PILIH AKUN PEMINDAHAN PENULIS MASSAL */}
       {isBulkAuthorModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-[#121324] border border-purple-500/50 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="bg-[#171A1F] border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2 text-purple-400 font-bold text-sm">
                 <UserCheck className="w-4 h-4" />
                 <span>Pindahkan Penulis ({selectedIds.length} Artikel Terpilih)</span>
@@ -1399,16 +1396,16 @@ export const AdminCMSArticles: React.FC = () => {
               ))}
             </div>
 
-            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-white/10">
               <button
                 onClick={() => setIsBulkAuthorModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all"
+                className="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-slate-300 text-xs font-bold transition-all"
               >
                 Batal
               </button>
               <button
                 onClick={handleApplyReassignAuthor}
-                className="px-4 py-2 rounded-xl bg-[#7928CA] hover:bg-[#8e38ea] text-white text-xs font-bold transition-all shadow-md shadow-purple-900/40"
+                className="px-4 py-2 rounded-xl bg-[#FF2E7E] hover:bg-[#e0266e] text-white text-xs font-bold transition-all shadow-sm active:scale-[0.98]"
               >
                 Terapkan Perubahan
               </button>

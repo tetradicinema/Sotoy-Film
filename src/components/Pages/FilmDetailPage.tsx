@@ -66,15 +66,15 @@ const RelatedArticleAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: a
         e.stopPropagation();
         navigateTo('user-profile', { userId: author.id });
       }}
-      className="flex items-center gap-2 mb-2 group/author cursor-pointer hover:text-[#00F0FF] transition-colors"
+      className="flex items-center gap-2 mb-2 group/author cursor-pointer hover:text-[#FF2E7E] transition-colors"
       title={`Kunjungi profil ${author.displayName || author.name}`}
     >
       <img
         src={author.avatarURL || author.avatar}
         alt={author.displayName || author.name}
-        className="w-5 h-5 rounded-full object-cover border border-slate-700 group-hover/author:border-[#00F0FF] transition-colors"
+        className="w-5 h-5 rounded-full object-cover border border-slate-700 group-hover/author:border-[#FF2E7E] transition-colors"
       />
-      <span className="text-[11px] font-bold text-slate-300 group-hover/author:text-[#00F0FF] transition-colors">
+      <span className="text-[11px] font-bold text-slate-300 group-hover/author:text-[#FF2E7E] transition-colors">
         {author.displayName || author.name}
       </span>
       {author.customBadge ? (
@@ -175,7 +175,7 @@ export const FilmDetailPage: React.FC = () => {
           <div className="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-400 mx-auto flex items-center justify-center">
             <Clapperboard className="w-7 h-7" />
           </div>
-          <h2 className="text-xl font-display font-black text-white">Film Tidak Ditemukan</h2>
+          <h2 className="text-xl font-display font-black text-white">Film Not Found</h2>
           <p className="text-slate-400 text-xs leading-relaxed">
             Data film atau tayangan yang Anda tuju tidak tersedia dalam katalog Sotoy Film.
           </p>
@@ -366,7 +366,7 @@ export const FilmDetailPage: React.FC = () => {
               onClick={handleShare}
               className="px-3 sm:px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-bold flex items-center gap-2 border border-slate-800 transition-colors"
             >
-              <Share2 className="w-3.5 h-3.5 text-[#00F0FF]" />
+              <Share2 className="w-3.5 h-3.5 text-[#FF2E7E]" />
               <span>Bagikan</span>
             </button>
           </div>
@@ -375,7 +375,7 @@ export const FilmDetailPage: React.FC = () => {
         {/* ========================================================================= */}
         {/* HERO SECTION: BACKDROP + FLOATING POSTER + HEADLINE METRICS */}
         {/* ========================================================================= */}
-        <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-800 shadow-2xl bg-[#121324]">
+        <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-800 shadow-2xl bg-[#171A1F]">
           {/* Backdrop Banner with Vignette */}
           <div className="h-52 sm:h-80 md:h-96 w-full relative">
             <img
@@ -383,8 +383,8 @@ export const FilmDetailPage: React.FC = () => {
               alt={film.title}
               className="w-full h-full object-cover object-center"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#121324] via-[#121324]/65 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#121324]/80 via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-[#171A1F]/65 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#171A1F]/80 via-transparent to-transparent" />
             
             {/* Quick Play Trailer on Backdrop */}
             <div className="absolute inset-0 flex items-center justify-center">
@@ -411,7 +411,7 @@ export const FilmDetailPage: React.FC = () => {
                 alt={film.title}
                 className="w-32 sm:w-52 md:w-60 rounded-2xl shadow-2xl border-2 border-white/20 group-hover:scale-105 transition-transform duration-300"
               />
-              <div className="absolute top-2.5 left-2.5 bg-black/85 backdrop-blur-md px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-xl border border-[#FFD000]/60 text-[#FFD000] font-medium text-xs sm:text-sm flex items-center gap-1 shadow-lg">
+              <div className="absolute top-2.5 left-2.5 bg-black/85 backdrop-blur-md px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-xl border border-[#FF2E7E]/60 text-[#FF2E7E] font-medium text-xs sm:text-sm flex items-center gap-1 shadow-lg">
                 <Star className="w-3.5 h-3.5 fill-current" />
                 <span>{film.skorSotoy.toFixed(1)}</span>
               </div>
@@ -429,7 +429,7 @@ export const FilmDetailPage: React.FC = () => {
                 </span>
                 {film.duration && (
                   <span className="text-slate-300 text-[10px] sm:text-xs flex items-center gap-1 bg-slate-800/80 px-2.5 py-1 rounded-full border border-slate-700">
-                    <Clock className="w-3 h-3 text-[#00F0FF]" />
+                    <Clock className="w-3 h-3 text-[#FF2E7E]" />
                     {film.duration}
                   </span>
                 )}
@@ -453,23 +453,23 @@ export const FilmDetailPage: React.FC = () => {
                 <div className="relative inline-flex items-center group/cert z-20">
                   <div
                     id="sotoy-certified-badge"
-                    className="relative inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-[#FFD000]/20 via-[#FF8008]/15 to-[#FFD000]/20 border border-[#FFD000]/60 text-[#FFD000] text-[10px] sm:text-xs font-bold tracking-wide shadow-[0_0_18px_rgba(255,208,0,0.25)] backdrop-blur-sm shrink-0 transition-all duration-300 hover:scale-105 hover:border-[#FFD000] hover:shadow-[0_0_24px_rgba(255,208,0,0.4)] cursor-pointer select-none"
+                    className="relative inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-[#FF2E7E]/20 via-[#e0266e]/15 to-[#FF2E7E]/20 border border-[#FF2E7E]/60 text-[#FF2E7E] text-[10px] sm:text-xs font-bold tracking-wide shadow-[0_0_18px_rgba(255,208,0,0.25)] backdrop-blur-sm shrink-0 transition-all duration-300 hover:scale-105 hover:border-[#FF2E7E] hover:shadow-[0_0_24px_rgba(255,208,0,0.4)] cursor-pointer select-none"
                   >
                     {/* Subtle pulsing indicator */}
                     <span className="relative flex h-2 w-2 mr-0.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FFD000] opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FFD000]" />
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF2E7E] opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FF2E7E]" />
                     </span>
 
-                    <Award className="w-3.5 h-3.5 text-[#FFD000] fill-[#FFD000]/20 shrink-0" />
+                    <Award className="w-3.5 h-3.5 text-[#FF2E7E] fill-[#FF2E7E]/20 shrink-0" />
                     <span>Sotoy Certified</span>
                   </div>
 
                   {/* Tooltip with smooth transition on hover */}
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-950/95 border border-[#FFD000]/50 rounded-xl shadow-2xl shadow-black/90 text-[#FFD000] text-[11px] font-bold pointer-events-none opacity-0 scale-90 translate-y-1 group-hover/cert:opacity-100 group-hover/cert:scale-100 group-hover/cert:translate-y-0 transition-all duration-200 ease-out z-50 whitespace-nowrap flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-[#FFD000]" />
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-950/95 border border-[#FF2E7E]/50 rounded-xl shadow-2xl shadow-black/90 text-[#FF2E7E] text-[11px] font-bold pointer-events-none opacity-0 scale-90 translate-y-1 group-hover/cert:opacity-100 group-hover/cert:scale-100 group-hover/cert:translate-y-0 transition-all duration-200 ease-out z-50 whitespace-nowrap flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#FF2E7E]" />
                     <span>Verified Sotoy Review</span>
-                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-950 border-b border-r border-[#FFD000]/50 rotate-45" />
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-950 border-b border-r border-[#FF2E7E]/50 rotate-45" />
                   </div>
                 </div>
 
@@ -483,7 +483,7 @@ export const FilmDetailPage: React.FC = () => {
                 <div className="flex items-center justify-between sm:justify-start gap-4 sm:gap-6">
                   {/* 1. Skor Critics - Emas */}
                   <div className="flex items-center gap-2.5">
-                    <div className="font-display font-medium text-2xl sm:text-3xl text-[#FFD000] drop-shadow-[0_0_12px_rgba(255,208,0,0.3)]">
+                    <div className="font-display font-medium text-2xl sm:text-3xl text-[#FF2E7E] drop-shadow-[0_0_12px_rgba(255,208,0,0.3)]">
                       ★ {film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}
                     </div>
                     <div className="text-left">
@@ -491,7 +491,7 @@ export const FilmDetailPage: React.FC = () => {
                         <span className="text-[11px] sm:text-xs font-black text-white uppercase tracking-wider">
                           Skor Critics
                         </span>
-                        <span className="bg-[#FFD000]/20 text-[#FFD000] border border-[#FFD000]/40 text-[9px] font-black uppercase px-1.5 py-0.2 rounded-full">
+                        <span className="bg-[#FF2E7E]/20 text-[#FF2E7E] border border-[#FF2E7E]/40 text-[9px] font-black uppercase px-1.5 py-0.2 rounded-full">
                           Utama
                         </span>
                       </div>
@@ -505,7 +505,7 @@ export const FilmDetailPage: React.FC = () => {
 
                   {/* 2. Skor Komunitas - Biru / Cyan, Besarnya Sama */}
                   <div className="flex items-center gap-2.5">
-                    <div className="font-display font-medium text-2xl sm:text-3xl text-[#00F0FF] drop-shadow-[0_0_12px_rgba(0,240,255,0.3)]">
+                    <div className="font-display font-medium text-2xl sm:text-3xl text-[#FF2E7E] drop-shadow-[0_0_12px_rgba(0,240,255,0.3)]">
                       ★ {film.skorSotoy.toFixed(1)}
                     </div>
                     <div className="text-left">
@@ -523,10 +523,10 @@ export const FilmDetailPage: React.FC = () => {
                   <button
                     id="hero-share-film-rating-btn"
                     onClick={handleShare}
-                    className="flex-1 sm:flex-initial justify-center px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-[#00F0FF] transition-all flex items-center gap-1.5 text-xs font-bold"
+                    className="flex-1 sm:flex-initial justify-center px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-[#FF2E7E] transition-all flex items-center gap-1.5 text-xs font-bold"
                     title="Bagikan Skor Film ke Instagram Story & Feed"
                   >
-                    <Share2 className="w-3.5 h-3.5 text-[#00F0FF]" />
+                    <Share2 className="w-3.5 h-3.5 text-[#FF2E7E]" />
                     <span>Bagikan Skor</span>
                   </button>
 
@@ -539,7 +539,7 @@ export const FilmDetailPage: React.FC = () => {
                         setRatingModalOpen(true);
                       }
                     }}
-                    className="flex-1 sm:flex-initial bg-gradient-to-r from-[#FFD000] to-[#FF8008] text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl shadow-lg shadow-[#FFD000]/20 active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                    className="flex-1 sm:flex-initial bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl shadow-lg shadow-[#FF2E7E]/20 active:scale-95 transition-all flex items-center justify-center gap-1.5"
                   >
                     <Star className="w-4 h-4 fill-current" />
                     <span>Beri Skor</span>
@@ -566,7 +566,7 @@ export const FilmDetailPage: React.FC = () => {
                     </>
                   ) : (
                     <>
-                      <Bookmark className="w-3.5 h-3.5 text-[#00F0FF]" />
+                      <Bookmark className="w-3.5 h-3.5 text-[#FF2E7E]" />
                       <span>+ Simpan ke Library</span>
                     </>
                   )}
@@ -594,31 +594,31 @@ export const FilmDetailPage: React.FC = () => {
           <span className="text-slate-500 uppercase text-[10px] tracking-wider shrink-0 mr-1">Lompat ke:</span>
           <button
             onClick={() => scrollToSection('section-synopsis')}
-            className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 hover:border-[#00F0FF] hover:text-white transition-colors shrink-0"
+            className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 hover:border-[#FF2E7E] hover:text-white transition-colors shrink-0"
           >
             Sinopsis & Trailer
           </button>
           <button
             onClick={() => scrollToSection('section-cast')}
-            className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 hover:border-[#00F0FF] hover:text-white transition-colors shrink-0"
+            className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 hover:border-[#FF2E7E] hover:text-white transition-colors shrink-0"
           >
             Pemeran & Kru ({allCastList.length + allCrewList.length})
           </button>
           <button
             onClick={() => scrollToSection('section-stills')}
-            className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 hover:border-[#00F0FF] hover:text-white transition-colors shrink-0"
+            className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 hover:border-[#FF2E7E] hover:text-white transition-colors shrink-0"
           >
             Foto Adegan ({stillsList.length})
           </button>
           <button
             onClick={() => scrollToSection('section-articles')}
-            className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 hover:border-[#00F0FF] hover:text-white transition-colors shrink-0"
+            className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 hover:border-[#FF2E7E] hover:text-white transition-colors shrink-0"
           >
             Artikel & Ulasan ({relatedArticles.length})
           </button>
           <button
             onClick={() => scrollToSection('section-reviews')}
-            className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 hover:border-[#00F0FF] hover:text-white transition-colors shrink-0"
+            className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 hover:border-[#FF2E7E] hover:text-white transition-colors shrink-0"
           >
             Ulasan Komunitas ({filmReviews.length})
           </button>
@@ -640,12 +640,12 @@ export const FilmDetailPage: React.FC = () => {
             {/* 1. SINOPSIS RESMI & CATATAN KURATOR */}
             <div
               id="section-synopsis"
-              className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-5"
+              className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-5"
             >
               <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                 <h2 className="font-display font-black text-xl sm:text-2xl text-white flex items-center gap-2.5">
-                  <Film className="w-5 h-5 text-[#00F0FF]" />
-                  <span>Sinopsis Resmi</span>
+                  <Film className="w-5 h-5 text-[#FF2E7E]" />
+                  <span>Official Synopsis</span>
                 </h2>
                 <span className="text-[11px] font-bold text-slate-400 bg-slate-900 px-2.5 py-1 rounded-full border border-slate-800">
                   {film.genres.join(' • ')}
@@ -657,8 +657,8 @@ export const FilmDetailPage: React.FC = () => {
               </p>
 
               {film.curatorNote && (
-                <div className="bg-[#FFD000]/10 border border-[#FFD000]/30 rounded-2xl p-4 sm:p-5 mt-4">
-                  <div className="flex items-center gap-2 text-[11px] font-black uppercase text-[#FFD000] tracking-wider mb-1.5">
+                <div className="bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 rounded-2xl p-4 sm:p-5 mt-4">
+                  <div className="flex items-center gap-2 text-[11px] font-black uppercase text-[#FF2E7E] tracking-wider mb-1.5">
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>Catatan Kurator Sotoy Film:</span>
                   </div>
@@ -672,7 +672,7 @@ export const FilmDetailPage: React.FC = () => {
             {/* 2. OFFICIAL TRAILER PREVIEW (TEPAT DI BAWAH SINOPSIS) */}
             <div
               id="section-trailer"
-              className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-5"
+              className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-5"
             >
               <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                 <div>
@@ -727,25 +727,25 @@ export const FilmDetailPage: React.FC = () => {
             {/* 3. DAFTAR PEMERAN & TIM PRODUKSI (CAST & CREW) */}
             <div
               id="section-cast"
-              className="bg-[#121324] border border-slate-800 rounded-3xl p-5 sm:p-8 shadow-xl space-y-7"
+              className="bg-[#171A1F] border border-slate-800 rounded-3xl p-5 sm:p-8 shadow-xl space-y-7"
             >
               {/* Section Header with Quick Action */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] sm:text-xs font-black uppercase text-[#FFD000] tracking-wider bg-[#FFD000]/10 px-2 py-0.5 rounded-full border border-[#FFD000]/30">
+                    <span className="text-[10px] sm:text-xs font-black uppercase text-[#FF2E7E] tracking-wider bg-[#FF2E7E]/10 px-2 py-0.5 rounded-full border border-[#FF2E7E]/30">
                       Kredit Sinematik
                     </span>
                     {isLoadingCredits && (
                       <span className="text-[10px] text-slate-400 flex items-center gap-1 animate-pulse">
-                        <Sparkles className="w-3 h-3 text-[#FFD000]" />
+                        <Sparkles className="w-3 h-3 text-[#FF2E7E]" />
                         Sinkronisasi TMDB...
                       </span>
                     )}
                   </div>
                   <h2 className="font-display font-black text-xl sm:text-2xl text-white flex items-center gap-2.5">
-                    <Users className="w-5 h-5 text-[#00F0FF]" />
-                    <span>Daftar Pemeran & Tim Produksi</span>
+                    <Users className="w-5 h-5 text-[#FF2E7E]" />
+                    <span>Cast & Production Crew</span>
                   </h2>
                   <p className="text-slate-400 text-xs mt-1">
                     Jajaran aktor, aktris, sutradara, dan tim kreatif di balik layar film {film.title}
@@ -755,11 +755,11 @@ export const FilmDetailPage: React.FC = () => {
                 <button
                   id="open-full-cast-crew-modal-header-btn"
                   onClick={() => setIsCastCrewModalOpen(true)}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-slate-800 to-slate-900 hover:from-[#FFD000]/20 hover:to-[#FF8008]/20 border border-slate-700 hover:border-[#FFD000]/60 text-slate-200 hover:text-[#FFD000] text-xs font-bold transition-all shadow-md group shrink-0"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-slate-800 to-slate-900 hover:from-[#FF2E7E]/20 hover:to-[#e0266e]/20 border border-slate-700 hover:border-[#FF2E7E]/60 text-slate-200 hover:text-[#FF2E7E] text-xs font-bold transition-all shadow-md group shrink-0"
                 >
-                  <Users className="w-4 h-4 text-[#FFD000] group-hover:scale-110 transition-transform" />
+                  <Users className="w-4 h-4 text-[#FF2E7E] group-hover:scale-110 transition-transform" />
                   <span>Lihat Cast & Crew Lengkap</span>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#FFD000] group-hover:translate-x-0.5 transition-all" />
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#FF2E7E] group-hover:translate-x-0.5 transition-all" />
                 </button>
               </div>
 
@@ -767,10 +767,10 @@ export const FilmDetailPage: React.FC = () => {
               <div className="space-y-3.5">
                 <div className="flex items-center justify-between">
                   <h3 className="font-display font-black text-sm sm:text-base text-white flex items-center gap-2">
-                    <Film className="w-4 h-4 text-[#00F0FF]" />
+                    <Film className="w-4 h-4 text-[#FF2E7E]" />
                     <span>Pemeran & Karakter Utama</span>
                   </h3>
-                  <span className="text-[11px] font-bold text-[#00F0FF] bg-[#00F0FF]/10 border border-[#00F0FF]/30 px-2.5 py-0.5 rounded-full">
+                  <span className="text-[11px] font-bold text-[#FF2E7E] bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 px-2.5 py-0.5 rounded-full">
                     {allCastList.length} Pemeran
                   </span>
                 </div>
@@ -780,16 +780,16 @@ export const FilmDetailPage: React.FC = () => {
                     <div
                       key={`preview-cast-${idx}`}
                       id={`cast-card-${idx}`}
-                      className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden hover:border-[#00F0FF] hover:shadow-[0_0_15px_rgba(0,240,255,0.12)] hover:scale-[1.015] transition-all duration-300 flex flex-col group shadow-md"
+                      className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FF2E7E] hover:shadow-[0_0_15px_rgba(0,240,255,0.12)] hover:scale-[1.015] transition-all duration-300 flex flex-col group shadow-md"
                     >
                       <div className="aspect-[3/4] w-full overflow-hidden bg-slate-950 relative">
                         <PersonAvatar photo={actor.photo} name={actor.name} />
                       </div>
                       <div className="p-3">
-                        <h4 className="font-bold text-xs sm:text-sm text-white group-hover:text-[#00F0FF] transition-colors truncate">
+                        <h4 className="font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors truncate">
                           {actor.name}
                         </h4>
-                        <p className="text-[11px] text-[#00F0FF] font-semibold truncate mt-0.5">
+                        <p className="text-[11px] text-[#FF2E7E] font-semibold truncate mt-0.5">
                           {actor.character ? `sebagai ${actor.character}` : 'Pemeran Utama'}
                         </p>
                       </div>
@@ -802,10 +802,10 @@ export const FilmDetailPage: React.FC = () => {
               <div className="space-y-3.5 pt-2">
                 <div className="flex items-center justify-between">
                   <h3 className="font-display font-black text-sm sm:text-base text-white flex items-center gap-2">
-                    <Clapperboard className="w-4 h-4 text-[#FFD000]" />
+                    <Clapperboard className="w-4 h-4 text-[#FF2E7E]" />
                     <span>Tim Produksi & Kru Kunci</span>
                   </h3>
-                  <span className="text-[11px] font-bold text-[#FFD000] bg-[#FFD000]/10 border border-[#FFD000]/30 px-2.5 py-0.5 rounded-full">
+                  <span className="text-[11px] font-bold text-[#FF2E7E] bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 px-2.5 py-0.5 rounded-full">
                     {allCrewList.length} Tim Kru
                   </span>
                 </div>
@@ -815,7 +815,7 @@ export const FilmDetailPage: React.FC = () => {
                     <div
                       key={`preview-crew-${idx}`}
                       id={`crew-card-${idx}`}
-                      className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FFD000] hover:shadow-[0_0_15px_rgba(255,208,0,0.12)] hover:scale-[1.015] transition-all duration-300 flex flex-col group shadow-md"
+                      className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FF2E7E] hover:shadow-[0_0_15px_rgba(255,208,0,0.12)] hover:scale-[1.015] transition-all duration-300 flex flex-col group shadow-md"
                     >
                       <div className="aspect-[3/4] w-full overflow-hidden bg-slate-950 relative">
                         <PersonAvatar photo={crew.photo} name={crew.name} />
@@ -826,10 +826,10 @@ export const FilmDetailPage: React.FC = () => {
                         )}
                       </div>
                       <div className="p-3">
-                        <h4 className="font-bold text-xs sm:text-sm text-white group-hover:text-[#FFD000] transition-colors truncate">
+                        <h4 className="font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors truncate">
                           {crew.name}
                         </h4>
-                        <p className="text-[11px] text-[#FFD000] font-semibold truncate mt-0.5">
+                        <p className="text-[11px] text-[#FF2E7E] font-semibold truncate mt-0.5">
                           {crew.job}
                         </p>
                       </div>
@@ -843,11 +843,11 @@ export const FilmDetailPage: React.FC = () => {
                 <button
                   id="open-full-cast-crew-modal-bottom-btn"
                   onClick={() => setIsCastCrewModalOpen(true)}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-3 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 hover:from-[#FFD000]/15 hover:via-[#FF8008]/20 hover:to-[#FFD000]/15 border border-slate-700 hover:border-[#FFD000]/60 text-slate-200 hover:text-[#FFD000] font-bold text-xs sm:text-sm transition-all shadow-lg hover:shadow-[#FFD000]/10 group"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-3 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 hover:from-[#FF2E7E]/15 hover:via-[#e0266e]/20 hover:to-[#FF2E7E]/15 border border-slate-700 hover:border-[#FF2E7E]/60 text-slate-200 hover:text-[#FF2E7E] font-bold text-xs sm:text-sm transition-all shadow-lg hover:shadow-[#FF2E7E]/10 group"
                 >
-                  <Users className="w-4 h-4 text-[#FFD000]" />
+                  <Users className="w-4 h-4 text-[#FF2E7E]" />
                   <span>Lihat Cast & Crew Lengkap ({allCastList.length + allCrewList.length} Orang)</span>
-                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#FFD000] group-hover:translate-x-1 transition-all" />
+                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#FF2E7E] group-hover:translate-x-1 transition-all" />
                 </button>
               </div>
             </div>
@@ -855,13 +855,13 @@ export const FilmDetailPage: React.FC = () => {
             {/* 4. GALERI CINEMATIC STILLS */}
             <div
               id="section-stills"
-              className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-5"
+              className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-5"
             >
               <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                 <div>
                   <h2 className="font-display font-black text-xl sm:text-2xl text-white flex items-center gap-2.5">
-                    <Camera className="w-5 h-5 text-[#FFD000]" />
-                    <span>Galeri Cinematic Stills</span>
+                    <Camera className="w-5 h-5 text-[#FF2E7E]" />
+                    <span>Cinematic Stills Gallery</span>
                   </h2>
                   <p className="text-slate-400 text-xs mt-1">
                     Tangkapan layar adegan dan foto produksi film {film.title}
@@ -897,13 +897,13 @@ export const FilmDetailPage: React.FC = () => {
             {/* 5. ARTIKEL & ULASAN PENULIS SOTOY */}
             <div
               id="section-articles"
-              className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-5"
+              className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-5"
             >
               <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                 <div>
                   <h2 className="font-display font-black text-xl sm:text-2xl text-white flex items-center gap-2.5">
-                    <Film className="w-5 h-5 text-[#00F0FF]" />
-                    <span>Artikel & Analisis dari Penulis Sotoy</span>
+                    <Film className="w-5 h-5 text-[#FF2E7E]" />
+                    <span>Editorial Articles & Cinematic Essays</span>
                   </h2>
                   <p className="text-slate-400 text-xs mt-1">
                     Kajian mendalam dan esai editorial khusus film {film.title}
@@ -925,7 +925,7 @@ export const FilmDetailPage: React.FC = () => {
                       key={art.id}
                       id={`film-article-${art.id}`}
                       onClick={() => navigateTo('article-detail', { articleId: art.id })}
-                      className="bg-[#151628] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#00F0FF] transition-all cursor-pointer group flex flex-col shadow-lg"
+                      className="bg-[#171A1F] border border-white/10 rounded-2xl overflow-hidden hover:border-[#FF2E7E] transition-all cursor-pointer group flex flex-col shadow-lg"
                     >
                       <div className="h-40 w-full overflow-hidden relative">
                         <img
@@ -933,7 +933,7 @@ export const FilmDetailPage: React.FC = () => {
                           alt={art.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
-                        <span className="absolute top-2 left-2 bg-[#00F0FF] text-slate-950 text-[10px] font-black uppercase px-2.5 py-0.5 rounded shadow">
+                        <span className="absolute top-2 left-2 bg-[#FF2E7E] text-white text-[10px] font-black uppercase px-2.5 py-0.5 rounded shadow">
                           {art.subCategory}
                         </span>
                       </div>
@@ -943,7 +943,7 @@ export const FilmDetailPage: React.FC = () => {
                           {/* Author */}
                           <RelatedArticleAuthorBadge authorId={art.authorId} defaultAuthor={art.author} />
 
-                          <h3 className="font-display font-bold text-sm text-white group-hover:text-[#00F0FF] transition-colors line-clamp-2">
+                          <h3 className="font-display font-bold text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-2">
                             {art.title}
                           </h3>
 
@@ -969,13 +969,13 @@ export const FilmDetailPage: React.FC = () => {
             {/* 6. ULASAN & KOMENTAR PENONTON (REVIEWS) */}
             <div
               id="section-reviews"
-              className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6"
+              className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
                 <div>
                   <h2 className="font-display font-black text-xl sm:text-2xl text-white flex items-center gap-2.5">
-                    <Star className="w-5 h-5 text-[#FFD000] fill-current" />
-                    <span>Ulasan Skor & Opini ({filmReviews.length})</span>
+                    <Star className="w-5 h-5 text-[#FF2E7E] fill-current" />
+                    <span>Reviews & Score Feed ({filmReviews.length})</span>
                   </h2>
                   <p className="text-slate-400 text-xs mt-1">
                     Opini dan penilaian jujur dari Dewan Kritikus Si Paling Sotoy & Komunitas Penonton
@@ -991,7 +991,7 @@ export const FilmDetailPage: React.FC = () => {
                       setRatingModalOpen(true);
                     }
                   }}
-                  className="bg-gradient-to-r from-[#FFD000] to-[#FF8008] text-slate-950 font-black text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-[#FFD000]/20 active:scale-95 transition-all flex items-center gap-2 self-start sm:self-auto"
+                  className="bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-slate-950 font-black text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-[#FF2E7E]/20 active:scale-95 transition-all flex items-center gap-2 self-start sm:self-auto"
                 >
                   <Star className="w-4 h-4 fill-current" />
                   <span>Beri Skor & Ulas Film Ini</span>
@@ -1005,7 +1005,7 @@ export const FilmDetailPage: React.FC = () => {
                   onClick={() => setReviewFilter('all')}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
                     reviewFilter === 'all'
-                      ? 'bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] text-white shadow-md'
+                      ? 'bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-white shadow-md'
                       : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                   }`}
                 >
@@ -1020,8 +1020,8 @@ export const FilmDetailPage: React.FC = () => {
                   onClick={() => setReviewFilter('critics')}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
                     reviewFilter === 'critics'
-                      ? 'bg-[#00F0FF] text-slate-950 shadow-md shadow-[#00F0FF]/30 font-black'
-                      : 'bg-slate-900 text-slate-400 hover:text-[#00F0FF] border border-slate-800'
+                      ? 'bg-[#FF2E7E] text-slate-950 shadow-md shadow-[#FF2E7E]/30 font-black'
+                      : 'bg-slate-900 text-slate-400 hover:text-[#FF2E7E] border border-slate-800'
                   }`}
                 >
                   <Star className="w-3 h-3 fill-current" />
@@ -1036,8 +1036,8 @@ export const FilmDetailPage: React.FC = () => {
                   onClick={() => setReviewFilter('community')}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
                     reviewFilter === 'community'
-                      ? 'bg-[#FFD000] text-slate-950 shadow-md shadow-[#FFD000]/30 font-black'
-                      : 'bg-slate-900 text-slate-400 hover:text-[#FFD000] border border-slate-800'
+                      ? 'bg-[#FF2E7E] text-slate-950 shadow-md shadow-[#FF2E7E]/30 font-black'
+                      : 'bg-slate-900 text-slate-400 hover:text-[#FF2E7E] border border-slate-800'
                   }`}
                 >
                   <Users className="w-3 h-3" />
@@ -1063,7 +1063,7 @@ export const FilmDetailPage: React.FC = () => {
                   {displayedReviews.map(rev => (
                     <div
                       key={rev.id}
-                      className="bg-[#151628] border border-slate-800 rounded-2xl p-5 space-y-3"
+                      className="bg-[#171A1F] border border-white/10 rounded-2xl p-5 space-y-3"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
@@ -1083,7 +1083,7 @@ export const FilmDetailPage: React.FC = () => {
                           </div>
                         </div>
 
-                        <div className="bg-black/60 border border-[#FFD000]/40 px-3 py-1 rounded-xl text-[#FFD000] font-black text-sm flex items-center gap-1">
+                        <div className="bg-black/60 border border-[#FF2E7E]/40 px-3 py-1 rounded-xl text-[#FF2E7E] font-black text-sm flex items-center gap-1">
                           <Star className="w-4 h-4 fill-current" />
                           <span>{rev.score.toFixed(1)}</span>
                           <span className="text-slate-500 text-xs">/ 5.0</span>
@@ -1129,7 +1129,7 @@ export const FilmDetailPage: React.FC = () => {
                           className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-[#FF2E7E]/20 text-slate-300 hover:text-white border border-slate-700 hover:border-[#FF2E7E]/50 font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm"
                           title="Bagikan Skor & Ulasan ini ke Instagram Story/Feed"
                         >
-                          <Share2 className="w-3.5 h-3.5 text-[#00F0FF]" />
+                          <Share2 className="w-3.5 h-3.5 text-[#FF2E7E]" />
                           <span>Bagikan Ulasan</span>
                         </button>
                       </div>
@@ -1147,10 +1147,10 @@ export const FilmDetailPage: React.FC = () => {
           <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-20">
             
             {/* 1. DIMANA MENONTON (WHERE TO WATCH) */}
-            <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+            <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                 <h3 className="font-display font-black text-base text-white flex items-center gap-2">
-                  <Tv className="w-4 h-4 text-[#00F0FF]" />
+                  <Tv className="w-4 h-4 text-[#FF2E7E]" />
                   <span>Platform Nonton Resmi</span>
                 </h3>
                 <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded">
@@ -1177,9 +1177,9 @@ export const FilmDetailPage: React.FC = () => {
             </div>
 
             {/* 2. DETAIL & SPESIFIKASI TEKNIS FILM */}
-            <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+            <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
               <h3 className="font-display font-black text-base text-white pb-3 border-b border-slate-800 flex items-center gap-2">
-                <Info className="w-4 h-4 text-[#FFD000]" />
+                <Info className="w-4 h-4 text-[#FF2E7E]" />
                 <span>Spesifikasi & Informasi Film</span>
               </h3>
 
@@ -1224,7 +1224,7 @@ export const FilmDetailPage: React.FC = () => {
             </div>
 
             {/* 3. METRIK REKOMENDASI SKOR SOTOY */}
-            <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+            <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
               <h3 className="font-display font-black text-base text-white pb-3 border-b border-slate-800 flex items-center gap-2">
                 <Award className="w-4 h-4 text-[#FF2E7E]" />
                 <span>Rangkuman Skor Sotoy</span>
@@ -1232,19 +1232,19 @@ export const FilmDetailPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3 text-center">
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3">
-                  <div className="font-display font-medium text-xl text-[#FFD000]">
+                  <div className="font-display font-medium text-xl text-[#FF2E7E]">
                     ★ {film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}
                   </div>
-                  <div className="text-[10px] font-bold text-[#FFD000] mt-1 uppercase">
+                  <div className="text-[10px] font-bold text-[#FF2E7E] mt-1 uppercase">
                     Si Paling Sotoy
                   </div>
                 </div>
 
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3">
-                  <div className="font-display font-medium text-xl text-[#00F0FF]">
+                  <div className="font-display font-medium text-xl text-[#FF2E7E]">
                     ★ {film.skorSotoy.toFixed(1)}
                   </div>
-                  <div className="text-[10px] font-bold text-[#00F0FF] mt-1 uppercase">
+                  <div className="text-[10px] font-bold text-[#FF2E7E] mt-1 uppercase">
                     Komunitas
                   </div>
                 </div>
@@ -1253,13 +1253,13 @@ export const FilmDetailPage: React.FC = () => {
               <div className="pt-1">
                 <div className="flex items-center justify-between text-xs text-slate-400 mb-1.5">
                   <span>Tingkat Kepuasan Penonton</span>
-                  <span className="font-medium text-[#FFD000]">
+                  <span className="font-medium text-[#FF2E7E]">
                     {Math.round((film.skorSotoy / 10.0) * 100)}%
                   </span>
                 </div>
                 <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
                   <div
-                    className="bg-gradient-to-r from-[#FFD000] to-[#FF8008] h-full rounded-full"
+                    className="bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] h-full rounded-full"
                     style={{ width: `${Math.round((film.skorSotoy / 10.0) * 100)}%` }}
                   />
                 </div>

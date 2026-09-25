@@ -145,7 +145,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ mode = 'glob
       case 'repost':
         return <Repeat2 className="w-4 h-4 text-emerald-400" />;
       default:
-        return <Award className="w-4 h-4 text-red-500" />;
+        return <Award className="w-4 h-4 text-[#FF2E7E]" />;
     }
   };
 
@@ -194,13 +194,13 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ mode = 'glob
       {/* Bell Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-full text-zinc-300 hover:text-white hover:bg-zinc-800/80 transition-all focus:outline-none focus:ring-2 focus:ring-red-500/50"
+        className="relative p-2 rounded-full text-zinc-300 hover:text-white hover:bg-zinc-800/80 transition-all focus:outline-none focus:ring-2 focus:ring-[#FF2E7E]/50"
         title={mode === 'writer' ? 'Notifikasi Penulis' : mode === 'critic' ? 'Notifikasi Kritik' : 'Notifikasi'}
         aria-label="Toggle notifications"
       >
         <Bell className="w-5 h-5" />
         {unreadCountForMode > 0 && (
-          <span className="absolute top-1 right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white shadow-lg animate-pulse">
+          <span className="absolute top-1 right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-[#FF2E7E] text-[10px] font-bold text-white shadow-lg animate-pulse">
             {unreadCountForMode > 99 ? '99+' : unreadCountForMode}
           </span>
         )}
@@ -208,16 +208,16 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ mode = 'glob
 
       {/* Popover Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 max-w-[calc(100vw-2rem)] bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-50 overflow-hidden backdrop-blur-md">
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 max-w-[calc(100vw-2rem)] bg-[#171A1F] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden backdrop-blur-md">
           {/* Dropdown Header */}
-          <div className="p-3 sm:p-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/90">
+          <div className="p-3 sm:p-4 border-b border-white/10 flex items-center justify-between bg-[#171A1F]/90">
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-white text-sm sm:text-base flex items-center gap-2">
-                <Bell className="w-4 h-4 text-red-500" />
+                <Bell className="w-4 h-4 text-[#FF2E7E]" />
                 {mode === 'writer' ? 'Alerts Penulis' : mode === 'critic' ? 'Alerts Kritik' : 'Notifikasi'}
               </h3>
               {unreadCountForMode > 0 && (
-                <span className="text-xs bg-red-500/10 text-red-400 font-semibold px-2 py-0.5 rounded-full border border-red-500/20">
+                <span className="text-xs bg-red-500/10 text-red-400 font-semibold px-2 py-0.5 rounded-full border border-[#FF2E7E]/20">
                   {unreadCountForMode} baru
                 </span>
               )}
@@ -244,12 +244,12 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ mode = 'glob
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex border-b border-zinc-800 bg-zinc-950/50 px-3 pt-2 text-xs font-medium">
+          <div className="flex border-b border-white/10 bg-zinc-950/50 px-3 pt-2 text-xs font-medium">
             <button
               onClick={() => setActiveFilter('all')}
               className={`pb-2 px-3 border-b-2 transition ${
                 activeFilter === 'all'
-                  ? 'border-red-500 text-white font-semibold'
+                  ? 'border-[#FF2E7E] text-white font-semibold'
                   : 'border-transparent text-zinc-400 hover:text-zinc-200'
               }`}
             >
@@ -259,7 +259,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ mode = 'glob
               onClick={() => setActiveFilter('unread')}
               className={`pb-2 px-3 border-b-2 transition ${
                 activeFilter === 'unread'
-                  ? 'border-red-500 text-white font-semibold'
+                  ? 'border-[#FF2E7E] text-white font-semibold'
                   : 'border-transparent text-zinc-400 hover:text-zinc-200'
               }`}
             >
@@ -297,7 +297,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ mode = 'glob
                       alt={senderName}
                       className="w-9 h-9 rounded-full object-cover border border-zinc-700"
                     />
-                    <div className="absolute -bottom-1 -right-1 p-0.5 rounded-full bg-zinc-900 border border-zinc-800">
+                    <div className="absolute -bottom-1 -right-1 p-0.5 rounded-full bg-[#171A1F] border border-white/10">
                       {getIconForType(item.type)}
                     </div>
                   </div>
@@ -341,7 +341,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ mode = 'glob
 
           {/* Footer */}
           {filteredNotifications.length > 0 && (
-            <div className="p-2.5 text-center border-t border-zinc-800 bg-zinc-950/80">
+            <div className="p-2.5 text-center border-t border-white/10 bg-zinc-950/80">
               <button
                 onClick={() => {
                   setIsOpen(false);

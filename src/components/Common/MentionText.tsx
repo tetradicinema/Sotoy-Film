@@ -39,7 +39,7 @@ export const MentionText: React.FC<MentionTextProps> = ({ content, className = '
                   navigateTo('community-feed');
                 }
               }}
-              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 mx-0.5 rounded-md bg-[#00F0FF]/15 border border-[#00F0FF]/30 text-[#00F0FF] font-mono font-bold text-xs sm:text-sm hover:bg-[#00F0FF]/30 cursor-pointer transition-colors shadow-sm"
+              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 mx-0.5 rounded-md bg-[#FF2E7E]/15 border border-[#FF2E7E]/30 text-[#FF2E7E] font-mono font-bold text-xs sm:text-sm hover:bg-[#FF2E7E]/30 cursor-pointer transition-colors shadow-sm"
               title={matchedUser ? `Buka profil ${matchedUser.name}` : `Mention ${part}`}
             >
               {part}

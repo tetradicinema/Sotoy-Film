@@ -51,13 +51,13 @@ export const BusinessInquiriesPage: React.FC = () => {
         
         {/* Header Hero */}
         <div className="text-center space-y-4 max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#FFD000]/10 border border-[#FFD000]/30 text-[#FFD000] text-xs font-black uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 text-[#FF2E7E] text-xs font-black uppercase tracking-wider">
             <Briefcase className="w-3.5 h-3.5" />
             <span>Kemitraan, Iklan & Kolaborasi Sinema</span>
           </div>
 
           <h1 className="font-display font-black text-3xl sm:text-5xl text-white tracking-tight leading-tight">
-            Hubungkan Karya Film & Brand Anda dengan <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00F0FF] via-[#FFD000] to-[#FF2E7E]">Audiens Paling Antusias.</span>
+            Hubungkan Karya Film & Brand Anda dengan <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF2E7E] via-[#FF2E7E] to-[#FF2E7E]">Audiens Paling Antusias.</span>
           </h1>
 
           <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
@@ -70,15 +70,15 @@ export const BusinessInquiriesPage: React.FC = () => {
 
         {/* Media Kit Snapshot / Metrics */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-[#121324] border border-slate-800 rounded-3xl p-5 text-center space-y-1 shadow-lg">
-            <div className="font-display font-black text-3xl sm:text-4xl text-[#00F0FF]">
+          <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-5 text-center space-y-1 shadow-lg">
+            <div className="font-display font-black text-3xl sm:text-4xl text-[#FF2E7E]">
               450K+
             </div>
             <div className="text-xs font-bold text-white">Pembaca Aktif / Bulan</div>
             <div className="text-[11px] text-slate-400">Film Enthusiasts & Penonton</div>
           </div>
 
-          <div className="bg-[#121324] border border-slate-800 rounded-3xl p-5 text-center space-y-1 shadow-lg">
+          <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-5 text-center space-y-1 shadow-lg">
             <div className="font-display font-black text-3xl sm:text-4xl text-[#FF2E7E]">
               85K+
             </div>
@@ -86,15 +86,15 @@ export const BusinessInquiriesPage: React.FC = () => {
             <div className="text-[11px] text-slate-400">Tingkat Retensi Sosial Tinggi</div>
           </div>
 
-          <div className="bg-[#121324] border border-slate-800 rounded-3xl p-5 text-center space-y-1 shadow-lg">
-            <div className="font-display font-black text-3xl sm:text-4xl text-[#FFD000]">
+          <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-5 text-center space-y-1 shadow-lg">
+            <div className="font-display font-black text-3xl sm:text-4xl text-[#FF2E7E]">
               72%
             </div>
             <div className="text-xs font-bold text-white">Demografi 18 - 34 Tahun</div>
             <div className="text-[11px] text-slate-400">Gen-Z & Urban Moviegoers</div>
           </div>
 
-          <div className="bg-[#121324] border border-slate-800 rounded-3xl p-5 text-center space-y-1 shadow-lg">
+          <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-5 text-center space-y-1 shadow-lg">
             <div className="font-display font-black text-3xl sm:text-4xl text-purple-400">
               94%
             </div>
@@ -115,8 +115,8 @@ export const BusinessInquiriesPage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 space-y-3 hover:border-[#00F0FF]/50 transition-colors shadow-lg">
-              <div className="w-10 h-10 rounded-2xl bg-[#00F0FF]/10 text-[#00F0FF] flex items-center justify-center">
+            <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 space-y-3 hover:border-[#FF2E7E]/50 transition-colors shadow-lg">
+              <div className="w-10 h-10 rounded-2xl bg-[#FF2E7E]/10 text-[#FF2E7E] flex items-center justify-center">
                 <Film className="w-5 h-5" />
               </div>
               <h3 className="font-display font-black text-lg text-white">
@@ -127,7 +127,7 @@ export const BusinessInquiriesPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 space-y-3 hover:border-[#FF2E7E]/50 transition-colors shadow-lg">
+            <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 space-y-3 hover:border-[#FF2E7E]/50 transition-colors shadow-lg">
               <div className="w-10 h-10 rounded-2xl bg-[#FF2E7E]/10 text-[#FF2E7E] flex items-center justify-center">
                 <Award className="w-5 h-5" />
               </div>
@@ -139,8 +139,8 @@ export const BusinessInquiriesPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 space-y-3 hover:border-[#FFD000]/50 transition-colors shadow-lg">
-              <div className="w-10 h-10 rounded-2xl bg-[#FFD000]/10 text-[#FFD000] flex items-center justify-center">
+            <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 space-y-3 hover:border-[#FF2E7E]/50 transition-colors shadow-lg">
+              <div className="w-10 h-10 rounded-2xl bg-[#FF2E7E]/10 text-[#FF2E7E] flex items-center justify-center">
                 <TrendingUp className="w-5 h-5" />
               </div>
               <h3 className="font-display font-black text-lg text-white">
@@ -151,7 +151,7 @@ export const BusinessInquiriesPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 space-y-3 hover:border-purple-400/50 transition-colors shadow-lg">
+            <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 space-y-3 hover:border-purple-400/50 transition-colors shadow-lg">
               <div className="w-10 h-10 rounded-2xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
                 <Camera className="w-5 h-5" />
               </div>
@@ -166,8 +166,8 @@ export const BusinessInquiriesPage: React.FC = () => {
         </div>
 
         {/* Business Inquiry Form */}
-        <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-[#FFD000]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-[#FF2E7E]/10 rounded-full blur-3xl pointer-events-none" />
 
           <div className="max-w-2xl mb-8 space-y-2">
             <h2 className="font-display font-black text-2xl sm:text-3xl text-white">
@@ -208,7 +208,7 @@ export const BusinessInquiriesPage: React.FC = () => {
                     value={formState.companyName}
                     onChange={e => setFormState({ ...formState, companyName: e.target.value })}
                     placeholder="Contoh: Palari Films / Sony Cine"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF]"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
                   />
                 </div>
 
@@ -222,7 +222,7 @@ export const BusinessInquiriesPage: React.FC = () => {
                     value={formState.contactName}
                     onChange={e => setFormState({ ...formState, contactName: e.target.value })}
                     placeholder="Nama lengkap Anda"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF]"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
                   />
                 </div>
 
@@ -236,7 +236,7 @@ export const BusinessInquiriesPage: React.FC = () => {
                     value={formState.email}
                     onChange={e => setFormState({ ...formState, email: e.target.value })}
                     placeholder="partner@company.com"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF]"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
                   />
                 </div>
 
@@ -249,7 +249,7 @@ export const BusinessInquiriesPage: React.FC = () => {
                     value={formState.phone}
                     onChange={e => setFormState({ ...formState, phone: e.target.value })}
                     placeholder="+62 812-xxxx-xxxx"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF]"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
                   />
                 </div>
 
@@ -260,7 +260,7 @@ export const BusinessInquiriesPage: React.FC = () => {
                   <select
                     value={formState.partnershipType}
                     onChange={e => setFormState({ ...formState, partnershipType: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#00F0FF]"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#FF2E7E]"
                   >
                     <option value="screening">Special Community Screening & Premiere</option>
                     <option value="editorial">Sponsored Article & Filmmaker Interview</option>
@@ -280,7 +280,7 @@ export const BusinessInquiriesPage: React.FC = () => {
                     value={formState.estimatedTimeline}
                     onChange={e => setFormState({ ...formState, estimatedTimeline: e.target.value })}
                     placeholder="Contoh: Kuartal 4 2026 / Bulan Depan"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF]"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
                   />
                 </div>
               </div>
@@ -295,19 +295,19 @@ export const BusinessInquiriesPage: React.FC = () => {
                   value={formState.message}
                   onChange={e => setFormState({ ...formState, message: e.target.value })}
                   placeholder="Ceritakan gambaran kampanye film atau brand Anda, target audiens, serta ekspektasi output kolaborasi bersama Sotoy Film..."
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF] resize-none"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] resize-none"
                 />
               </div>
 
               <div className="flex items-center justify-between flex-wrap gap-4 pt-2">
                 <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
-                  <Mail className="w-3.5 h-3.5 text-[#00F0FF]" />
+                  <Mail className="w-3.5 h-3.5 text-[#FF2E7E]" />
                   <span>Atau email langsung ke: <strong>business@sotoyfilm.com</strong></span>
                 </div>
 
                 <button
                   type="submit"
-                  className="px-8 py-3 rounded-xl bg-gradient-to-r from-[#FFD000] to-[#FF2E7E] hover:brightness-110 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-[#FFD000]/20 transition-transform active:scale-95"
+                  className="px-8 py-3 rounded-xl bg-gradient-to-r from-[#FF2E7E] to-[#FF2E7E] hover:brightness-110 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-[#FF2E7E]/20 transition-transform active:scale-95"
                 >
                   <span>Kirim Proposal Kemitraan</span>
                   <Send className="w-4 h-4" />
@@ -325,11 +325,11 @@ export const BusinessInquiriesPage: React.FC = () => {
           </div>
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <Mail className="w-4 h-4 text-[#FFD000]" />
+              <Mail className="w-4 h-4 text-[#FF2E7E]" />
               <span className="text-slate-300 font-medium">business@sotoyfilm.com</span>
             </div>
             <div className="flex items-center gap-2">
-              <Phone className="w-4 h-4 text-[#00F0FF]" />
+              <Phone className="w-4 h-4 text-[#FF2E7E]" />
               <span className="text-slate-300 font-medium">+62 812-9900-SOTOY</span>
             </div>
           </div>

@@ -75,7 +75,7 @@ export const GENRE_CATEGORIES: GenreCategory[] = [
     badgeClass: 'text-cyan-400 border-cyan-900/50 bg-cyan-950/30 hover:border-cyan-600/60',
     activeClass: 'bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 border-cyan-400 shadow-lg shadow-cyan-500/30 ring-2 ring-cyan-300/40 font-black',
     description: 'Fiksi ilmiah futuristik, eksplorasi luar angkasa, distopia teknologi, dan multiverse spektakuler.',
-    themeColor: '#00F0FF',
+    themeColor: '#FF2E7E',
   },
   {
     id: 'Drama',
@@ -84,7 +84,7 @@ export const GENRE_CATEGORIES: GenreCategory[] = [
     badgeClass: 'text-amber-400 border-amber-900/50 bg-amber-950/30 hover:border-amber-600/60',
     activeClass: 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 border-amber-400 shadow-lg shadow-amber-500/30 ring-2 ring-amber-300/40 font-black',
     description: 'Konflik emosional mendalam, pergulatan nurani manusia, drama persidangan, dan relasi autentik.',
-    themeColor: '#FFD000',
+    themeColor: '#FF2E7E',
   },
   {
     id: 'Anime',
@@ -200,9 +200,9 @@ export const FilmDatabasePage: React.FC = () => {
     name: selectedGenre,
     icon: Film,
     badgeClass: 'text-slate-300 border-slate-700 bg-slate-900/60',
-    activeClass: 'bg-[#FFD000] text-slate-950 border-[#FFD000]',
+    activeClass: 'bg-[#FF2E7E] text-slate-950 border-[#FF2E7E]',
     description: `Koleksi film dan tayangan dengan genre ${selectedGenre}.`,
-    themeColor: '#FFD000',
+    themeColor: '#FF2E7E',
   };
 
   // Film sections data (respects selectedGenre if set)
@@ -320,17 +320,12 @@ export const FilmDatabasePage: React.FC = () => {
         {/* Header Hero Banner */}
         <div
           id="film-database-header"
-          className="bg-gradient-to-br from-[#181428] via-[#141529] to-[#0d0e19] border border-[#FFD000]/40 rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden"
+          className="bg-gradient-to-br from-[#181428] via-[#141529] to-[#0d0e19] border border-[#FF2E7E]/40 rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden"
         >
-          <div className="absolute -right-16 -top-16 w-80 h-80 bg-[#FFD000]/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -right-16 -top-16 w-80 h-80 bg-[#FF2E7E]/15 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -left-16 -bottom-16 w-80 h-80 bg-[#FF2E7E]/15 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider mb-3 bg-[#FFD000]/20 text-[#FFD000] border border-[#FFD000]/40">
-              <Film className="w-3.5 h-3.5" />
-              <span>SOTOY FILM DATABASE & SKOR KOMUNITAS</span>
-            </div>
-
             <h1 className="font-display font-black text-3xl sm:text-5xl text-white tracking-tight leading-tight mb-3">
               Film Database
             </h1>
@@ -347,14 +342,14 @@ export const FilmDatabasePage: React.FC = () => {
         <section id="genre-filter-system" className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-[#FFD000]/20 text-[#FFD000] flex items-center justify-center shadow-inner">
+              <div className="w-8 h-8 rounded-xl bg-[#FF2E7E]/20 text-[#FF2E7E] flex items-center justify-center shadow-inner">
                 <SlidersHorizontal className="w-4 h-4" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="font-display font-black text-xl text-white">Eksplorasi Berdasarkan Genre</h2>
+                  <h2 className="font-display font-black text-xl text-white">Browse by Genre</h2>
                   {selectedGenre !== 'all' && (
-                    <span className="text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#FFD000] text-slate-950 shadow-sm animate-pulse">
+                    <span className="text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#FF2E7E] text-slate-950 shadow-sm animate-pulse">
                       Filter Aktif
                     </span>
                   )}
@@ -368,9 +363,9 @@ export const FilmDatabasePage: React.FC = () => {
               <button
                 id="reset-genre-filter-btn"
                 onClick={() => setSelectedGenre('all')}
-                className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-[#FFD000] text-xs font-bold transition-all shadow-sm group"
+                className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:border-[#FF2E7E] text-xs font-bold transition-all shadow-sm group"
               >
-                <RotateCcw className="w-3.5 h-3.5 text-[#FFD000] group-hover:-rotate-45 transition-transform" />
+                <RotateCcw className="w-3.5 h-3.5 text-[#FF2E7E] group-hover:-rotate-45 transition-transform" />
                 <span>Reset ke Semua ({films.length})</span>
               </button>
             )}
@@ -414,7 +409,7 @@ export const FilmDatabasePage: React.FC = () => {
           {selectedGenre !== 'all' && (
             <div
               id="genre-spotlight-banner"
-              className="bg-gradient-to-r from-[#17182e] via-[#121324] to-[#15162a] border border-slate-800/90 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl relative overflow-hidden"
+              className="bg-gradient-to-r from-[#17182e] via-[#171A1F] to-[#15162a] border border-slate-800/90 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl relative overflow-hidden"
             >
               <div
                 className="absolute top-0 right-0 w-64 h-full pointer-events-none opacity-20 blur-3xl"
@@ -447,7 +442,7 @@ export const FilmDatabasePage: React.FC = () => {
               <div className="flex items-center gap-4 text-xs relative z-10 self-stretch sm:self-auto justify-between sm:justify-start border-t sm:border-t-0 sm:border-l border-slate-800 pt-3 sm:pt-0 sm:pl-5">
                 <div>
                   <div className="text-[10px] text-slate-500 uppercase font-black">Rata-Rata Skor</div>
-                  <div className="font-medium text-sm text-[#FFD000] flex items-center gap-1 mt-0.5">
+                  <div className="font-medium text-sm text-[#FF2E7E] flex items-center gap-1 mt-0.5">
                     <Star className="w-3.5 h-3.5 fill-current" />
                     <span>{avgGenreScore} / 10.0</span>
                   </div>
@@ -458,7 +453,7 @@ export const FilmDatabasePage: React.FC = () => {
                     <div className="text-[10px] text-slate-500 uppercase font-black">Rating Tertinggi</div>
                     <div
                       onClick={() => navigateTo('film-detail', { filmId: topRatedGenreFilm.id })}
-                      className="font-bold text-sm text-white hover:text-[#FFD000] truncate max-w-[140px] cursor-pointer mt-0.5 transition-colors"
+                      className="font-bold text-sm text-white hover:text-[#FF2E7E] truncate max-w-[140px] cursor-pointer mt-0.5 transition-colors"
                       title={topRatedGenreFilm.title}
                     >
                       {topRatedGenreFilm.title}
@@ -473,12 +468,12 @@ export const FilmDatabasePage: React.FC = () => {
         {/* ========================================================================= */}
         {/* SEARCH SECTION WITH POSTERS & RATINGS */}
         {/* ========================================================================= */}
-        <section id="film-search-section" className="bg-[#121324] border border-slate-800 rounded-3xl p-6 shadow-xl space-y-5">
+        <section id="film-search-section" className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 shadow-xl space-y-5">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h2 className="font-display font-black text-xl text-white flex items-center gap-2">
-                <Search className="w-5 h-5 text-[#FFD000]" />
-                <span>Pencarian Film & Penilaian</span>
+                <Search className="w-5 h-5 text-[#FF2E7E]" />
+                <span>Film Search & Ratings</span>
               </h2>
               <p className="text-slate-400 text-xs mt-0.5">
                 Cari judul film, sutradara, atau filter berdasarkan genre, rating bintang, dan format tayangan
@@ -493,7 +488,7 @@ export const FilmDatabasePage: React.FC = () => {
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Cari Dune, Nolan, Shōgun, Horror, Anime..."
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 pl-10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000] transition-all"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 pl-10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] focus:ring-1 focus:ring-[#FF2E7E] transition-all"
               />
               <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
               {searchQuery && (
@@ -536,7 +531,7 @@ export const FilmDatabasePage: React.FC = () => {
                 onClick={() => setSelectedFormat('series')}
                 className={`px-3 py-1 rounded-lg font-bold transition-all ${
                   selectedFormat === 'series'
-                    ? 'bg-[#00F0FF] text-slate-950 shadow'
+                    ? 'bg-[#FF2E7E] text-slate-950 shadow'
                     : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                 }`}
               >
@@ -546,7 +541,7 @@ export const FilmDatabasePage: React.FC = () => {
                 onClick={() => setSelectedFormat('anime')}
                 className={`px-3 py-1 rounded-lg font-bold transition-all ${
                   selectedFormat === 'anime'
-                    ? 'bg-[#FFD000] text-slate-950 shadow'
+                    ? 'bg-[#FF2E7E] text-slate-950 shadow'
                     : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                 }`}
               >
@@ -563,17 +558,11 @@ export const FilmDatabasePage: React.FC = () => {
                   id="genre-filter-select"
                   value={selectedGenre}
                   onChange={e => setSelectedGenre(e.target.value)}
-                  className="bg-transparent text-slate-200 text-xs focus:outline-none focus:text-[#FFD000] font-medium cursor-pointer"
+                  className="bg-transparent text-slate-200 text-xs focus:outline-none focus:text-[#FF2E7E] font-medium cursor-pointer"
                 >
-                  <option value="all" className="bg-slate-900 text-slate-200">Semua Genre ({films.length})</option>
-                  <option value="Horror" className="bg-slate-900 text-rose-400 font-bold">👻 Horror ({getGenreCount('Horror')})</option>
-                  <option value="Sci-Fi" className="bg-slate-900 text-cyan-400 font-bold">🚀 Sci-Fi ({getGenreCount('Sci-Fi')})</option>
-                  <option value="Drama" className="bg-slate-900 text-amber-400 font-bold">🎬 Drama ({getGenreCount('Drama')})</option>
-                  <option value="Anime" className="bg-slate-900 text-pink-400 font-bold">✨ Anime ({getGenreCount('Anime')})</option>
-                  <option value="Action" className="bg-slate-900 text-orange-400 font-bold">🔥 Action ({getGenreCount('Action')})</option>
-                  <option value="Mystery" className="bg-slate-900 text-purple-400 font-bold">👁️ Mystery & Thriller ({getGenreCount('Mystery')})</option>
+                  <option value="all" className="bg-slate-900 text-slate-200">All Genres ({films.length})</option>
                   {allGenres
-                    .filter(g => !['horror', 'sci-fi', 'drama', 'anime', 'action', 'mystery', 'thriller'].includes(g.toLowerCase()))
+                    .sort((a, b) => a.localeCompare(b))
                     .map(g => (
                       <option key={g} value={g} className="bg-slate-900 text-slate-300">
                         {g} ({getGenreCount(g)})
@@ -586,7 +575,7 @@ export const FilmDatabasePage: React.FC = () => {
               <select
                 value={ratingFilter}
                 onChange={e => setRatingFilter(Number(e.target.value))}
-                className="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-[#FFD000] cursor-pointer"
+                className="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-[#FF2E7E] cursor-pointer"
               >
                 <option value={0}>Semua Skor Sotoy</option>
                 <option value={9.0}>★ 9.0+ / 10.0</option>
@@ -601,7 +590,7 @@ export const FilmDatabasePage: React.FC = () => {
                 <select
                   value={sortBy}
                   onChange={e => setSortBy(e.target.value as any)}
-                  className="bg-transparent text-slate-300 text-xs focus:outline-none focus:text-[#FFD000] cursor-pointer font-medium"
+                  className="bg-transparent text-slate-300 text-xs focus:outline-none focus:text-[#FF2E7E] cursor-pointer font-medium"
                 >
                   <option value="rating" className="bg-slate-900 text-slate-200">Skor Tertinggi</option>
                   <option value="votes" className="bg-slate-900 text-slate-200">Paling Banyak Diulas</option>
@@ -619,7 +608,7 @@ export const FilmDatabasePage: React.FC = () => {
                 <span>
                   Menampilkan <strong className="text-white">{sortedSearchResults.length}</strong> judul film & series
                   {selectedGenre !== 'all' && (
-                    <span className="ml-1 text-[#FFD000] font-bold">
+                    <span className="ml-1 text-[#FF2E7E] font-bold">
                       (Genre: {activeCategoryConfig.name})
                     </span>
                   )}
@@ -635,7 +624,7 @@ export const FilmDatabasePage: React.FC = () => {
                     setSelectedGenre('all');
                     setRatingFilter(0);
                   }}
-                  className="text-xs font-bold text-slate-400 hover:text-[#FFD000] transition-colors flex items-center gap-1"
+                  className="text-xs font-bold text-slate-400 hover:text-[#FF2E7E] transition-colors flex items-center gap-1"
                 >
                   <RotateCcw className="w-3 h-3" />
                   <span>Reset Semua Filter</span>
@@ -661,7 +650,7 @@ export const FilmDatabasePage: React.FC = () => {
                     setSelectedGenre('all');
                     setRatingFilter(0);
                   }}
-                  className="mt-3 text-xs font-bold text-[#FFD000] hover:underline"
+                  className="mt-3 text-xs font-bold text-[#FF2E7E] hover:underline"
                 >
                   Reset Filter Pencarian
                 </button>
@@ -675,25 +664,24 @@ export const FilmDatabasePage: React.FC = () => {
                     <div
                       key={film.id}
                       id={`search-film-card-${film.id}`}
-                      className="bg-[#151628] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FFD000]/70 hover:shadow-[0_0_24px_rgba(255,208,0,0.18)] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group shadow-lg"
+                      className="bg-[#171A1F] border border-white/10 rounded-2xl overflow-hidden hover:border-[#FF2E7E] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group shadow-lg"
                     >
                       {/* Movie Poster */}
                       <div
                         onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                        className="relative aspect-[2/3] w-full overflow-hidden cursor-pointer bg-slate-900"
+                        className="relative aspect-[2/3] w-full overflow-hidden cursor-pointer bg-[#0E1013]"
                       >
                         <img
                           src={film.poster}
                           alt={film.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#151628] via-transparent to-transparent opacity-80" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent opacity-80" />
 
                         {/* Rating Badge */}
-                        <div className="absolute top-2 left-2 bg-black/90 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/50 text-[#FFD000] text-[11px] font-medium flex items-center gap-1 shadow-md">
-                          <Star className="w-3 h-3 fill-current" />
+                        <div className="absolute top-2 left-2 bg-black/90 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/30 text-[#FFD000] text-[11px] font-black flex items-center gap-1 shadow-md">
+                          <Star className="w-3 h-3 fill-current text-[#FFD000]" />
                           <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
-                          <span className="text-[9px] text-amber-200/80 font-bold">Critics</span>
                         </div>
 
                         {/* Watchlist toggle */}
@@ -724,7 +712,7 @@ export const FilmDatabasePage: React.FC = () => {
                         <div>
                           <h3
                             onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                            className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FFD000] transition-colors line-clamp-1 cursor-pointer mb-1"
+                            className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-1 cursor-pointer mb-1"
                             title={film.title}
                           >
                             {film.title}
@@ -746,7 +734,7 @@ export const FilmDatabasePage: React.FC = () => {
                                   }}
                                   className={`text-[9px] font-bold px-1.5 py-0.5 rounded transition-colors ${
                                     isTagActive
-                                      ? 'bg-[#FFD000] text-slate-950 font-black'
+                                      ? 'bg-[#FF2E7E] text-slate-950 font-black'
                                       : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
                                   }`}
                                   title={`Filter genre ${g}`}
@@ -770,7 +758,7 @@ export const FilmDatabasePage: React.FC = () => {
                               if (!isLoggedIn) setLoginModalOpen(true);
                               else setRatingModalFilm(film);
                             }}
-                            className="py-1 px-2 rounded-lg bg-[#FFD000]/15 hover:bg-[#FFD000] text-[#FFD000] hover:text-slate-950 text-[11px] font-black transition-colors"
+                            className="py-1 px-2 rounded-lg bg-[#FF2E7E]/15 hover:bg-[#FF2E7E] text-[#FF2E7E] hover:text-slate-950 text-[11px] font-black transition-colors"
                           >
                             Ulas
                           </button>
@@ -793,7 +781,7 @@ export const FilmDatabasePage: React.FC = () => {
         <section id="recent-released-section" className="space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-800">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-cyan-500/20 text-[#00F0FF] flex items-center justify-center">
+              <div className="w-8 h-8 rounded-xl bg-cyan-500/20 text-[#FF2E7E] flex items-center justify-center">
                 <Clock className="w-4 h-4" />
               </div>
               <div>
@@ -801,7 +789,7 @@ export const FilmDatabasePage: React.FC = () => {
                 <p className="text-slate-400 text-xs">Film bioskop dan tayangan serial yang baru saja dirilis resmi</p>
               </div>
             </div>
-            <span className="text-xs font-bold text-[#00F0FF]">
+            <span className="text-xs font-bold text-[#FF2E7E]">
               {filteredRecentReleased.length} Judul {selectedGenre !== 'all' ? `(${activeCategoryConfig.name})` : 'Rilis Baru'}
             </span>
           </div>
@@ -819,7 +807,7 @@ export const FilmDatabasePage: React.FC = () => {
               </p>
               <button
                 onClick={() => setSelectedGenre('all')}
-                className="mt-2 text-xs font-bold text-[#00F0FF] hover:underline"
+                className="mt-2 text-xs font-bold text-[#FF2E7E] hover:underline"
               >
                 Lihat semua rilis baru
               </button>
@@ -831,7 +819,7 @@ export const FilmDatabasePage: React.FC = () => {
                   key={film.id}
                   id={`recent-film-card-${film.id}`}
                   onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                  className="bg-[#121324] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FFD000]/70 hover:shadow-[0_0_24px_rgba(255,208,0,0.18)] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
+                  className="bg-[#171A1F] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FF2E7E]/70 hover:shadow-[0_0_24px_rgba(255,208,0,0.18)] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
                 >
                   <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
                     <img
@@ -839,9 +827,9 @@ export const FilmDatabasePage: React.FC = () => {
                       alt={film.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#121324] via-transparent to-transparent opacity-80" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent opacity-80" />
 
-                    <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/50 text-[#FFD000] text-[11px] font-medium flex items-center gap-1">
+                    <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FF2E7E]/50 text-[#FF2E7E] text-[11px] font-medium flex items-center gap-1">
                       <Star className="w-3 h-3 fill-current" />
                       <span>{film.skorSotoy.toFixed(1)}</span>
                     </div>
@@ -856,7 +844,7 @@ export const FilmDatabasePage: React.FC = () => {
                   </div>
 
                   <div className="p-3">
-                    <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FFD000] transition-colors line-clamp-1 mb-1">
+                    <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-1 mb-1">
                       {film.title}
                     </h3>
                     <div className="flex flex-wrap gap-1">
@@ -928,7 +916,7 @@ export const FilmDatabasePage: React.FC = () => {
                   key={film.id}
                   id={`popular-film-card-${film.id}`}
                   onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                  className="bg-[#121324] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FFD000]/70 hover:shadow-[0_0_24px_rgba(255,208,0,0.18)] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
+                  className="bg-[#171A1F] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FF2E7E]/70 hover:shadow-[0_0_24px_rgba(255,208,0,0.18)] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
                 >
                   <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
                     <img
@@ -936,9 +924,9 @@ export const FilmDatabasePage: React.FC = () => {
                       alt={film.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#121324] via-transparent to-transparent opacity-80" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent opacity-80" />
 
-                    <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/50 text-[#FFD000] text-[11px] font-medium flex items-center gap-1">
+                    <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FF2E7E]/50 text-[#FF2E7E] text-[11px] font-medium flex items-center gap-1">
                       <Star className="w-3 h-3 fill-current" />
                       <span>{film.skorSotoy.toFixed(1)}</span>
                     </div>
@@ -953,7 +941,7 @@ export const FilmDatabasePage: React.FC = () => {
                   </div>
 
                   <div className="p-3">
-                    <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FFD000] transition-colors line-clamp-1 mb-1">
+                    <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-1 mb-1">
                       {film.title}
                     </h3>
                     <div className="flex flex-wrap gap-1">
@@ -987,7 +975,7 @@ export const FilmDatabasePage: React.FC = () => {
         <section id="popular-this-week-section" className="space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-800">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-[#FFD000] flex items-center justify-center">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-[#FF2E7E] flex items-center justify-center">
                 <TrendingUp className="w-4 h-4" />
               </div>
               <div>
@@ -995,7 +983,7 @@ export const FilmDatabasePage: React.FC = () => {
                 <p className="text-slate-400 text-xs">Paling banyak dibicarakan di Buzz Feed dan media sosial pekan ini</p>
               </div>
             </div>
-            <span className="text-xs font-bold text-[#FFD000]">
+            <span className="text-xs font-bold text-[#FF2E7E]">
               {filteredPopularThisWeek.length} Judul {selectedGenre !== 'all' ? `(${activeCategoryConfig.name})` : 'Trending Minggu Ini'}
             </span>
           </div>
@@ -1013,7 +1001,7 @@ export const FilmDatabasePage: React.FC = () => {
               </p>
               <button
                 onClick={() => setSelectedGenre('all')}
-                className="mt-2 text-xs font-bold text-[#FFD000] hover:underline"
+                className="mt-2 text-xs font-bold text-[#FF2E7E] hover:underline"
               >
                 Lihat semua film trending
               </button>
@@ -1025,7 +1013,7 @@ export const FilmDatabasePage: React.FC = () => {
                   key={film.id}
                   id={`trending-film-card-${film.id}`}
                   onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                  className="bg-[#121324] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FFD000]/70 hover:shadow-[0_0_24px_rgba(255,208,0,0.18)] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
+                  className="bg-[#171A1F] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FF2E7E]/70 hover:shadow-[0_0_24px_rgba(255,208,0,0.18)] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
                 >
                   <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
                     <img
@@ -1033,9 +1021,9 @@ export const FilmDatabasePage: React.FC = () => {
                       alt={film.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#121324] via-transparent to-transparent opacity-80" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent opacity-80" />
 
-                    <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/50 text-[#FFD000] text-[11px] font-medium flex items-center gap-1">
+                    <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FF2E7E]/50 text-[#FF2E7E] text-[11px] font-medium flex items-center gap-1">
                       <Star className="w-3 h-3 fill-current" />
                       <span>{film.skorSotoy.toFixed(1)}</span>
                     </div>
@@ -1050,7 +1038,7 @@ export const FilmDatabasePage: React.FC = () => {
                   </div>
 
                   <div className="p-3">
-                    <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FFD000] transition-colors line-clamp-1 mb-1">
+                    <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-1 mb-1">
                       {film.title}
                     </h3>
                     <div className="flex flex-wrap gap-1">
@@ -1063,7 +1051,7 @@ export const FilmDatabasePage: React.FC = () => {
                           }}
                           className={`text-[9px] font-medium px-1.5 py-0.2 rounded ${
                             selectedGenre.toLowerCase() === g.toLowerCase()
-                              ? 'bg-[#FFD000] text-slate-950 font-bold'
+                              ? 'bg-[#FF2E7E] text-slate-950 font-bold'
                               : 'text-slate-400 bg-slate-800/80 hover:text-white'
                           }`}
                         >
@@ -1089,7 +1077,7 @@ export const FilmDatabasePage: React.FC = () => {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
                 <div>
                   <h2 className="font-display font-black text-xl sm:text-2xl text-white flex items-center gap-2">
-                    <Star className="w-5 h-5 text-[#FFD000] fill-current" />
+                    <Star className="w-5 h-5 text-[#FF2E7E] fill-current" />
                     <span>Popular Reviews</span>
                   </h2>
                   <p className="text-slate-400 text-xs">Ulasan mendalam dan penilaian skor film dari kritikus & komunitas</p>
@@ -1111,7 +1099,7 @@ export const FilmDatabasePage: React.FC = () => {
                     onClick={() => setReviewsFilterRole('critic')}
                     className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${
                       reviewsFilterRole === 'critic'
-                        ? 'bg-[#FFD000] text-slate-950 shadow'
+                        ? 'bg-[#FF2E7E] text-slate-950 shadow'
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
@@ -1121,7 +1109,7 @@ export const FilmDatabasePage: React.FC = () => {
                     onClick={() => setReviewsFilterRole('warga')}
                     className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${
                       reviewsFilterRole === 'warga'
-                        ? 'bg-[#00F0FF] text-slate-950 shadow'
+                        ? 'bg-[#FF2E7E] text-slate-950 shadow'
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
@@ -1139,7 +1127,7 @@ export const FilmDatabasePage: React.FC = () => {
                     <div
                       key={rev.id}
                       id={`popular-review-item-${rev.id}`}
-                      className="bg-[#121324] border border-slate-800/80 rounded-3xl p-5 sm:p-6 hover:border-slate-700 transition-all shadow-xl space-y-4"
+                      className="bg-[#171A1F] border border-slate-800/80 rounded-3xl p-5 sm:p-6 hover:border-slate-700 transition-all shadow-xl space-y-4"
                     >
                       {/* Reviewer Header */}
                       <div className="flex items-start justify-between gap-3">
@@ -1161,7 +1149,7 @@ export const FilmDatabasePage: React.FC = () => {
                         </div>
 
                         {/* Star Rating Badge */}
-                        <div className="bg-black/60 border border-[#FFD000]/40 px-3 py-1 rounded-xl text-[#FFD000] font-medium text-xs sm:text-sm flex items-center gap-1 shadow-md">
+                        <div className="bg-black/60 border border-[#FF2E7E]/40 px-3 py-1 rounded-xl text-[#FF2E7E] font-medium text-xs sm:text-sm flex items-center gap-1 shadow-md">
                           <Star className="w-4 h-4 fill-current" />
                           <span>{rev.score.toFixed(1)}</span>
                           <span className="text-slate-500 text-[10px]">/ 10.0</span>
@@ -1172,7 +1160,7 @@ export const FilmDatabasePage: React.FC = () => {
                       {targetFilm && (
                         <div
                           onClick={() => navigateTo('film-detail', { filmId: targetFilm.id })}
-                          className="flex items-center gap-3 p-2.5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-[#FFD000]/50 cursor-pointer group transition-colors"
+                          className="flex items-center gap-3 p-2.5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-[#FF2E7E]/50 cursor-pointer group transition-colors"
                         >
                           <img
                             src={targetFilm.poster}
@@ -1181,7 +1169,7 @@ export const FilmDatabasePage: React.FC = () => {
                           />
                           <div className="flex-1 min-w-0">
                             <div className="text-[10px] text-slate-400 uppercase font-bold">Ulasan untuk:</div>
-                            <div className="text-xs font-bold text-white group-hover:text-[#FFD000] truncate">
+                            <div className="text-xs font-bold text-white group-hover:text-[#FF2E7E] truncate">
                               {targetFilm.title} ({targetFilm.year})
                             </div>
                             <div className="text-[10px] text-slate-400 truncate">
@@ -1216,7 +1204,7 @@ export const FilmDatabasePage: React.FC = () => {
                               if (!isLoggedIn) setLoginModalOpen(true);
                               else setRatingModalFilm(targetFilm);
                             }}
-                            className="text-[11px] font-bold text-[#00F0FF] hover:underline"
+                            className="text-[11px] font-bold text-[#FF2E7E] hover:underline"
                           >
                             Tulis Ulasan Tandingan →
                           </button>
@@ -1234,17 +1222,17 @@ export const FilmDatabasePage: React.FC = () => {
               {/* TOP REVIEWER OF THE MONTH SPOTLIGHT */}
               <div
                 id="top-reviewer-spotlight"
-                className="bg-gradient-to-br from-[#1C162E] via-[#16172E] to-[#121324] border-2 border-[#FFD000]/50 rounded-3xl p-6 shadow-2xl relative overflow-hidden"
+                className="bg-gradient-to-br from-[#1C162E] via-[#16172E] to-[#171A1F] border-2 border-[#FF2E7E]/50 rounded-3xl p-6 shadow-2xl relative overflow-hidden"
               >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-[#FFD000]/10 rounded-full blur-2xl pointer-events-none" />
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF2E7E]/10 rounded-full blur-2xl pointer-events-none" />
 
                 <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-800">
-                  <Trophy className="w-5 h-5 text-[#FFD000]" />
+                  <Trophy className="w-5 h-5 text-[#FF2E7E]" />
                   <div>
                     <h3 className="font-display font-black text-sm uppercase tracking-wider text-white">
                       Top Reviewer Spotlight
                     </h3>
-                    <span className="text-[10px] text-[#FFD000] font-bold">Kritikus Terpopuler Bulan Ini</span>
+                    <span className="text-[10px] text-[#FF2E7E] font-bold">Kritikus Terpopuler Bulan Ini</span>
                   </div>
                 </div>
 
@@ -1253,17 +1241,17 @@ export const FilmDatabasePage: React.FC = () => {
                   <img
                     src={topReviewers[0].avatar}
                     alt={topReviewers[0].name}
-                    className="w-16 h-16 rounded-2xl object-cover ring-2 ring-[#FFD000] shadow-lg"
+                    className="w-16 h-16 rounded-2xl object-cover ring-2 ring-[#FF2E7E] shadow-lg"
                   />
                   <div>
                     <div className="flex items-center gap-1.5">
                       <h4 className="font-display font-black text-lg text-white">
                         {topReviewers[0].name}
                       </h4>
-                      <UserCheck className="w-4 h-4 text-[#FFD000]" />
+                      <UserCheck className="w-4 h-4 text-[#FF2E7E]" />
                     </div>
                     <div className="text-xs text-slate-400">{topReviewers[0].handle}</div>
-                    <span className="inline-block mt-1 bg-[#FFD000]/20 text-[#FFD000] border border-[#FFD000]/40 text-[10px] font-black px-2 py-0.5 rounded">
+                    <span className="inline-block mt-1 bg-[#FF2E7E]/20 text-[#FF2E7E] border border-[#FF2E7E]/40 text-[10px] font-black px-2 py-0.5 rounded">
                       SI PALING SOTOY (CRITIC)
                     </span>
                   </div>
@@ -1290,17 +1278,17 @@ export const FilmDatabasePage: React.FC = () => {
                     <div className="text-[9px] text-slate-400 font-bold uppercase">Suka</div>
                   </div>
                   <div className="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
-                    <div className="text-base font-medium text-[#FFD000]">★ {topReviewers[0].avgScoreGiven}</div>
+                    <div className="text-base font-medium text-[#FF2E7E]">★ {topReviewers[0].avgScoreGiven}</div>
                     <div className="text-[9px] text-slate-400 font-bold uppercase">Rerata Skor</div>
                   </div>
                 </div>
               </div>
 
               {/* REVIEW LEADERBOARD LIST */}
-              <div id="review-leaderboard-card" className="bg-[#121324] border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+              <div id="review-leaderboard-card" className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                   <div className="flex items-center gap-2">
-                    <Award className="w-5 h-5 text-[#00F0FF]" />
+                    <Award className="w-5 h-5 text-[#FF2E7E]" />
                     <h3 className="font-display font-black text-base text-white">
                       Review Leaderboard
                     </h3>
@@ -1318,7 +1306,7 @@ export const FilmDatabasePage: React.FC = () => {
                       id={`leaderboard-item-${user.id}`}
                       className={`flex items-center justify-between p-3 rounded-2xl border transition-colors ${
                         idx === 0
-                          ? 'bg-[#FFD000]/10 border-[#FFD000]/30'
+                          ? 'bg-[#FF2E7E]/10 border-[#FF2E7E]/30'
                           : idx === 1
                           ? 'bg-[#FF2E7E]/10 border-[#FF2E7E]/30'
                           : idx === 2
@@ -1331,11 +1319,11 @@ export const FilmDatabasePage: React.FC = () => {
                         <div
                           className={`w-6 h-6 rounded-lg font-black text-xs flex items-center justify-center ${
                             idx === 0
-                              ? 'bg-[#FFD000] text-slate-950 shadow-md'
+                              ? 'bg-[#FF2E7E] text-slate-950 shadow-md'
                               : idx === 1
                               ? 'bg-[#FF2E7E] text-white shadow-md'
                               : idx === 2
-                              ? 'bg-[#00F0FF] text-slate-950 shadow-md'
+                              ? 'bg-[#FF2E7E] text-slate-950 shadow-md'
                               : 'bg-slate-800 text-slate-400'
                           }`}
                         >
@@ -1362,7 +1350,7 @@ export const FilmDatabasePage: React.FC = () => {
                       </div>
 
                       <div className="text-right">
-                        <div className="text-xs font-medium text-[#FFD000]">
+                        <div className="text-xs font-medium text-[#FF2E7E]">
                           ★ {user.avgScoreGiven}
                         </div>
                         <div className="text-[10px] text-slate-400">
@@ -1376,7 +1364,7 @@ export const FilmDatabasePage: React.FC = () => {
                 {/* How to become a top reviewer info */}
                 <div className="mt-4 p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-1.5">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-white">
-                    <Info className="w-3.5 h-3.5 text-[#00F0FF]" />
+                    <Info className="w-3.5 h-3.5 text-[#FF2E7E]" />
                     <span>Mau Jadi Si Paling Sotoy (Verified Critic)?</span>
                   </div>
                   <p className="text-[11px] text-slate-400 leading-relaxed">

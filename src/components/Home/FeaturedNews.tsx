@@ -17,7 +17,7 @@ const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo
     <article
       id={`featured-news-card-${article.id}`}
       onClick={() => navigateTo('article-detail', { articleId: article.id })}
-      className="bg-[#121320] border border-white/[0.08] hover:border-white/20 rounded-3xl overflow-hidden group transition-all duration-300 flex flex-col cursor-pointer shadow-lg hover:shadow-2xl hover:shadow-black/50"
+      className="bg-[#171A1F] border border-white/[0.08] hover:border-white/20 rounded-3xl overflow-hidden group transition-all duration-300 flex flex-col cursor-pointer shadow-lg hover:shadow-2xl hover:shadow-black/50"
     >
       {/* Editorial Card Cover Image */}
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-900">
@@ -26,7 +26,7 @@ const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo
           alt={article.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#121320] via-transparent to-transparent opacity-60" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent opacity-60" />
       </div>
 
       {/* Editorial Card Body */}
@@ -47,7 +47,7 @@ const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo
           </div>
 
           {/* Card Title */}
-          <h3 className="font-display font-bold text-base sm:text-lg text-white group-hover:text-amber-200 transition-colors line-clamp-2 leading-snug mb-2.5">
+          <h3 className="font-display font-bold text-base sm:text-lg text-white group-hover:text-white transition-colors line-clamp-2 leading-snug mb-2.5">
             {article.title}
           </h3>
 
@@ -116,11 +116,11 @@ export const FeaturedNews: React.FC = () => {
             <div className="flex items-center gap-2">
               <span className="w-1.5 h-4 bg-[#FF2E7E] rounded-full inline-block" />
               <h2 className="font-display font-black text-xl sm:text-2xl text-white tracking-tight">
-                Sorotan Liputan & Berita Utama
+                Featured News & Top Stories
               </h2>
             </div>
             <p className="text-slate-400 text-xs sm:text-[13px] mt-1 ml-3.5">
-              Liputan industri film global, pengumuman festival, dan analisis mendalam dari meja redaksi.
+              Global cinema industry dispatches, festival highlights, and in-depth editorial stories.
             </p>
           </div>
 
@@ -129,7 +129,7 @@ export const FeaturedNews: React.FC = () => {
             onClick={() => navigateTo('category', { category: 'movies', subCategory: 'news' })}
             className="self-start sm:self-auto text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1 transition-colors"
           >
-            <span>Semua Berita</span>
+            <span>All News</span>
             <ArrowUpRight className="w-3.5 h-3.5 text-[#FF2E7E]" />
           </button>
         </div>

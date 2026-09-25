@@ -47,7 +47,7 @@ const HeroActiveAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }
           {author.displayName || author.name}
         </span>
         {author.customBadge && (
-          <span className="text-[10px] text-amber-400 font-medium">
+          <span className="text-[10px] text-white font-medium">
             · {author.customBadge}
           </span>
         )}
@@ -81,7 +81,7 @@ export const HeroSection: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
             <div className="lg:col-span-8">
-              <div className="animate-pulse w-full min-h-[480px] rounded-3xl border border-white/[0.06] bg-[#121320] flex items-center justify-center">
+              <div className="animate-pulse w-full min-h-[480px] rounded-3xl border border-white/[0.06] bg-[#171A1F] flex items-center justify-center">
                 <div className="text-center space-y-3">
                   <div className="w-8 h-8 border-2 border-[#FF2E7E] border-t-transparent rounded-full animate-spin mx-auto" />
                   <span className="text-slate-400 text-xs font-medium">Memuat Ulasan Headline...</span>
@@ -89,7 +89,7 @@ export const HeroSection: React.FC = () => {
               </div>
             </div>
             <div className="lg:col-span-4">
-              <div className="animate-pulse w-full h-full min-h-[480px] rounded-3xl border border-white/[0.06] bg-[#121320]" />
+              <div className="animate-pulse w-full h-full min-h-[480px] rounded-3xl border border-white/[0.06] bg-[#171A1F]" />
             </div>
           </div>
         </div>
@@ -121,7 +121,7 @@ export const HeroSection: React.FC = () => {
         {isLoggedIn && (currentUser.role === 'penulis_sotoy' || currentUser.role === 'admin') && (
           <div
             id="author-editorial-quick-banner"
-            className="mb-5 sm:mb-6 bg-[#131522]/90 border border-white/[0.08] rounded-2xl p-3.5 sm:p-4 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 backdrop-blur-md"
+            className="mb-5 sm:mb-6 bg-[#171A1F]/90 border border-white/[0.08] rounded-2xl p-3.5 sm:p-4 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 backdrop-blur-md"
           >
             <div className="flex items-center gap-3">
               <img
@@ -148,7 +148,7 @@ export const HeroSection: React.FC = () => {
             <button
               id="quick-write-article-hero-btn"
               onClick={() => navigateTo('write-article')}
-              className="w-full sm:w-auto px-4 py-2 bg-[#FF2E7E] hover:bg-[#e6206d] text-white font-semibold text-xs rounded-xl shadow-lg shadow-[#FF2E7E]/20 active:scale-95 transition-all flex items-center justify-center gap-2 whitespace-nowrap"
+              className="w-full sm:w-auto px-4 py-2 bg-[#FF2E7E] hover:bg-[#e0266e] text-white font-semibold text-xs rounded-xl shadow-lg shadow-[#FF2E7E]/20 active:scale-95 transition-all flex items-center justify-center gap-2 whitespace-nowrap"
             >
               <PenSquare className="w-3.5 h-3.5" />
               <span>Tulis Artikel Baru</span>
@@ -161,7 +161,7 @@ export const HeroSection: React.FC = () => {
           
           {/* LEFT: CINEMATIC COVER SLIDER (8 Columns) */}
           <div className="lg:col-span-8 flex flex-col">
-            <div className="relative w-full flex-1 min-h-[460px] sm:min-h-[540px] rounded-3xl overflow-hidden border border-white/[0.08] shadow-2xl bg-[#0D0E15] group">
+            <div className="relative w-full flex-1 min-h-[460px] sm:min-h-[540px] rounded-3xl overflow-hidden border border-white/[0.08] shadow-2xl bg-[#0E1013] group">
               {/* Background Cover Image with cinematic pan/zoom */}
               <img
                 src={activeArticle.coverImage}
@@ -170,8 +170,8 @@ export const HeroSection: React.FC = () => {
               />
 
               {/* Measured contrast scrim: at least 4.5:1 text contrast across entire image */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0A0B10] via-[#0A0B10]/75 to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#0A0B10]/90 via-[#0A0B10]/40 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0E1013] via-[#0E1013]/75 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#0E1013]/90 via-[#0E1013]/40 to-transparent" />
 
               {/* Top Row: Clean Unboxed Editorial Kicker & Reading Endorsement */}
               <div className="absolute top-5 sm:top-7 left-5 sm:left-7 right-5 sm:right-7 flex items-center justify-between z-10">
@@ -208,7 +208,7 @@ export const HeroSection: React.FC = () => {
                 {/* Primary Headline */}
                 <h1
                   onClick={() => navigateTo('article-detail', { articleId: activeArticle.id })}
-                  className="font-display font-black text-2xl sm:text-3xl md:text-4xl text-white leading-tight mb-3 cursor-pointer hover:text-amber-200 transition-colors line-clamp-3 text-balance"
+                  className="font-display font-black text-2xl sm:text-3xl md:text-4xl text-white leading-tight mb-3 cursor-pointer hover:text-white transition-colors line-clamp-3 text-balance"
                 >
                   {activeArticle.title}
                 </h1>
@@ -223,7 +223,7 @@ export const HeroSection: React.FC = () => {
                   <button
                     id="hero-read-article-btn"
                     onClick={() => navigateTo('article-detail', { articleId: activeArticle.id })}
-                    className="bg-[#FF2E7E] hover:bg-[#e6206d] text-white font-semibold text-xs sm:text-sm px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-[#FF2E7E]/25"
+                    className="bg-[#FF2E7E] hover:bg-[#e0266e] text-white font-semibold text-xs sm:text-sm px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-[#FF2E7E]/25"
                   >
                     <span>Baca Ulasan Lengkap</span>
                     <ArrowRight className="w-4 h-4" />
@@ -263,7 +263,7 @@ export const HeroSection: React.FC = () => {
 
           {/* RIGHT: CURATED TANGGA & SELEKSI SINEMA (4 Columns) */}
           <div className="lg:col-span-4 flex flex-col">
-            <div className="bg-[#121320] border border-white/[0.08] rounded-3xl p-5 flex-1 flex flex-col shadow-xl">
+            <div className="bg-[#171A1F] border border-white/[0.08] rounded-3xl p-5 flex-1 flex flex-col shadow-xl">
               
               {/* Segmented Control Filter Tabs */}
               <div className="flex items-center p-1 bg-black/40 rounded-xl border border-white/[0.06] mb-4">
@@ -289,7 +289,7 @@ export const HeroSection: React.FC = () => {
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  <Bookmark className="w-3.5 h-3.5 text-sky-400" />
+                  <Bookmark className="w-3.5 h-3.5 text-slate-300" />
                   <span>To Watch</span>
                 </button>
 
@@ -302,7 +302,7 @@ export const HeroSection: React.FC = () => {
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  <Camera className="w-3.5 h-3.5 text-amber-400" />
+                  <Camera className="w-3.5 h-3.5 text-white" />
                   <span>Gear</span>
                 </button>
               </div>
@@ -320,7 +320,7 @@ export const HeroSection: React.FC = () => {
                       >
                         {/* Tabular Rank Number */}
                         <span className={`w-6 font-mono tabular-nums text-xs font-bold text-center ${
-                          index === 0 ? 'text-amber-400' : 'text-slate-500'
+                          index === 0 ? 'text-white' : 'text-slate-500'
                         }`}>
                           {String(index + 1).padStart(2, '0')}
                         </span>
@@ -334,14 +334,14 @@ export const HeroSection: React.FC = () => {
 
                         {/* Metadata & Scores */}
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-white font-semibold text-xs truncate group-hover:text-amber-200 transition-colors">
+                          <h4 className="text-white font-semibold text-xs truncate group-hover:text-white transition-colors">
                             {film.title}
                           </h4>
                           <p className="text-slate-400 text-[11px] truncate mt-0.5">
                             {film.year} · {film.genres.slice(0, 2).join(', ')}
                           </p>
                           <div className="mt-1 flex items-center gap-2 text-[11px] font-mono tabular-nums">
-                            <span className="text-amber-400 font-medium flex items-center gap-0.5">
+                            <span className="text-amber-400 font-semibold flex items-center gap-0.5">
                               <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                               <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
                             </span>
@@ -385,7 +385,7 @@ export const HeroSection: React.FC = () => {
                           className="w-10 h-14 object-cover rounded-lg shrink-0 border border-white/10 group-hover:scale-105 transition-transform"
                         />
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-white font-semibold text-xs truncate group-hover:text-sky-300 transition-colors">
+                          <h4 className="text-white font-semibold text-xs truncate group-hover:text-white transition-colors">
                             {film.title}
                           </h4>
                           <p className="text-slate-400 text-[11px] line-clamp-1 mt-0.5">
@@ -395,13 +395,13 @@ export const HeroSection: React.FC = () => {
                             {film.whereToWatch.slice(0, 1).map((w, idx) => (
                               <span
                                 key={idx}
-                                className="text-sky-400 text-[10px] font-medium"
+                                className="text-slate-300 text-[10px] font-medium"
                               >
                                 {w.platform}
                               </span>
                             ))}
                             <span className="text-slate-600">·</span>
-                            <span className="font-mono tabular-nums text-amber-400 text-[11px] flex items-center gap-0.5">
+                            <span className="font-mono tabular-nums text-amber-400 text-[11px] font-semibold flex items-center gap-0.5">
                               <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                               <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
                             </span>
@@ -417,7 +417,7 @@ export const HeroSection: React.FC = () => {
                     className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 mt-2"
                   >
                     <span>Buka Generator Rekomendasi Film</span>
-                    <ArrowRight className="w-3 h-3 text-sky-400" />
+                    <ArrowRight className="w-3 h-3 text-slate-300" />
                   </button>
                 </div>
               )}
@@ -440,14 +440,14 @@ export const HeroSection: React.FC = () => {
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-amber-400 font-medium">
+                            <span className="text-white font-medium">
                               {gear.badge}
                             </span>
                             <span className="font-mono tabular-nums text-white text-[11px]">
                               {gear.price}
                             </span>
                           </div>
-                          <h4 className="text-white font-semibold text-xs truncate group-hover:text-amber-200 transition-colors mt-0.5">
+                          <h4 className="text-white font-semibold text-xs truncate group-hover:text-white transition-colors mt-0.5">
                             {gear.name}
                           </h4>
                           <p className="text-slate-400 text-[10px] truncate">
@@ -464,7 +464,7 @@ export const HeroSection: React.FC = () => {
                     className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 mt-2"
                   >
                     <span>Lihat Semua Ulasan Cinema Gear</span>
-                    <ArrowRight className="w-3 h-3 text-amber-400" />
+                    <ArrowRight className="w-3 h-3 text-white" />
                   </button>
                 </div>
               )}

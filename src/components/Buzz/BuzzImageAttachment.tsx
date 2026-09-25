@@ -46,7 +46,7 @@ export const BuzzImageAttachment: React.FC<BuzzImageAttachmentProps> = ({
       {/* Feed Image Container: preserves full native aspect ratio without cropping, capped by max-height */}
       <div
         onClick={() => setIsLightboxOpen(true)}
-        className="relative w-full max-h-[400px] sm:max-h-[500px] rounded-2xl overflow-hidden bg-slate-900 border border-slate-800/80 cursor-pointer group my-2.5 shadow-md transition-all hover:border-slate-700 flex items-center justify-center"
+        className="relative w-full max-h-[400px] sm:max-h-[500px] rounded-2xl overflow-hidden bg-[#0E1013] border border-white/10 cursor-pointer group my-2.5 shadow-md transition-all hover:border-white/20 flex items-center justify-center"
       >
         <img
           src={src}
@@ -59,13 +59,13 @@ export const BuzzImageAttachment: React.FC<BuzzImageAttachmentProps> = ({
         {/* Hover overlay hint */}
         <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
           <span className="bg-black/75 backdrop-blur-md text-white text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg border border-white/10">
-            <Maximize2 className="w-3.5 h-3.5 text-[#00F0FF]" />
+            <Maximize2 className="w-3.5 h-3.5 text-white" />
             <span>Klik untuk memperbesar</span>
           </span>
         </div>
 
         {/* Expand badge icon bottom-right */}
-        <div className="absolute bottom-2.5 right-2.5 p-1.5 rounded-lg bg-black/60 backdrop-blur-sm text-slate-300 border border-white/10 group-hover:bg-[#00F0FF] group-hover:text-slate-950 transition-colors pointer-events-none">
+        <div className="absolute bottom-2.5 right-2.5 p-1.5 rounded-lg bg-black/60 backdrop-blur-sm text-slate-300 border border-white/10 group-hover:bg-[#FF2E7E] group-hover:text-white transition-colors pointer-events-none">
           <ZoomIn className="w-3.5 h-3.5" />
         </div>
       </div>
@@ -85,7 +85,7 @@ export const BuzzImageAttachment: React.FC<BuzzImageAttachmentProps> = ({
               e.stopPropagation();
               setIsLightboxOpen(false);
             }}
-            className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2.5 rounded-full bg-slate-900/90 text-slate-300 hover:text-white hover:bg-red-500/80 transition-colors z-50 border border-slate-700 shadow-xl cursor-pointer"
+            className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2.5 rounded-full bg-[#171A1F] text-slate-300 hover:text-white hover:bg-[#FF2E7E] transition-colors z-50 border border-white/10 shadow-xl cursor-pointer"
             aria-label="Tutup pratinjau"
           >
             <X className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -99,7 +99,7 @@ export const BuzzImageAttachment: React.FC<BuzzImageAttachmentProps> = ({
             <img
               src={src}
               alt={alt}
-              className="max-w-full max-h-[88vh] w-auto h-auto object-contain rounded-xl shadow-2xl border border-slate-800 animate-in zoom-in-95 duration-200 select-none"
+              className="max-w-full max-h-[88vh] w-auto h-auto object-contain rounded-xl shadow-2xl border border-white/10 animate-in zoom-in-95 duration-200 select-none"
             />
           </div>
         </div>

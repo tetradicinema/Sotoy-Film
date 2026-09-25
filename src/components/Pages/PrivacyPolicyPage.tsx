@@ -22,7 +22,7 @@ export const PrivacyPolicyPage: React.FC = () => {
         
         {/* Header Title */}
         <div className="space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#00F0FF]/10 border border-[#00F0FF]/30 text-[#00F0FF] text-xs font-black uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 text-[#FF2E7E] text-xs font-black uppercase tracking-wider">
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>Dokumen Resmi & Transparansi</span>
           </div>
@@ -42,9 +42,9 @@ export const PrivacyPolicyPage: React.FC = () => {
         <AdBannerSlot variant="leaderboard" />
 
         {/* Quick Highlights Callout */}
-        <div className="bg-[#121324] border border-[#00F0FF]/30 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xl">
+        <div className="bg-[#171A1F] border border-[#FF2E7E]/30 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xl">
           <h2 className="font-display font-black text-lg text-white flex items-center gap-2">
-            <Lock className="w-5 h-5 text-[#00F0FF]" />
+            <Lock className="w-5 h-5 text-[#FF2E7E]" />
             <span>Ringkasan Komitmen Privasi Kami</span>
           </h2>
           <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
@@ -52,15 +52,15 @@ export const PrivacyPolicyPage: React.FC = () => {
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
             <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800 flex items-center gap-2 text-xs text-slate-300">
-              <CheckCircle2 className="w-4 h-4 text-[#00F0FF] shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-[#FF2E7E] shrink-0" />
               <span>Tanpa Pelacakan Lokasi Latar Belakang</span>
             </div>
             <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800 flex items-center gap-2 text-xs text-slate-300">
-              <CheckCircle2 className="w-4 h-4 text-[#00F0FF] shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-[#FF2E7E] shrink-0" />
               <span>Opsi Ekspor JSON Data Kapan Saja</span>
             </div>
             <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800 flex items-center gap-2 text-xs text-slate-300">
-              <CheckCircle2 className="w-4 h-4 text-[#00F0FF] shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-[#FF2E7E] shrink-0" />
               <span>Kontrol Penuh Profil Publik/Privat</span>
             </div>
           </div>
@@ -70,9 +70,9 @@ export const PrivacyPolicyPage: React.FC = () => {
         <div className="space-y-8 text-slate-300 text-xs sm:text-sm leading-relaxed">
           
           {/* Section 1 */}
-          <section className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+          <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
             <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
-              <Database className="w-5 h-5 text-[#FFD000]" />
+              <Database className="w-5 h-5 text-[#FF2E7E]" />
               <span>1. Informasi yang Kami Kumpulkan</span>
             </h3>
             <p>
@@ -95,7 +95,7 @@ export const PrivacyPolicyPage: React.FC = () => {
           </section>
 
           {/* Section 2 */}
-          <section className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+          <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
             <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
               <Eye className="w-5 h-5 text-[#FF2E7E]" />
               <span>2. Bagaimana Kami Menggunakan Informasi Anda</span>
@@ -110,7 +110,7 @@ export const PrivacyPolicyPage: React.FC = () => {
           </section>
 
           {/* Section 3 */}
-          <section className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+          <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
             <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
               <UserCheck className="w-5 h-5 text-purple-400" />
               <span>3. Kontrol dan Hak Privasi Anda</span>
@@ -132,7 +132,7 @@ export const PrivacyPolicyPage: React.FC = () => {
           </section>
 
           {/* Section 4 */}
-          <section className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+          <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
             <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
               <FileText className="w-5 h-5 text-emerald-400" />
               <span>4. Penyimpanan Lokal Browser (Local Storage & Cache)</span>
@@ -143,9 +143,9 @@ export const PrivacyPolicyPage: React.FC = () => {
           </section>
 
           {/* Section 5 */}
-          <section className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+          <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
             <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
-              <Mail className="w-5 h-5 text-[#00F0FF]" />
+              <Mail className="w-5 h-5 text-[#FF2E7E]" />
               <span>5. Hubungi Petugas Perlindungan Data</span>
             </h3>
             <p>
@@ -170,7 +170,7 @@ export const PrivacyPolicyPage: React.FC = () => {
           </button>
           <button
             onClick={() => navigateTo('terms-conditions')}
-            className="text-xs font-bold text-[#00F0FF] hover:underline"
+            className="text-xs font-bold text-[#FF2E7E] hover:underline"
           >
             Baca Syarat & Ketentuan →
           </button>

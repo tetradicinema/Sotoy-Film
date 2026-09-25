@@ -251,19 +251,19 @@ export const AdminAuditLog: React.FC = () => {
       case 'critic_approved':
         return {
           label: 'Kritikus Disetujui',
-          bg: 'bg-yellow-500/15 text-[#FFD000] border-yellow-500/30',
-          icon: <Award className="w-3.5 h-3.5 text-[#FFD000]" />
+          bg: 'bg-white/[0.06] text-white border-white/10',
+          icon: <Award className="w-3.5 h-3.5 text-[#FF2E7E]" />
         };
       case 'critic_rejected':
         return {
           label: 'Kritikus Ditolak',
-          bg: 'bg-slate-700/30 text-slate-400 border-slate-700',
+          bg: 'bg-white/[0.04] text-slate-400 border-white/10',
           icon: <XCircle className="w-3.5 h-3.5 text-slate-400" />
         };
       default:
         return {
           label: action,
-          bg: 'bg-slate-800 text-slate-300 border-slate-700',
+          bg: 'bg-white/[0.04] text-slate-300 border-white/10',
           icon: <Info className="w-3.5 h-3.5 text-slate-400" />
         };
     }
@@ -276,7 +276,7 @@ export const AdminAuditLog: React.FC = () => {
         <div>
           <h2 className="font-display font-black text-xl text-white tracking-tight flex items-center gap-2.5">
             <span>Audit Log & Jejak Transparansi Moderasi</span>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-sans font-bold">
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-white/[0.06] text-slate-300 border border-white/10 font-sans font-bold">
               {auditLogs.length} Riwayat Tercatat
             </span>
           </h2>
@@ -291,20 +291,20 @@ export const AdminAuditLog: React.FC = () => {
           <button
             type="button"
             onClick={handleExportCSV}
-            className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-750 text-slate-300 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+            className="px-3 py-1.5 rounded-xl bg-[#171A1F] hover:bg-white/[0.08] border border-white/10 text-slate-300 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-[0.98]"
             title="Ekspor ke CSV"
           >
-            <Download className="w-3.5 h-3.5 text-cyan-400" />
+            <Download className="w-3.5 h-3.5 text-slate-300" />
             <span>Ekspor CSV</span>
           </button>
 
           <button
             type="button"
             onClick={handleExportJSON}
-            className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-750 text-slate-300 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+            className="px-3 py-1.5 rounded-xl bg-[#171A1F] hover:bg-white/[0.08] border border-white/10 text-slate-300 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-[0.98]"
             title="Ekspor ke JSON"
           >
-            <FileText className="w-3.5 h-3.5 text-purple-400" />
+            <FileText className="w-3.5 h-3.5 text-slate-300" />
             <span>JSON</span>
           </button>
 
@@ -312,7 +312,7 @@ export const AdminAuditLog: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsClearModalOpen(true)}
-              className="px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+              className="px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-[0.98]"
               title="Bersihkan Semua Log"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -327,76 +327,76 @@ export const AdminAuditLog: React.FC = () => {
         <div 
           onClick={() => setActionCategory('all')}
           className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-            actionCategory === 'all' ? 'bg-slate-800 border-purple-500/60 shadow-md' : 'bg-[#121324] border-slate-800 hover:border-slate-700'
+            actionCategory === 'all' ? 'bg-[#171A1F] border-[#FF2E7E] shadow-sm' : 'bg-[#171A1F] border-white/10 hover:border-white/20'
           }`}
         >
           <div className="text-[10px] text-slate-400 font-bold uppercase">Total Log</div>
-          <div className="text-lg font-display font-black text-white mt-0.5">{stats.total}</div>
+          <div className="text-lg font-display font-black text-white mt-0.5 tabular-nums">{stats.total}</div>
         </div>
 
         <div 
           onClick={() => setActionCategory('roles')}
           className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-            actionCategory === 'roles' ? 'bg-purple-950/40 border-purple-500/60 shadow-md' : 'bg-[#121324] border-slate-800 hover:border-purple-500/30'
+            actionCategory === 'roles' ? 'bg-[#171A1F] border-[#FF2E7E] shadow-sm' : 'bg-[#171A1F] border-white/10 hover:border-white/20'
           }`}
         >
-          <div className="text-[10px] text-purple-300 font-bold uppercase">Role Overrides</div>
-          <div className="text-lg font-display font-black text-purple-200 mt-0.5">{stats.roles}</div>
+          <div className="text-[10px] text-slate-400 font-bold uppercase">Role Overrides</div>
+          <div className="text-lg font-display font-black text-white mt-0.5 tabular-nums">{stats.roles}</div>
         </div>
 
         <div 
           onClick={() => setActionCategory('suspensions')}
           className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-            actionCategory === 'suspensions' ? 'bg-red-950/40 border-red-500/60 shadow-md' : 'bg-[#121324] border-slate-800 hover:border-red-500/30'
+            actionCategory === 'suspensions' ? 'bg-[#171A1F] border-[#FF2E7E] shadow-sm' : 'bg-[#171A1F] border-white/10 hover:border-white/20'
           }`}
         >
           <div className="text-[10px] text-red-400 font-bold uppercase">Penangguhan</div>
-          <div className="text-lg font-display font-black text-red-300 mt-0.5">{stats.suspensions}</div>
+          <div className="text-lg font-display font-black text-red-300 mt-0.5 tabular-nums">{stats.suspensions}</div>
         </div>
 
         <div 
           onClick={() => setActionCategory('deletions')}
           className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-            actionCategory === 'deletions' ? 'bg-rose-950/40 border-rose-500/60 shadow-md' : 'bg-[#121324] border-slate-800 hover:border-rose-500/30'
+            actionCategory === 'deletions' ? 'bg-[#171A1F] border-[#FF2E7E] shadow-sm' : 'bg-[#171A1F] border-white/10 hover:border-white/20'
           }`}
         >
           <div className="text-[10px] text-rose-400 font-bold uppercase">Hapus Akun</div>
-          <div className="text-lg font-display font-black text-rose-300 mt-0.5">{stats.deletions}</div>
+          <div className="text-lg font-display font-black text-rose-300 mt-0.5 tabular-nums">{stats.deletions}</div>
         </div>
 
         <div 
           onClick={() => setActionCategory('appeals')}
           className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-            actionCategory === 'appeals' ? 'bg-amber-950/40 border-amber-500/60 shadow-md' : 'bg-[#121324] border-slate-800 hover:border-amber-500/30'
+            actionCategory === 'appeals' ? 'bg-[#171A1F] border-[#FF2E7E] shadow-sm' : 'bg-[#171A1F] border-white/10 hover:border-white/20'
           }`}
         >
           <div className="text-[10px] text-amber-400 font-bold uppercase">Banding</div>
-          <div className="text-lg font-display font-black text-amber-300 mt-0.5">{stats.appeals}</div>
+          <div className="text-lg font-display font-black text-amber-300 mt-0.5 tabular-nums">{stats.appeals}</div>
         </div>
 
         <div 
           onClick={() => setActionCategory('moderation')}
           className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-            actionCategory === 'moderation' ? 'bg-cyan-950/40 border-cyan-500/60 shadow-md' : 'bg-[#121324] border-slate-800 hover:border-cyan-500/30'
+            actionCategory === 'moderation' ? 'bg-[#171A1F] border-[#FF2E7E] shadow-sm' : 'bg-[#171A1F] border-white/10 hover:border-white/20'
           }`}
         >
-          <div className="text-[10px] text-[#00F0FF] font-bold uppercase">Moderasi</div>
-          <div className="text-lg font-display font-black text-cyan-300 mt-0.5">{stats.moderation}</div>
+          <div className="text-[10px] text-slate-300 font-bold uppercase">Moderasi</div>
+          <div className="text-lg font-display font-black text-white mt-0.5 tabular-nums">{stats.moderation}</div>
         </div>
 
         <div 
           onClick={() => setActionCategory('critics')}
           className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-            actionCategory === 'critics' ? 'bg-yellow-950/40 border-yellow-500/60 shadow-md' : 'bg-[#121324] border-slate-800 hover:border-yellow-500/30'
+            actionCategory === 'critics' ? 'bg-[#171A1F] border-[#FF2E7E] shadow-sm' : 'bg-[#171A1F] border-white/10 hover:border-white/20'
           }`}
         >
-          <div className="text-[10px] text-[#FFD000] font-bold uppercase">Kritikus</div>
-          <div className="text-lg font-display font-black text-yellow-300 mt-0.5">{stats.critics}</div>
+          <div className="text-[10px] text-slate-300 font-bold uppercase">Kritikus</div>
+          <div className="text-lg font-display font-black text-white mt-0.5 tabular-nums">{stats.critics}</div>
         </div>
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-[#121324] border border-slate-800 rounded-2xl p-4 space-y-3 shadow-sm">
+      <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-4 space-y-3 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           {/* Action Category Filters */}
           <div className="flex items-center gap-1.5 overflow-x-auto text-xs font-medium pb-1 lg:pb-0 scrollbar-none">
@@ -404,8 +404,8 @@ export const AdminAuditLog: React.FC = () => {
               onClick={() => setActionCategory('all')}
               className={`px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
                 actionCategory === 'all'
-                  ? 'bg-purple-600 text-white font-bold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  ? 'bg-[#FF2E7E] text-white font-semibold shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
               }`}
             >
               Semua ({stats.total})
@@ -415,8 +415,8 @@ export const AdminAuditLog: React.FC = () => {
               onClick={() => setActionCategory('roles')}
               className={`px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
                 actionCategory === 'roles'
-                  ? 'bg-purple-500/20 text-purple-300 font-bold border border-purple-500/40'
-                  : 'text-slate-400 hover:text-purple-300 hover:bg-slate-800'
+                  ? 'bg-[#FF2E7E] text-white font-semibold shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
               }`}
             >
               Role Overrides
@@ -427,7 +427,7 @@ export const AdminAuditLog: React.FC = () => {
               className={`px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
                 actionCategory === 'suspensions'
                   ? 'bg-red-500/20 text-red-300 font-bold border border-red-500/40'
-                  : 'text-slate-400 hover:text-red-300 hover:bg-slate-800'
+                  : 'text-slate-400 hover:text-red-300 hover:bg-white/[0.06]'
               }`}
             >
               Penangguhan (Bans)
@@ -438,7 +438,7 @@ export const AdminAuditLog: React.FC = () => {
               className={`px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
                 actionCategory === 'deletions'
                   ? 'bg-rose-500/20 text-rose-300 font-bold border border-rose-500/40'
-                  : 'text-slate-400 hover:text-rose-300 hover:bg-slate-800'
+                  : 'text-slate-400 hover:text-rose-300 hover:bg-white/[0.06]'
               }`}
             >
               Hapus Akun
@@ -449,7 +449,7 @@ export const AdminAuditLog: React.FC = () => {
               className={`px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
                 actionCategory === 'appeals'
                   ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40'
-                  : 'text-slate-400 hover:text-amber-300 hover:bg-slate-800'
+                  : 'text-slate-400 hover:text-amber-300 hover:bg-white/[0.06]'
               }`}
             >
               Banding Akun
@@ -459,8 +459,8 @@ export const AdminAuditLog: React.FC = () => {
               onClick={() => setActionCategory('moderation')}
               className={`px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
                 actionCategory === 'moderation'
-                  ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40'
-                  : 'text-slate-400 hover:text-cyan-300 hover:bg-slate-800'
+                  ? 'bg-[#FF2E7E] text-white font-semibold shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
               }`}
             >
               Laporan Konten
@@ -470,8 +470,8 @@ export const AdminAuditLog: React.FC = () => {
               onClick={() => setActionCategory('critics')}
               className={`px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
                 actionCategory === 'critics'
-                  ? 'bg-yellow-500/20 text-yellow-300 font-bold border border-yellow-500/40'
-                  : 'text-slate-400 hover:text-yellow-300 hover:bg-slate-800'
+                  ? 'bg-[#FF2E7E] text-white font-semibold shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
               }`}
             >
               Verifikasi Kritikus
@@ -520,9 +520,9 @@ export const AdminAuditLog: React.FC = () => {
       </div>
 
       {/* Main Table Layout */}
-      <div className="overflow-x-auto rounded-2xl border border-slate-850 bg-[#121324] shadow-sm">
+      <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[#171A1F] shadow-sm">
         <table className="w-full text-left text-xs">
-          <thead className="bg-[#17182b] text-slate-400 text-[11px] font-bold uppercase tracking-wider border-b border-slate-800">
+          <thead className="bg-[#121418] text-slate-400 text-[11px] font-bold uppercase tracking-wider border-b border-white/10">
             <tr>
               <th className="p-3.5 whitespace-nowrap">Waktu & Tanggal</th>
               <th className="p-3.5">Tindakan Moderasi</th>
@@ -532,7 +532,7 @@ export const AdminAuditLog: React.FC = () => {
               <th className="p-3.5 text-right">Aksi</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/60 font-medium">
+          <tbody className="divide-y divide-white/5 font-medium">
             {filteredLogs.length === 0 ? (
               <tr>
                 <td colSpan={6} className="p-10 text-center text-slate-500 space-y-2">
@@ -549,7 +549,7 @@ export const AdminAuditLog: React.FC = () => {
                 return (
                   <tr 
                     key={log.id} 
-                    className={`hover:bg-slate-850/60 transition-colors ${isSelected ? 'bg-purple-950/20' : ''}`}
+                    className={`hover:bg-white/[0.03] transition-colors ${isSelected ? 'bg-white/[0.06]' : ''}`}
                   >
                     {/* Timestamp */}
                     <td className="p-3.5 whitespace-nowrap text-slate-400 text-[11px]">
@@ -573,11 +573,11 @@ export const AdminAuditLog: React.FC = () => {
                         <img
                           src={log.actorAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}
                           alt={log.actorName}
-                          className="w-7 h-7 rounded-full object-cover border border-slate-700 shrink-0"
+                          className="w-7 h-7 rounded-full object-cover border border-white/10 shrink-0"
                         />
                         <div className="min-w-0">
                           <div className="font-bold text-white text-xs truncate">{log.actorName || 'Admin'}</div>
-                          <div className="text-[10px] text-purple-400/80 font-mono truncate">{log.actorRole || 'admin'}</div>
+                          <div className="text-[10px] text-slate-400 font-mono truncate">{log.actorRole || 'admin'}</div>
                         </div>
                       </div>
                     </td>
@@ -591,7 +591,7 @@ export const AdminAuditLog: React.FC = () => {
                           </div>
                           <div className="text-[10px] text-slate-500 font-mono truncate flex items-center gap-1">
                             {log.targetType && (
-                              <span className="uppercase text-[9px] bg-slate-900 px-1 rounded border border-slate-800 text-slate-400">
+                              <span className="uppercase text-[9px] bg-black/40 px-1 rounded border border-white/10 text-slate-400">
                                 {log.targetType}
                               </span>
                             )}
@@ -609,7 +609,7 @@ export const AdminAuditLog: React.FC = () => {
                         {log.details || 'Tindakan selesai dieksekusi.'}
                       </div>
                       {log.metadata && Object.keys(log.metadata).length > 0 && (
-                        <div className="mt-1 flex items-center gap-1.5 text-[10px] text-purple-400/70 font-mono">
+                        <div className="mt-1 flex items-center gap-1.5 text-[10px] text-slate-400 font-mono">
                           <Layers className="w-3 h-3" />
                           <span>{Object.keys(log.metadata).length} atribut metadata tersimpan</span>
                         </div>
@@ -622,7 +622,7 @@ export const AdminAuditLog: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setSelectedLog(log)}
-                          className="px-2.5 py-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                          className="px-2.5 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-slate-200 border border-white/10 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
                           title="Lihat Rincian Log"
                         >
                           <Eye className="w-3.5 h-3.5" />
@@ -640,8 +640,8 @@ export const AdminAuditLog: React.FC = () => {
 
       {/* DETAIL MODAL / DRAWER */}
       {selectedLog && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-2xl bg-[#121324] border-2 border-purple-500/40 rounded-3xl overflow-hidden shadow-2xl shadow-purple-950/40 animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl bg-[#171A1F] border border-white/10 rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-purple-950/60 via-slate-900/90 to-purple-950/60 border-b border-purple-500/30 p-6 flex items-start justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -790,8 +790,8 @@ export const AdminAuditLog: React.FC = () => {
 
       {/* CLEAR ALL LOGS CONFIRMATION MODAL */}
       {isClearModalOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-[#121324] border-2 border-red-500/40 rounded-3xl overflow-hidden shadow-2xl shadow-red-950/40 animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-[#171A1F] border border-white/10 rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="p-6 bg-red-500/15 border-b border-red-500/30 flex items-start gap-4">
               <div className="w-12 h-12 rounded-2xl bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-400 shrink-0">
                 <AlertTriangle className="w-6 h-6" />

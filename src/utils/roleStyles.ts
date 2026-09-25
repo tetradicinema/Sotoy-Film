@@ -19,7 +19,7 @@ export interface RoleConfigItem {
 
 /**
  * Consolidated Role Configuration for Sotoy Film
- * Single source of truth for role identity, colors, badges, and icons.
+ * Multi-accent system with #FF2E7E primary pink accent and clean neutral tiers.
  */
 export const ROLES_CONFIG: Record<UserRole, RoleConfigItem> = {
   warga_sotoy: {
@@ -28,13 +28,13 @@ export const ROLES_CONFIG: Record<UserRole, RoleConfigItem> = {
     shortLabel: 'Warga',
     fullTitle: 'Warga Sotoy (Penonton Santai)',
     description: 'Anggota komunitas & penonton sinema santai',
-    color: '#00F0FF',
-    text: 'text-[#00F0FF]',
-    bg: 'bg-cyan-500/15',
-    border: 'border-cyan-500/30',
-    badgeClass: 'bg-cyan-500/15 text-[#00F0FF] border border-cyan-500/30',
-    hoverScaleClass: 'transition-transform duration-200 hover:scale-105 active:scale-95',
-    accent: '#00F0FF',
+    color: '#94A3B8',
+    text: 'text-slate-400',
+    bg: 'bg-white/[0.04]',
+    border: 'border-white/[0.08]',
+    badgeClass: 'bg-white/[0.04] text-slate-400 border border-white/[0.08]',
+    hoverScaleClass: 'transition-all duration-200 active:scale-95',
+    accent: '#FF2E7E',
     icon: Users,
   },
   si_paling_sotoy: {
@@ -43,13 +43,13 @@ export const ROLES_CONFIG: Record<UserRole, RoleConfigItem> = {
     shortLabel: 'Top Critic',
     fullTitle: 'Si Paling Sotoy (Kritikus Film)',
     description: 'Kritikus film terverifikasi & kurator tahunan',
-    color: '#FFD000',
-    text: 'text-[#FFD000]',
-    bg: 'bg-amber-500/15',
-    border: 'border-amber-500/40',
-    badgeClass: 'bg-amber-500/15 text-[#FFD000] border border-amber-500/40',
-    hoverScaleClass: 'transition-transform duration-200 hover:scale-105 active:scale-95',
-    accent: '#FFD000',
+    color: '#FFFFFF',
+    text: 'text-white',
+    bg: 'bg-white/[0.08]',
+    border: 'border-white/15',
+    badgeClass: 'bg-white/[0.08] text-white border border-white/15',
+    hoverScaleClass: 'transition-all duration-200 active:scale-95',
+    accent: '#FF2E7E',
     icon: Award,
   },
   penulis_sotoy: {
@@ -60,10 +60,10 @@ export const ROLES_CONFIG: Record<UserRole, RoleConfigItem> = {
     description: 'Jurnalis & editor artikel editorial resmi',
     color: '#FF2E7E',
     text: 'text-[#FF2E7E]',
-    bg: 'bg-pink-500/15',
-    border: 'border-pink-500/30',
-    badgeClass: 'bg-pink-500/15 text-[#FF2E7E] border border-pink-500/30',
-    hoverScaleClass: 'transition-transform duration-200 hover:scale-105 active:scale-95',
+    bg: 'bg-[#FF2E7E]/10',
+    border: 'border-[#FF2E7E]/30',
+    badgeClass: 'bg-[#FF2E7E]/10 text-[#FF2E7E] border border-[#FF2E7E]/30',
+    hoverScaleClass: 'transition-all duration-200 active:scale-95',
     accent: '#FF2E7E',
     icon: PenSquare,
   },
@@ -73,13 +73,13 @@ export const ROLES_CONFIG: Record<UserRole, RoleConfigItem> = {
     shortLabel: 'Admin',
     fullTitle: 'Admin Sotoy (Pengelola Platform)',
     description: 'Moderator platform, manajemen pengguna & kurasi',
-    color: '#7928CA',
-    text: 'text-purple-300',
-    bg: 'bg-purple-500/15',
-    border: 'border-purple-500/40',
-    badgeClass: 'bg-purple-500/15 text-purple-300 border border-purple-500/40',
-    hoverScaleClass: 'transition-transform duration-200 hover:scale-105 active:scale-95',
-    accent: '#7928CA',
+    color: '#FF2E7E',
+    text: 'text-white',
+    bg: 'bg-[#FF2E7E]',
+    border: 'border-[#FF2E7E]',
+    badgeClass: 'bg-[#FF2E7E] text-white border border-[#FF2E7E]',
+    hoverScaleClass: 'transition-all duration-200 active:scale-95',
+    accent: '#FF2E7E',
     icon: ShieldCheck,
   },
 };
@@ -94,7 +94,7 @@ export interface RoleBadgeStyleResult {
   text: string;
   bg: string;
   border: string;
-  badge: string; // Full tailwind class with border and hover scale
+  badge: string;
   badgeClass: string;
   hoverScaleClass: string;
   accent: string;
@@ -102,10 +102,6 @@ export interface RoleBadgeStyleResult {
   Icon: LucideIcon;
 }
 
-/**
- * Returns centralized role badge styling, tailwind classes, and lucide icon.
- * @param role UserRole or string identifier
- */
 export const getRoleBadgeStyle = (role?: UserRole | string | null): RoleBadgeStyleResult => {
   const normalizedKey = (role as UserRole) || 'warga_sotoy';
   const config = ROLES_CONFIG[normalizedKey] || ROLES_CONFIG.warga_sotoy;
@@ -129,5 +125,4 @@ export const getRoleBadgeStyle = (role?: UserRole | string | null): RoleBadgeSty
   };
 };
 
-// Backward-compatible alias for existing code
 export const getRoleStyle = getRoleBadgeStyle;

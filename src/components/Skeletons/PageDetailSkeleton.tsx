@@ -12,17 +12,17 @@ export const GenericPageSkeleton: React.FC = () => {
 
       {/* Content Cards Grid Shimmer */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="h-48 rounded-3xl bg-[#121324] border border-slate-800/80 p-6 space-y-3">
+        <div className="h-48 rounded-3xl bg-[#171A1F] border border-white/[0.08]/80 p-6 space-y-3">
           <div className="h-6 w-1/3 bg-slate-800 rounded" />
           <div className="h-4 w-full bg-slate-850 rounded" />
           <div className="h-4 w-3/4 bg-slate-850 rounded" />
         </div>
-        <div className="h-48 rounded-3xl bg-[#121324] border border-slate-800/80 p-6 space-y-3">
+        <div className="h-48 rounded-3xl bg-[#171A1F] border border-white/[0.08]/80 p-6 space-y-3">
           <div className="h-6 w-1/3 bg-slate-800 rounded" />
           <div className="h-4 w-full bg-slate-850 rounded" />
           <div className="h-4 w-3/4 bg-slate-850 rounded" />
         </div>
-        <div className="h-48 rounded-3xl bg-[#121324] border border-slate-800/80 p-6 space-y-3">
+        <div className="h-48 rounded-3xl bg-[#171A1F] border border-white/[0.08]/80 p-6 space-y-3">
           <div className="h-6 w-1/3 bg-slate-800 rounded" />
           <div className="h-4 w-full bg-slate-850 rounded" />
           <div className="h-4 w-3/4 bg-slate-850 rounded" />
@@ -30,7 +30,7 @@ export const GenericPageSkeleton: React.FC = () => {
       </div>
 
       {/* Main Container Shimmer */}
-      <div className="h-72 rounded-3xl bg-[#121324] border border-slate-800/80 p-6 space-y-4">
+      <div className="h-72 rounded-3xl bg-[#171A1F] border border-white/[0.08]/80 p-6 space-y-4">
         <div className="h-6 w-48 bg-slate-800 rounded" />
         <div className="h-4 w-full bg-slate-850 rounded" />
         <div className="h-4 w-5/6 bg-slate-850 rounded" />
@@ -59,7 +59,7 @@ export const ArticleDetailSkeleton: React.FC = () => {
         </div>
 
         {/* Author row skeleton */}
-        <div className="flex items-center justify-between py-4 border-y border-slate-800">
+        <div className="flex items-center justify-between py-4 border-y border-white/[0.08]">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-full bg-slate-800" />
             <div className="space-y-1.5">
@@ -83,7 +83,7 @@ export const ArticleDetailSkeleton: React.FC = () => {
           <div className="h-4 w-[94%] bg-slate-800/80 rounded" />
           <div className="h-4 w-[88%] bg-slate-800/70 rounded" />
           <div className="h-4 w-[92%] bg-slate-800/70 rounded" />
-          <div className="h-20 w-full bg-slate-850/40 rounded-2xl border border-slate-800/80 my-6" />
+          <div className="h-20 w-full bg-slate-850/40 rounded-2xl border border-white/[0.08]/80 my-6" />
           <div className="h-4 w-full bg-slate-800/80 rounded" />
           <div className="h-4 w-[95%] bg-slate-800/80 rounded" />
           <div className="h-4 w-[70%] bg-slate-800/60 rounded" />
@@ -97,8 +97,8 @@ export const FilmDetailSkeleton: React.FC = () => {
   return (
     <div className="min-h-screen pb-16 animate-pulse select-none" aria-busy="true" aria-label="Memuat database film...">
       {/* Backdrop Header Skeleton */}
-      <div className="relative h-[320px] sm:h-[420px] w-full bg-slate-900 border-b border-slate-800">
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0D0E15] via-[#0D0E15]/60 to-transparent" />
+      <div className="relative h-[320px] sm:h-[420px] w-full bg-slate-900 border-b border-white/[0.08]">
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0E1013] via-[#0E1013]/60 to-transparent" />
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-36 sm:-mt-48 relative z-10 space-y-10">
@@ -136,12 +136,12 @@ export const FilmDetailSkeleton: React.FC = () => {
               <div className="h-4 w-full bg-slate-800/80 rounded" />
               <div className="h-4 w-4/5 bg-slate-800/70 rounded" />
             </div>
-            <div className="h-64 rounded-3xl bg-slate-850/60 border border-slate-800" />
+            <div className="h-64 rounded-3xl bg-slate-850/60 border border-white/[0.08]" />
           </div>
 
           <div className="space-y-4">
             <div className="h-8 w-36 bg-slate-800 rounded-xl" />
-            <div className="h-48 rounded-3xl bg-[#121324] border border-slate-800 p-5 space-y-3" />
+            <div className="h-48 rounded-3xl bg-[#171A1F] border border-white/[0.08] p-5 space-y-3" />
           </div>
         </div>
       </div>

@@ -7,31 +7,18 @@ import {
   PenSquare,
   ChevronDown,
   Search,
-  Menu,
-  X,
-  Shield,
-  Star,
+  Clapperboard,
+  LogIn,
+  User as UserIcon,
+  Home,
   Tv,
   Camera,
   BookOpen,
-  Award,
-  Clapperboard,
-  LogIn,
-  LogOut,
-  User as UserIcon,
-  Activity,
-  Bookmark,
-  Settings,
-  Sliders,
-  Home,
-  Users,
-  Heart,
-  FileText,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
 import { RoleBadge } from '../Common/RoleBadge';
-import { MainCategory, SubCategory, UserRole, UserTab } from '../../types';
+import { MainCategory, SubCategory } from '../../types';
 import { useTranslation } from '../../i18n';
 import { GlobalSearchBar } from './GlobalSearchBar';
 import { NotificationBell } from '../Common/NotificationBell';
@@ -50,19 +37,12 @@ export const Navbar: React.FC = () => {
     activeCategory,
     activeSubCategory,
     navigateTo,
-    searchQuery,
-    setSearchQuery,
     showToast,
     watchlist,
     savedArticles,
-    ratings,
-    buzzList,
     activeUserTab,
-    buzzFeedTab,
-    setBuzzFeedTab,
   } = useApp();
 
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<MainCategory | null>(null);
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -138,22 +118,11 @@ export const Navbar: React.FC = () => {
 
   const handleCategoryClick = (cat: MainCategory, subCat?: SubCategory) => {
     setActiveDropdown(null);
-    setMobileMenuOpen(false);
     navigateTo('category', { category: cat, subCategory: subCat || null });
   };
 
-  const handleWriteArticleClick = () => {
-    if (currentUser.role === 'penulis_sotoy' || currentUser.role === 'admin' || currentUser.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02' || isWriter) {
-      navigateTo('write-article');
-    } else {
-      showToast('Peran Anda saat ini tidak memiliki izin menulis artikel resmi.');
-    }
-  };
-
-  const roleStyle = getRoleBadgeStyle(currentUser.role);
-
   return (
-    <header className="sticky top-0 z-50 bg-[#0D0E15]/95 backdrop-blur-md border-b border-slate-800/80">
+    <header className="sticky top-0 z-50 bg-[#0E1013]/95 backdrop-blur-md border-b border-white/[0.08]">
       {/* Main Navbar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-4">
@@ -163,21 +132,19 @@ export const Navbar: React.FC = () => {
             onClick={() => navigateTo('home')}
             className="flex items-center gap-2.5 cursor-pointer group shrink-0"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#FF2E7E] via-[#FFD000] to-[#00F0FF] p-0.5 shadow-lg shadow-[#FF2E7E]/20 transition-transform group-hover:scale-105">
-              <div className="w-full h-full bg-[#0D0E15] rounded-[10px] flex items-center justify-center">
-                <Clapperboard className="w-5 h-5 text-[#FFD000] group-hover:rotate-6 transition-transform" />
-              </div>
+            <div className="w-10 h-10 rounded-xl bg-[#171A1F] border border-white/10 flex items-center justify-center text-[#FF2E7E] transition-all group-hover:border-[#FF2E7E]/50 group-active:scale-95 shadow-sm">
+              <Clapperboard className="w-5 h-5 text-[#FF2E7E] transition-transform group-hover:scale-105" />
             </div>
             <div>
-              <div className="flex items-center gap-1">
-                <span className="font-display font-black text-xl tracking-tight text-white group-hover:text-[#FFD000] transition-colors">
+              <div className="flex items-center gap-1 font-display tracking-tight text-xl font-black">
+                <span className="text-white transition-colors">
                   SOTOY
                 </span>
-                <span className="font-display font-black text-xl tracking-tight text-[#FF2E7E]">
+                <span className="text-[#FF2E7E]">
                   FILM
                 </span>
               </div>
-              <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase block -mt-1">
+              <span className="text-[9px] font-semibold tracking-wider text-slate-400 uppercase block -mt-1 font-mono">
                 Pop-Culture & Cinema
               </span>
             </div>
@@ -186,7 +153,6 @@ export const Navbar: React.FC = () => {
           {/* Desktop Category Navigation */}
           <nav className="hidden lg:flex items-center gap-1">
             {categoriesConfig.map(cat => {
-              const Icon = cat.icon;
               const isSelected = activeCategory === cat.id && currentView === 'category';
 
               return (
@@ -199,21 +165,21 @@ export const Navbar: React.FC = () => {
                   <button
                     id={`nav-cat-${cat.id}`}
                     onClick={() => handleCategoryClick(cat.id)}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold transition-all ${
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
                       isSelected
-                        ? 'text-white bg-slate-800/80 border border-slate-700'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                        ? 'text-white bg-white/[0.08] border border-white/15'
+                        : 'text-slate-300 hover:text-white hover:bg-white/[0.04]'
                     }`}
                   >
                     <span>{cat.name}</span>
-                    <ChevronDown className="w-3 h-3 text-slate-500 group-hover:text-slate-300 transition-transform group-hover:rotate-180" />
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 transition-transform group-hover:rotate-180" />
                   </button>
 
                   {/* Dropdown Menu for Subcategories */}
                   {activeDropdown === cat.id && (
                     <div className="absolute left-0 top-full pt-1.5 w-56 z-50">
-                      <div className="bg-[#151624] border border-slate-700/80 rounded-2xl p-2 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-1 duration-150">
-                        <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                      <div className="bg-[#171A1F] border border-white/10 rounded-xl p-2 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-1 duration-150">
+                        <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 border-b border-white/[0.08]">
                           Sub-Kategori {cat.name}
                         </div>
                         <div className="py-1 space-y-0.5">
@@ -225,23 +191,23 @@ export const Navbar: React.FC = () => {
                                 e.stopPropagation();
                                 handleCategoryClick(cat.id, sub.id);
                               }}
-                              className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors ${
+                              className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition-colors ${
                                 activeCategory === cat.id && activeSubCategory === sub.id
-                                  ? 'bg-[#FF2E7E] text-white'
-                                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                                  ? 'bg-[#FF2E7E] text-white font-semibold'
+                                  : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
                               }`}
                             >
                               <span>{sub.label}</span>
-                              <span className="text-[10px] text-slate-400 group-hover:text-slate-200 uppercase">
-                                Page →
+                              <span className="text-[10px] text-slate-400 group-hover:text-slate-200">
+                                →
                               </span>
                             </button>
                           ))}
                         </div>
-                        <div className="pt-1.5 border-t border-slate-800 mt-1">
+                        <div className="pt-1.5 border-t border-white/[0.08] mt-1">
                           <button
                             onClick={() => handleCategoryClick(cat.id)}
-                            className="w-full text-center text-[11px] font-bold text-[#00F0FF] hover:underline py-1"
+                            className="w-full text-center text-xs font-semibold text-[#FF2E7E] hover:underline py-1"
                           >
                             Buka Halaman Utama {cat.name}
                           </button>
@@ -255,14 +221,14 @@ export const Navbar: React.FC = () => {
           </nav>
 
           {/* Direct Feature Links */}
-          <div className="hidden xl:flex items-center gap-1.5 border-l border-slate-800 pl-3">
+          <div className="hidden xl:flex items-center gap-1.5 border-l border-white/[0.08] pl-3">
             <button
               id="nav-film-database"
               onClick={() => navigateTo('film-database')}
-              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors ${
+              className={`px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                 currentView === 'film-database' || currentView === 'film-detail'
-                  ? 'bg-[#FFD000] text-slate-950 font-black shadow-md'
-                  : 'text-slate-300 hover:text-[#FFD000] hover:bg-slate-800/40'
+                  ? 'bg-[#FF2E7E] text-white shadow-sm'
+                  : 'text-slate-300 hover:text-white hover:bg-white/[0.04]'
               }`}
             >
               <span>{t('nav.filmDatabase', 'Film Database')}</span>
@@ -271,10 +237,10 @@ export const Navbar: React.FC = () => {
             <button
               id="nav-buzz"
               onClick={() => navigateTo('community-feed')}
-              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors ${
+              className={`px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                 currentView === 'community-feed'
-                  ? 'bg-[#FF2E7E] text-white font-black shadow-md'
-                  : 'text-slate-300 hover:text-[#FF2E7E] hover:bg-slate-800/40'
+                  ? 'bg-[#FF2E7E] text-white shadow-sm'
+                  : 'text-slate-300 hover:text-white hover:bg-white/[0.04]'
               }`}
             >
               <span>{t('nav.buzzFeed', 'Buzz Feed')}</span>
@@ -299,17 +265,13 @@ export const Navbar: React.FC = () => {
               <button
                 id="navbar-writer-mode-pill"
                 onClick={() => navigateTo('writer-dashboard')}
-                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-black tracking-wider transition-all duration-200 border shadow-sm ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all border shadow-sm ${
                   currentView === 'writer-dashboard'
-                    ? 'bg-pink-600 text-white border-pink-500 shadow-pink-900/50 ring-2 ring-pink-400/40'
-                    : 'bg-pink-500/20 text-pink-300 border-pink-500/60 hover:bg-pink-600 hover:text-white'
+                    ? 'bg-[#FF2E7E] text-white border-[#FF2E7E]'
+                    : 'bg-[#FF2E7E]/10 text-[#FF2E7E] border-[#FF2E7E]/30 hover:bg-[#FF2E7E] hover:text-white'
                 }`}
                 title="Dasbor CMS Penulis"
               >
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-pink-400"></span>
-                </span>
                 <PenSquare className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">DASBOR PENULIS</span>
               </button>
@@ -320,10 +282,10 @@ export const Navbar: React.FC = () => {
               <button
                 id="role-profile-trigger"
                 onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
-                className={`relative p-0.5 rounded-full border-2 transition-all hover:scale-105 active:scale-95 shadow-md flex items-center justify-center focus:outline-none ${
+                className={`relative p-0.5 rounded-full border-2 transition-all hover:scale-105 active:scale-95 flex items-center justify-center focus:outline-none ${
                   roleDropdownOpen
-                    ? 'border-[#00F0FF] ring-2 ring-[#00F0FF]/40 shadow-cyan-500/20'
-                    : 'border-slate-700 hover:border-[#00F0FF] hover:ring-2 hover:ring-[#00F0FF]/20'
+                    ? 'border-[#FF2E7E] ring-2 ring-[#FF2E7E]/30'
+                    : 'border-white/20 hover:border-[#FF2E7E]'
                 }`}
                 title={isLoggedIn ? `Menu Navigasi & Akun (${currentUser.name})` : 'Menu Navigasi & Masuk Akun'}
                 aria-label="Menu Utama & Akun"
@@ -336,28 +298,28 @@ export const Navbar: React.FC = () => {
                     className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover ring-1 ring-white/20"
                   />
                 ) : (
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-tr from-[#FF2E7E] to-[#00F0FF] flex items-center justify-center text-white font-bold text-xs shadow-inner">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#171A1F] border border-white/10 flex items-center justify-center text-slate-300 font-bold text-xs">
                     <UserIcon className="w-4 h-4" />
                   </div>
                 )}
-                {/* Status Indicator Badge */}
+                {/* Semantic online status indicator */}
                 {isLoggedIn && (
-                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-[#0D0E15]" />
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-[#0E1013]" />
                 )}
               </button>
 
               {roleDropdownOpen && (
-                <div className="absolute right-0 top-full mt-2 w-80 sm:w-88 bg-[#121324] border border-slate-700 rounded-3xl p-4 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 max-h-[85vh] overflow-y-auto scrollbar-thin">
+                <div className="absolute right-0 top-full mt-2 w-80 sm:w-88 bg-[#171A1F] border border-white/10 rounded-2xl p-4 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 max-h-[85vh] overflow-y-auto scrollbar-thin">
                   {/* User Profile Header / Login Banner */}
                   {isLoggedIn ? (
-                    <div className="flex items-center gap-3 pb-3 border-b border-slate-800">
+                    <div className="flex items-center gap-3 pb-3 border-b border-white/[0.08]">
                       <img
                         src={currentUser.avatar}
                         alt={currentUser.name}
-                        className="w-11 h-11 rounded-2xl object-cover ring-2 ring-[#00F0FF] border border-white/20 shrink-0"
+                        className="w-11 h-11 rounded-xl object-cover ring-1 ring-white/20 shrink-0"
                       />
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm font-bold text-white truncate">{currentUser.name}</div>
+                        <div className="text-sm font-semibold text-white truncate">{currentUser.name}</div>
                         <div className="text-xs text-slate-400 truncate">{currentUser.handle}</div>
                         <div className="mt-1">
                           <RoleBadge role={currentUser.role} size="sm" />
@@ -365,12 +327,12 @@ export const Navbar: React.FC = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="pb-3 border-b border-slate-800 space-y-2">
-                      <div className="flex items-center gap-2 text-xs font-bold text-white">
+                    <div className="pb-3 border-b border-white/[0.08] space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-white">
                         <Sparkles className="w-4 h-4 text-[#FF2E7E]" />
                         <span>Selamat Datang di Sotoy Film</span>
                       </div>
-                      <p className="text-[11px] text-slate-400 leading-relaxed">
+                      <p className="text-xs text-slate-400 leading-relaxed">
                         Masuk akun untuk berdiskusi, simpan watchlist, dan berikan review film.
                       </p>
                       <button
@@ -378,7 +340,7 @@ export const Navbar: React.FC = () => {
                           setLoginModalOpen(true);
                           setRoleDropdownOpen(false);
                         }}
-                        className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] text-white text-xs font-bold hover:brightness-110 transition-all flex items-center justify-center gap-2 shadow-md"
+                        className="w-full py-2 px-3 rounded-lg bg-[#FF2E7E] hover:bg-[#e0266e] text-white text-xs font-semibold transition-all flex items-center justify-center gap-2 shadow-sm"
                       >
                         <LogIn className="w-3.5 h-3.5" />
                         <span>Masuk / Daftar Akun</span>
@@ -387,7 +349,7 @@ export const Navbar: React.FC = () => {
                   )}
 
                   {/* Section 1: Navigasi Situs Utama */}
-                  <div className="py-2.5 space-y-1 border-b border-slate-800">
+                  <div className="py-2.5 space-y-0.5 border-b border-white/[0.08]">
                     <div className="text-slate-400 text-xs font-semibold px-1 mb-1">
                       Navigasi Utama
                     </div>
@@ -397,13 +359,13 @@ export const Navbar: React.FC = () => {
                         navigateTo('home');
                         setRoleDropdownOpen(false);
                       }}
-                      className={`w-full text-left p-2 rounded-xl text-xs flex items-center gap-2.5 transition-colors ${
+                      className={`w-full text-left p-2 rounded-lg text-xs flex items-center gap-2.5 transition-colors ${
                         currentView === 'home'
-                          ? 'bg-[#FF2E7E]/20 text-[#FF2E7E] font-bold border border-[#FF2E7E]/30'
-                          : 'hover:bg-slate-800 text-slate-200'
+                          ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] font-semibold border border-[#FF2E7E]/30'
+                          : 'hover:bg-white/[0.05] text-slate-200'
                       }`}
                     >
-                      <Home className="w-4 h-4 text-[#FF2E7E]" />
+                      <Home className="w-4 h-4 text-slate-400" />
                       <span>Beranda</span>
                     </button>
 
@@ -412,14 +374,14 @@ export const Navbar: React.FC = () => {
                         navigateTo('film-database');
                         setRoleDropdownOpen(false);
                       }}
-                      className={`w-full text-left p-2 rounded-xl text-xs flex items-center gap-2.5 transition-colors ${
+                      className={`w-full text-left p-2 rounded-lg text-xs flex items-center gap-2.5 transition-colors ${
                         currentView === 'film-database'
-                          ? 'bg-[#FFD000]/20 text-[#FFD000] font-bold border border-[#FFD000]/30'
-                          : 'hover:bg-slate-800 text-slate-200'
+                          ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] font-semibold border border-[#FF2E7E]/30'
+                          : 'hover:bg-white/[0.05] text-slate-200'
                       }`}
                     >
-                      <Film className="w-4 h-4 text-[#FFD000]" />
-                      <span>Film</span>
+                      <Film className="w-4 h-4 text-slate-400" />
+                      <span>Film Database</span>
                     </button>
 
                     <button
@@ -427,13 +389,13 @@ export const Navbar: React.FC = () => {
                         navigateTo('community-feed');
                         setRoleDropdownOpen(false);
                       }}
-                      className={`w-full text-left p-2 rounded-xl text-xs flex items-center gap-2.5 transition-colors ${
+                      className={`w-full text-left p-2 rounded-lg text-xs flex items-center gap-2.5 transition-colors ${
                         currentView === 'community-feed'
-                          ? 'bg-[#00F0FF]/20 text-[#00F0FF] font-bold border border-[#00F0FF]/30'
-                          : 'hover:bg-slate-800 text-slate-200'
+                          ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] font-semibold border border-[#FF2E7E]/30'
+                          : 'hover:bg-white/[0.05] text-slate-200'
                       }`}
                     >
-                      <MessageSquare className="w-4 h-4 text-[#00F0FF]" />
+                      <MessageSquare className="w-4 h-4 text-slate-400" />
                       <span>Komunitas</span>
                     </button>
 
@@ -442,13 +404,13 @@ export const Navbar: React.FC = () => {
                         navigateTo('film-recommendations');
                         setRoleDropdownOpen(false);
                       }}
-                      className={`w-full text-left p-2 rounded-xl text-xs flex items-center gap-2.5 transition-colors ${
+                      className={`w-full text-left p-2 rounded-lg text-xs flex items-center gap-2.5 transition-colors ${
                         currentView === 'film-recommendations'
-                          ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30'
-                          : 'hover:bg-slate-800 text-slate-200'
+                          ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] font-semibold border border-[#FF2E7E]/30'
+                          : 'hover:bg-white/[0.05] text-slate-200'
                       }`}
                     >
-                      <Sparkles className="w-4 h-4 text-amber-400" />
+                      <Sparkles className="w-4 h-4 text-slate-400" />
                       <span>Rekomendasi</span>
                     </button>
 
@@ -457,20 +419,20 @@ export const Navbar: React.FC = () => {
                         navigateTo('search');
                         setRoleDropdownOpen(false);
                       }}
-                      className={`w-full text-left p-2 rounded-xl text-xs flex items-center gap-2.5 transition-colors ${
+                      className={`w-full text-left p-2 rounded-lg text-xs flex items-center gap-2.5 transition-colors ${
                         currentView === 'search'
-                          ? 'bg-pink-500/20 text-pink-300 font-bold border border-pink-500/30'
-                          : 'hover:bg-slate-800 text-slate-200'
+                          ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] font-semibold border border-[#FF2E7E]/30'
+                          : 'hover:bg-white/[0.05] text-slate-200'
                       }`}
                     >
-                      <Search className="w-4 h-4 text-pink-400" />
+                      <Search className="w-4 h-4 text-slate-400" />
                       <span>Cari</span>
                     </button>
                   </div>
 
                   {/* Section 2: Menu Pengguna (Jika Logged In) */}
                   {isLoggedIn && (
-                    <div className="py-2.5 space-y-1 border-b border-slate-800">
+                    <div className="py-2.5 space-y-0.5 border-b border-white/[0.08]">
                       <div className="text-slate-400 text-xs font-semibold px-1 mb-1">
                         Fitur Akun Saya
                       </div>
@@ -481,10 +443,10 @@ export const Navbar: React.FC = () => {
                           navigateTo('user-profile', { userId: currentUser.id, userTab: 'buzz' });
                           setRoleDropdownOpen(false);
                         }}
-                        className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
+                        className={`w-full text-left p-2 rounded-lg text-xs flex items-center justify-between transition-colors ${
                           currentView === 'user-profile' && activeUserTab === 'buzz'
-                            ? 'bg-cyan-500/20 text-[#00F0FF] border border-cyan-500/40 font-bold'
-                            : 'hover:bg-slate-800/80 text-slate-200'
+                            ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] font-semibold border border-[#FF2E7E]/30'
+                            : 'hover:bg-white/[0.05] text-slate-200'
                         }`}
                       >
                         <span>Profil</span>
@@ -497,14 +459,14 @@ export const Navbar: React.FC = () => {
                           navigateTo('user-profile', { userId: currentUser.id, userTab: 'watchlist' });
                           setRoleDropdownOpen(false);
                         }}
-                        className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
+                        className={`w-full text-left p-2 rounded-lg text-xs flex items-center justify-between transition-colors ${
                           currentView === 'user-profile' && activeUserTab === 'watchlist'
-                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold'
-                            : 'hover:bg-slate-800/80 text-slate-200'
+                            ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] font-semibold border border-[#FF2E7E]/30'
+                            : 'hover:bg-white/[0.05] text-slate-200'
                         }`}
                       >
                         <span>Watchlist</span>
-                        <span className="bg-emerald-500/20 text-emerald-300 font-bold text-[10px] px-2 py-0.5 rounded-full">
+                        <span className="bg-white/10 text-slate-300 font-mono tabular-nums text-[11px] px-2 py-0.5 rounded-md">
                           {watchlist.length + savedArticles.length}
                         </span>
                       </button>
@@ -515,10 +477,10 @@ export const Navbar: React.FC = () => {
                           navigateTo('settings');
                           setRoleDropdownOpen(false);
                         }}
-                        className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
+                        className={`w-full text-left p-2 rounded-lg text-xs flex items-center justify-between transition-colors ${
                           currentView === 'settings'
-                            ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold'
-                            : 'hover:bg-slate-800/80 text-slate-200'
+                            ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] font-semibold border border-[#FF2E7E]/30'
+                            : 'hover:bg-white/[0.05] text-slate-200'
                         }`}
                       >
                         <span>Pengaturan</span>
@@ -531,7 +493,7 @@ export const Navbar: React.FC = () => {
                             navigateTo('critic-submission');
                             setRoleDropdownOpen(false);
                           }}
-                          className="w-full text-left p-2 rounded-xl text-xs flex items-center justify-between border border-dashed border-[#FFD000]/30 hover:bg-[#FFD000]/10 text-[#FFD000] font-bold transition-colors"
+                          className="w-full text-left p-2 rounded-lg text-xs flex items-center justify-between border border-dashed border-white/20 hover:bg-white/[0.05] text-slate-300 font-semibold transition-colors"
                         >
                           <span>Daftar Si Paling Sotoy</span>
                           <span>→</span>
@@ -539,30 +501,30 @@ export const Navbar: React.FC = () => {
                       )}
 
                       {(currentUser.role === 'si_paling_sotoy' || isCritic) && (
-                        <div className="pt-1.5 border-t border-slate-800/50 mt-1.5">
+                        <div className="pt-1.5 border-t border-white/[0.08] mt-1.5">
                           <button
                             id="menu-critic-dashboard-btn"
                             onClick={() => {
                               navigateTo('critic-dashboard');
                               setRoleDropdownOpen(false);
                             }}
-                            className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
+                            className={`w-full text-left p-2 rounded-lg text-xs flex items-center justify-between transition-colors ${
                               currentView === 'critic-dashboard'
-                                ? 'bg-amber-500/20 text-[#FFD000] border border-amber-500/50 font-bold'
-                                : 'hover:bg-amber-500/10 text-[#FFD000] font-bold border border-amber-500/30'
+                                ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] border border-[#FF2E7E]/30 font-semibold'
+                                : 'hover:bg-white/[0.05] text-slate-200 border border-transparent'
                             }`}
                           >
                             <div className="flex items-center gap-2">
-                              <span>Kritikus</span>
+                              <span>Dasbor Kritikus</span>
                               <RoleBadge role="si_paling_sotoy" size="xs" showTooltip={false} />
                             </div>
-                            <span className="text-xs text-[#FFD000]">→</span>
+                            <span className="text-xs text-slate-400">→</span>
                           </button>
                         </div>
                       )}
 
                       {(currentUser.role === 'penulis_sotoy' || currentUser.role === 'admin' || isWriter || isAdmin || currentUser.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02') && (
-                        <div className="pt-1.5 border-t border-slate-800/50 mt-1.5 space-y-1">
+                        <div className="pt-1.5 border-t border-white/[0.08] mt-1.5 space-y-1">
                           <div className="text-slate-400 text-xs font-semibold px-1 mb-1 flex items-center justify-between">
                             <span>CMS Artikel</span>
                             <RoleBadge role={currentUser.role === 'admin' ? 'admin' : 'penulis_sotoy'} size="xs" showTooltip={false} />
@@ -574,14 +536,14 @@ export const Navbar: React.FC = () => {
                                 navigateTo('writer-dashboard');
                                 setRoleDropdownOpen(false);
                               }}
-                              className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
+                              className={`w-full text-left p-2 rounded-lg text-xs flex items-center justify-between transition-colors ${
                                 currentView === 'writer-dashboard'
-                                  ? 'bg-pink-500/20 text-[#FF2E7E] border border-pink-500/50 font-bold'
-                                  : 'hover:bg-pink-500/10 text-[#FF2E7E] font-bold border border-pink-500/30'
+                                  ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] border border-[#FF2E7E]/30 font-semibold'
+                                  : 'hover:bg-white/[0.05] text-slate-200'
                               }`}
                             >
                               <span>Workspace Penulis</span>
-                              <span className="text-xs text-[#FF2E7E]">→</span>
+                              <span className="text-xs text-slate-400">→</span>
                             </button>
                           )}
                           <button
@@ -590,14 +552,14 @@ export const Navbar: React.FC = () => {
                               navigateTo('cms');
                               setRoleDropdownOpen(false);
                             }}
-                            className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
+                            className={`w-full text-left p-2 rounded-lg text-xs flex items-center justify-between transition-colors ${
                               currentView === 'cms' || currentView === 'cms-workspace'
-                                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold'
-                                : 'hover:bg-purple-500/10 text-purple-300 hover:text-white border border-purple-500/20'
+                                ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] border border-[#FF2E7E]/30 font-semibold'
+                                : 'hover:bg-white/[0.05] text-slate-200'
                             }`}
                           >
                             <span>Halaman CMS</span>
-                            <span className="text-xs text-purple-400">→</span>
+                            <span className="text-xs text-slate-400">→</span>
                           </button>
                           <button
                             id="menu-write-article-btn"
@@ -605,7 +567,7 @@ export const Navbar: React.FC = () => {
                               navigateTo('write-article');
                               setRoleDropdownOpen(false);
                             }}
-                            className="w-full text-left p-2 rounded-xl text-xs flex items-center justify-between hover:bg-slate-800 text-slate-200 transition-colors"
+                            className="w-full text-left p-2 rounded-lg text-xs flex items-center justify-between hover:bg-white/[0.05] text-slate-200 transition-colors"
                           >
                             <span>Tulis Artikel Baru</span>
                             <span className="text-xs text-slate-400">→</span>
@@ -614,7 +576,7 @@ export const Navbar: React.FC = () => {
                       )}
 
                       {(currentUser.role === 'admin' || isAdmin) && (
-                        <div className="pt-1.5 border-t border-slate-800/50 mt-1.5 space-y-1">
+                        <div className="pt-1.5 border-t border-white/[0.08] mt-1.5 space-y-1">
                           <div className="text-slate-400 text-xs font-semibold px-1 mb-1 flex items-center justify-between">
                             <span>Admin</span>
                             <RoleBadge role="admin" size="xs" showTooltip={false} />
@@ -623,48 +585,47 @@ export const Navbar: React.FC = () => {
                             to="/admin"
                             id="menu-admin-dashboard-btn"
                             onClick={() => setRoleDropdownOpen(false)}
-                            className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
+                            className={`w-full text-left p-2 rounded-lg text-xs flex items-center justify-between transition-colors ${
                               currentView === 'admin-dashboard'
-                                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/50 font-bold'
-                                : 'hover:bg-purple-500/10 text-purple-300 font-bold border border-purple-500/30'
+                                ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] border border-[#FF2E7E]/30 font-semibold'
+                                : 'hover:bg-white/[0.05] text-slate-200'
                             }`}
                           >
-                            <span>Admin</span>
-                            <span className="text-xs text-purple-300">→</span>
+                            <span>Admin Dashboard</span>
+                            <span className="text-xs text-slate-400">→</span>
                           </Link>
                           <Link
                             to="/admin/cms"
                             id="menu-admin-full-cms-btn"
                             onClick={() => setRoleDropdownOpen(false)}
-                            className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
+                            className={`w-full text-left p-2 rounded-lg text-xs flex items-center justify-between transition-colors ${
                               currentView === 'cms' || currentView === 'cms-workspace'
-                                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/50 font-bold'
-                                : 'hover:bg-purple-500/10 text-purple-300 font-bold border border-purple-500/30'
+                                ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] border border-[#FF2E7E]/30 font-semibold'
+                                : 'hover:bg-white/[0.05] text-slate-200'
                             }`}
                           >
-                            <span>CMS</span>
-                            <span className="text-xs text-purple-300">→</span>
+                            <span>CMS Manager</span>
+                            <span className="text-xs text-slate-400">→</span>
                           </Link>
                           <Link
                             to="/admin/submissions"
                             id="menu-admin-critics-btn"
                             onClick={() => setRoleDropdownOpen(false)}
-                            className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-colors ${
+                            className={`w-full text-left p-2 rounded-lg text-xs flex items-center justify-between transition-colors ${
                               currentView === 'admin-critic-submissions'
-                                ? 'bg-red-500/20 text-red-300 border border-red-500/50 font-bold'
-                                : 'hover:bg-red-500/10 text-red-400 font-bold border border-red-500/30'
+                                ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] border border-[#FF2E7E]/30 font-semibold'
+                                : 'hover:bg-white/[0.05] text-slate-200'
                             }`}
                           >
                             <span>Verifikasi Kritikus</span>
-                            <span className="text-xs text-red-400">→</span>
+                            <span className="text-xs text-slate-400">→</span>
                           </Link>
                         </div>
                       )}
                     </div>
                   )}
 
-                  {/* Section 3: Role Switcher Simulator (if logged in) removed */}
-                  {/* Section 4: Logout Option */}
+                  {/* Section 4: Semantic Logout Option */}
                   {isLoggedIn && (
                     <div className="pt-2">
                       <button
@@ -673,7 +634,7 @@ export const Navbar: React.FC = () => {
                           logout();
                           setRoleDropdownOpen(false);
                         }}
-                        className="w-full text-left p-2 rounded-xl text-xs text-red-400 hover:bg-red-500/10 flex items-center justify-between font-bold transition-colors"
+                        className="w-full text-left p-2 rounded-lg text-xs text-red-400 hover:bg-red-500/10 flex items-center justify-between font-semibold transition-colors"
                       >
                         <span>Keluar</span>
                         <span className="text-xs text-red-400/70">→</span>

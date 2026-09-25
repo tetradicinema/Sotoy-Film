@@ -69,8 +69,8 @@ export const CriticSubmissionPage: React.FC = () => {
     <div className="max-w-5xl mx-auto px-4 py-8 lg:py-12">
       {/* Header */}
       <div className="text-center max-w-2xl mx-auto mb-12">
-        <div className="inline-flex items-center justify-center p-3 bg-[#FFD000]/10 rounded-full mb-4 ring-1 ring-[#FFD000]/30">
-          <Star className="w-8 h-8 text-[#FFD000] fill-current" />
+        <div className="inline-flex items-center justify-center p-3 bg-[#FF2E7E]/10 rounded-full mb-4 ring-1 ring-[#FF2E7E]/30">
+          <Star className="w-8 h-8 text-[#FF2E7E] fill-current" />
         </div>
         <h1 className="text-3xl sm:text-4xl font-black text-white mb-4">
           Critic Submission
@@ -85,7 +85,7 @@ export const CriticSubmissionPage: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
             <h2 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
-              <ShieldCheck className="w-5 h-5 text-[#FFD000]" />
+              <ShieldCheck className="w-5 h-5 text-[#FF2E7E]" />
               Tentang Si Paling Sotoy
             </h2>
             <p className="text-sm text-slate-400 mb-4 leading-relaxed">
@@ -107,7 +107,7 @@ export const CriticSubmissionPage: React.FC = () => {
 
         {/* Application Form */}
         <div className="lg:col-span-3">
-          <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8">
+          <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8">
             <h2 className="text-xl font-black text-white mb-6">Formulir Pendaftaran</h2>
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-1.5">
@@ -119,7 +119,7 @@ export const CriticSubmissionPage: React.FC = () => {
                   required
                   value={formData.fullName}
                   onChange={handleChange}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000]"
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#FF2E7E] focus:ring-1 focus:ring-[#FF2E7E]"
                   placeholder="Nama sesuai identitas"
                 />
               </div>
@@ -134,7 +134,7 @@ export const CriticSubmissionPage: React.FC = () => {
                     required
                     value={formData.publicationName}
                     onChange={handleChange}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000]"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#FF2E7E] focus:ring-1 focus:ring-[#FF2E7E]"
                     placeholder="Contoh: Pop Culture Media"
                   />
                 </div>
@@ -147,7 +147,7 @@ export const CriticSubmissionPage: React.FC = () => {
                     required
                     value={formData.publicationUrl}
                     onChange={handleChange}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000]"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#FF2E7E] focus:ring-1 focus:ring-[#FF2E7E]"
                     placeholder="https://..."
                   />
                 </div>
@@ -163,7 +163,7 @@ export const CriticSubmissionPage: React.FC = () => {
                     required
                     value={formData.portfolioUrl}
                     onChange={handleChange}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000]"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#FF2E7E] focus:ring-1 focus:ring-[#FF2E7E]"
                     placeholder="https://..."
                   />
                 </div>
@@ -175,7 +175,7 @@ export const CriticSubmissionPage: React.FC = () => {
                     name="twitterHandle"
                     value={formData.twitterHandle}
                     onChange={handleChange}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000]"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#FF2E7E] focus:ring-1 focus:ring-[#FF2E7E]"
                     placeholder="@username"
                   />
                 </div>
@@ -190,7 +190,7 @@ export const CriticSubmissionPage: React.FC = () => {
                   rows={4}
                   value={formData.motivation}
                   onChange={handleChange}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000]"
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#FF2E7E] focus:ring-1 focus:ring-[#FF2E7E]"
                   placeholder="Ceritakan singkat tentang dedikasi kamu dalam mengulas film..."
                 />
               </div>
@@ -198,7 +198,7 @@ export const CriticSubmissionPage: React.FC = () => {
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="w-full py-4 rounded-xl bg-[#FFD000] text-slate-950 font-black text-sm hover:brightness-110 shadow-lg shadow-[#FFD000]/20 flex items-center justify-center gap-2 transition-all"
+                  className="w-full py-4 rounded-xl bg-[#FF2E7E] text-slate-950 font-black text-sm hover:brightness-110 shadow-lg shadow-[#FF2E7E]/20 flex items-center justify-center gap-2 transition-all"
                 >
                   <Send className="w-4 h-4" />
                   Kirim Pengajuan

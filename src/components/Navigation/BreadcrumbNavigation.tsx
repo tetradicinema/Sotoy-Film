@@ -207,10 +207,10 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
                 <Link
                   to={step.path || '/'}
                   id={`breadcrumb-link-${index}-${stepSlug}`}
-                  className="group flex items-center gap-1 transition-colors hover:text-[#00F0FF] text-slate-400 focus-visible:text-[#00F0FF] focus-visible:outline-none"
+                  className="group flex items-center gap-1 transition-colors hover:text-[#FF2E7E] text-slate-400 focus-visible:text-[#FF2E7E] focus-visible:outline-none"
                 >
                   {index === 0 && (
-                    <Home className="w-3.5 h-3.5 shrink-0 text-slate-500 group-hover:text-[#00F0FF] transition-colors" aria-hidden="true" />
+                    <Home className="w-3.5 h-3.5 shrink-0 text-slate-500 group-hover:text-[#FF2E7E] transition-colors" aria-hidden="true" />
                   )}
                   <span className="truncate">{step.label}</span>
                 </Link>

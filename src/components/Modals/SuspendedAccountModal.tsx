@@ -60,13 +60,13 @@ export const SuspendedAccountModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="w-full max-w-lg bg-[#121324] border-2 border-red-500/30 rounded-3xl overflow-hidden shadow-2xl shadow-red-950/50 animate-in zoom-in-95 duration-300">
+      <div className="w-full max-w-lg bg-[#171A1F] border-2 border-red-500/30 rounded-3xl overflow-hidden shadow-2xl shadow-red-950/50 animate-in zoom-in-95 duration-300">
         {/* Header */}
         <div className="bg-gradient-to-r from-red-950/60 via-red-900/30 to-red-950/60 border-b border-red-500/30 p-6 text-center relative overflow-hidden">
           <div className="w-16 h-16 rounded-2xl bg-red-500/20 flex items-center justify-center mx-auto mb-3 border border-red-500/40 shadow-lg shadow-red-500/20">
             <ShieldAlert className="w-8 h-8 text-red-400" />
           </div>
-          <h2 className="font-display font-black text-2xl text-white tracking-tight">Akun Sedang Dibekukan</h2>
+          <h2 className="font-display font-black text-2xl text-white tracking-tight">Account Suspended</h2>
           <p className="text-red-300/90 text-xs mt-1 font-medium max-w-sm mx-auto">
             Akses interaksi akun Anda dibatasi oleh tim moderator karena terindikasi pelanggaran pedoman komunitas.
           </p>

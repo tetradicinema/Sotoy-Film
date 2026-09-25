@@ -525,7 +525,7 @@ export const WriteArticlePage: React.FC = () => {
   if (!isAuthorized) {
     return (
       <div className="min-h-screen py-16 px-4 flex items-center justify-center">
-        <div className="max-w-md w-full bg-[#121324] border border-slate-800 rounded-3xl p-8 text-center shadow-2xl space-y-5">
+        <div className="max-w-md w-full bg-[#171A1F] border border-slate-800 rounded-3xl p-8 text-center shadow-2xl space-y-5">
           <div className="w-16 h-16 rounded-3xl bg-[#FF2E7E]/20 text-[#FF2E7E] flex items-center justify-center mx-auto border border-[#FF2E7E]/40">
             <Lock className="w-8 h-8" />
           </div>
@@ -553,7 +553,7 @@ export const WriteArticlePage: React.FC = () => {
               <button
                 id="login-to-write-btn"
                 onClick={() => setLoginModalOpen(true)}
-                className="w-full bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] hover:brightness-110 text-white font-black text-xs uppercase tracking-wider py-3 rounded-xl transition-all shadow-lg shadow-[#FF2E7E]/25"
+                className="w-full bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] hover:brightness-110 text-white font-black text-xs uppercase tracking-wider py-3 rounded-xl transition-all shadow-lg shadow-[#FF2E7E]/25"
               >
                 Masuk (Log In) Akun Penulis Sekarang
               </button>
@@ -579,7 +579,7 @@ export const WriteArticlePage: React.FC = () => {
       <div className={`${splitPreview ? 'max-w-[92rem]' : 'max-w-4xl'} mx-auto px-4 sm:px-6 lg:px-8 space-y-6 transition-all duration-300`}>
         
         {/* Header Navigation */}
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#121324]/80 backdrop-blur-md p-4 rounded-2xl border border-slate-800 shadow-xl">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#171A1F]/80 backdrop-blur-md p-4 rounded-2xl border border-slate-800 shadow-xl">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigateTo('writer-dashboard')}
@@ -592,7 +592,7 @@ export const WriteArticlePage: React.FC = () => {
               <button
                 type="button"
                 onClick={resetForm}
-                className="inline-flex items-center gap-1.5 text-xs text-[#FFD000] hover:underline bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20 cursor-pointer"
+                className="inline-flex items-center gap-1.5 text-xs text-[#FF2E7E] hover:underline bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20 cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Batal Edit</span>
@@ -622,7 +622,7 @@ export const WriteArticlePage: React.FC = () => {
               }}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                 splitPreview
-                  ? 'bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] text-white shadow-lg shadow-[#FF2E7E]/20'
+                  ? 'bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-white shadow-lg shadow-[#FF2E7E]/20'
                   : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
               }`}
             >
@@ -651,7 +651,7 @@ export const WriteArticlePage: React.FC = () => {
 
         {/* Main Editor & Split Preview Container */}
         <div className={splitPreview ? 'grid grid-cols-1 lg:grid-cols-2 gap-8 items-start' : 'space-y-6'}>
-          <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-6">
+          <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-6">
             <div className="flex items-center gap-3 pb-4 border-b border-slate-800">
             <div className="w-10 h-10 rounded-2xl bg-[#FF2E7E]/20 text-[#FF2E7E] flex items-center justify-center">
               <PenSquare className="w-5 h-5" />
@@ -938,7 +938,7 @@ export const WriteArticlePage: React.FC = () => {
 
                 {/* Currently Linked Film Card or Search Input */}
                 {selectedFilm ? (
-                  <div className="p-4 rounded-2xl bg-[#0D0E15] border border-cyan-500/40 flex items-center justify-between gap-4 shadow-lg">
+                  <div className="p-4 rounded-2xl bg-[#0E1013] border border-cyan-500/40 flex items-center justify-between gap-4 shadow-lg">
                     <div className="flex items-center gap-3.5">
                       <img
                         src={selectedFilm.poster}
@@ -995,7 +995,7 @@ export const WriteArticlePage: React.FC = () => {
 
                     {/* Auto-complete Search Results Dropdown */}
                     {isFilmSearchOpen && filmSearchQuery.trim().length > 0 && (
-                      <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#121324] border border-slate-700 rounded-2xl shadow-2xl max-h-64 overflow-y-auto divide-y divide-slate-800">
+                      <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#171A1F] border border-slate-700 rounded-2xl shadow-2xl max-h-64 overflow-y-auto divide-y divide-slate-800">
                         {filteredFilms.length > 0 ? (
                           filteredFilms.map(film => (
                             <div
@@ -1095,16 +1095,16 @@ export const WriteArticlePage: React.FC = () => {
               </div>
 
               {/* Dedicated SEO Metadata & OpenGraph Social Section */}
-              <div className="p-6 rounded-2xl bg-[#0D0E15] border border-slate-800 space-y-5 shadow-xl">
+              <div className="p-6 rounded-2xl bg-[#0E1013] border border-slate-800 space-y-5 shadow-xl">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-[#00F0FF]">
+                    <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-[#FF2E7E]">
                       <Search className="w-5 h-5" />
                     </div>
                     <div>
                       <h3 className="text-sm font-black text-white tracking-tight flex items-center gap-2">
                         <span>Manajemen SEO & Meta Social Share Card</span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-[#00F0FF] border border-cyan-500/30">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-[#FF2E7E] border border-cyan-500/30">
                           Optimasi Mesin Pencari
                         </span>
                       </h3>
@@ -1134,7 +1134,7 @@ export const WriteArticlePage: React.FC = () => {
                           value={seoTitle}
                           onChange={e => setSeoTitle(e.target.value)}
                           placeholder="Ketik judul khusus untuk mesin pencari..."
-                          className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF]"
+                          className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
                         />
                         <button
                           type="button"
@@ -1162,12 +1162,12 @@ export const WriteArticlePage: React.FC = () => {
                         value={metaDescription}
                         onChange={e => setMetaDescription(e.target.value)}
                         placeholder="Ringkasan 1-2 kalimat menarik yang muncul di Google Snippet & WhatsApp..."
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF] resize-none"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] resize-none"
                       />
                       <button
                         type="button"
                         onClick={() => setMetaDescription(excerpt)}
-                        className="mt-1 text-[11px] text-[#00F0FF] hover:underline font-bold cursor-pointer inline-flex items-center gap-1"
+                        className="mt-1 text-[11px] text-[#FF2E7E] hover:underline font-bold cursor-pointer inline-flex items-center gap-1"
                       >
                         <span>Salin dari Excerpt Artikel</span>
                       </button>
@@ -1184,7 +1184,7 @@ export const WriteArticlePage: React.FC = () => {
                           value={ogImage}
                           onChange={e => setOgImage(e.target.value)}
                           placeholder="URL gambar khusus kartu media sosial..."
-                          className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF]"
+                          className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
                         />
                         <button
                           type="button"
@@ -1206,7 +1206,7 @@ export const WriteArticlePage: React.FC = () => {
                         value={seoKeywords}
                         onChange={e => setSeoKeywords(e.target.value)}
                         placeholder="Dune 2, Sinematografi, Timothee Chalamet, Ulasan Film"
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF]"
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
                       />
                     </div>
                   </div>
@@ -1222,7 +1222,7 @@ export const WriteArticlePage: React.FC = () => {
                     </div>
 
                     {/* Card Preview Box */}
-                    <div className="rounded-2xl overflow-hidden border border-slate-700/80 bg-[#121324] shadow-2xl">
+                    <div className="rounded-2xl overflow-hidden border border-slate-700/80 bg-[#171A1F] shadow-2xl">
                       <div className="relative h-36 bg-slate-800 overflow-hidden">
                         <img
                           src={ogImage || coverImage}
@@ -1255,7 +1255,7 @@ export const WriteArticlePage: React.FC = () => {
               </div>
 
               {/* Dedicated Publishing Schedule & Status Section */}
-              <div className="p-6 rounded-2xl bg-[#0D0E15] border border-slate-800 space-y-5 shadow-xl">
+              <div className="p-6 rounded-2xl bg-[#0E1013] border border-slate-800 space-y-5 shadow-xl">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
@@ -1284,7 +1284,7 @@ export const WriteArticlePage: React.FC = () => {
                     className={`p-4 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
                       publishOption === 'now'
                         ? 'bg-emerald-500/10 border-emerald-500 text-white shadow-lg shadow-emerald-950/40'
-                        : 'bg-[#121324] border-slate-800 text-slate-400 hover:border-slate-700'
+                        : 'bg-[#171A1F] border-slate-800 text-slate-400 hover:border-slate-700'
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -1309,7 +1309,7 @@ export const WriteArticlePage: React.FC = () => {
                     className={`p-4 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
                       publishOption === 'scheduled'
                         ? 'bg-purple-500/10 border-purple-500 text-white shadow-lg shadow-purple-950/40'
-                        : 'bg-[#121324] border-slate-800 text-slate-400 hover:border-slate-700'
+                        : 'bg-[#171A1F] border-slate-800 text-slate-400 hover:border-slate-700'
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -1331,7 +1331,7 @@ export const WriteArticlePage: React.FC = () => {
                     className={`p-4 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
                       publishOption === 'draft'
                         ? 'bg-amber-500/10 border-amber-500 text-white shadow-lg shadow-amber-950/40'
-                        : 'bg-[#121324] border-slate-800 text-slate-400 hover:border-slate-700'
+                        : 'bg-[#171A1F] border-slate-800 text-slate-400 hover:border-slate-700'
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -1349,7 +1349,7 @@ export const WriteArticlePage: React.FC = () => {
 
                 {/* Date & Time Picker Controls (Visible when 'scheduled' option active) */}
                 {publishOption === 'scheduled' && (
-                  <div className="p-4 bg-[#121324] border border-purple-500/30 rounded-2xl space-y-4 animate-in fade-in duration-200">
+                  <div className="p-4 bg-[#171A1F] border border-purple-500/30 rounded-2xl space-y-4 animate-in fade-in duration-200">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
                         <label className="block text-xs font-bold text-slate-200 mb-1 flex items-center gap-1.5">
@@ -1468,7 +1468,7 @@ export const WriteArticlePage: React.FC = () => {
                       type="button"
                       disabled={isSubmitting}
                       onClick={() => handleSaveArticle('published')}
-                      className="bg-gradient-to-r from-[#FF2E7E] via-[#FFD000] to-[#00F0FF] hover:brightness-110 text-slate-950 font-black text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl flex items-center gap-2 shadow-lg shadow-[#FF2E7E]/30 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+                      className="bg-gradient-to-r from-[#FF2E7E] via-[#FF2E7E] to-[#FF2E7E] hover:brightness-110 text-slate-950 font-black text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl flex items-center gap-2 shadow-lg shadow-[#FF2E7E]/30 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
                     >
                       <Send className="w-4 h-4" />
                       <span>
@@ -1488,10 +1488,10 @@ export const WriteArticlePage: React.FC = () => {
 
         {/* Right Split Live Preview Panel */}
         {splitPreview && (
-          <div className="sticky top-20 bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto custom-scrollbar">
+          <div className="sticky top-20 bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <div className="flex items-center gap-2 text-xs font-black text-white uppercase tracking-wider">
-                <Eye className="w-4 h-4 text-[#00F0FF]" />
+                <Eye className="w-4 h-4 text-[#FF2E7E]" />
                 <span>Live Pratinjau Artikel</span>
               </div>
               <span className="text-[10px] bg-[#FF2E7E]/20 border border-[#FF2E7E]/40 text-[#FF2E7E] px-2.5 py-1 rounded-full font-mono font-bold">
@@ -1532,7 +1532,7 @@ export const WriteArticlePage: React.FC = () => {
               </div>
 
               {excerpt && (
-                <div className="p-3.5 bg-slate-900/80 rounded-2xl border-l-4 border-[#00F0FF] border-slate-800 text-xs text-slate-300 italic">
+                <div className="p-3.5 bg-slate-900/80 rounded-2xl border-l-4 border-[#FF2E7E] border-slate-800 text-xs text-slate-300 italic">
                   "{excerpt}"
                 </div>
               )}
@@ -1544,7 +1544,7 @@ export const WriteArticlePage: React.FC = () => {
                   <div>
                     <div className="text-xs font-black text-white">{selectedFilm.title} ({selectedFilm.year})</div>
                     <div className="text-[11px] text-slate-400 mt-0.5">{selectedFilm.director} • {selectedFilm.genres.slice(0, 2).join(', ')}</div>
-                    <div className="text-[11px] text-[#FFD000] font-medium mt-1">★ {selectedFilm.skorSotoy} Skor Sotoy</div>
+                    <div className="text-[11px] text-[#FFD000] font-bold mt-1">★ {selectedFilm.skorSotoy} Skor Sotoy</div>
                   </div>
                 </div>
               )}

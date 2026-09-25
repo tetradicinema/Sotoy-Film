@@ -4,7 +4,7 @@ export const ArticleCardSkeleton: React.FC = () => {
   return (
     <article
       aria-hidden="true"
-      className="bg-[#121324] border border-slate-800 rounded-3xl overflow-hidden flex flex-col shadow-lg animate-pulse select-none"
+      className="bg-[#171A1F] border border-white/[0.08] rounded-3xl overflow-hidden flex flex-col shadow-lg animate-pulse select-none"
     >
       {/* Cover Image Placeholder */}
       <div className="relative h-48 w-full bg-slate-800/80 overflow-hidden">
@@ -38,7 +38,7 @@ export const ArticleCardSkeleton: React.FC = () => {
         </div>
 
         {/* Card Footer */}
-        <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between">
+        <div className="pt-3 border-t border-white/[0.08]/80 flex items-center justify-between">
           <div className="h-3.5 w-20 bg-slate-850 rounded" />
           <div className="h-3.5 w-24 bg-slate-800/80 rounded" />
         </div>

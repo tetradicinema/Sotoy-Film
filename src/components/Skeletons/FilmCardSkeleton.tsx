@@ -4,7 +4,7 @@ export const FilmCardSkeleton: React.FC = () => {
   return (
     <div
       aria-hidden="true"
-      className="bg-[#151628] border border-slate-800 rounded-2xl overflow-hidden flex flex-col shadow-lg animate-pulse select-none"
+      className="bg-[#171A1F] border border-white/[0.08] rounded-2xl overflow-hidden flex flex-col shadow-lg animate-pulse select-none"
     >
       {/* Poster Aspect Ratio 2:3 */}
       <div className="relative aspect-[2/3] w-full bg-slate-800/80 overflow-hidden">
@@ -36,7 +36,7 @@ export const FilmCardSkeleton: React.FC = () => {
         </div>
 
         {/* Dual Scores Comparison Placeholder */}
-        <div className="pt-2 border-t border-slate-800/80 grid grid-cols-2 gap-1.5 text-center">
+        <div className="pt-2 border-t border-white/[0.08]/80 grid grid-cols-2 gap-1.5 text-center">
           <div className="p-1 rounded bg-slate-900/60 flex flex-col items-center gap-1">
             <div className="h-2 w-8 bg-slate-800 rounded" />
             <div className="h-3 w-6 bg-slate-700/70 rounded" />

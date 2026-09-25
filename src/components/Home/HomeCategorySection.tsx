@@ -24,7 +24,7 @@ const HomeCategoryArticleItem: React.FC<HomeCategoryArticleItemProps> = ({ artic
     <article
       id={`cat-article-item-${article.id}`}
       onClick={() => navigateTo('article-detail', { articleId: article.id })}
-      className="bg-[#121320] border border-white/[0.08] hover:border-white/20 rounded-3xl p-5 flex flex-col sm:flex-row gap-5 group cursor-pointer transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-black/50"
+      className="bg-[#171A1F] border border-white/[0.08] hover:border-white/20 rounded-3xl p-5 flex flex-col sm:flex-row gap-5 group cursor-pointer transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-black/50"
     >
       {/* Article Thumbnail */}
       <div className="sm:w-56 h-44 sm:h-auto rounded-2xl overflow-hidden shrink-0 relative bg-slate-900">
@@ -33,7 +33,7 @@ const HomeCategoryArticleItem: React.FC<HomeCategoryArticleItemProps> = ({ artic
           alt={article.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#121320] via-transparent to-transparent opacity-40 sm:hidden" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent opacity-40 sm:hidden" />
       </div>
 
       {/* Article Content */}
@@ -55,7 +55,7 @@ const HomeCategoryArticleItem: React.FC<HomeCategoryArticleItemProps> = ({ artic
             </span>
           </div>
 
-          <h3 className="font-display font-bold text-base sm:text-lg text-white group-hover:text-amber-200 transition-colors leading-snug mb-2">
+          <h3 className="font-display font-bold text-base sm:text-lg text-white group-hover:text-white transition-colors leading-snug mb-2">
             {article.title}
           </h3>
 
@@ -147,9 +147,9 @@ export const HomeCategorySection: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 mb-6 pb-4 border-b border-white/[0.08]">
           <div>
             <div className="flex items-center gap-2">
-              <span className="w-1.5 h-4 bg-sky-400 rounded-full inline-block" />
+              <span className="w-1.5 h-4 bg-slate-300 rounded-full inline-block" />
               <h2 className="font-display font-black text-xl sm:text-2xl text-white tracking-tight">
-                Eksplorasi Rubrik & Arsip
+                Explore Categories & Archives
               </h2>
             </div>
             <p className="text-slate-400 text-xs sm:text-[13px] mt-1 ml-3.5">
@@ -160,7 +160,7 @@ export const HomeCategorySection: React.FC = () => {
           {selectedCategoryTab !== 'all' && (
             <button
               onClick={() => navigateTo('category', { category: selectedCategoryTab })}
-              className="text-xs font-semibold text-sky-400 hover:text-white flex items-center gap-1 transition-colors"
+              className="text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1 transition-colors"
             >
               <span>Arsip Lengkap {selectedCategoryTab}</span>
               <ChevronRight className="w-3.5 h-3.5" />

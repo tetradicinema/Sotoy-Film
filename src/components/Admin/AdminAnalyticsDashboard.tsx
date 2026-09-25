@@ -69,10 +69,10 @@ interface DailyDataPoint {
 }
 
 const ROLE_COLORS: Record<string, string> = {
-  warga_sotoy: '#00F0FF',
-  si_paling_sotoy: '#FFD000',
-  penulis_sotoy: '#FF2E7E',
-  admin: '#A855F7',
+  warga_sotoy: '#64748B',
+  si_paling_sotoy: '#FF2E7E',
+  penulis_sotoy: '#94A3B8',
+  admin: '#CBD5E1',
 };
 
 const ROLE_LABELS: Record<string, string> = {
@@ -407,7 +407,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
               return (
                 <div key={idx} className="flex items-center justify-between gap-3 text-[11px]">
                   <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color || item.stroke || item.fill || '#00F0FF' }} />
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color || item.stroke || item.fill || '#FF2E7E' }} />
                     <span className="text-slate-300">{item.name}:</span>
                   </div>
                   <span className="font-black text-white font-mono">{displayVal}</span>
@@ -425,20 +425,19 @@ export const AdminAnalyticsDashboard: React.FC = () => {
     <div className="space-y-6 animate-in fade-in duration-300">
       
       {/* 1. Header Banner & Action Bar */}
-      <div className="p-6 rounded-3xl bg-gradient-to-r from-[#131428] via-[#10121f] to-[#1a1433] border border-cyan-500/30 shadow-2xl relative overflow-hidden">
-        <div className="absolute -top-12 -right-12 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-12 -left-12 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="p-6 rounded-3xl bg-[#171A1F] border border-white/10 shadow-xl relative overflow-hidden">
+        <div className="absolute -top-12 -right-12 w-64 h-64 bg-[#FF2E7E]/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-[#00F0FF] shadow-lg shadow-cyan-500/20">
+              <div className="w-10 h-10 rounded-2xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-[#FF2E7E] shadow-sm">
                 <BarChart3 className="w-5 h-5" />
               </div>
               <h2 className="font-display font-black text-2xl text-white tracking-tight">
                 Analisis Pertumbuhan & Retensi Warga
               </h2>
-              <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-cyan-500/20 text-[#00F0FF] border border-cyan-500/30">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-white/[0.06] text-slate-300 border border-white/10">
                 Live Recharts
               </span>
             </div>
@@ -506,102 +505,96 @@ export const AdminAnalyticsDashboard: React.FC = () => {
       {/* 2. Key Performance Indicators (KPI Cards) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* KPI 1: Total & Registrasi Baru */}
-        <div className="bg-[#121324] border border-slate-800/90 hover:border-cyan-500/40 rounded-2xl p-5 shadow-lg relative overflow-hidden transition-all group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl pointer-events-none" />
+        <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-5 shadow-sm relative overflow-hidden transition-all group">
           <div className="flex items-start justify-between">
             <div>
               <span className="text-xs font-semibold text-slate-400">Total Anggota Terdaftar</span>
               <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-3xl font-black text-white tracking-tight">{kpis.totalUsers}</span>
-                <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-0.5">
+                <span className="text-3xl font-black text-white tracking-tight tabular-nums">{kpis.totalUsers}</span>
+                <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-0.5 tabular-nums">
                   <ArrowUpRight className="w-3 h-3" /> +{kpis.growthRate}%
                 </span>
               </div>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-[#00F0FF]">
+            <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-slate-300">
               <Users className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-3 pt-3 border-t border-slate-850 flex items-center justify-between text-[11px] text-slate-400">
-            <span>+{kpis.newUsersInWindow} Akun Baru</span>
-            <span className="text-cyan-400 font-bold">{timeRange === '7d' ? '7 Hari' : timeRange === '14d' ? '14 Hari' : timeRange === '30d' ? '30 Hari' : '90 Hari'}</span>
+          <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400">
+            <span className="tabular-nums">+{kpis.newUsersInWindow} Akun Baru</span>
+            <span className="text-white font-bold">{timeRange === '7d' ? '7 Hari' : timeRange === '14d' ? '14 Hari' : timeRange === '30d' ? '30 Hari' : '90 Hari'}</span>
           </div>
         </div>
 
         {/* KPI 2: Daily Active Users (DAU) */}
-        <div className="bg-[#121324] border border-slate-800/90 hover:border-pink-500/40 rounded-2xl p-5 shadow-lg relative overflow-hidden transition-all group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-pink-500/5 rounded-full blur-2xl pointer-events-none" />
+        <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-5 shadow-sm relative overflow-hidden transition-all group">
           <div className="flex items-start justify-between">
             <div>
               <span className="text-xs font-semibold text-slate-400">Rata-rata DAU (Aktif/Hari)</span>
               <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-3xl font-black text-white tracking-tight">{kpis.avgDAU}</span>
-                <span className="text-[10px] font-bold text-pink-400 uppercase tracking-wider">User/Hari</span>
+                <span className="text-3xl font-black text-white tracking-tight tabular-nums">{kpis.avgDAU}</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">User/Hari</span>
               </div>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-pink-500/10 border border-pink-500/30 flex items-center justify-center text-[#FF2E7E]">
+            <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-[#FF2E7E]">
               <Flame className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-3 pt-3 border-t border-slate-850 flex items-center justify-between text-[11px] text-slate-400">
-            <span>Puncak Aktif: <strong className="text-white">{kpis.peakDAU}</strong></span>
-            <span className="text-pink-400 font-bold">Stickiness: {kpis.stickinessRatio}%</span>
+          <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400">
+            <span>Puncak Aktif: <strong className="text-white tabular-nums">{kpis.peakDAU}</strong></span>
+            <span className="text-slate-300 font-bold tabular-nums">Stickiness: {kpis.stickinessRatio}%</span>
           </div>
         </div>
 
         {/* KPI 3: User Retention Rate & Returning Users */}
-        <div className="bg-[#121324] border border-slate-800/90 hover:border-emerald-500/40 rounded-2xl p-5 shadow-lg relative overflow-hidden transition-all group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+        <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-5 shadow-sm relative overflow-hidden transition-all group">
           <div className="flex items-start justify-between">
             <div>
               <span className="text-xs font-semibold text-slate-400">Rata-rata Pengguna Kembali</span>
               <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-3xl font-black text-white tracking-tight">{retentionStats.avgReturningUsers}</span>
-                <span className="text-[11px] font-bold text-emerald-400">
+                <span className="text-3xl font-black text-white tracking-tight tabular-nums">{retentionStats.avgReturningUsers}</span>
+                <span className="text-[11px] font-bold text-emerald-400 tabular-nums">
                   {retentionStats.avgRetentionRate}% Rate
                 </span>
               </div>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-slate-300">
               <Repeat className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-3 pt-3 border-t border-slate-850 flex items-center justify-between text-[11px] text-slate-400">
-            <span>D1 Retensi: <strong className="text-emerald-300">{retentionStats.avgD1}%</strong></span>
-            <span className="text-emerald-400 font-bold">D7: {retentionStats.avgD7}%</span>
+          <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400">
+            <span>D1 Retensi: <strong className="text-white tabular-nums">{retentionStats.avgD1}%</strong></span>
+            <span className="text-slate-300 font-bold tabular-nums">D7: {retentionStats.avgD7}%</span>
           </div>
         </div>
 
         {/* KPI 4: Community Health Score */}
-        <div className="bg-[#121324] border border-slate-800/90 hover:border-purple-500/40 rounded-2xl p-5 shadow-lg relative overflow-hidden transition-all group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl pointer-events-none" />
+        <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-5 shadow-sm relative overflow-hidden transition-all group">
           <div className="flex items-start justify-between">
             <div>
               <span className="text-xs font-semibold text-slate-400">Kesehatan Komunitas</span>
               <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-3xl font-black text-white tracking-tight">{retentionStats.healthScore}</span>
-                <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">/ 100</span>
+                <span className="text-3xl font-black text-white tracking-tight tabular-nums">{retentionStats.healthScore}</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">/ 100</span>
               </div>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
+            <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-[#FF2E7E]">
               <HeartHandshake className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-3 pt-3 border-t border-slate-850 flex items-center justify-between text-[11px] text-slate-400">
+          <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400">
             <span>Status: <strong className="text-emerald-400">{retentionStats.healthStatus}</strong></span>
-            <span className="text-purple-400 font-bold">D30: {retentionStats.avgD30}%</span>
+            <span className="text-slate-300 font-bold tabular-nums">D30: {retentionStats.avgD30}%</span>
           </div>
         </div>
       </div>
 
-      {/* 3. NEW SECTION: USER RETENTION BREAKDOWN (RECHARTS LINE CHART) */}
-      <div className="bg-[#121324] border border-emerald-500/30 rounded-3xl p-6 shadow-2xl space-y-6 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
-
+      {/* 3. SECTION: USER RETENTION BREAKDOWN (RECHARTS LINE CHART) */}
+      <div className="bg-[#171A1F] border border-white/10 rounded-3xl p-6 shadow-xl space-y-6 relative overflow-hidden">
         {/* Section Header with Mode Filter */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4 relative z-10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4 relative z-10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-[#FF2E7E] shrink-0">
               <Repeat className="w-5 h-5" />
             </div>
             <div>
@@ -609,22 +602,19 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                 <h3 className="font-display font-black text-base sm:text-lg text-white tracking-tight">
                   Breakdown Retensi Pengguna Terdaftar (User Retention)
                 </h3>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                  Community Health
-                </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Visualisasi frekuensi pengguna terdaftar yang kembali aktif setiap hari (Returning Users) vs pendaftaran baru untuk menilai retensi jangka panjang.
+                Cohort analitik pengguna terdaftar yang kembali melakukan aktivitas di platform Sotoy Film.
               </p>
             </div>
           </div>
 
           {/* Retention View Selector */}
-          <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs self-start sm:self-auto">
+          <div className="flex items-center gap-1.5 bg-[#0E1013] p-1 rounded-xl border border-white/10 text-xs self-start sm:self-auto">
             <button
               onClick={() => setRetentionView('overview')}
               className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                retentionView === 'overview' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
+                retentionView === 'overview' ? 'bg-[#FF2E7E] text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
               Komparasi Lengkap
@@ -632,7 +622,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
             <button
               onClick={() => setRetentionView('counts')}
               className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                retentionView === 'counts' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
+                retentionView === 'counts' ? 'bg-[#FF2E7E] text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
               Jumlah User Kembali
@@ -640,7 +630,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
             <button
               onClick={() => setRetentionView('rates')}
               className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                retentionView === 'rates' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
+                retentionView === 'rates' ? 'bg-[#FF2E7E] text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
               Tingkat Retensi (%)
@@ -648,7 +638,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
             <button
               onClick={() => setRetentionView('cohorts')}
               className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                retentionView === 'cohorts' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
+                retentionView === 'cohorts' ? 'bg-[#FF2E7E] text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
               Analisis Kohort (D1/D7/D30)
@@ -660,7 +650,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
         <div className="h-80 w-full relative z-10">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#262b35" vertical={false} />
               
               <XAxis 
                 dataKey="displayDate" 
@@ -692,9 +682,9 @@ export const AdminAnalyticsDashboard: React.FC = () => {
               {(retentionView === 'overview' || retentionView === 'rates') && (
                 <ReferenceLine 
                   y={40} 
-                  stroke="#FFD000" 
+                  stroke="#94A3B8" 
                   strokeDasharray="4 4" 
-                  label={{ value: 'Target Sehat (40%)', fill: '#FFD000', fontSize: 10, position: 'insideTopLeft' }} 
+                  label={{ value: 'Target Sehat (40%)', fill: '#94A3B8', fontSize: 10, position: 'insideTopLeft' }} 
                 />
               )}
 
@@ -705,27 +695,27 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                     type="monotone"
                     name="Pengguna Kembali (Returning Users)"
                     dataKey="returningUsers"
-                    stroke="#10B981"
+                    stroke="#FF2E7E"
                     strokeWidth={3}
-                    dot={{ r: 4, fill: '#10B981', strokeWidth: 1, stroke: '#FFFFFF' }}
-                    activeDot={{ r: 6, fill: '#10B981' }}
+                    dot={{ r: 4, fill: '#FF2E7E', strokeWidth: 1, stroke: '#FFFFFF' }}
+                    activeDot={{ r: 6, fill: '#FF2E7E' }}
                   />
                   <Line
                     type="monotone"
                     name="Registrasi Baru"
                     dataKey="newUsers"
-                    stroke="#FF2E7E"
+                    stroke="#94A3B8"
                     strokeWidth={2}
                     strokeDasharray="3 3"
-                    dot={{ r: 3, fill: '#FF2E7E' }}
+                    dot={{ r: 3, fill: '#94A3B8' }}
                   />
                   <Line
                     type="monotone"
                     name="Tingkat Retensi (%)"
                     dataKey="retentionRate"
-                    stroke="#00F0FF"
+                    stroke="#CBD5E1"
                     strokeWidth={2.5}
-                    dot={{ r: 3, fill: '#00F0FF' }}
+                    dot={{ r: 3, fill: '#CBD5E1' }}
                   />
                 </>
               )}
@@ -737,15 +727,15 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                     type="monotone"
                     name="Pengguna Kembali (Returning Users)"
                     dataKey="returningUsers"
-                    stroke="#10B981"
+                    stroke="#FF2E7E"
                     strokeWidth={3}
-                    dot={{ r: 4, fill: '#10B981' }}
+                    dot={{ r: 4, fill: '#FF2E7E' }}
                   />
                   <Line
                     type="monotone"
                     name="Total Pengguna Aktif (DAU)"
                     dataKey="activeUsers"
-                    stroke="#00F0FF"
+                    stroke="#CBD5E1"
                     strokeWidth={2}
                     strokeDasharray="4 4"
                     dot={false}
@@ -754,9 +744,9 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                     type="monotone"
                     name="User Baru Hari Tersebut"
                     dataKey="newUsers"
-                    stroke="#FF2E7E"
+                    stroke="#94A3B8"
                     strokeWidth={2}
-                    dot={{ r: 3, fill: '#FF2E7E' }}
+                    dot={{ r: 3, fill: '#94A3B8' }}
                   />
                 </>
               )}
@@ -768,16 +758,16 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                     type="monotone"
                     name="Tingkat Retensi Harian (%)"
                     dataKey="retentionRate"
-                    stroke="#10B981"
+                    stroke="#FF2E7E"
                     strokeWidth={3}
-                    dot={{ r: 4, fill: '#10B981', strokeWidth: 1, stroke: '#FFFFFF' }}
+                    dot={{ r: 4, fill: '#FF2E7E', strokeWidth: 1, stroke: '#FFFFFF' }}
                     activeDot={{ r: 7 }}
                   />
                   <Line
                     type="monotone"
                     name="Day-1 Retention Benchmark (%)"
                     dataKey="day1Retention"
-                    stroke="#00F0FF"
+                    stroke="#94A3B8"
                     strokeWidth={2}
                     strokeDasharray="2 2"
                     dot={false}
@@ -792,26 +782,26 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                     type="monotone"
                     name="Day 1 Retention (%)"
                     dataKey="day1Retention"
-                    stroke="#00F0FF"
+                    stroke="#CBD5E1"
                     strokeWidth={2.5}
-                    dot={{ r: 3, fill: '#00F0FF' }}
+                    dot={{ r: 3, fill: '#CBD5E1' }}
                   />
                   <Line
                     type="monotone"
                     name="Day 7 Retention (%)"
                     dataKey="day7Retention"
-                    stroke="#10B981"
+                    stroke="#94A3B8"
                     strokeWidth={2.5}
-                    dot={{ r: 3, fill: '#10B981' }}
+                    dot={{ r: 3, fill: '#94A3B8' }}
                   />
                   <Line
                     type="monotone"
                     name="Day 30 Retention (%)"
                     dataKey="day30Retention"
-                    stroke="#FFD000"
+                    stroke="#FF2E7E"
                     strokeWidth={2}
                     strokeDasharray="4 4"
-                    dot={{ r: 3, fill: '#FFD000' }}
+                    dot={{ r: 3, fill: '#FF2E7E' }}
                   />
                 </>
               )}
@@ -821,42 +811,42 @@ export const AdminAnalyticsDashboard: React.FC = () => {
 
         {/* Retention Cohort Metrics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 relative z-10">
-          <div className="bg-slate-950/70 border border-slate-800 p-3.5 rounded-2xl flex items-center justify-between">
+          <div className="bg-[#0E1013] border border-white/10 p-3.5 rounded-2xl flex items-center justify-between">
             <div>
               <span className="text-[11px] font-semibold text-slate-400 block">Day-1 Retention (D1)</span>
-              <span className="text-xl font-black text-cyan-400">{retentionStats.avgD1}%</span>
+              <span className="text-xl font-black text-white tabular-nums">{retentionStats.avgD1}%</span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-300 border border-cyan-500/25">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/[0.06] text-slate-300 border border-white/10">
               Target &gt;60%
             </span>
           </div>
 
-          <div className="bg-slate-950/70 border border-slate-800 p-3.5 rounded-2xl flex items-center justify-between">
+          <div className="bg-[#0E1013] border border-white/10 p-3.5 rounded-2xl flex items-center justify-between">
             <div>
               <span className="text-[11px] font-semibold text-slate-400 block">Day-7 Retention (D7)</span>
-              <span className="text-xl font-black text-emerald-400">{retentionStats.avgD7}%</span>
+              <span className="text-xl font-black text-white tabular-nums">{retentionStats.avgD7}%</span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/[0.06] text-slate-300 border border-white/10">
               Target &gt;40%
             </span>
           </div>
 
-          <div className="bg-slate-950/70 border border-slate-800 p-3.5 rounded-2xl flex items-center justify-between">
+          <div className="bg-[#0E1013] border border-white/10 p-3.5 rounded-2xl flex items-center justify-between">
             <div>
               <span className="text-[11px] font-semibold text-slate-400 block">Day-30 Retention (D30)</span>
-              <span className="text-xl font-black text-amber-400">{retentionStats.avgD30}%</span>
+              <span className="text-xl font-black text-white tabular-nums">{retentionStats.avgD30}%</span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/25">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/[0.06] text-slate-300 border border-white/10">
               Target &gt;25%
             </span>
           </div>
 
-          <div className="bg-slate-950/70 border border-slate-800 p-3.5 rounded-2xl flex items-center justify-between">
+          <div className="bg-[#0E1013] border border-white/10 p-3.5 rounded-2xl flex items-center justify-between">
             <div>
               <span className="text-[11px] font-semibold text-slate-400 block">Rata-rata User Kembali/Hari</span>
-              <span className="text-xl font-black text-white">{retentionStats.avgReturningUsers} Warga</span>
+              <span className="text-xl font-black text-white tabular-nums">{retentionStats.avgReturningUsers} Warga</span>
             </div>
-            <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-white/[0.06] text-slate-300 flex items-center justify-center">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
@@ -864,10 +854,10 @@ export const AdminAnalyticsDashboard: React.FC = () => {
       </div>
 
       {/* 4. Main Chart: Registrasi Tren & DAU (Interactive AreaChart) */}
-      <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
+      <div className="bg-[#171A1F] border border-white/10 rounded-3xl p-6 shadow-xl space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-[#00F0FF]">
+            <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-[#FF2E7E]">
               <TrendingUp className="w-4 h-4" />
             </div>
             <div>
@@ -881,11 +871,11 @@ export const AdminAnalyticsDashboard: React.FC = () => {
           </div>
 
           {/* Metric display filter */}
-          <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+          <div className="flex items-center gap-1.5 bg-[#0E1013] p-1 rounded-xl border border-white/10 text-xs">
             <button
               onClick={() => setSelectedMetric('all')}
               className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                selectedMetric === 'all' ? 'bg-cyan-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
+                selectedMetric === 'all' ? 'bg-[#FF2E7E] text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
               Semua Metrik
@@ -893,7 +883,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
             <button
               onClick={() => setSelectedMetric('users')}
               className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                selectedMetric === 'users' ? 'bg-cyan-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
+                selectedMetric === 'users' ? 'bg-[#FF2E7E] text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
               Hanya Pendaftaran
@@ -901,7 +891,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
             <button
               onClick={() => setSelectedMetric('activity')}
               className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                selectedMetric === 'activity' ? 'bg-cyan-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
+                selectedMetric === 'activity' ? 'bg-[#FF2E7E] text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
               Hanya DAU
@@ -915,20 +905,16 @@ export const AdminAnalyticsDashboard: React.FC = () => {
             <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="dauGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#00F0FF" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#00F0FF" stopOpacity={0.0} />
-                </linearGradient>
-                <linearGradient id="newUsersGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#FF2E7E" stopOpacity={0.4} />
                   <stop offset="95%" stopColor="#FF2E7E" stopOpacity={0.0} />
                 </linearGradient>
-                <linearGradient id="cumulativeGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#A855F7" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#A855F7" stopOpacity={0.0} />
+                <linearGradient id="newUsersGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#94A3B8" stopOpacity={0.4} />
+                  <stop offset="95%" stopColor="#94A3B8" stopOpacity={0.0} />
                 </linearGradient>
               </defs>
 
-              <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#262b35" vertical={false} />
               
               <XAxis 
                 dataKey="displayDate" 
@@ -960,7 +946,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                   type="monotone"
                   name="Pengguna Aktif (DAU)"
                   dataKey="activeUsers"
-                  stroke="#00F0FF"
+                  stroke="#FF2E7E"
                   strokeWidth={2.5}
                   fillOpacity={1}
                   fill="url(#dauGradient)"
@@ -972,8 +958,8 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                   type="monotone"
                   name="Registrasi Baru"
                   dataKey="newUsers"
-                  stroke="#FF2E7E"
-                  strokeWidth={2.5}
+                  stroke="#94A3B8"
+                  strokeWidth={2}
                   fillOpacity={1}
                   fill="url(#newUsersGradient)"
                 />
@@ -999,10 +985,10 @@ export const AdminAnalyticsDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Left Column (2 spans): Activity Volume BarChart */}
-        <div className="lg:col-span-2 bg-[#121324] border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
-          <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
+        <div className="lg:col-span-2 bg-[#171A1F] border border-white/10 rounded-3xl p-6 shadow-xl space-y-6">
+          <div className="flex items-center justify-between border-b border-white/10 pb-4">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-[#FFD000]">
+              <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-[#FF2E7E]">
                 <Activity className="w-4 h-4" />
               </div>
               <div>
@@ -1015,7 +1001,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
               </div>
             </div>
 
-            <span className="text-[11px] font-bold text-amber-400 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20">
+            <span className="text-[11px] font-bold text-slate-200 px-2.5 py-1 rounded-lg bg-white/[0.06] border border-white/10 tabular-nums">
               {kpis.totalInteractions} Total Aksi
             </span>
           </div>
@@ -1023,7 +1009,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#262b35" vertical={false} />
                 <XAxis dataKey="displayDate" stroke="#64748B" fontSize={11} tickLine={false} />
                 <YAxis stroke="#64748B" fontSize={11} tickLine={false} allowDecimals={false} />
                 <Tooltip content={<CustomTooltip />} />
@@ -1033,18 +1019,18 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                   height={32}
                   wrapperStyle={{ fontSize: '11px' }} 
                 />
-                <Bar name="Review Skor Sotoy" dataKey="reviewsCount" fill="#FFD000" radius={[4, 4, 0, 0]} />
-                <Bar name="Diskusi Buzz" dataKey="buzzCount" fill="#FF2E7E" radius={[4, 4, 0, 0]} />
+                <Bar name="Review Skor Sotoy" dataKey="reviewsCount" fill="#FF2E7E" radius={[4, 4, 0, 0]} />
+                <Bar name="Diskusi Buzz" dataKey="buzzCount" fill="#64748B" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Right Column (1 span): Role Composition Donut */}
-        <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4 flex flex-col justify-between">
+        <div className="bg-[#171A1F] border border-white/10 rounded-3xl p-6 shadow-xl space-y-4 flex flex-col justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
+              <div className="w-8 h-8 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-slate-300">
                 <Shield className="w-4 h-4" />
               </div>
               <h3 className="font-display font-black text-base text-white">
@@ -1075,20 +1061,20 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                 </Pie>
                 <Tooltip 
                   formatter={(value: any, name: any) => [`${value} Akun`, name]}
-                  contentStyle={{ backgroundColor: '#10121D', borderColor: '#334155', borderRadius: '12px', fontSize: '11px' }}
+                  contentStyle={{ backgroundColor: '#171A1F', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '11px' }}
                 />
               </PieChart>
             </ResponsiveContainer>
             
             {/* Center Total Counter */}
             <div className="absolute flex flex-col items-center pointer-events-none">
-              <span className="text-xl font-black text-white">{kpis.totalUsers}</span>
+              <span className="text-xl font-black text-white tabular-nums">{kpis.totalUsers}</span>
               <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Total</span>
             </div>
           </div>
 
           {/* Role Legend List */}
-          <div className="space-y-2 pt-2 border-t border-slate-855">
+          <div className="space-y-2 pt-2 border-t border-white/10">
             {roleBreakdown.map((item, idx) => (
               <div key={idx} className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
@@ -1096,8 +1082,8 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                   <span className="text-slate-300 font-medium">{item.name}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-white font-bold font-mono">{item.value}</span>
-                  <span className="text-slate-500 text-[10px] w-8 text-right font-mono">({item.percentage}%)</span>
+                  <span className="text-white font-bold font-mono tabular-nums">{item.value}</span>
+                  <span className="text-slate-500 text-[10px] w-8 text-right font-mono tabular-nums">({item.percentage}%)</span>
                 </div>
               </div>
             ))}
@@ -1107,10 +1093,10 @@ export const AdminAnalyticsDashboard: React.FC = () => {
       </div>
 
       {/* 6. Leaderboard of Top Contributors */}
-      <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
+      <div className="bg-[#171A1F] border border-white/10 rounded-3xl p-6 shadow-xl space-y-4">
+        <div className="flex items-center justify-between border-b border-white/10 pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-pink-500/10 border border-pink-500/30 flex items-center justify-center text-[#FF2E7E]">
+            <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-[#FF2E7E]">
               <Award className="w-4 h-4" />
             </div>
             <div>
@@ -1130,22 +1116,22 @@ export const AdminAnalyticsDashboard: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {topActiveUsers.map((item, index) => {
             const user = item.user;
-            const rankBadge = index === 0 ? 'bg-[#FFD000] text-slate-950' : index === 1 ? 'bg-slate-300 text-slate-950' : index === 2 ? 'bg-amber-700 text-white' : 'bg-slate-800 text-slate-300';
+            const rankBadge = index === 0 ? 'bg-[#FF2E7E] text-white' : index === 1 ? 'bg-white/[0.12] text-white' : index === 2 ? 'bg-white/[0.08] text-slate-200' : 'bg-white/[0.04] text-slate-400';
 
             return (
               <div
                 key={user.id || index}
-                className="bg-slate-950/60 border border-slate-850 hover:border-slate-700 p-3.5 rounded-2xl flex flex-col justify-between transition-all group"
+                className="bg-[#0E1013] border border-white/10 hover:border-white/20 p-3.5 rounded-2xl flex flex-col justify-between transition-all group"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <img
                       src={user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}
                       alt={user.name}
-                      className="w-8 h-8 rounded-full object-cover shrink-0 border border-slate-700"
+                      className="w-8 h-8 rounded-full object-cover shrink-0 border border-white/10"
                     />
                     <div className="min-w-0">
-                      <div className="font-bold text-white text-xs truncate max-w-[100px] group-hover:text-cyan-400 transition-colors">
+                      <div className="font-bold text-white text-xs truncate max-w-[100px] group-hover:text-[#FF2E7E] transition-colors">
                         {user.name}
                       </div>
                       <div className="text-[10px] text-slate-400 truncate">
@@ -1159,9 +1145,9 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="mt-3 pt-2.5 border-t border-slate-850/80 flex items-center justify-between text-[11px]">
+                <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px]">
                   <span className="text-slate-400">Total Aksi:</span>
-                  <span className="font-black text-cyan-400 font-mono">
+                  <span className="font-bold text-white font-mono tabular-nums">
                     {item.interactions} Interaksi
                   </span>
                 </div>

@@ -117,19 +117,19 @@ export const AdminModeration: React.FC = () => {
       </div>
 
       {/* Sub-Tab Navigation */}
-      <div className="flex border-b border-slate-800 bg-[#121324] rounded-2xl p-1.5 gap-1.5">
+      <div className="flex border border-white/10 bg-[#171A1F] rounded-2xl p-1.5 gap-1.5">
         <button
           onClick={() => setActiveSubTab('reports')}
           className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
             activeSubTab === 'reports'
-              ? 'bg-red-500/20 text-red-300 border border-red-500/40 shadow-sm'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              ? 'bg-[#FF2E7E] text-white shadow-sm'
+              : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
           }`}
         >
-          <ShieldAlert className="w-4 h-4 text-red-400" />
+          <ShieldAlert className="w-4 h-4 text-white" />
           <span>Laporan Warga ({moderationReports.length})</span>
           {pendingCount > 0 && (
-            <span className="w-5 h-5 rounded-full bg-red-500 text-slate-950 font-black text-[10px] flex items-center justify-center">
+            <span className="w-5 h-5 rounded-full bg-white text-slate-950 font-black text-[10px] flex items-center justify-center">
               {pendingCount}
             </span>
           )}
@@ -139,11 +139,11 @@ export const AdminModeration: React.FC = () => {
           onClick={() => setActiveSubTab('buzz')}
           className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
             activeSubTab === 'buzz'
-              ? 'bg-cyan-500/20 text-[#00F0FF] border border-cyan-500/40 shadow-sm'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              ? 'bg-[#FF2E7E] text-white shadow-sm'
+              : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
           }`}
         >
-          <MessageSquare className="w-4 h-4 text-[#00F0FF]" />
+          <MessageSquare className="w-4 h-4 text-slate-400" />
           <span>Semua Obrolan Buzz ({buzzList.length})</span>
         </button>
 
@@ -151,11 +151,11 @@ export const AdminModeration: React.FC = () => {
           onClick={() => setActiveSubTab('reviews')}
           className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
             activeSubTab === 'reviews'
-              ? 'bg-amber-500/20 text-[#FFD000] border border-amber-500/40 shadow-sm'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              ? 'bg-[#FF2E7E] text-white shadow-sm'
+              : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
           }`}
         >
-          <Star className="w-4 h-4 text-[#FFD000]" />
+          <Star className="w-4 h-4 text-slate-400" />
           <span>Semua Ulasan Film ({ratings.length})</span>
         </button>
       </div>
@@ -164,7 +164,7 @@ export const AdminModeration: React.FC = () => {
       {activeSubTab === 'reports' && (
         <div className="space-y-4">
           {/* Status Filter and Search Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#121324] border border-slate-800 rounded-2xl p-3.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#171A1F] border border-white/10 rounded-2xl p-3.5">
             <div className="flex items-center gap-1.5">
               {(['all', 'pending', 'resolved', 'dismissed'] as const).map(status => (
                 <button
@@ -172,8 +172,8 @@ export const AdminModeration: React.FC = () => {
                   onClick={() => setReportStatusFilter(status)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-colors ${
                     reportStatusFilter === status
-                      ? 'bg-slate-750 text-white'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                      ? 'bg-white/[0.12] text-white'
+                      : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
                   }`}
                 >
                   {status === 'all' ? 'Semua' : status === 'pending' ? 'Menunggu (Pending)' : status === 'resolved' ? 'Ditindaklanjuti' : 'Diabaikan'}
@@ -188,7 +188,7 @@ export const AdminModeration: React.FC = () => {
                 placeholder="Cari alasan, konten, nama..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-750 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-400"
+                className="w-full bg-[#0E1013] border border-white/10 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
               />
             </div>
           </div>
@@ -196,7 +196,7 @@ export const AdminModeration: React.FC = () => {
           {/* Reports List */}
           <div className="space-y-3">
             {filteredReports.length === 0 ? (
-              <div className="bg-[#121324] border border-slate-800 rounded-2xl p-8 text-center text-slate-500 text-xs">
+              <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-8 text-center text-slate-500 text-xs">
                 <CheckCircle className="w-8 h-8 text-emerald-400/60 mx-auto mb-2" />
                 <p className="font-bold text-slate-300">Tidak ada laporan aktif dalam kategori ini.</p>
                 <p className="text-slate-500 mt-1">Komunitas Sotoy Film kondusif dan tertib.</p>
@@ -205,10 +205,10 @@ export const AdminModeration: React.FC = () => {
               filteredReports.map(report => (
                 <div 
                   key={report.id}
-                  className={`bg-[#121324] border rounded-2xl p-4 sm:p-5 transition-all space-y-4 ${
+                  className={`bg-[#171A1F] border rounded-2xl p-4 sm:p-5 transition-all space-y-4 ${
                     report.status === 'pending'
-                      ? 'border-red-500/40 bg-gradient-to-r from-red-950/10 to-[#121324]'
-                      : 'border-slate-800 opacity-75'
+                      ? 'border-[#FF2E7E]/40 bg-[#171A1F]'
+                      : 'border-white/10 opacity-75'
                   }`}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
@@ -268,7 +268,7 @@ export const AdminModeration: React.FC = () => {
 
                       <button
                         onClick={() => handleBanAuthor(report.targetAuthorId, report.targetAuthorName)}
-                        className="px-3 py-1.5 rounded-xl bg-[#7928CA] hover:bg-[#8e38ea] text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-md shadow-purple-900/30"
+                        className="px-3 py-1.5 rounded-xl bg-[#FF2E7E] hover:bg-[#e0266e] text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-[0.98]"
                       >
                         <UserX className="w-3.5 h-3.5" />
                         <span>Bekukan Akun Pelaku</span>
@@ -289,7 +289,7 @@ export const AdminModeration: React.FC = () => {
       {/* Sub-Tab 2: Live Buzz Stream */}
       {activeSubTab === 'buzz' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3 bg-[#121324] border border-slate-800 rounded-2xl p-3.5">
+          <div className="flex items-center justify-between gap-3 bg-[#171A1F] border border-white/10 rounded-2xl p-3.5">
             <span className="text-xs text-slate-400 font-bold">
               Menampilkan {filteredBuzz.length} utas obrolan Buzz warga di Firestore
             </span>
@@ -300,19 +300,19 @@ export const AdminModeration: React.FC = () => {
                 placeholder="Cari obrolan buzz..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-750 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+                className="w-full bg-[#0E1013] border border-white/10 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
               />
             </div>
           </div>
 
           <div className="space-y-3">
             {filteredBuzz.length === 0 ? (
-              <div className="bg-[#121324] border border-slate-800 rounded-2xl p-8 text-center text-slate-500 text-xs">
+              <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-8 text-center text-slate-500 text-xs">
                 Tidak ada obrolan buzz yang cocok dengan pencarian.
               </div>
             ) : (
               filteredBuzz.map(buzz => (
-                <div key={buzz.id} className="bg-[#121324] border border-slate-800 hover:border-slate-750 rounded-2xl p-4 flex items-start justify-between gap-4 transition-all">
+                <div key={buzz.id} className="bg-[#171A1F] border border-white/10 hover:border-white/20 rounded-2xl p-4 flex items-start justify-between gap-4 transition-all">
                   <div className="flex items-start gap-3 min-w-0">
                     <img
                       src={buzz.author.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80'}
@@ -336,7 +336,7 @@ export const AdminModeration: React.FC = () => {
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={() => handleBanAuthor(buzz.author.id, buzz.author.name)}
-                      className="p-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 transition-colors"
+                      className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 border border-white/10 transition-colors"
                       title="Bekukan Akun Penulis"
                     >
                       <UserX className="w-3.5 h-3.5" />
@@ -359,7 +359,7 @@ export const AdminModeration: React.FC = () => {
       {/* Sub-Tab 3: Film Reviews Stream */}
       {activeSubTab === 'reviews' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3 bg-[#121324] border border-slate-800 rounded-2xl p-3.5">
+          <div className="flex items-center justify-between gap-3 bg-[#171A1F] border border-white/10 rounded-2xl p-3.5">
             <span className="text-xs text-slate-400 font-bold">
               Menampilkan {filteredReviews.length} ulasan skor warga di Firestore
             </span>
@@ -370,23 +370,23 @@ export const AdminModeration: React.FC = () => {
                 placeholder="Cari teks ulasan / penilai..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-750 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
+                className="w-full bg-[#0E1013] border border-white/10 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
               />
             </div>
           </div>
 
           <div className="space-y-3">
             {filteredReviews.length === 0 ? (
-              <div className="bg-[#121324] border border-slate-800 rounded-2xl p-8 text-center text-slate-500 text-xs">
+              <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-8 text-center text-slate-500 text-xs">
                 Tidak ada ulasan yang cocok dengan pencarian.
               </div>
             ) : (
               filteredReviews.map(review => (
-                <div key={review.id} className="bg-[#121324] border border-slate-800 hover:border-slate-750 rounded-2xl p-4 flex items-start justify-between gap-4 transition-all">
+                <div key={review.id} className="bg-[#171A1F] border border-white/10 hover:border-white/20 rounded-2xl p-4 flex items-start justify-between gap-4 transition-all">
                   <div className="min-w-0 space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-white text-xs">{review.userName}</span>
-                      <span className="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/30 font-black">
+                      <span className="text-[10px] text-[#FF2E7E] bg-[#FF2E7E]/10 px-2 py-0.5 rounded-full border border-[#FF2E7E]/30 font-black">
                         ★ {review.score} / 10
                       </span>
                       <span className="text-[10px] text-slate-500">• Film ID: {review.filmId}</span>
@@ -397,7 +397,7 @@ export const AdminModeration: React.FC = () => {
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={() => handleBanAuthor(review.userId, review.userName)}
-                      className="p-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 transition-colors"
+                      className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 border border-white/10 transition-colors"
                       title="Bekukan Akun Warga"
                     >
                       <UserX className="w-3.5 h-3.5" />

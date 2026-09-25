@@ -638,7 +638,7 @@ export const CommunityFeedPage: React.FC = () => {
                     )}
                     {buzzFeedTab === 'trending' && (
                       <>
-                        <Sparkles className="w-5 h-5 text-[#FFD000] shrink-0" />
+                        <Sparkles className="w-5 h-5 text-[#FF2E7E] shrink-0" />
                         <span>Sedang Hangat</span>
                       </>
                     )}
@@ -674,7 +674,7 @@ export const CommunityFeedPage: React.FC = () => {
         {/* ========================================================================= */}
         {/* POST COMPOSER CARD WITH SEARCHABLE FILM/ARTICLE TAGGING */}
         {/* ========================================================================= */}
-        <div id="buzz-composer-card" className="bg-[#121324] border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4">
+        <div id="buzz-composer-card" className="bg-[#171A1F] border border-white/10 rounded-3xl p-5 shadow-2xl space-y-4">
           <div className="flex items-start gap-3">
             {isLoggedIn ? (
               <img
@@ -683,7 +683,7 @@ export const CommunityFeedPage: React.FC = () => {
                 className="w-10 h-10 rounded-xl object-cover ring-2 ring-[#FF2E7E]/50 shrink-0"
               />
             ) : (
-              <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-slate-500 ring-2 ring-slate-700 shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center text-slate-400 ring-2 ring-white/10 shrink-0">
                 <UserIcon className="w-5 h-5" />
               </div>
             )}
@@ -694,12 +694,12 @@ export const CommunityFeedPage: React.FC = () => {
                 onChange={setPostContent}
                 placeholder="Apa yang lagi kamu tonton atau pikirkan seputar film hari ini? Ketik '@' untuk mention warga lain..."
                 rows={3}
-                className="w-full bg-slate-900/80 border border-slate-800 rounded-2xl p-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] resize-none"
+                className="w-full bg-[#0E1013] border border-white/10 rounded-2xl p-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] resize-none"
               />
 
               {/* Tagged Item Preview In Composer */}
               {selectedFilm && (
-                <div className="flex items-center justify-between p-2.5 bg-slate-900/90 border border-[#00F0FF]/40 rounded-2xl">
+                <div className="flex items-center justify-between p-2.5 bg-[#0E1013] border border-[#FF2E7E]/40 rounded-2xl">
                   <div className="flex items-center gap-3 min-w-0">
                     <img
                       src={selectedFilm.poster}
@@ -708,7 +708,7 @@ export const CommunityFeedPage: React.FC = () => {
                     />
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[9px] font-black uppercase bg-[#00F0FF] text-slate-950 px-1.5 py-0.2 rounded">
+                        <span className="text-[9px] font-black uppercase bg-[#FF2E7E] text-white px-1.5 py-0.2 rounded">
                           FILM
                         </span>
                         <h4 className="text-white font-bold text-xs truncate">{selectedFilm.title}</h4>
@@ -723,7 +723,7 @@ export const CommunityFeedPage: React.FC = () => {
                       setSelectedFilmId(null);
                       setSkorMention(undefined);
                     }}
-                    className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 ml-2"
+                    className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.1] ml-2"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -731,7 +731,7 @@ export const CommunityFeedPage: React.FC = () => {
               )}
 
               {selectedArticle && (
-                <div className="flex items-center justify-between p-2.5 bg-slate-900/90 border border-[#FF2E7E]/40 rounded-2xl">
+                <div className="flex items-center justify-between p-2.5 bg-[#0E1013] border border-[#FF2E7E]/40 rounded-2xl">
                   <div className="flex items-center gap-3 min-w-0">
                     <img
                       src={selectedArticle.coverImage}
@@ -752,7 +752,7 @@ export const CommunityFeedPage: React.FC = () => {
                   </div>
                   <button
                     onClick={() => setSelectedArticleId(null)}
-                    className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 ml-2"
+                    className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.1] ml-2"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -761,8 +761,8 @@ export const CommunityFeedPage: React.FC = () => {
 
               {/* Photo Attachment Preview / Compressing indicator */}
               {isCompressingImage ? (
-                <div className="flex items-center gap-3 p-3 bg-slate-900/90 border border-slate-800 rounded-2xl animate-pulse">
-                  <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center shrink-0">
+                <div className="flex items-center gap-3 p-3 bg-[#0E1013] border border-white/10 rounded-2xl animate-pulse">
+                  <div className="w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center shrink-0">
                     <Loader2 className="w-5 h-5 text-[#FF2E7E] animate-spin" />
                   </div>
                   <div className="space-y-0.5">
@@ -771,7 +771,7 @@ export const CommunityFeedPage: React.FC = () => {
                   </div>
                 </div>
               ) : attachedImagePreview ? (
-                <div className="relative rounded-2xl overflow-hidden border border-slate-700 bg-slate-900 group max-w-sm shadow-md">
+                <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-[#0E1013] group max-w-sm shadow-md">
                   <img
                     src={attachedImagePreview}
                     alt="Preview foto lampiran"
@@ -781,7 +781,7 @@ export const CommunityFeedPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleRemoveImage}
-                    className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 hover:bg-red-500 text-white transition-colors shadow-lg cursor-pointer"
+                    className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 hover:bg-[#FF2E7E] text-white transition-colors shadow-lg cursor-pointer"
                     title="Hapus foto lampiran"
                   >
                     <X className="w-4 h-4" />
@@ -794,7 +794,7 @@ export const CommunityFeedPage: React.FC = () => {
               ) : null}
 
               {/* Tag Controls & Submit Button */}
-              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800/80 relative">
+              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/10 relative">
                 
                 {/* Hidden File Input for Photo Attachment */}
                 <input
@@ -814,7 +814,7 @@ export const CommunityFeedPage: React.FC = () => {
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                     attachedImageDataUrl
                       ? 'bg-[#FF2E7E]/15 border-[#FF2E7E]/50 text-[#FF2E7E]'
-                      : 'bg-slate-900 hover:bg-slate-800 border-slate-700 text-slate-300'
+                      : 'bg-white/[0.06] hover:bg-white/[0.12] border-white/10 text-slate-300'
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
                   title="Lampirkan 1 foto (JPG, PNG, WEBP, HEIC)"
                 >
@@ -832,9 +832,9 @@ export const CommunityFeedPage: React.FC = () => {
                     type="button"
                     id="open-tag-selector-btn"
                     onClick={() => setDropdownOpen(!dropdownOpen)}
-                    className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 text-xs text-slate-300 font-bold transition-colors"
+                    className="flex items-center gap-1.5 bg-white/[0.06] hover:bg-white/[0.12] px-3 py-1.5 rounded-xl border border-white/10 text-xs text-slate-200 font-bold transition-colors"
                   >
-                    <Tag className="w-3.5 h-3.5 text-[#00F0FF]" />
+                    <Tag className="w-3.5 h-3.5 text-[#FF2E7E]" />
                     <span>
                       {selectedFilm ? 'Ganti Film' : selectedArticle ? 'Ganti Artikel' : '+ Tag Film / Artikel'}
                     </span>
@@ -842,9 +842,9 @@ export const CommunityFeedPage: React.FC = () => {
 
                   {/* Popover / Dropdown Menu with Live Search */}
                   {dropdownOpen && (
-                    <div className="absolute top-full left-0 mt-2 w-[calc(100vw-3rem)] max-w-sm sm:w-96 bg-[#16182D] border border-slate-700 rounded-2xl shadow-2xl z-30 p-3 space-y-3">
+                    <div className="absolute top-full left-0 mt-2 w-[calc(100vw-3rem)] max-w-sm sm:w-96 bg-[#171A1F] border border-white/10 rounded-2xl shadow-2xl z-30 p-3 space-y-3">
                       {/* Mode Toggle: Film vs Artikel */}
-                      <div className="flex p-1 bg-slate-900 rounded-xl text-xs font-bold">
+                      <div className="flex p-1 bg-white/[0.04] border border-white/10 rounded-xl text-xs font-bold">
                         <button
                           type="button"
                           onClick={() => {
@@ -853,7 +853,7 @@ export const CommunityFeedPage: React.FC = () => {
                           }}
                           className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-colors ${
                             tagMode === 'film'
-                              ? 'bg-[#00F0FF] text-slate-950 font-black'
+                              ? 'bg-[#FF2E7E] text-white font-black'
                               : 'text-slate-400 hover:text-white'
                           }`}
                         >
@@ -885,7 +885,7 @@ export const CommunityFeedPage: React.FC = () => {
                           value={searchQuery}
                           onChange={e => setSearchQuery(e.target.value)}
                           placeholder={tagMode === 'film' ? "Cari judul film, sutradara..." : "Cari judul artikel, topik..."}
-                          className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF]"
+                          className="w-full bg-[#0E1013] border border-white/10 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
                           autoFocus
                         />
                       </div>
@@ -906,8 +906,8 @@ export const CommunityFeedPage: React.FC = () => {
                                 }}
                                 className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-colors ${
                                   selectedFilmId === f.id
-                                    ? 'bg-[#00F0FF]/15 border border-[#00F0FF]/40'
-                                    : 'hover:bg-slate-900 border border-transparent'
+                                    ? 'bg-[#FF2E7E]/15 border border-[#FF2E7E]/40'
+                                    : 'hover:bg-white/[0.06] border border-transparent'
                                 }`}
                               >
                                 <img
@@ -918,7 +918,7 @@ export const CommunityFeedPage: React.FC = () => {
                                 <div className="min-w-0 flex-1">
                                   <h5 className="font-bold text-xs text-white truncate">{f.title}</h5>
                                   <p className="text-[11px] text-slate-400 truncate">{f.year} • {f.genres.join(', ')}</p>
-                                  <span className="text-[10px] text-[#FFD000] font-medium">★ {f.skorSotoy.toFixed(1)}</span>
+                                  <span className="text-[10px] text-[#FF2E7E] font-medium">★ {f.skorSotoy.toFixed(1)}</span>
                                 </div>
                               </div>
                             ))
@@ -938,7 +938,7 @@ export const CommunityFeedPage: React.FC = () => {
                                 className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-colors ${
                                   selectedArticleId === a.id
                                     ? 'bg-[#FF2E7E]/15 border border-[#FF2E7E]/40'
-                                    : 'hover:bg-slate-900 border border-transparent'
+                                    : 'hover:bg-white/[0.06] border border-transparent'
                                 }`}
                               >
                                 <img
@@ -961,20 +961,20 @@ export const CommunityFeedPage: React.FC = () => {
 
                 {/* Score Mention selector (if a film is tagged) */}
                 {selectedFilm && (
-                  <div className="flex items-center gap-1 bg-slate-900 px-2.5 py-1.5 rounded-xl border border-slate-700 text-xs">
-                    <Star className="w-3.5 h-3.5 text-[#FFD000] fill-current" />
+                  <div className="flex items-center gap-1 bg-white/[0.06] px-2.5 py-1.5 rounded-xl border border-white/10 text-xs">
+                    <Star className="w-3.5 h-3.5 text-[#FF2E7E] fill-current" />
                     <select
                       value={skorMention !== undefined ? String(skorMention) : ''}
                       onChange={e => setSkorMention(e.target.value ? parseFloat(e.target.value) : undefined)}
                       className="bg-transparent text-slate-300 text-xs focus:outline-none cursor-pointer"
                     >
-                      <option value="">Beri Skor Film?</option>
-                      <option value="5.0">5.0 (Masterpiece)</option>
-                      <option value="4.5">4.5 (Keren Banget)</option>
-                      <option value="4.0">4.0 (Bagus)</option>
-                      <option value="3.5">3.5 (Lumayan)</option>
-                      <option value="3.0">3.0 (Biasa Aja)</option>
-                      <option value="2.0">2.0 (Kurang)</option>
+                      <option value="" className="bg-[#171A1F] text-slate-300">Beri Skor Film?</option>
+                      <option value="5.0" className="bg-[#171A1F] text-slate-300">5.0 (Masterpiece)</option>
+                      <option value="4.5" className="bg-[#171A1F] text-slate-300">4.5 (Keren Banget)</option>
+                      <option value="4.0" className="bg-[#171A1F] text-slate-300">4.0 (Bagus)</option>
+                      <option value="3.5" className="bg-[#171A1F] text-slate-300">3.5 (Lumayan)</option>
+                      <option value="3.0" className="bg-[#171A1F] text-slate-300">3.0 (Biasa Aja)</option>
+                      <option value="2.0" className="bg-[#171A1F] text-slate-300">2.0 (Kurang)</option>
                     </select>
                   </div>
                 )}
@@ -983,7 +983,7 @@ export const CommunityFeedPage: React.FC = () => {
                   id="submit-buzz-post-btn"
                   onClick={handlePostSubmit}
                   disabled={!postContent.trim() || isCompressingImage || isSubmittingPost}
-                  className="ml-auto bg-gradient-to-r from-[#FF2E7E] to-[#FFD000] hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-black text-xs uppercase tracking-wider px-5 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-[#FF2E7E]/20 transition-transform active:scale-95 cursor-pointer"
+                  className="ml-auto bg-[#FF2E7E] hover:bg-[#e0266e] disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-xs uppercase tracking-wider px-5 py-2 rounded-xl flex items-center gap-1.5 shadow-md transition-all active:scale-95 cursor-pointer"
                 >
                   {isSubmittingPost ? (
                     <>
@@ -1014,7 +1014,7 @@ export const CommunityFeedPage: React.FC = () => {
                 className={`relative px-3 py-1 rounded-xl text-xs font-bold transition-colors shrink-0 ${
                   isActive
                     ? 'text-white shadow-md shadow-[#FF2E7E]/30'
-                    : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                    : 'bg-white/[0.06] text-slate-400 hover:text-white border border-white/10'
                 }`}
               >
                 {isActive && (
@@ -1065,7 +1065,7 @@ export const CommunityFeedPage: React.FC = () => {
                     scale: { duration: 0.22, ease: 'easeOut' },
                   }}
                   id={`buzz-feed-card-${post.feedKey || post.id}`}
-                  className="bg-[#121324] border border-slate-800/80 hover:border-slate-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl transition-colors space-y-3.5 sm:space-y-4"
+                  className="bg-[#171A1F] border border-white/10 hover:border-white/20 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl transition-colors space-y-3.5 sm:space-y-4"
                 >
                 {/* Repost Indicator Header */}
                 {post.isRepost && post.repostedBy && (
@@ -1074,7 +1074,7 @@ export const CommunityFeedPage: React.FC = () => {
                       e.stopPropagation();
                       navigateTo('user-profile', { userId: post.repostedBy!.id });
                     }}
-                    className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-emerald-400 cursor-pointer transition-colors pb-2 border-b border-slate-800/60 group/repost"
+                    className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-emerald-400 cursor-pointer transition-colors pb-2 border-b border-white/10 group/repost"
                     title={`Lihat profil ${post.repostedBy.name}`}
                   >
                     <Repeat2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 stroke-[2.2]" />
@@ -1102,7 +1102,7 @@ export const CommunityFeedPage: React.FC = () => {
                     <img
                       src={post.author.avatar}
                       alt={post.author.name}
-                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover ring-2 ring-transparent group-hover:ring-[#00F0FF] transition-all shrink-0"
+                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover ring-2 ring-transparent group-hover:ring-[#FF2E7E] transition-all shrink-0"
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -1125,7 +1125,7 @@ export const CommunityFeedPage: React.FC = () => {
                   <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                     {/* Optional quick score badge */}
                     {post.skorSotoyMention && (
-                      <div className="bg-[#FFD000]/15 border border-[#FFD000]/40 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-xl text-[#FFD000] text-[11px] sm:text-xs font-black flex items-center gap-1 shrink-0">
+                      <div className="bg-[#FF2E7E]/15 border border-[#FF2E7E]/40 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-xl text-[#FF2E7E] text-[11px] sm:text-xs font-black flex items-center gap-1 shrink-0">
                         <Star className="w-3 h-3 fill-current" />
                         <span>{post.skorSotoyMention.toFixed(1)}</span>
                       </div>
@@ -1146,8 +1146,8 @@ export const CommunityFeedPage: React.FC = () => {
                         }}
                         className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1 sm:gap-1.5 shadow-sm shrink-0 ${
                           isLoggedIn && isFollowing(post.author.id)
-                            ? 'bg-slate-800 text-slate-300 border border-slate-700 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/40'
-                            : 'bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] text-white hover:brightness-110 active:scale-95'
+                            ? 'bg-white/[0.06] text-slate-300 border border-white/10 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/40'
+                            : 'bg-[#FF2E7E] hover:bg-[#e0266e] text-white active:scale-95'
                         }`}
                         title={
                           isLoggedIn && isFollowing(post.author.id)
@@ -1188,10 +1188,10 @@ export const CommunityFeedPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Recommendation Signal Badge (Explainable AI / personalization badge) */}
+                {/* Recommendation Signal Badge */}
                 {buzzFeedTab === 'for-you' && post.recommendationSignal && (
-                  <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-cyan-300 bg-cyan-950/70 border border-cyan-500/30 px-2.5 py-0.5 rounded-full shadow-sm">
-                    <Sparkles className="w-3 h-3 text-cyan-400 shrink-0" />
+                  <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-300 bg-white/[0.06] border border-white/10 px-2.5 py-0.5 rounded-full shadow-sm">
+                    <Sparkles className="w-3 h-3 text-[#FF2E7E] shrink-0" />
                     <span>{post.recommendationSignal.label}</span>
                   </div>
                 )}
@@ -1211,7 +1211,7 @@ export const CommunityFeedPage: React.FC = () => {
                       <span
                         key={idx}
                         onClick={() => setActiveTagFilter(t)}
-                        className="text-xs text-[#00F0FF] hover:underline cursor-pointer font-medium"
+                        className="text-xs text-[#FF2E7E] hover:underline cursor-pointer font-medium"
                       >
                         #{t}
                       </span>
@@ -1220,13 +1220,13 @@ export const CommunityFeedPage: React.FC = () => {
                 )}
 
                 {/* =================================================================== */}
-                {/* TAGGED FILM PREVIEW CARD (DENGAN POSTER RESMI) */}
+                {/* TAGGED FILM PREVIEW CARD */}
                 {/* =================================================================== */}
                 {postFilm && (
                   <div
                     id={`buzz-tagged-film-${postFilm.id}`}
                     onClick={() => navigateTo('film-detail', { filmId: postFilm.id })}
-                    className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-slate-900 to-[#16182D] border border-[#00F0FF]/30 hover:border-[#00F0FF] transition-all cursor-pointer group flex items-center justify-between gap-4 shadow-md"
+                    className="p-3.5 sm:p-4 rounded-2xl bg-[#0E1013] border border-white/10 hover:border-[#FF2E7E]/50 transition-all cursor-pointer group flex items-center justify-between gap-4 shadow-md"
                   >
                     <div className="flex items-center gap-3.5 min-w-0">
                       {/* Film Poster */}
@@ -1238,7 +1238,7 @@ export const CommunityFeedPage: React.FC = () => {
 
                       <div className="min-w-0 space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="bg-[#00F0FF] text-slate-950 font-black text-[9px] uppercase px-2 py-0.5 rounded">
+                          <span className="bg-[#FF2E7E] text-white font-black text-[9px] uppercase px-2 py-0.5 rounded">
                             FILM PREVIEW
                           </span>
                           {'year' in postFilm && (
@@ -1248,7 +1248,7 @@ export const CommunityFeedPage: React.FC = () => {
                           )}
                         </div>
 
-                        <h4 className="font-display font-black text-sm sm:text-base text-white group-hover:text-[#00F0FF] transition-colors truncate">
+                        <h4 className="font-display font-black text-sm sm:text-base text-white group-hover:text-[#FF2E7E] transition-colors truncate">
                           {postFilm.title}
                         </h4>
 
@@ -1259,7 +1259,7 @@ export const CommunityFeedPage: React.FC = () => {
                         )}
 
                         <div className="flex items-center gap-2 pt-0.5">
-                          <div className="text-[11px] text-[#FFD000] font-black flex items-center gap-1">
+                          <div className="text-[11px] text-[#FF2E7E] font-black flex items-center gap-1">
                             <Star className="w-3 h-3 fill-current" />
                             <span>
                               {'skorSotoy' in postFilm ? (postFilm as any).skorSotoy.toFixed(1) : '4.9'}
@@ -1270,7 +1270,7 @@ export const CommunityFeedPage: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="shrink-0 flex items-center gap-1 text-xs font-bold text-[#00F0FF] group-hover:translate-x-1 transition-transform">
+                    <div className="shrink-0 flex items-center gap-1 text-xs font-bold text-[#FF2E7E] group-hover:translate-x-1 transition-transform">
                       <span className="hidden sm:inline">Buka Film</span>
                       <ChevronRight className="w-4 h-4" />
                     </div>
@@ -1278,13 +1278,13 @@ export const CommunityFeedPage: React.FC = () => {
                 )}
 
                 {/* =================================================================== */}
-                {/* TAGGED ARTIKEL PREVIEW CARD (DENGAN GAMBAR THUMBNAIL) */}
+                {/* TAGGED ARTIKEL PREVIEW CARD */}
                 {/* =================================================================== */}
                 {postArticle && (
                   <div
                     id={`buzz-tagged-article-${postArticle.id}`}
                     onClick={() => navigateTo('article-detail', { articleId: postArticle.id })}
-                    className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-slate-900 to-[#1F1426] border border-[#FF2E7E]/30 hover:border-[#FF2E7E] transition-all cursor-pointer group flex items-center justify-between gap-4 shadow-md"
+                    className="p-3.5 sm:p-4 rounded-2xl bg-[#0E1013] border border-white/10 hover:border-[#FF2E7E]/50 transition-all cursor-pointer group flex items-center justify-between gap-4 shadow-md"
                   >
                     <div className="flex items-center gap-3.5 min-w-0">
                       {/* Article Cover Thumbnail */}
@@ -1339,7 +1339,7 @@ export const CommunityFeedPage: React.FC = () => {
                 )}
 
                 {/* Footer Controls: Quick Reaction Bar, Replies, Share, Save */}
-                <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-4 text-xs text-slate-400">
+                <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-4 text-xs text-slate-400">
                   <div className="overflow-x-auto scrollbar-none min-w-0 flex-1">
                     <QuickReactionBar
                       buzzId={post.id}
@@ -1352,10 +1352,10 @@ export const CommunityFeedPage: React.FC = () => {
                     <button
                       id={`buzz-reply-trigger-${post.id}`}
                       onClick={() => navigateTo('buzz-detail', { buzzId: post.id })}
-                      className="flex items-center gap-1 sm:gap-1.5 hover:text-[#00F0FF] text-slate-300 transition-colors group cursor-pointer bg-slate-900/80 hover:bg-slate-800 border border-slate-800 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl text-xs shrink-0"
+                      className="flex items-center gap-1 sm:gap-1.5 hover:text-[#FF2E7E] text-slate-300 transition-colors group cursor-pointer bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl text-xs shrink-0"
                       title="Buka halaman diskusi & balas buzz ini"
                     >
-                      <MessageSquare className="w-3.5 h-3.5 text-[#00F0FF] group-hover:scale-110 transition-transform" />
+                      <MessageSquare className="w-3.5 h-3.5 text-[#FF2E7E] group-hover:scale-110 transition-transform" />
                       <span className="font-semibold">
                         {(post.replies && post.replies.length > 0 ? post.replies.length : post.repliesCount) || 0} <span className="hidden xs:inline">Balasan</span>
                       </span>
@@ -1369,8 +1369,8 @@ export const CommunityFeedPage: React.FC = () => {
                         currentUser?.id && post.repostedByUsers?.[currentUser.id]
                           ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 font-bold'
                           : currentUser?.id === post.author?.id
-                            ? 'bg-slate-900/40 border-slate-800 text-slate-600 cursor-not-allowed opacity-50'
-                            : 'bg-slate-900/80 hover:bg-slate-800 border-slate-800 text-slate-300 hover:text-emerald-400'
+                            ? 'bg-white/[0.02] border-white/5 text-slate-600 cursor-not-allowed opacity-50'
+                            : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-slate-300 hover:text-emerald-400'
                       }`}
                       title={
                         currentUser?.id === post.author?.id
@@ -1388,7 +1388,7 @@ export const CommunityFeedPage: React.FC = () => {
 
                     <button
                       onClick={() => handleShareBuzz(post)}
-                      className="flex items-center gap-1 sm:gap-1.5 hover:text-[#00F0FF] transition-colors bg-slate-900/80 hover:bg-slate-800 border border-slate-800 p-1.5 sm:px-3 sm:py-1.5 rounded-xl text-slate-300 text-xs shrink-0"
+                      className="flex items-center gap-1 sm:gap-1.5 hover:text-[#FF2E7E] transition-colors bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 p-1.5 sm:px-3 sm:py-1.5 rounded-xl text-slate-300 text-xs shrink-0"
                       title="Bagikan Buzz ini ke Media Sosial"
                     >
                       <Share2 className="w-3.5 h-3.5" />
@@ -1401,7 +1401,7 @@ export const CommunityFeedPage: React.FC = () => {
                       className={`flex items-center gap-1 sm:gap-1.5 transition-colors border p-1.5 sm:px-3 sm:py-1.5 rounded-xl text-xs shrink-0 ${
                         savedBuzzIds.includes(post.id)
                           ? 'bg-white/20 border-white/40 text-white font-bold'
-                          : 'bg-slate-900/80 hover:bg-slate-800 border-slate-800 text-slate-300'
+                          : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-slate-300'
                       }`}
                       title={savedBuzzIds.includes(post.id) ? 'Hapus dari Tersimpan' : 'Simpan Buzz ini'}
                     >
@@ -1425,7 +1425,7 @@ export const CommunityFeedPage: React.FC = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: -12 }}
               transition={{ duration: 0.22, ease: 'easeOut' }}
-              className="bg-[#121324] border border-slate-800 rounded-3xl p-8 text-center space-y-4 shadow-xl"
+              className="bg-[#171A1F] border border-slate-800 rounded-3xl p-8 text-center space-y-4 shadow-xl"
             >
             <div className="w-14 h-14 rounded-2xl bg-white/10 mx-auto flex items-center justify-center text-slate-200">
               {buzzFeedTab === 'following' ? (
@@ -1509,10 +1509,10 @@ export const CommunityFeedPage: React.FC = () => {
       {/* ========================================================================= */}
       <div className="hidden xl:flex flex-col gap-4 w-72 shrink-0 sticky top-20 select-none">
         {/* Trending Tags & Topics */}
-        <div className="bg-[#121324]/90 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 shadow-xl space-y-3">
+        <div className="bg-[#171A1F]/90 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 shadow-xl space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-slate-800/60">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-[#FFD000]" />
+              <Sparkles className="w-3.5 h-3.5 text-[#FF2E7E]" />
               <span>Topik Hangat Hari Ini</span>
             </h3>
             {activeTagFilter !== 'all' && (
@@ -1550,7 +1550,7 @@ export const CommunityFeedPage: React.FC = () => {
         </div>
 
         {/* Recommended Reviewers to Follow */}
-        <div className="bg-[#121324]/90 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 shadow-xl space-y-3">
+        <div className="bg-[#171A1F]/90 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 shadow-xl space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-slate-800/60">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
               <Users className="w-3.5 h-3.5 text-cyan-400" />
@@ -1606,7 +1606,7 @@ export const CommunityFeedPage: React.FC = () => {
         </div>
 
         {/* Community Guidelines Glass Card */}
-        <div className="bg-[#121324]/60 border border-slate-800/60 rounded-2xl p-3.5 text-[11px] text-slate-400 space-y-1.5 leading-relaxed">
+        <div className="bg-[#171A1F]/60 border border-slate-800/60 rounded-2xl p-3.5 text-[11px] text-slate-400 space-y-1.5 leading-relaxed">
           <p className="font-bold text-slate-300">💡 Etika Berdiskusi di Sotoy Buzz:</p>
           <ul className="list-disc list-inside space-y-0.5 text-slate-400">
             <li>Sertakan tagar <span className="text-[#FF2E7E] font-semibold">#spoiler</span> jika membahas plot twist.</li>

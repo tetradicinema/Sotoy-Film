@@ -122,51 +122,51 @@ export const AdminAppeals: React.FC = () => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div 
             onClick={() => setFilter('all')}
-            className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
-              filter === 'all' ? 'bg-slate-800 border-cyan-400/50 shadow-md' : 'bg-[#121324] border-slate-800 hover:border-slate-700'
+            className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+              filter === 'all' ? 'bg-white/[0.08] border-white/20 text-white shadow-sm' : 'bg-[#171A1F] border-white/[0.08] hover:border-white/20 text-slate-300'
             }`}
           >
-            <div className="text-[11px] text-slate-400 font-bold">Total Banding</div>
-            <div className="text-xl font-display font-black text-white mt-0.5">{totalCount}</div>
+            <div className="text-[11px] text-slate-400 font-semibold font-mono">Total Banding</div>
+            <div className="text-xl font-display font-black text-white mt-0.5 font-mono tabular-nums">{totalCount}</div>
           </div>
 
           <div 
             onClick={() => setFilter('pending')}
-            className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
-              filter === 'pending' ? 'bg-amber-950/40 border-amber-500/60 shadow-md' : 'bg-[#121324] border-slate-800 hover:border-amber-500/30'
+            className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+              filter === 'pending' ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-sm' : 'bg-[#171A1F] border-white/[0.08] hover:border-amber-500/30 text-slate-300'
             }`}
           >
-            <div className="text-[11px] text-amber-400 font-bold flex items-center gap-1">
+            <div className="text-[11px] text-amber-400 font-semibold flex items-center gap-1 font-mono">
               <Clock className="w-3 h-3" />
               <span>Menunggu</span>
             </div>
-            <div className="text-xl font-display font-black text-amber-300 mt-0.5">{pendingCount}</div>
+            <div className="text-xl font-display font-black text-amber-300 mt-0.5 font-mono tabular-nums">{pendingCount}</div>
           </div>
 
           <div 
             onClick={() => setFilter('approved')}
-            className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
-              filter === 'approved' ? 'bg-emerald-950/40 border-emerald-500/60 shadow-md' : 'bg-[#121324] border-slate-800 hover:border-emerald-500/30'
+            className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+              filter === 'approved' ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 shadow-sm' : 'bg-[#171A1F] border-white/[0.08] hover:border-emerald-500/30 text-slate-300'
             }`}
           >
-            <div className="text-[11px] text-emerald-400 font-bold flex items-center gap-1">
+            <div className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1 font-mono">
               <CheckCircle2 className="w-3 h-3" />
               <span>Disetujui</span>
             </div>
-            <div className="text-xl font-display font-black text-emerald-300 mt-0.5">{approvedCount}</div>
+            <div className="text-xl font-display font-black text-emerald-300 mt-0.5 font-mono tabular-nums">{approvedCount}</div>
           </div>
 
           <div 
             onClick={() => setFilter('rejected')}
-            className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
-              filter === 'rejected' ? 'bg-red-950/40 border-red-500/60 shadow-md' : 'bg-[#121324] border-slate-800 hover:border-red-500/30'
+            className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+              filter === 'rejected' ? 'bg-red-500/15 border-red-500/40 text-red-300 shadow-sm' : 'bg-[#171A1F] border-white/[0.08] hover:border-red-500/30 text-slate-300'
             }`}
           >
-            <div className="text-[11px] text-red-400 font-bold flex items-center gap-1">
+            <div className="text-[11px] text-red-400 font-semibold flex items-center gap-1 font-mono">
               <XCircle className="w-3 h-3" />
               <span>Ditolak</span>
             </div>
-            <div className="text-xl font-display font-black text-red-300 mt-0.5">{rejectedCount}</div>
+            <div className="text-xl font-display font-black text-red-300 mt-0.5 font-mono tabular-nums">{rejectedCount}</div>
           </div>
         </div>
       </div>
@@ -175,36 +175,36 @@ export const AdminAppeals: React.FC = () => {
         {/* Left Column: Appeals List */}
         <div className="lg:col-span-2 space-y-4">
           {/* Filters & Search */}
-          <div className="flex flex-col sm:flex-row items-center gap-4 bg-[#121324] border border-slate-800 p-3 rounded-2xl">
-            <div className="flex items-center gap-1.5 bg-slate-900 rounded-xl p-1 shrink-0 overflow-x-auto">
+          <div className="flex flex-col sm:flex-row items-center gap-4 bg-[#171A1F] border border-white/[0.08] p-3 rounded-2xl">
+            <div className="flex items-center gap-1.5 bg-[#0E1013] rounded-xl p-1 shrink-0 overflow-x-auto">
               <button
                 onClick={() => setFilter('pending')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  filter === 'pending' ? 'bg-amber-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  filter === 'pending' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 Menunggu ({pendingCount})
               </button>
               <button
                 onClick={() => setFilter('approved')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  filter === 'approved' ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-white'
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  filter === 'approved' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 Diterima ({approvedCount})
               </button>
               <button
                 onClick={() => setFilter('rejected')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  filter === 'rejected' ? 'bg-red-500 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  filter === 'rejected' ? 'bg-red-500/20 text-red-300 border border-red-500/40' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 Ditolak ({rejectedCount})
               </button>
               <button
                 onClick={() => setFilter('all')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  filter === 'all' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  filter === 'all' ? 'bg-[#FF2E7E] text-white shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 Semua ({totalCount})
@@ -218,7 +218,7 @@ export const AdminAppeals: React.FC = () => {
                 placeholder="Cari nama, handle, email, atau alasan..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-750 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition-colors"
+                className="w-full bg-[#0E1013] border border-white/10 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] transition-colors"
               />
             </div>
           </div>
@@ -226,7 +226,7 @@ export const AdminAppeals: React.FC = () => {
           {/* List items */}
           <div className="space-y-3">
             {filteredAppeals.length === 0 ? (
-              <div className="bg-[#121324] border border-slate-800 rounded-2xl p-12 text-center">
+              <div className="bg-[#171A1F] border border-white/[0.08] rounded-2xl p-12 text-center">
                 <History className="w-12 h-12 text-slate-700 mx-auto mb-3" />
                 <p className="text-slate-400 text-sm font-medium">Tidak ada permohonan banding yang sesuai dengan filter.</p>
               </div>
@@ -242,34 +242,34 @@ export const AdminAppeals: React.FC = () => {
                       setSelectedAppeal(appeal);
                       setAdminNote(appeal.adminNote || '');
                     }}
-                    className={`w-full text-left bg-[#121324] border transition-all rounded-2xl p-4 flex items-start gap-4 cursor-pointer ${
+                    className={`w-full text-left bg-[#171A1F] border transition-all rounded-2xl p-4 flex items-start gap-4 cursor-pointer ${
                       isSelected 
-                        ? 'border-cyan-400 bg-cyan-500/5 ring-1 ring-cyan-400/30' 
-                        : 'border-slate-800 hover:border-slate-700'
+                        ? 'border-[#FF2E7E] bg-[#FF2E7E]/5 ring-1 ring-[#FF2E7E]/30' 
+                        : 'border-white/[0.08] hover:border-white/20'
                     }`}
                   >
                     <img
                       src={appeal.userAvatar || targetUser?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}
                       alt={appeal.userName}
-                      className="w-11 h-11 rounded-2xl object-cover border border-slate-700 shrink-0"
+                      className="w-11 h-11 rounded-xl object-cover border border-white/10 shrink-0"
                     />
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 truncate">
-                          <h4 className="font-bold text-white text-sm truncate">{appeal.userName}</h4>
+                          <h4 className="font-semibold text-white text-sm truncate">{appeal.userName}</h4>
                           <span className="text-xs text-slate-500 truncate">{appeal.userHandle || targetUser?.handle || ''}</span>
                         </div>
-                        <span className="text-[10px] text-slate-500 whitespace-nowrap">{formatDate(appeal.createdAt)}</span>
+                        <span className="text-[10px] text-slate-500 whitespace-nowrap font-mono">{formatDate(appeal.createdAt)}</span>
                       </div>
 
-                      <p className="text-xs text-slate-300 line-clamp-2 mt-1.5 leading-relaxed bg-slate-900/60 p-2.5 rounded-xl border border-slate-850">
+                      <p className="text-xs text-slate-300 line-clamp-2 mt-1.5 leading-relaxed bg-black/30 p-2.5 rounded-xl border border-white/[0.06]">
                         "{appeal.reason}"
                       </p>
 
                       <div className="mt-3 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
+                          <span className={`text-[10px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-md border font-mono ${
                             appeal.status === 'pending' 
                               ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' 
                               : appeal.status === 'approved' 
@@ -284,7 +284,7 @@ export const AdminAppeals: React.FC = () => {
                         </div>
 
                         {appeal.resolvedAt && (
-                          <span className="text-[10px] text-slate-500 hidden sm:inline">
+                          <span className="text-[10px] text-slate-500 hidden sm:inline font-mono">
                             Ditinjau: {formatDate(appeal.resolvedAt)}
                           </span>
                         )}
@@ -300,27 +300,27 @@ export const AdminAppeals: React.FC = () => {
         {/* Right Column: Appeal Detail & Action Sidebar */}
         <div className="lg:col-span-1">
           {selectedAppeal ? (
-            <div className="bg-[#121324] border border-slate-800 rounded-2xl p-5 sticky top-8 space-y-5 animate-in slide-in-from-right-4 duration-300 shadow-xl">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div className="bg-[#171A1F] border border-white/[0.08] rounded-2xl p-5 sticky top-8 space-y-5 animate-in slide-in-from-right-4 duration-300 shadow-xl">
+              <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
                 <h3 className="font-display font-black text-white text-base">Detail Permohonan</h3>
                 <button 
                   onClick={() => setSelectedAppeal(null)} 
-                  className="text-slate-500 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+                  className="text-slate-500 hover:text-white p-1 rounded-lg hover:bg-white/[0.05] transition-colors"
                 >
                   <XCircle className="w-5 h-5" />
                 </button>
               </div>
 
               {/* User Profile Card */}
-              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3">
+              <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-4 space-y-3">
                 <div className="flex items-center gap-3">
                   <img
                     src={selectedAppeal.userAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}
                     alt={selectedAppeal.userName}
-                    className="w-12 h-12 rounded-2xl object-cover border border-slate-700"
+                    className="w-12 h-12 rounded-xl object-cover border border-white/10"
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="font-bold text-white text-sm truncate">{selectedAppeal.userName}</div>
+                    <div className="font-semibold text-white text-sm truncate">{selectedAppeal.userName}</div>
                     <div className="text-slate-400 text-xs truncate">{selectedAppeal.userHandle || `@${selectedAppeal.userName.toLowerCase().replace(/\s+/g, '')}`}</div>
                     {selectedAppeal.userEmail && (
                       <div className="text-[11px] text-slate-500 truncate flex items-center gap-1 mt-0.5">
@@ -331,11 +331,11 @@ export const AdminAppeals: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-slate-850 flex items-center justify-between text-[10px] text-slate-500">
+                <div className="pt-2 border-t border-white/[0.08] flex items-center justify-between text-[10px] text-slate-500 font-mono">
                   <span>UID: {selectedAppeal.userId.slice(0, 12)}...</span>
                   <button
                     onClick={() => navigateTo('user-profile', { userId: selectedAppeal.userId })}
-                    className="text-cyan-400 hover:underline flex items-center gap-1 font-bold"
+                    className="text-[#FF2E7E] hover:underline flex items-center gap-1 font-semibold"
                   >
                     <span>Lihat Profil</span>
                     <ExternalLink className="w-3 h-3" />
@@ -345,29 +345,29 @@ export const AdminAppeals: React.FC = () => {
 
               {/* Explanation Block */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block font-mono">
                   Penjelasan & Pembelaan Pengguna
                 </label>
-                <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 text-xs text-slate-200 leading-relaxed italic">
+                <div className="bg-black/30 border border-white/[0.08] rounded-xl p-4 text-xs text-slate-200 leading-relaxed italic">
                   "{selectedAppeal.reason}"
                 </div>
-                <div className="text-[10px] text-slate-500 text-right">
+                <div className="text-[10px] text-slate-500 text-right font-mono">
                   Dikirim: {formatDate(selectedAppeal.createdAt)}
                 </div>
               </div>
 
               {/* Action Area for Pending Appeals */}
               {selectedAppeal.status === 'pending' ? (
-                <div className="space-y-4 pt-3 border-t border-slate-800">
+                <div className="space-y-4 pt-3 border-t border-white/[0.08]">
                   <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                    <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-2 font-mono">
                       Catatan Moderator untuk Pengguna
                     </label>
                     <textarea
                       value={adminNote}
                       onChange={(e) => setAdminNote(e.target.value)}
                       placeholder="Tuliskan catatan evaluasi atau alasan keputusan Anda..."
-                      className="w-full bg-slate-900 border border-slate-750 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 min-h-[90px] resize-none transition-colors"
+                      className="w-full bg-[#0E1013] border border-white/10 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] min-h-[90px] resize-none transition-colors"
                     />
                   </div>
 
@@ -375,7 +375,7 @@ export const AdminAppeals: React.FC = () => {
                     <button
                       onClick={() => handleResolve('rejected')}
                       disabled={isProcessing}
-                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/15 hover:bg-red-500/25 text-red-300 border border-red-500/30 rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/15 hover:bg-red-500/25 text-red-300 border border-red-500/30 rounded-xl text-xs font-semibold transition-all disabled:opacity-50 cursor-pointer"
                     >
                       <ShieldAlert className="w-4 h-4 text-red-400" />
                       <span>Tolak Banding</span>
@@ -383,20 +383,20 @@ export const AdminAppeals: React.FC = () => {
                     <button
                       onClick={() => handleResolve('approved')}
                       disabled={isProcessing}
-                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-bold shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-50 cursor-pointer"
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-sm transition-all disabled:opacity-50 cursor-pointer"
                     >
-                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                      <ShieldCheck className="w-4 h-4 text-white" />
                       <span>Terima & Aktifkan</span>
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="pt-3 border-t border-slate-800 space-y-4">
+                <div className="pt-3 border-t border-white/[0.08] space-y-4">
                   <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">
+                    <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">
                       Status Keputusan
                     </label>
-                    <div className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-between ${
+                    <div className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-between ${
                       selectedAppeal.status === 'approved' 
                         ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' 
                         : 'bg-red-500/15 text-red-300 border-red-500/30'
@@ -405,16 +405,16 @@ export const AdminAppeals: React.FC = () => {
                         {selectedAppeal.status === 'approved' ? <ShieldCheck className="w-4 h-4" /> : <ShieldAlert className="w-4 h-4" />}
                         Banding {selectedAppeal.status === 'approved' ? 'Telah Diterima' : 'Telah Ditolak'}
                       </span>
-                      <span className="text-[10px] opacity-80">{formatDate(selectedAppeal.resolvedAt)}</span>
+                      <span className="text-[10px] opacity-80 font-mono">{formatDate(selectedAppeal.resolvedAt)}</span>
                     </div>
                   </div>
 
                   {selectedAppeal.adminNote && (
                     <div>
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">
+                      <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">
                         Catatan Admin
                       </label>
-                      <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-300 leading-relaxed">
+                      <div className="bg-black/30 border border-white/[0.08] rounded-xl p-3 text-xs text-slate-300 leading-relaxed">
                         {selectedAppeal.adminNote}
                       </div>
                     </div>
@@ -425,7 +425,7 @@ export const AdminAppeals: React.FC = () => {
                     <button
                       onClick={() => handleDeleteAppeal(selectedAppeal.id)}
                       disabled={isProcessing}
-                      className="w-full py-2 bg-slate-900 hover:bg-red-500/10 text-slate-400 hover:text-red-400 border border-slate-800 hover:border-red-500/30 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="w-full py-2 bg-white/[0.04] hover:bg-red-500/10 text-slate-400 hover:text-red-400 border border-white/10 hover:border-red-500/30 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>Hapus Catatan Banding</span>
@@ -435,9 +435,9 @@ export const AdminAppeals: React.FC = () => {
               )}
             </div>
           ) : (
-            <div className="bg-[#121324] border border-slate-800 border-dashed rounded-2xl p-10 text-center space-y-2">
-              <MessageSquare className="w-10 h-10 text-slate-750 mx-auto" />
-              <div className="text-xs text-slate-400 font-bold">Pilih Permohonan</div>
+            <div className="bg-[#171A1F] border border-white/[0.08] border-dashed rounded-2xl p-10 text-center space-y-2">
+              <MessageSquare className="w-10 h-10 text-slate-600 mx-auto" />
+              <div className="text-xs text-slate-400 font-semibold">Pilih Permohonan</div>
               <p className="text-[11px] text-slate-500">Klik salah satu tiket banding pada daftar di samping untuk melihat rincian dan melakukan verifikasi.</p>
             </div>
           )}

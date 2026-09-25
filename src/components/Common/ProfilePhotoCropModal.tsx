@@ -113,7 +113,7 @@ export const ProfilePhotoCropModal: React.FC<ProfilePhotoCropModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 bg-slate-900/90">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#00F0FF]/10 text-[#00F0FF] flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-[#FF2E7E]/10 text-[#FF2E7E] flex items-center justify-center">
               <Crop className="w-4 h-4" />
             </div>
             <div>
@@ -177,7 +177,7 @@ export const ProfilePhotoCropModal: React.FC<ProfilePhotoCropModalProps> = ({
                 disabled={isProcessing}
                 onChange={e => setZoom(Number(e.target.value))}
                 aria-label="Kontrol perbesaran foto"
-                className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-[#00F0FF] focus:outline-none"
+                className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-[#FF2E7E] focus:outline-none"
               />
             </div>
 
@@ -216,7 +216,7 @@ export const ProfilePhotoCropModal: React.FC<ProfilePhotoCropModalProps> = ({
               type="button"
               onClick={handleConfirm}
               disabled={isProcessing}
-              className="px-5 py-2.5 rounded-xl bg-[#00F0FF] hover:bg-[#00d0e0] text-black font-black text-xs flex items-center gap-2 shadow-lg shadow-cyan-500/20 transition-all hover:scale-102 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="px-5 py-2.5 rounded-xl bg-[#FF2E7E] hover:bg-[#e0266e] text-white font-black text-xs flex items-center gap-2 shadow-lg shadow-[#FF2E7E]/20 transition-all hover:scale-102 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {isProcessing ? (
                 <>

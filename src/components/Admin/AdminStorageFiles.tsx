@@ -115,7 +115,7 @@ export const AdminStorageFiles: React.FC = () => {
                 placeholder="Cari user berdasarkan nama / UID..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-750 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
+                className="w-full bg-slate-900 border border-slate-750 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF]"
               />
             </div>
           </div>
@@ -165,13 +165,13 @@ export const AdminStorageFiles: React.FC = () => {
                     <div className="flex items-center gap-3 shrink-0">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                         userFileCount > 0 
-                          ? 'bg-cyan-500/20 text-[#00F0FF] border border-cyan-500/30' 
-                          : 'bg-slate-800 text-slate-500'
+                          ? 'bg-[#FF2E7E]/10 text-[#FF2E7E] border border-[#FF2E7E]/20' 
+                          : 'bg-white/[0.04] text-slate-500'
                       }`}>
                         {userFileCount} File
                       </span>
                       <ChevronRight className={`w-3.5 h-3.5 ${
-                        isSelected ? 'text-amber-400' : 'text-slate-600'
+                        isSelected ? 'text-[#FF2E7E]' : 'text-slate-600'
                       }`} />
                     </div>
                   </button>
@@ -201,7 +201,7 @@ export const AdminStorageFiles: React.FC = () => {
                       onClick={() => setActiveFileFilter(tab)}
                       className={`px-2.5 py-1 rounded-lg capitalize font-bold transition-colors ${
                         activeFileFilter === tab 
-                          ? 'bg-amber-400 text-slate-950' 
+                          ? 'bg-cyan-400 text-slate-950' 
                           : 'bg-slate-800 text-slate-400 hover:text-white'
                       }`}
                     >
@@ -226,13 +226,13 @@ export const AdminStorageFiles: React.FC = () => {
                           {file.type.startsWith('image/') ? (
                             <img src={file.url} alt={file.name} className="w-full h-full object-cover" />
                           ) : (
-                            <FileText className="w-6 h-6 text-amber-500" />
+                            <FileText className="w-6 h-6 text-cyan-400" />
                           )}
                           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity">
                             {file.type.startsWith('image/') && (
                               <button
                                 onClick={() => setActiveLightboxFile(file)}
-                                className="w-7 h-7 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center"
+                                className="w-7 h-7 rounded-full bg-cyan-400 text-slate-950 flex items-center justify-center"
                                 title="Lihat Foto"
                               >
                                 <Eye className="w-3.5 h-3.5" />

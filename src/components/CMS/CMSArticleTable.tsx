@@ -446,13 +446,13 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
           onClick={() => setStatusFilter('draft')}
           className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
             statusFilter === 'draft'
-              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-sm'
+              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-sm'
               : 'text-slate-400 hover:text-white hover:bg-slate-850'
           }`}
         >
-          <Clock className="w-3.5 h-3.5 text-amber-400" />
+          <Clock className="w-3.5 h-3.5 text-cyan-400" />
           <span>Draf</span>
-          <span className="px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-black">
+          <span className="px-1.5 py-0.2 rounded-full bg-cyan-500/20 text-cyan-300 text-[10px] font-black">
             {statusCounts.draft}
           </span>
         </button>
@@ -832,8 +832,8 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
                               {article.title}
                             </span>
                             {article.featured && (
-                              <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[9px] font-black uppercase tracking-wider flex items-center gap-0.5">
-                                <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                              <span className="px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-[9px] font-black uppercase tracking-wider flex items-center gap-0.5">
+                                <Sparkles className="w-2.5 h-2.5 text-cyan-400" />
                                 Featured
                               </span>
                             )}
@@ -926,7 +926,7 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
                             <span className="font-mono text-slate-300">{article.likes || 0}</span>
                           </span>
                           <span className="flex items-center gap-1" title="Komentar">
-                            <MessageSquare className="w-3 h-3 text-amber-400" />
+                            <MessageSquare className="w-3 h-3 text-cyan-400" />
                             <span className="font-mono text-slate-300">{article.commentsCount || 0}</span>
                           </span>
                         </div>
@@ -938,7 +938,7 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
                           isPublished
                             ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 shadow-sm shadow-emerald-950/20'
                             : article.status === 'draft'
-                            ? 'bg-amber-500/10 border border-amber-500/30 text-amber-400 shadow-sm shadow-amber-950/20'
+                            ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 shadow-sm shadow-cyan-950/20'
                             : article.status === 'scheduled'
                             ? 'bg-blue-500/10 border border-blue-500/30 text-blue-400 shadow-sm shadow-blue-950/20'
                             : 'bg-red-500/10 border border-red-500/30 text-red-400 shadow-sm shadow-red-950/20'

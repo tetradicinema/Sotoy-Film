@@ -90,8 +90,8 @@ export const FullCastCrewModal: React.FC<FullCastCrewModalProps> = ({
             )}
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1">
-                <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold text-[#FFD000] bg-[#FFD000]/10 border border-[#FFD000]/30 px-2 py-0.5 rounded-full">
-                  <Award className="w-3 h-3 text-[#FFD000]" />
+                <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold text-[#FF2E7E] bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 px-2 py-0.5 rounded-full">
+                  <Award className="w-3 h-3 text-[#FF2E7E]" />
                   <span>Kredit Sinematik Lengkap</span>
                 </span>
                 <span className="text-xs text-slate-400 font-medium">
@@ -130,7 +130,7 @@ export const FullCastCrewModal: React.FC<FullCastCrewModalProps> = ({
                 }}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                   activeTab === 'all'
-                    ? 'bg-gradient-to-r from-[#FFD000] to-[#FF8008] text-slate-950 shadow-md shadow-[#FFD000]/10'
+                    ? 'bg-[#FF2E7E] text-slate-950 shadow-md shadow-[#FF2E7E]/10'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -146,7 +146,7 @@ export const FullCastCrewModal: React.FC<FullCastCrewModalProps> = ({
                 }}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                   activeTab === 'cast'
-                    ? 'bg-[#00F0FF] text-slate-950 font-black shadow-md shadow-[#00F0FF]/15'
+                    ? 'bg-[#FF2E7E] text-slate-950 font-black shadow-md shadow-[#FF2E7E]/15'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -159,7 +159,7 @@ export const FullCastCrewModal: React.FC<FullCastCrewModalProps> = ({
                 onClick={() => setActiveTab('crew')}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                   activeTab === 'crew'
-                    ? 'bg-[#FF2E7E] text-white font-black shadow-md shadow-[#FF2E7E]/20'
+                    ? 'bg-[#FF2E7E] text-white font-black shadow-md shadow-sm'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -177,7 +177,7 @@ export const FullCastCrewModal: React.FC<FullCastCrewModalProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Cari nama aktor, sutradara, karakter, atau departemen..."
-                className="w-full bg-slate-950 border border-slate-800 focus:border-[#FFD000] rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-slate-500 focus:outline-none transition-all"
+                className="w-full bg-slate-950 border border-slate-800 focus:border-[#FF2E7E] rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-slate-500 focus:outline-none transition-all"
               />
               {searchQuery && (
                 <button
@@ -213,7 +213,7 @@ export const FullCastCrewModal: React.FC<FullCastCrewModalProps> = ({
                   onClick={() => setSelectedDepartment(dept)}
                   className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border shrink-0 transition-all ${
                     selectedDepartment === dept
-                      ? 'bg-[#FFD000]/20 text-[#FFD000] border-[#FFD000]/60 font-bold'
+                      ? 'bg-[#FF2E7E]/20 text-[#FF2E7E] border-[#FF2E7E]/60 font-bold'
                       : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
                   }`}
                 >
@@ -228,7 +228,7 @@ export const FullCastCrewModal: React.FC<FullCastCrewModalProps> = ({
         <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-8 max-h-[calc(90vh-190px)]">
           {isLoading ? (
             <div className="py-20 text-center space-y-3">
-              <div className="w-10 h-10 border-3 border-[#FFD000] border-t-transparent rounded-full animate-spin mx-auto" />
+              <div className="w-10 h-10 border-3 border-[#FF2E7E] border-t-transparent rounded-full animate-spin mx-auto" />
               <p className="text-sm font-bold text-slate-300">
                 Mengambil data kredit lengkap dari TMDB...
               </p>
@@ -252,10 +252,10 @@ export const FullCastCrewModal: React.FC<FullCastCrewModalProps> = ({
                 <div id="modal-section-cast" className="space-y-4">
                   <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                     <h3 className="text-sm sm:text-base font-display font-black text-white flex items-center gap-2">
-                      <Film className="w-4 h-4 text-[#00F0FF]" />
+                      <Film className="w-4 h-4 text-[#FF2E7E]" />
                       <span>Daftar Pemeran (Cast)</span>
                     </h3>
-                    <span className="text-[11px] font-bold text-[#00F0FF] bg-[#00F0FF]/10 border border-[#00F0FF]/30 px-2.5 py-0.5 rounded-full">
+                    <span className="text-[11px] font-bold text-[#FF2E7E] bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 px-2.5 py-0.5 rounded-full">
                       {filteredCast.length} Orang
                     </span>
                   </div>
@@ -264,16 +264,16 @@ export const FullCastCrewModal: React.FC<FullCastCrewModalProps> = ({
                     {filteredCast.map((actor, idx) => (
                       <div
                         key={`cast-${idx}`}
-                        className="group bg-slate-900/80 border border-slate-800 hover:border-[#00F0FF]/60 hover:shadow-[0_0_15px_rgba(0,240,255,0.12)] hover:scale-[1.02] rounded-2xl overflow-hidden transition-all duration-300 flex flex-col"
+                        className="group bg-slate-900/80 border border-slate-800 hover:border-[#FF2E7E]/60 hover:shadow-[0_0_15px_rgba(0,240,255,0.12)] hover:scale-[1.02] rounded-2xl overflow-hidden transition-all duration-300 flex flex-col"
                       >
                         <div className="aspect-[3/4] w-full overflow-hidden bg-slate-950 relative">
                           <PersonAvatar photo={actor.photo} name={actor.name} />
                         </div>
                         <div className="p-3">
-                          <h4 className="font-bold text-xs sm:text-sm text-white group-hover:text-[#00F0FF] transition-colors truncate">
+                          <h4 className="font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors truncate">
                             {actor.name}
                           </h4>
-                          <p className="text-[11px] text-[#00F0FF]/90 font-medium truncate mt-0.5">
+                          <p className="text-[11px] text-[#FF2E7E]/90 font-medium truncate mt-0.5">
                             {actor.character ? `sebagai ${actor.character}` : 'Pemeran'}
                           </p>
                         </div>
@@ -288,10 +288,10 @@ export const FullCastCrewModal: React.FC<FullCastCrewModalProps> = ({
                 <div id="modal-section-crew" className="space-y-4">
                   <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                     <h3 className="text-sm sm:text-base font-display font-black text-white flex items-center gap-2">
-                      <Clapperboard className="w-4 h-4 text-[#FFD000]" />
+                      <Clapperboard className="w-4 h-4 text-[#FF2E7E]" />
                       <span>Tim Produksi & Departemen (Crew)</span>
                     </h3>
-                    <span className="text-[11px] font-bold text-[#FFD000] bg-[#FFD000]/10 border border-[#FFD000]/30 px-2.5 py-0.5 rounded-full">
+                    <span className="text-[11px] font-bold text-[#FF2E7E] bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 px-2.5 py-0.5 rounded-full">
                       {filteredCrew.length} Orang
                     </span>
                   </div>
@@ -300,7 +300,7 @@ export const FullCastCrewModal: React.FC<FullCastCrewModalProps> = ({
                     {filteredCrew.map((crew, idx) => (
                       <div
                         key={`crew-${idx}`}
-                        className="group bg-slate-900/80 border border-slate-800 hover:border-[#FFD000]/60 hover:shadow-[0_0_15px_rgba(255,208,0,0.12)] hover:scale-[1.02] rounded-2xl overflow-hidden transition-all duration-300 flex flex-col"
+                        className="group bg-slate-900/80 border border-slate-800 hover:border-[#FF2E7E]/60 hover:shadow-[0_0_15px_rgba(255,208,0,0.12)] hover:scale-[1.02] rounded-2xl overflow-hidden transition-all duration-300 flex flex-col"
                       >
                         <div className="aspect-[3/4] w-full overflow-hidden bg-slate-950 relative">
                           <PersonAvatar photo={crew.photo} name={crew.name} />
@@ -311,10 +311,10 @@ export const FullCastCrewModal: React.FC<FullCastCrewModalProps> = ({
                           )}
                         </div>
                         <div className="p-3">
-                          <h4 className="font-bold text-xs sm:text-sm text-white group-hover:text-[#FFD000] transition-colors truncate">
+                          <h4 className="font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors truncate">
                             {crew.name}
                           </h4>
-                          <p className="text-[11px] text-[#FFD000] font-semibold truncate mt-0.5">
+                          <p className="text-[11px] text-[#FF2E7E] font-semibold truncate mt-0.5">
                             {crew.job}
                           </p>
                         </div>
@@ -330,7 +330,7 @@ export const FullCastCrewModal: React.FC<FullCastCrewModalProps> = ({
         {/* Footer */}
         <div className="p-4 sm:p-5 border-t border-slate-800/90 bg-[#121424] flex items-center justify-between text-xs text-slate-400">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5 text-[#FFD000]" />
+            <Sparkles className="w-3.5 h-3.5 text-[#FF2E7E]" />
             <span>Data kredit tersinkronisasi dengan The Movie Database (TMDB)</span>
           </div>
           <button

@@ -110,8 +110,8 @@ export const MentionInput: React.FC<MentionInputProps> = ({
 
       {/* Floating Mention Autocomplete Suggestions Dropdown */}
       {showSuggestions && matchingUsers.length > 0 && (
-        <div className="absolute bottom-full left-0 mb-2 w-72 max-h-56 overflow-y-auto bg-[#181A2E] border border-[#00F0FF]/40 rounded-2xl shadow-2xl z-50 p-1.5 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-150 scrollbar-thin">
-          <div className="px-3 py-1.5 border-b border-slate-800 flex items-center justify-between text-[10px] font-bold text-[#00F0FF] uppercase tracking-wider">
+        <div className="absolute bottom-full left-0 mb-2 w-72 max-h-56 overflow-y-auto bg-[#171A1F] border border-[#FF2E7E]/40 rounded-2xl shadow-2xl z-50 p-1.5 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-150 scrollbar-thin">
+          <div className="px-3 py-1.5 border-b border-slate-800 flex items-center justify-between text-[10px] font-bold text-[#FF2E7E] uppercase tracking-wider">
             <span className="flex items-center gap-1">
               <AtSign className="w-3 h-3" /> Mention Warga Sotoy
             </span>
@@ -124,16 +124,16 @@ export const MentionInput: React.FC<MentionInputProps> = ({
                 key={u.id}
                 type="button"
                 onClick={() => selectUser(u)}
-                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-[#00F0FF]/15 transition-colors text-left group"
+                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-[#FF2E7E]/15 transition-colors text-left group"
               >
                 <img
                   src={u.avatar}
                   alt={u.name}
-                  className="w-7 h-7 rounded-lg object-cover ring-1 ring-slate-700 group-hover:ring-[#00F0FF] shrink-0"
+                  className="w-7 h-7 rounded-lg object-cover ring-1 ring-slate-700 group-hover:ring-[#FF2E7E] shrink-0"
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-1">
-                    <span className="text-xs font-bold text-white group-hover:text-[#00F0FF] truncate">
+                    <span className="text-xs font-bold text-white group-hover:text-[#FF2E7E] truncate">
                       {u.name}
                     </span>
                     <span className="text-[9px] uppercase font-bold text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded shrink-0">

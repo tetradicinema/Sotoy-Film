@@ -263,7 +263,7 @@ export const SearchPage: React.FC = () => {
         </div>
 
         {/* Search Header Banner */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#121324] via-[#1a1735] to-[#121324] border border-slate-800 p-5 sm:p-8 mb-6 shadow-2xl">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#171A1F] via-[#1a1735] to-[#171A1F] border border-slate-800 p-5 sm:p-8 mb-6 shadow-2xl">
           <div className="relative z-10 max-w-3xl">
             <h1 className="text-2xl sm:text-4xl font-black font-display text-white tracking-tight flex items-center gap-3">
               <Search className="w-7 h-7 sm:w-8 sm:h-8 text-[#FF2E7E] shrink-0" />
@@ -308,7 +308,7 @@ export const SearchPage: React.FC = () => {
                   )}
                   <button
                     type="submit"
-                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] text-white text-xs font-bold hover:brightness-110 shadow-md shadow-[#FF2E7E]/25 transition-all"
+                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-white text-xs font-bold hover:brightness-110 shadow-md shadow-[#FF2E7E]/25 transition-all"
                   >
                     Cari
                   </button>
@@ -319,7 +319,7 @@ export const SearchPage: React.FC = () => {
             {/* Trending Quick Search Chips */}
             <div className="mt-4 flex items-center gap-2 flex-wrap">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-[#FFD000]" />
+                <Sparkles className="w-3 h-3 text-[#FF2E7E]" />
                 <span>Trending:</span>
               </span>
               {TRENDING_SEARCHES.map(kw => (
@@ -356,7 +356,7 @@ export const SearchPage: React.FC = () => {
                   className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all ${
                     isActive
                       ? 'bg-[#FF2E7E] text-white shadow-lg shadow-[#FF2E7E]/20'
-                      : 'bg-[#121324] text-slate-400 hover:text-white border border-slate-800 hover:border-slate-700'
+                      : 'bg-[#171A1F] text-slate-400 hover:text-white border border-slate-800 hover:border-slate-700'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -379,10 +379,10 @@ export const SearchPage: React.FC = () => {
           <div className="space-y-6">
             {/* Recent Searches Panel */}
             {recentSearches.length > 0 && (
-              <div className="bg-[#121324] border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl">
+              <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
                   <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-[#00F0FF]" />
+                    <Clock className="w-4 h-4 text-[#FF2E7E]" />
                     <span>Pencarian Terakhir Kamu</span>
                   </h2>
                   <button
@@ -397,9 +397,9 @@ export const SearchPage: React.FC = () => {
                     <div
                       key={term}
                       onClick={() => handleSelectKeyword(term)}
-                      className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-xs sm:text-sm text-slate-200 hover:text-white transition-all cursor-pointer group shadow-sm hover:border-[#00F0FF]/40"
+                      className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-xs sm:text-sm text-slate-200 hover:text-white transition-all cursor-pointer group shadow-sm hover:border-[#FF2E7E]/40"
                     >
-                      <Clock className="w-3.5 h-3.5 text-slate-500 group-hover:text-[#00F0FF] transition-colors shrink-0" />
+                      <Clock className="w-3.5 h-3.5 text-slate-500 group-hover:text-[#FF2E7E] transition-colors shrink-0" />
                       <span className="font-medium">{term}</span>
                       <button
                         type="button"
@@ -416,16 +416,16 @@ export const SearchPage: React.FC = () => {
             )}
 
             {/* Quick Browse Categories Shortcuts */}
-            <div className="bg-[#121324] border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl">
+            <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl">
               <h2 className="text-sm sm:text-base font-bold text-white mb-4 flex items-center gap-2">
-                <Film className="w-4 h-4 text-[#FFD000]" />
+                <Film className="w-4 h-4 text-[#FF2E7E]" />
                 <span>Jelajahi Berdasarkan Kategori</span>
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
-                  { name: 'Film Database', desc: 'Arsip rating & ulasan', view: 'film-database', icon: Film, color: 'text-[#FFD000]' },
+                  { name: 'Film Database', desc: 'Arsip rating & ulasan', view: 'film-database', icon: Film, color: 'text-[#FF2E7E]' },
                   { name: 'Rekomendasi Film', desc: 'Pilihan kurasi redaksi', view: 'film-recommendations', icon: Sparkles, color: 'text-[#FF2E7E]' },
-                  { name: 'Buzz Komunitas', desc: 'Thread & obrolan pop-culture', view: 'community-feed', icon: MessageSquare, color: 'text-[#00F0FF]' },
+                  { name: 'Buzz Komunitas', desc: 'Thread & obrolan pop-culture', view: 'community-feed', icon: MessageSquare, color: 'text-[#FF2E7E]' },
                   { name: 'Daftar Kritikus', desc: 'Gabung dewan penilai', view: 'critic-submission', icon: Star, color: 'text-amber-400' },
                 ].map(item => {
                   const Icon = item.icon;
@@ -453,7 +453,7 @@ export const SearchPage: React.FC = () => {
           <div className="space-y-8">
             {totalResults === 0 ? (
               /* No Results State */
-              <div className="text-center py-16 px-4 bg-[#121324] border border-slate-800 rounded-3xl shadow-xl">
+              <div className="text-center py-16 px-4 bg-[#171A1F] border border-slate-800 rounded-3xl shadow-xl">
                 <div className="w-16 h-16 rounded-3xl bg-slate-900 border border-slate-700 flex items-center justify-center mx-auto mb-4 text-slate-500">
                   <Search className="w-8 h-8 text-slate-400" />
                 </div>
@@ -483,13 +483,13 @@ export const SearchPage: React.FC = () => {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                       <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                        <Film className="w-5 h-5 text-[#FFD000]" />
+                        <Film className="w-5 h-5 text-[#FF2E7E]" />
                         <span>Film Terkait ({matchingFilms.length})</span>
                       </h2>
                       {activeTab === 'all' && matchingFilms.length > 3 && (
                         <button
                           onClick={() => setActiveTab('film')}
-                          className="text-xs text-[#FFD000] hover:underline font-bold"
+                          className="text-xs text-[#FF2E7E] hover:underline font-bold"
                         >
                           Lihat Semua Film ({matchingFilms.length}) →
                         </button>
@@ -501,7 +501,7 @@ export const SearchPage: React.FC = () => {
                         <div
                           key={film.id}
                           onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                          className="group bg-[#121324] hover:bg-slate-850 border border-slate-800 hover:border-[#FFD000]/50 rounded-2xl p-3 sm:p-4 flex gap-3.5 cursor-pointer transition-all shadow-md hover:shadow-xl"
+                          className="group bg-[#171A1F] hover:bg-slate-850 border border-slate-800 hover:border-[#FF2E7E]/50 rounded-2xl p-3 sm:p-4 flex gap-3.5 cursor-pointer transition-all shadow-md hover:shadow-xl"
                         >
                           <img
                             src={film.poster}
@@ -512,13 +512,13 @@ export const SearchPage: React.FC = () => {
                             <div>
                               <div className="flex items-center justify-between gap-1">
                                 <span className="text-[11px] font-bold text-slate-400">{film.year}</span>
-                                <div className="flex items-center gap-1 bg-[#00F0FF]/15 text-[#00F0FF] border border-[#00F0FF]/30 px-2 py-0.5 rounded-md font-mono text-xs font-black">
+                                <div className="flex items-center gap-1 bg-[#FF2E7E]/15 text-[#FF2E7E] border border-[#FF2E7E]/30 px-2 py-0.5 rounded-md font-mono text-xs font-black">
                                   <Star className="w-3 h-3 fill-current" />
                                   <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
                                   <span className="text-[9px] text-slate-300 font-bold">Critics</span>
                                 </div>
                               </div>
-                              <h3 className="font-bold text-sm sm:text-base text-white group-hover:text-[#FFD000] transition-colors line-clamp-2 mt-1">
+                              <h3 className="font-bold text-sm sm:text-base text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-2 mt-1">
                                 {film.title}
                               </h3>
                               <p className="text-xs text-slate-400 mt-1 line-clamp-1">
@@ -566,7 +566,7 @@ export const SearchPage: React.FC = () => {
                         <div
                           key={art.id}
                           onClick={() => navigateTo('article-detail', { articleId: art.id })}
-                          className="group bg-[#121324] hover:bg-slate-850 border border-slate-800 hover:border-[#FF2E7E]/50 rounded-2xl p-4 flex gap-4 cursor-pointer transition-all shadow-md hover:shadow-xl"
+                          className="group bg-[#171A1F] hover:bg-slate-850 border border-slate-800 hover:border-[#FF2E7E]/50 rounded-2xl p-4 flex gap-4 cursor-pointer transition-all shadow-md hover:shadow-xl"
                         >
                           <img
                             src={art.coverImage}
@@ -605,13 +605,13 @@ export const SearchPage: React.FC = () => {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                       <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                        <MessageSquare className="w-5 h-5 text-[#00F0FF]" />
+                        <MessageSquare className="w-5 h-5 text-[#FF2E7E]" />
                         <span>Diskusi Buzz Terkait ({matchingBuzz.length})</span>
                       </h2>
                       {activeTab === 'all' && matchingBuzz.length > 3 && (
                         <button
                           onClick={() => setActiveTab('buzz')}
-                          className="text-xs text-[#00F0FF] hover:underline font-bold"
+                          className="text-xs text-[#FF2E7E] hover:underline font-bold"
                         >
                           Lihat Semua Buzz ({matchingBuzz.length}) →
                         </button>
@@ -623,7 +623,7 @@ export const SearchPage: React.FC = () => {
                         <div
                           key={buzz.id}
                           onClick={() => navigateTo('buzz-detail', { buzzId: buzz.id })}
-                          className="group bg-[#121324] hover:bg-slate-850 border border-slate-800 hover:border-[#00F0FF]/50 rounded-2xl p-4 cursor-pointer transition-all shadow-md"
+                          className="group bg-[#171A1F] hover:bg-slate-850 border border-slate-800 hover:border-[#FF2E7E]/50 rounded-2xl p-4 cursor-pointer transition-all shadow-md"
                         >
                           <div className="flex items-start gap-3">
                             <img
@@ -633,7 +633,7 @@ export const SearchPage: React.FC = () => {
                             />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <span className="font-bold text-sm text-white group-hover:text-[#00F0FF] transition-colors">
+                                <span className="font-bold text-sm text-white group-hover:text-[#FF2E7E] transition-colors">
                                   {buzz.author.name}
                                 </span>
                                 <span className="text-xs text-slate-400">@{buzz.author.handle}</span>
@@ -647,10 +647,10 @@ export const SearchPage: React.FC = () => {
                               {/* Tagged Film if any */}
                               {buzz.taggedFilm && (
                                 <div className="mt-2.5 inline-flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 px-2.5 py-1 rounded-lg text-xs">
-                                  <Film className="w-3.5 h-3.5 text-[#FFD000]" />
+                                  <Film className="w-3.5 h-3.5 text-[#FF2E7E]" />
                                   <span className="font-semibold text-slate-200">{buzz.taggedFilm.title}</span>
                                   {buzz.taggedFilm.skorSotoy !== undefined && (
-                                    <span className="text-[#FFD000] font-mono font-bold">
+                                    <span className="text-[#FF2E7E] font-mono font-bold">
                                       ★ {buzz.taggedFilm.skorSotoy.toFixed(1)}
                                     </span>
                                   )}
@@ -692,7 +692,7 @@ export const SearchPage: React.FC = () => {
                         return (
                           <div
                             key={user.id}
-                            className="bg-[#121324] border border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-md"
+                            className="bg-[#171A1F] border border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-md"
                           >
                             <div
                               onClick={() => navigateTo('user-profile', { userId: user.id })}

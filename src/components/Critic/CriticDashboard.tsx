@@ -165,14 +165,14 @@ export const CriticDashboard: React.FC = () => {
           <AlertTriangle className="w-10 h-10" />
         </div>
         <div className="space-y-2">
-          <h2 className="text-2xl font-black text-white">Akses Ditolak</h2>
+          <h2 className="text-2xl font-black text-white">Access Denied</h2>
           <p className="text-slate-400 max-w-md">
             Maaf, halaman ini hanya tersedia untuk pengguna dengan peran <strong>Si Paling Sotoy</strong> atau Admin.
           </p>
         </div>
         <button
           onClick={() => navigateTo('home')}
-          className="px-6 py-3 rounded-2xl bg-[#FF2E7E] text-white font-bold hover:brightness-110 transition-all"
+          className="px-6 py-3 rounded-2xl bg-[#FF2E7E] text-white font-bold hover:bg-[#e0266e] transition-all shadow-sm active:scale-[0.98]"
         >
           Kembali ke Beranda
         </button>
@@ -181,13 +181,12 @@ export const CriticDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0B10] text-slate-100 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#0E1013] text-slate-100 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-8 pb-20 lg:pb-8">
         
         {/* Header & Critic Profile Banner */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1A1C2E] via-[#121320] to-[#0D0E15] border border-cyan-500/30 p-6 sm:p-8 shadow-2xl shadow-cyan-950/20">
-          <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-gradient-to-br from-cyan-500/15 to-transparent rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-1/3 -mb-12 w-48 h-48 bg-gradient-to-tr from-[#FF2E7E]/10 to-transparent rounded-full blur-2xl pointer-events-none" />
+        <div className="relative overflow-hidden rounded-3xl bg-[#171A1F] border border-white/10 p-6 sm:p-8 shadow-xl">
+          <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-[#FF2E7E]/5 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex items-start sm:items-center gap-4 sm:gap-5">
@@ -195,20 +194,20 @@ export const CriticDashboard: React.FC = () => {
                 <img
                   src={currentUser.avatar}
                   alt={currentUser.name}
-                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover ring-2 ring-cyan-500 shadow-xl shadow-cyan-500/20"
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover ring-2 ring-white/10 shadow-sm"
                 />
-                <span className="absolute -bottom-1 -right-1 bg-gradient-to-r from-cyan-500 to-blue-600 p-1.5 rounded-xl text-white shadow-md">
+                <span className="absolute -bottom-1 -right-1 bg-[#FF2E7E] p-1.5 rounded-xl text-white shadow-sm">
                   <Award className="w-3.5 h-3.5" />
                 </span>
               </div>
 
               <div>
                 <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-cyan-500/20 border border-cyan-500/40 text-cyan-400 shadow-sm">
-                    <Sparkles className="w-3 h-3" />
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-white/[0.06] border border-white/10 text-white shadow-sm">
+                    <Sparkles className="w-3 h-3 text-[#FF2E7E]" />
                     Si Paling Sotoy
                   </span>
-                  <span className="text-[11px] font-mono text-slate-400 bg-slate-800/80 px-2.5 py-0.5 rounded-md border border-slate-700">
+                  <span className="text-[11px] font-mono text-slate-400 bg-white/[0.04] px-2.5 py-0.5 rounded-md border border-white/10">
                     UID: {currentUser.id}
                   </span>
                 </div>
@@ -226,15 +225,15 @@ export const CriticDashboard: React.FC = () => {
 
             {/* Quick Actions & Notifications */}
             <div className="flex flex-wrap items-center gap-3 shrink-0">
-              <div className="bg-slate-900/80 p-1.5 rounded-2xl border border-slate-700/80 shadow-md">
+              <div className="bg-[#0E1013] p-1.5 rounded-2xl border border-white/10 shadow-sm">
                 <NotificationBell mode="critic" />
               </div>
 
               <button
                 onClick={handleDownloadReport}
-                className="px-4 py-3 rounded-2xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 font-bold text-xs sm:text-sm border border-slate-700 hover:border-slate-600 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                className="px-4 py-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] text-slate-200 font-bold text-xs sm:text-sm border border-white/10 transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
               >
-                <Download className="w-4 h-4 text-cyan-400" />
+                <Download className="w-4 h-4 text-slate-300" />
                 <span className="hidden sm:inline">Laporan PDF</span>
               </button>
 
@@ -251,11 +250,11 @@ export const CriticDashboard: React.FC = () => {
 
         {/* Critic Stats Summary */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          <div className="p-5 sm:p-6 rounded-2xl bg-[#121324] border border-slate-800 hover:border-cyan-500/40 transition-all shadow-lg group">
+          <div className="p-5 sm:p-6 rounded-2xl bg-[#171A1F] border border-white/10 hover:border-[#FF2E7E]/40 transition-all shadow-lg group">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider group-hover:text-cyan-400 transition-colors">Total Ulasan</span>
-              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-                <Star className="w-5 h-5 fill-cyan-400/20" />
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider group-hover:text-[#FF2E7E] transition-colors">Total Ulasan</span>
+              <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-[#FF2E7E]">
+                <Star className="w-5 h-5 fill-current" />
               </div>
             </div>
             <div className="mt-4 flex items-baseline gap-2">
@@ -268,10 +267,10 @@ export const CriticDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-5 sm:p-6 rounded-2xl bg-[#121324] border border-slate-800 hover:border-amber-500/40 transition-all shadow-lg group">
+          <div className="p-5 sm:p-6 rounded-2xl bg-[#171A1F] border border-white/10 hover:border-[#FF2E7E]/40 transition-all shadow-lg group">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider group-hover:text-amber-400 transition-colors">Rata-rata Skor</span>
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider group-hover:text-[#FF2E7E] transition-colors">Rata-rata Skor</span>
+              <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-[#FF2E7E]">
                 <Flame className="w-5 h-5" />
               </div>
             </div>
@@ -280,16 +279,16 @@ export const CriticDashboard: React.FC = () => {
               <span className="text-xs text-slate-400 font-semibold">/ 10.0</span>
             </div>
             <div className="mt-2 text-[11px] text-slate-500 flex items-center gap-1">
-              <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+              <Star className="w-3.5 h-3.5 text-[#FF2E7E] fill-current" />
               <span>Kualitas penilaian kritikus</span>
             </div>
           </div>
 
-          <div className="p-5 sm:p-6 rounded-2xl bg-[#121324] border border-slate-800 hover:border-rose-500/40 transition-all shadow-lg group">
+          <div className="p-5 sm:p-6 rounded-2xl bg-[#171A1F] border border-white/10 hover:border-[#FF2E7E]/40 transition-all shadow-lg group">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider group-hover:text-rose-400 transition-colors">Apresiasi (Likes)</span>
-              <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400">
-                <Heart className="w-5 h-5 fill-rose-400/20" />
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider group-hover:text-[#FF2E7E] transition-colors">Apresiasi (Likes)</span>
+              <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-[#FF2E7E]">
+                <Heart className="w-5 h-5 fill-current" />
               </div>
             </div>
             <div className="mt-4 flex items-baseline gap-2">
@@ -297,15 +296,15 @@ export const CriticDashboard: React.FC = () => {
               <span className="text-xs text-slate-400 font-semibold">suka</span>
             </div>
             <div className="mt-2 text-[11px] text-slate-500 flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5 text-rose-400" />
+              <Sparkles className="w-3.5 h-3.5 text-[#FF2E7E]" />
               <span>Dukungan dari komunitas</span>
             </div>
           </div>
 
-          <div className="p-5 sm:p-6 rounded-2xl bg-[#121324] border border-slate-800 hover:border-blue-500/40 transition-all shadow-lg group">
+          <div className="p-5 sm:p-6 rounded-2xl bg-[#171A1F] border border-white/10 hover:border-[#FF2E7E]/40 transition-all shadow-lg group">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider group-hover:text-blue-400 transition-colors">Engagement</span>
-              <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider group-hover:text-[#FF2E7E] transition-colors">Engagement</span>
+              <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-[#FF2E7E]">
                 <MessageSquare className="w-5 h-5" />
               </div>
             </div>
@@ -314,25 +313,25 @@ export const CriticDashboard: React.FC = () => {
               <span className="text-xs text-slate-400 font-semibold">komentar</span>
             </div>
             <div className="mt-2 text-[11px] text-slate-500 flex items-center gap-1">
-              <Eye className="w-3.5 h-3.5 text-blue-400" />
+              <Eye className="w-3.5 h-3.5 text-slate-400" />
               <span>{stats.totalViews.toLocaleString('id-ID')} total tayangan</span>
             </div>
           </div>
         </div>
 
         {/* Analytics Chart */}
-        <div className="p-6 rounded-3xl bg-[#121324] border border-slate-800 shadow-xl space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+        <div className="p-6 rounded-3xl bg-[#171A1F] border border-white/10 shadow-xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
             <div>
               <h2 className="text-base sm:text-lg font-black text-white tracking-tight flex items-center gap-2.5">
-                <BarChart3 className="w-5 h-5 text-cyan-400" />
+                <BarChart3 className="w-5 h-5 text-[#FF2E7E]" />
                 <span>Statistik Jangkauan Ulasan (30 Hari)</span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
                 Volume pembaca harian untuk seluruh kurasi dan ulasan film Anda.
               </p>
             </div>
-            <div className="flex items-center gap-2 text-xs font-bold text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1.5 rounded-xl self-start sm:self-auto">
+            <div className="flex items-center gap-2 text-xs font-bold text-[#FF2E7E] bg-[#FF2E7E]/10 border border-[#FF2E7E]/20 px-3 py-1.5 rounded-xl self-start sm:self-auto">
               <TrendingUp className="w-4 h-4" />
               <span>Performa Stabil</span>
             </div>
@@ -379,13 +378,13 @@ export const CriticDashboard: React.FC = () => {
         </div>
 
         {/* Review Management List */}
-        <div className="rounded-3xl bg-[#121324] border border-slate-800 p-6 sm:p-8 shadow-xl space-y-6">
+        <div className="rounded-3xl bg-[#171A1F] border border-white/10 p-6 sm:p-8 shadow-xl space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2.5">
-                <LayoutDashboard className="w-5 h-5 text-cyan-400" />
+                <LayoutDashboard className="w-5 h-5 text-[#FF2E7E]" />
                 Manajemen Ulasan & Kritik
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-white/[0.06] text-slate-300 border border-white/10">
                   {criticRatings.length} Total
                 </span>
               </h2>
@@ -402,19 +401,19 @@ export const CriticDashboard: React.FC = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Cari ulasan film..."
-                  className="w-full pl-9 pr-3 py-2 bg-[#0A0B10] border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+                  className="w-full pl-9 pr-3 py-2 bg-[#0E1013] border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
                 />
               </div>
 
               <select
                 value={selectedFilmType}
                 onChange={(e) => setSelectedFilmType(e.target.value as any)}
-                className="bg-[#0A0B10] border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-cyan-500 cursor-pointer"
+                className="bg-[#0E1013] border border-white/10 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-[#FF2E7E] cursor-pointer"
               >
-                <option value="all">Semua Tipe</option>
-                <option value="movie">Movie</option>
-                <option value="series">Series</option>
-                <option value="anime">Anime</option>
+                <option value="all" className="bg-[#171A1F]">Semua Tipe</option>
+                <option value="movie" className="bg-[#171A1F]">Movie</option>
+                <option value="series" className="bg-[#171A1F]">Series</option>
+                <option value="anime" className="bg-[#171A1F]">Anime</option>
               </select>
 
               <select
@@ -564,7 +563,7 @@ export const CriticDashboard: React.FC = () => {
       {/* Delete Confirmation Modal */}
       {ratingToDelete && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-[#121324] border border-slate-700 rounded-3xl p-6 shadow-2xl space-y-5">
+          <div className="w-full max-w-md bg-[#171A1F] border border-white/10 rounded-3xl p-6 shadow-2xl space-y-5">
             <div className="flex items-center gap-3 text-rose-400">
               <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-6 h-6 text-rose-400" />
@@ -575,7 +574,7 @@ export const CriticDashboard: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-3.5 bg-slate-900/80 rounded-2xl border border-slate-800">
+            <div className="p-3.5 bg-[#0E1013] rounded-2xl border border-white/10">
               <div className="text-xs font-bold text-white line-clamp-1">
                 {ratingToDelete.filmId}
               </div>
@@ -588,7 +587,7 @@ export const CriticDashboard: React.FC = () => {
               <button
                 onClick={() => setRatingToDelete(null)}
                 disabled={isDeleting}
-                className="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                className="px-4 py-2.5 rounded-xl bg-white/[0.06] text-slate-300 hover:bg-white/[0.12] text-xs font-bold transition-colors cursor-pointer"
               >
                 Batal
               </button>

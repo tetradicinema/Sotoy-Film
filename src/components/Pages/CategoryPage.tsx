@@ -62,7 +62,7 @@ export const CategoryPage: React.FC = () => {
     series: {
       title: 'Series',
       subtitle: 'Dunia serial televisi prestisius, drama streaming HBO, Netflix, Disney+, dan serial terbatas.',
-      accentColor: '#00F0FF',
+      accentColor: '#FF2E7E',
       icon: Tv,
       allSubCategories: [
         { id: 'news', label: 'News' },
@@ -73,7 +73,7 @@ export const CategoryPage: React.FC = () => {
     anime: {
       title: 'Anime',
       subtitle: 'Kabar rilisan sakuga, manga adaptasi, anime musiman, dan film animasi layar lebar Jepang.',
-      accentColor: '#FFD000',
+      accentColor: '#FF2E7E',
       icon: Sparkles,
       allSubCategories: [
         { id: 'news', label: 'News' },
@@ -93,7 +93,7 @@ export const CategoryPage: React.FC = () => {
     'film-studies': {
       title: 'Film Studies',
       subtitle: 'Pusat edukasi & keahlian filmmaking: Producing, Directing, Sinematografi, Tata Cahaya, dan Post-Production.',
-      accentColor: '#7928CA',
+      accentColor: '#FF2E7E',
       icon: BookOpen,
       allSubCategories: [
         { id: 'producing', label: 'Producing' },
@@ -151,73 +151,62 @@ export const CategoryPage: React.FC = () => {
         {/* Category Hero Banner */}
         <div
           id="category-header-banner"
-          className="relative rounded-3xl p-6 sm:p-10 overflow-hidden border border-slate-800 shadow-2xl bg-[#121324]"
+          className="relative rounded-3xl p-6 sm:p-10 overflow-hidden border border-slate-800 shadow-2xl bg-[#171A1F] flex flex-col items-start gap-5"
         >
           <div
             className="absolute -right-16 -top-16 w-80 h-80 rounded-full blur-3xl opacity-20 pointer-events-none"
             style={{ backgroundColor: meta.accentColor }}
           />
 
-          <div className="relative z-10 max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider mb-4 border"
-              style={{
-                backgroundColor: `${meta.accentColor}15`,
-                borderColor: `${meta.accentColor}40`,
-                color: meta.accentColor,
-              }}
-            >
-              <Icon className="w-4 h-4" />
-              <span>Kategori Resmi</span>
-            </div>
-
+          <div className="max-w-3xl relative z-10">
             <h1 className="font-display font-black text-3xl sm:text-5xl text-white tracking-tight mb-3">
               {meta.title}
             </h1>
-            <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
+            <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
               {meta.subtitle}
             </p>
+          </div>
 
-            {/* Subcategories Filter Pills */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <button
-                id="cat-subcat-all"
-                onClick={() => navigateTo('category', { category: currentCategory, subCategory: null })}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                  !activeSubCategory
-                    ? 'bg-white text-slate-950 shadow-md font-black'
-                    : 'bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800'
-                }`}
-              >
-                Semua ({publishedArticles.filter(a => a.category === currentCategory).length})
-              </button>
+          {/* Subcategories Filter Pills */}
+          <div className="flex items-center gap-2 flex-wrap relative z-10">
+            <button
+              id="cat-subcat-all"
+              onClick={() => navigateTo('category', { category: currentCategory, subCategory: null })}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                !activeSubCategory
+                  ? 'bg-white text-slate-950 shadow-md font-black'
+                  : 'bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800'
+              }`}
+            >
+              Semua ({publishedArticles.filter(a => a.category === currentCategory).length})
+            </button>
 
-              {meta.allSubCategories.map(sub => {
-                const isCurrent = activeSubCategory === sub.id;
-                const count = publishedArticles.filter(
-                  a => a.category === currentCategory && a.subCategory === sub.id
-                ).length;
+            {meta.allSubCategories.map(sub => {
+              const isCurrent = activeSubCategory === sub.id;
+              const count = publishedArticles.filter(
+                a => a.category === currentCategory && a.subCategory === sub.id
+              ).length;
 
-                return (
-                  <button
-                    key={sub.id}
-                    id={`cat-subcat-${sub.id}`}
-                    onClick={() => navigateTo('category', { category: currentCategory, subCategory: sub.id })}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                      isCurrent
-                        ? 'text-white shadow-md'
-                        : 'bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800'
-                    }`}
-                    style={{
-                      backgroundColor: isCurrent ? meta.accentColor : undefined,
-                      color: isCurrent && meta.accentColor === '#FFD000' ? '#0f172a' : undefined,
-                    }}
-                  >
-                    <span>{sub.label}</span>
-                    <span className="opacity-70 text-[10px]">({count})</span>
-                  </button>
-                );
-              })}
-            </div>
+              return (
+                <button
+                  key={sub.id}
+                  id={`cat-subcat-${sub.id}`}
+                  onClick={() => navigateTo('category', { category: currentCategory, subCategory: sub.id })}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    isCurrent
+                      ? 'text-white shadow-md'
+                      : 'bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                  style={{
+                    backgroundColor: isCurrent ? meta.accentColor : undefined,
+                    color: isCurrent && meta.accentColor === '#FF2E7E' ? '#0f172a' : undefined,
+                  }}
+                >
+                  <span>{sub.label}</span>
+                  <span className="opacity-70 text-[10px]">({count})</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -228,7 +217,7 @@ export const CategoryPage: React.FC = () => {
         {isLoadingArticles && publishedArticles.length === 0 ? (
           <ArticleListSkeleton count={6} showHeroBanner={false} />
         ) : filteredArticles.length === 0 ? (
-          <div className="text-center py-16 bg-[#121324] rounded-3xl border border-slate-800">
+          <div className="text-center py-16 bg-[#171A1F] rounded-3xl border border-slate-800">
             <p className="text-slate-400 text-sm">Belum ada artikel untuk sub-kategori ini saat ini.</p>
           </div>
         ) : (
@@ -238,7 +227,7 @@ export const CategoryPage: React.FC = () => {
                 key={article.id}
                 id={`category-article-${article.id}`}
                 onClick={() => navigateTo('article-detail', { articleId: article.id })}
-                className="bg-[#121324] border border-slate-800 rounded-3xl overflow-hidden hover:border-[#00F0FF]/60 transition-all duration-300 flex flex-col cursor-pointer group shadow-lg"
+                className="bg-[#171A1F] border border-slate-800 rounded-3xl overflow-hidden hover:border-[#FF2E7E]/60 transition-all duration-300 flex flex-col cursor-pointer group shadow-lg"
               >
                 <div className="relative h-48 w-full overflow-hidden">
                   <img
@@ -246,7 +235,7 @@ export const CategoryPage: React.FC = () => {
                     alt={article.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#121324] via-transparent to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent" />
                   <span className="absolute top-3 left-3 bg-[#FF2E7E] text-white text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
                     {article.subCategory}
                   </span>
@@ -263,7 +252,7 @@ export const CategoryPage: React.FC = () => {
                       <span>{article.readTime}</span>
                     </div>
 
-                    <h3 className="font-display font-bold text-base sm:text-lg text-white group-hover:text-[#00F0FF] transition-colors leading-snug mb-2 line-clamp-2">
+                    <h3 className="font-display font-bold text-base sm:text-lg text-white group-hover:text-[#FF2E7E] transition-colors leading-snug mb-2 line-clamp-2">
                       {article.title}
                     </h3>
                     <p className="text-slate-400 text-xs line-clamp-2 mb-4 leading-relaxed">
@@ -276,7 +265,7 @@ export const CategoryPage: React.FC = () => {
                       <MessageCircle className="w-3.5 h-3.5" />
                       {article.commentsCount} komentar
                     </span>
-                    <span className="text-[#00F0FF] font-bold group-hover:translate-x-1 transition-transform">
+                    <span className="text-[#FF2E7E] font-bold group-hover:translate-x-1 transition-transform">
                       Selengkapnya →
                     </span>
                   </div>

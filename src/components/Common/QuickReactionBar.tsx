@@ -22,9 +22,9 @@ const REACTION_CONFIG: {
     type: 'heart',
     emoji: '❤️',
     label: 'Suka',
-    activeBg: 'bg-rose-500/20',
-    activeBorder: 'border-rose-500/50',
-    activeText: 'text-rose-300 font-bold',
+    activeBg: 'bg-[#FF2E7E]/15',
+    activeBorder: 'border-[#FF2E7E]/40',
+    activeText: 'text-[#FF2E7E] font-semibold',
   },
 ];
 

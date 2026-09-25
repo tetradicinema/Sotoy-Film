@@ -64,7 +64,7 @@ export const AdminDashboard: React.FC = () => {
         <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto text-red-400">
           <ShieldCheck className="w-8 h-8" />
         </div>
-        <h2 className="font-display font-black text-2xl text-white">Akses Admin Terbatas</h2>
+        <h2 className="font-display font-black text-2xl text-white">Restricted Admin Access</h2>
         <p className="text-slate-400 text-sm max-w-md mx-auto leading-relaxed">
           Halaman Dasbor Admin hanya diperuntukkan bagi Administrator Utama. Sebagai Penulis, Anda dapat mengelola artikel dan karya Anda melalui Dasbor Penulis.
         </p>
@@ -91,19 +91,16 @@ export const AdminDashboard: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-in fade-in duration-300">
       
-      {/* 1. TAMPILAN KHUSUS ADMIN (ADMIN VIEW OVERRIDE HEADER WITH #7928CA PURPLE) */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-[#170e2b] via-[#121324] to-[#1a0f2e] border-2 border-[#7928CA]/60 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-purple-950/40">
-        {/* Glow ambient effects */}
-        <div className="absolute top-0 right-1/4 w-80 h-80 bg-[#7928CA]/15 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-10 -left-10 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+      {/* 1. TAMPILAN KHUSUS ADMIN (ADMIN VIEW OVERRIDE HEADER) */}
+      <div className="relative overflow-hidden bg-[#171A1F] border border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl">
+        {/* Subtle background glow */}
+        <div className="absolute top-0 right-1/4 w-80 h-80 bg-[#FF2E7E]/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           {/* Title & Badge */}
           <div className="flex items-start sm:items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#7928CA] to-[#A855F7] p-0.5 shadow-xl shadow-purple-600/30 shrink-0">
-              <div className="w-full h-full bg-[#110e1d] rounded-[14px] flex items-center justify-center">
-                <ShieldCheck className="w-8 h-8 text-[#C48BFF] animate-pulse" />
-              </div>
+            <div className="w-16 h-16 rounded-2xl bg-[#0E1013] border border-white/10 p-0.5 shrink-0 flex items-center justify-center">
+              <ShieldCheck className="w-8 h-8 text-[#FF2E7E]" />
             </div>
 
             <div>
@@ -112,14 +109,14 @@ export const AdminDashboard: React.FC = () => {
                   Sotoy Admin Control Center
                 </h1>
 
-                {/* VISUAL INDICATOR "ADMIN MODE" (Ungu #7928CA) */}
+                {/* VISUAL INDICATOR "ADMIN MODE" */}
                 <div 
                   id="admin-mode-pill-header"
-                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#7928CA] text-white text-xs font-black uppercase tracking-widest rounded-full shadow-lg shadow-purple-900/60 border border-purple-400/40"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#FF2E7E] text-white text-xs font-black uppercase tracking-widest rounded-full shadow-sm"
                 >
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-200"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
                   </span>
                   <span>ADMIN MODE</span>
                 </div>
@@ -132,16 +129,16 @@ export const AdminDashboard: React.FC = () => {
           </div>
 
           {/* Connected Admin Details & Public Switcher */}
-          <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end justify-between gap-4 shrink-0 bg-slate-950/40 border border-purple-500/20 p-4 rounded-2xl">
+          <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end justify-between gap-4 shrink-0 bg-[#0E1013] border border-white/10 p-4 rounded-2xl">
             <div className="text-left sm:text-right">
-              <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-purple-300">
+              <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-slate-300">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                 <span>{currentUser.role === 'admin' ? 'Admin Utama Terotentikasi' : 'Penulis / Redaksi CMS Terotentikasi'}</span>
               </div>
               <div className="text-sm font-bold text-white mt-0.5">
                 {currentUser.name} ({currentUser.email || 'Admin'})
               </div>
-              <div className="text-[10px] font-mono text-purple-400/80 mt-0.5">
+              <div className="text-[10px] font-mono text-slate-400 mt-0.5">
                 UID: {currentUser.id}
               </div>
             </div>
@@ -150,20 +147,20 @@ export const AdminDashboard: React.FC = () => {
             <Link
               to="/admin/cms"
               id="admin-open-cms-page-btn"
-              className="px-3.5 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+              className="px-3.5 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-[0.98]"
             >
-              <FileText className="w-3.5 h-3.5 text-purple-400" />
+              <FileText className="w-3.5 h-3.5 text-slate-300" />
               <span>Full Control CMS (Halaman Khusus)</span>
-              <ExternalLink className="w-3 h-3 text-purple-400" />
+              <ExternalLink className="w-3 h-3 text-slate-300" />
             </Link>
 
             {/* Quick Switch Button to Public View */}
             <Link
               to="/"
               id="admin-public-view-btn"
-              className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-750 text-slate-300 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
+              className="px-3.5 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-slate-300 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-[0.98]"
             >
-              <Eye className="w-3.5 h-3.5 text-[#00F0FF]" />
+              <Eye className="w-3.5 h-3.5 text-slate-300" />
               <span>Lihat Tampilan Publik</span>
             </Link>
           </div>
@@ -207,7 +204,7 @@ export const AdminDashboard: React.FC = () => {
       <div className="space-y-6">
         {/* Navigation Tabs Bar pointing to Standalone URLs */}
         <nav 
-          className="admin-navigation-list flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-800 scrollbar-none"
+          className="admin-navigation-list flex items-center gap-2 overflow-x-auto pb-2 border-b border-white/10 scrollbar-none"
           aria-label="Admin Navigation List"
         >
           {/* Link 0: Community Analytics */}
@@ -216,11 +213,11 @@ export const AdminDashboard: React.FC = () => {
             id="admin-tab-analytics"
             className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
               activeTab === 'analytics'
-                ? 'bg-gradient-to-r from-cyan-500/20 to-blue-600/10 text-[#00F0FF] border border-cyan-500/40 shadow-lg shadow-cyan-950/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-850 border border-transparent'
+                ? 'bg-[#FF2E7E] text-white shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
             }`}
           >
-            <BarChart3 className={`w-4 h-4 ${activeTab === 'analytics' ? 'text-[#00F0FF]' : 'text-slate-400'}`} />
+            <BarChart3 className="w-4 h-4" />
             <span>Analisis Pertumbuhan</span>
           </Link>
 
@@ -230,11 +227,11 @@ export const AdminDashboard: React.FC = () => {
             id="admin-tab-users"
             className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
               activeTab === 'users'
-                ? 'bg-gradient-to-r from-cyan-500/20 to-cyan-600/10 text-[#00F0FF] border border-cyan-500/40 shadow-lg shadow-cyan-950/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-850 border border-transparent'
+                ? 'bg-[#FF2E7E] text-white shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
             }`}
           >
-            <Users className={`w-4 h-4 ${activeTab === 'users' ? 'text-[#00F0FF]' : 'text-slate-400'}`} />
+            <Users className="w-4 h-4" />
             <span>Manajemen Pengguna & Role</span>
           </Link>
 
@@ -244,14 +241,14 @@ export const AdminDashboard: React.FC = () => {
             id="admin-tab-moderation"
             className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 relative ${
               activeTab === 'moderation'
-                ? 'bg-gradient-to-r from-red-500/20 to-red-600/10 text-red-300 border border-red-500/40 shadow-lg shadow-red-950/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-850 border border-transparent'
+                ? 'bg-[#FF2E7E] text-white shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
             }`}
           >
-            <ShieldAlert className={`w-4 h-4 ${activeTab === 'moderation' ? 'text-red-400' : 'text-slate-400'}`} />
+            <ShieldAlert className="w-4 h-4" />
             <span>Moderasi Komunitas</span>
             {pendingReportsCount > 0 && (
-              <span className="w-5 h-5 rounded-full bg-red-500 text-slate-950 font-black text-[10px] flex items-center justify-center">
+              <span className="w-5 h-5 rounded-full bg-white text-slate-950 font-black text-[10px] flex items-center justify-center">
                 {pendingReportsCount}
               </span>
             )}
@@ -263,11 +260,11 @@ export const AdminDashboard: React.FC = () => {
             id="admin-tab-catalog"
             className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
               activeTab === 'catalog'
-                ? 'bg-gradient-to-r from-amber-500/20 to-amber-600/10 text-[#FFD000] border border-amber-500/40 shadow-lg shadow-amber-950/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-850 border border-transparent'
+                ? 'bg-[#FF2E7E] text-white shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
             }`}
           >
-            <Film className={`w-4 h-4 ${activeTab === 'catalog' ? 'text-[#FFD000]' : 'text-slate-400'}`} />
+            <Film className="w-4 h-4" />
             <span>Database Film & Series</span>
           </Link>
 
@@ -277,11 +274,11 @@ export const AdminDashboard: React.FC = () => {
             id="admin-tab-storage"
             className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
               activeTab === 'storage'
-                ? 'bg-gradient-to-r from-emerald-500/20 to-emerald-600/10 text-emerald-300 border border-emerald-500/40 shadow-lg shadow-emerald-950/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-850 border border-transparent'
+                ? 'bg-[#FF2E7E] text-white shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
             }`}
           >
-            <HardDrive className={`w-4 h-4 ${activeTab === 'storage' ? 'text-emerald-400' : 'text-slate-400'}`} />
+            <HardDrive className="w-4 h-4" />
             <span>Arsip Media & Berkas</span>
           </Link>
 
@@ -291,14 +288,14 @@ export const AdminDashboard: React.FC = () => {
             id="admin-tab-appeals"
             className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 relative ${
               activeTab === 'appeals'
-                ? 'bg-gradient-to-r from-purple-500/20 to-purple-600/10 text-purple-300 border border-purple-500/40 shadow-lg shadow-purple-950/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-850 border border-transparent'
+                ? 'bg-[#FF2E7E] text-white shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
             }`}
           >
-            <ShieldCheck className={`w-4 h-4 ${activeTab === 'appeals' ? 'text-purple-400' : 'text-slate-400'}`} />
+            <ShieldCheck className="w-4 h-4" />
             <span>Banding Akun</span>
             {pendingAppealsCount > 0 && (
-              <span className="w-5 h-5 rounded-full bg-purple-500 text-slate-950 font-black text-[10px] flex items-center justify-center">
+              <span className="w-5 h-5 rounded-full bg-white text-slate-950 font-black text-[10px] flex items-center justify-center">
                 {pendingAppealsCount}
               </span>
             )}
@@ -310,11 +307,11 @@ export const AdminDashboard: React.FC = () => {
             id="admin-tab-audit"
             className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
               activeTab === 'audit'
-                ? 'bg-gradient-to-r from-indigo-500/20 to-indigo-600/10 text-indigo-300 border border-indigo-500/40 shadow-lg shadow-indigo-950/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-850 border border-transparent'
+                ? 'bg-[#FF2E7E] text-white shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
             }`}
           >
-            <ScrollText className={`w-4 h-4 ${activeTab === 'audit' ? 'text-indigo-400' : 'text-slate-400'}`} />
+            <ScrollText className="w-4 h-4" />
             <span>Audit Log Moderasi</span>
           </Link>
 
@@ -324,13 +321,13 @@ export const AdminDashboard: React.FC = () => {
             id="admin-tab-cms"
             className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
               location.pathname === '/admin/cms' || location.pathname === '/cms'
-                ? 'bg-gradient-to-r from-purple-500/20 to-purple-600/10 text-purple-300 border border-purple-500/40 shadow-lg shadow-purple-950/30'
-                : 'text-slate-400 hover:text-purple-300 hover:bg-slate-850 border border-purple-500/20'
+                ? 'bg-[#FF2E7E] text-white shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-white/10'
             }`}
           >
-            <FileText className="w-4 h-4 text-purple-400" />
+            <FileText className="w-4 h-4" />
             <span>Full Control CMS</span>
-            <ExternalLink className="w-3 h-3 text-purple-400" />
+            <ExternalLink className="w-3 h-3" />
           </Link>
 
           {/* Link 8: Critic Submissions Standalone URL */}
@@ -339,18 +336,18 @@ export const AdminDashboard: React.FC = () => {
             id="admin-tab-submissions"
             className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
               location.pathname === '/admin/submissions'
-                ? 'bg-gradient-to-r from-amber-500/20 to-amber-600/10 text-amber-300 border border-amber-500/40 shadow-lg shadow-amber-950/30'
-                : 'text-slate-400 hover:text-amber-300 hover:bg-slate-850 border border-amber-500/20'
+                ? 'bg-[#FF2E7E] text-white shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-white/10'
             }`}
           >
-            <Award className="w-4 h-4 text-amber-400" />
+            <Award className="w-4 h-4" />
             <span>Verifikasi Kritikus</span>
             {pendingCriticsCount > 0 && (
-              <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 font-black text-[10px] flex items-center justify-center">
+              <span className="w-5 h-5 rounded-full bg-white text-slate-950 font-black text-[10px] flex items-center justify-center">
                 {pendingCriticsCount}
               </span>
             )}
-            <ExternalLink className="w-3 h-3 text-amber-400" />
+            <ExternalLink className="w-3 h-3" />
           </Link>
         </nav>
 

@@ -360,15 +360,15 @@ export const UserPage: React.FC = () => {
         
         {/* Visitor Alert Banner */}
         {!isLoggedIn && (
-          <div className="bg-gradient-to-r from-blue-950/60 via-purple-950/50 to-slate-900 border border-[#00F0FF]/30 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+          <div className="bg-gradient-to-r from-blue-950/60 via-purple-950/50 to-slate-900 border border-[#FF2E7E]/30 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
             <div className="flex items-center gap-3.5">
-              <div className="w-11 h-11 rounded-2xl bg-cyan-500/20 text-[#00F0FF] flex items-center justify-center shrink-0 border border-cyan-500/30">
+              <div className="w-11 h-11 rounded-2xl bg-cyan-500/20 text-[#FF2E7E] flex items-center justify-center shrink-0 border border-cyan-500/30">
                 <Eye className="w-5 h-5" />
               </div>
               <div className="space-y-0.5 text-center sm:text-left">
                 <h4 className="text-white font-bold text-sm flex items-center justify-center sm:justify-start gap-2">
                   <span>Mode Pengunjung (Visitor Mode)</span>
-                  <span className="text-[10px] bg-cyan-500/20 text-[#00F0FF] px-2 py-0.5 rounded-full font-black uppercase">
+                  <span className="text-[10px] bg-cyan-500/20 text-[#FF2E7E] px-2 py-0.5 rounded-full font-black uppercase">
                     Publik
                   </span>
                 </h4>
@@ -379,7 +379,7 @@ export const UserPage: React.FC = () => {
             </div>
             <button
               onClick={() => setLoginModalOpen(true)}
-              className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-[#FF2E7E]/25 hover:brightness-110 active:scale-95 transition-all shrink-0 flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-[#FF2E7E]/25 hover:brightness-110 active:scale-95 transition-all shrink-0 flex items-center justify-center gap-2"
             >
               <LogIn className="w-4 h-4" />
               <span>Masuk / Buat Akun</span>
@@ -391,7 +391,7 @@ export const UserPage: React.FC = () => {
         {isLoggedIn && !isOwnProfile && (
           <div className="bg-slate-900/90 border border-slate-800 rounded-2xl px-5 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
             <div className="flex items-center gap-2.5 text-xs text-slate-300">
-              <span className="w-2 h-2 rounded-full bg-[#00F0FF] animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-[#FF2E7E] animate-pulse" />
               <span>
                 Sedang mengunjungi profil publik milik <strong className="text-white">{targetUser.name}</strong> ({targetUser.handle})
               </span>
@@ -408,9 +408,9 @@ export const UserPage: React.FC = () => {
         {/* ========================================================================= */}
         {/* USER PROFILE HEADER BANNER */}
         {/* ========================================================================= */}
-        <div className="bg-[#121324] border border-slate-800 rounded-3xl overflow-hidden shadow-2xl relative">
+        <div className="bg-[#171A1F] border border-slate-800 rounded-3xl overflow-hidden shadow-2xl relative">
           {/* Header Banner Background */}
-          <div className="h-36 sm:h-44 bg-gradient-to-r from-[#191a32] via-[#2a1b32] to-[#121324] relative overflow-hidden">
+          <div className="h-36 sm:h-44 bg-gradient-to-r from-[#191a32] via-[#2a1b32] to-[#171A1F] relative overflow-hidden">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-[#FF2E7E]/20 via-transparent to-transparent" />
             <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
               {/* Share Profile Button (IG, WA, X) */}
@@ -429,10 +429,10 @@ export const UserPage: React.FC = () => {
                     meta: `${targetUser.roleTitle} di Sotoy Film`,
                   });
                 }}
-                className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-white text-xs font-bold border border-slate-700/80 hover:border-[#00F0FF] flex items-center gap-1.5 transition-all shadow-md backdrop-blur-sm"
+                className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-white text-xs font-bold border border-slate-700/80 hover:border-[#FF2E7E] flex items-center gap-1.5 transition-all shadow-md backdrop-blur-sm"
                 title="Bagikan Profil ke Instagram Stories, Feed, atau WhatsApp"
               >
-                <Share2 className="w-3.5 h-3.5 text-[#00F0FF]" />
+                <Share2 className="w-3.5 h-3.5 text-[#FF2E7E]" />
                 <span className="hidden sm:inline">Bagikan Profil</span>
                 <span className="sm:hidden">Share</span>
               </button>
@@ -452,7 +452,7 @@ export const UserPage: React.FC = () => {
                   className={`px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-md backdrop-blur-sm ${
                     isLoggedIn && isFollowing(targetUser.id)
                       ? 'bg-slate-900/90 text-slate-300 border border-slate-700 hover:bg-red-500/20 hover:text-red-400'
-                      : 'bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] text-white hover:brightness-110'
+                      : 'bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-white hover:brightness-110'
                   }`}
                 >
                   {isLoggedIn && isFollowing(targetUser.id) ? (
@@ -514,12 +514,12 @@ export const UserPage: React.FC = () => {
                   <img
                     src={targetUser.avatar}
                     alt={targetUser.name}
-                    className="w-20 h-20 sm:w-28 sm:h-28 rounded-3xl object-cover ring-4 ring-[#121324] border-2 border-white/20 shadow-2xl bg-slate-900"
+                    className="w-20 h-20 sm:w-28 sm:h-28 rounded-3xl object-cover ring-4 ring-[#171A1F] border-2 border-white/20 shadow-2xl bg-slate-900"
                   />
                   {isOwnProfile && (
                     <button
                       onClick={() => navigateTo('settings', { settingsTab: 'profile' })}
-                      className="absolute bottom-1 right-1 p-1.5 bg-[#00F0FF] text-black font-black rounded-xl shadow-lg hover:scale-110 active:scale-95 transition-all"
+                      className="absolute bottom-1 right-1 p-1.5 bg-[#FF2E7E] text-black font-black rounded-xl shadow-lg hover:scale-110 active:scale-95 transition-all"
                       title="Ganti Foto Profil dari Perangkat di Settings"
                     >
                       <Camera className="w-3.5 h-3.5" />
@@ -545,10 +545,10 @@ export const UserPage: React.FC = () => {
                     <button
                       id="btn-dashboard-followers"
                       onClick={() => setFollowModalType('followers')}
-                      className="px-2.5 py-1 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-[#00F0FF]/50 text-xs text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors group"
+                      className="px-2.5 py-1 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-[#FF2E7E]/50 text-xs text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors group"
                       title="Lihat Pengikut"
                     >
-                      <span className="font-black text-[#00F0FF] group-hover:scale-110 transition-transform">
+                      <span className="font-black text-[#FF2E7E] group-hover:scale-110 transition-transform">
                         {targetFollowersCount}
                       </span>
                       <span className="text-slate-400 text-[11px]">Pengikut (Followers)</span>
@@ -557,10 +557,10 @@ export const UserPage: React.FC = () => {
                     <button
                       id="btn-dashboard-following"
                       onClick={() => setFollowModalType('following')}
-                      className="px-2.5 py-1 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-[#00F0FF]/50 text-xs text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors group"
+                      className="px-2.5 py-1 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-[#FF2E7E]/50 text-xs text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors group"
                       title="Lihat Akun yang Diikuti"
                     >
-                      <span className="font-black text-[#00F0FF] group-hover:scale-110 transition-transform">
+                      <span className="font-black text-[#FF2E7E] group-hover:scale-110 transition-transform">
                         {targetFollowingCount}
                       </span>
                       <span className="text-slate-400 text-[11px]">Mengikuti (Following)</span>
@@ -596,7 +596,7 @@ export const UserPage: React.FC = () => {
                   onClick={() => navigateTo('settings')}
                   className="self-end sm:self-center px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold border border-slate-700 flex items-center gap-1.5 transition-colors shrink-0"
                 >
-                  <Settings className="w-3.5 h-3.5 text-[#00F0FF]" />
+                  <Settings className="w-3.5 h-3.5 text-[#FF2E7E]" />
                   <span>Pengaturan & Privasi</span>
                 </button>
               )}
@@ -618,9 +618,9 @@ export const UserPage: React.FC = () => {
 
               <div
                 onClick={() => setActiveUserTab('reviews')}
-                className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 text-center cursor-pointer hover:border-[#FFD000] transition-colors"
+                className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 text-center cursor-pointer hover:border-[#FF2E7E] transition-colors"
               >
-                <div className="font-display font-black text-xl text-[#FFD000]">
+                <div className="font-display font-black text-xl text-[#FF2E7E]">
                   {myReviews.length}
                 </div>
                 <div className="text-[10px] uppercase font-bold text-slate-400 mt-0.5">
@@ -642,9 +642,9 @@ export const UserPage: React.FC = () => {
 
               <div
                 onClick={() => setActiveUserTab('reviews')}
-                className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 text-center cursor-pointer hover:border-[#00F0FF] transition-colors"
+                className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 text-center cursor-pointer hover:border-[#FF2E7E] transition-colors"
               >
-                <div className="font-display font-black text-xl text-[#00F0FF]">
+                <div className="font-display font-black text-xl text-[#FF2E7E]">
                   ★ {averageScore}
                 </div>
                 <div className="text-[10px] uppercase font-bold text-slate-400 mt-0.5">
@@ -680,7 +680,7 @@ export const UserPage: React.FC = () => {
               onClick={() => setActiveUserTab('replies')}
               className={`flex-1 min-w-fit px-3 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap ${
                 activeUserTab === 'replies'
-                  ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-[#00F0FF] border border-cyan-500/40 shadow-sm'
+                  ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-[#FF2E7E] border border-cyan-500/40 shadow-sm'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -694,7 +694,7 @@ export const UserPage: React.FC = () => {
               onClick={() => setActiveUserTab('reviews')}
               className={`flex-1 min-w-fit px-3 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap ${
                 activeUserTab === 'reviews'
-                  ? 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-[#FFD000] border border-amber-500/40 shadow-sm'
+                  ? 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-[#FF2E7E] border border-amber-500/40 shadow-sm'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -733,12 +733,12 @@ export const UserPage: React.FC = () => {
                 <MoreHorizontal className="w-3.5 h-3.5" />
                 <span>Lainnya</span>
                 {isSecondaryActive && (
-                  <span className="w-2 h-2 rounded-full bg-[#00F0FF] ring-2 ring-[#0D0E15]" />
+                  <span className="w-2 h-2 rounded-full bg-[#FF2E7E] ring-2 ring-[#0E1013]" />
                 )}
               </button>
 
               {moreMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-56 sm:w-60 bg-[#121324] border border-slate-700/80 rounded-2xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute right-0 top-full mt-2 w-56 sm:w-60 bg-[#171A1F] border border-slate-700/80 rounded-2xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150">
                   {/* Secondary Tab: Reposts */}
                   <button
                     id="user-tab-reposts"
@@ -818,7 +818,7 @@ export const UserPage: React.FC = () => {
         {/* TAB 1: POSTINGAN BUZZ & OPINI SINEMA (TAB UTAMA DASHBOARD) */}
         {/* ========================================================================= */}
         {activeUserTab === 'buzz' && (
-          <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
+          <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
               <div>
                 <h3 className="font-display font-black text-xl text-white flex items-center gap-2.5">
@@ -833,7 +833,7 @@ export const UserPage: React.FC = () => {
               </div>
               <button
                 onClick={() => navigateTo('community-feed')}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] text-white font-black text-xs flex items-center gap-1.5 self-start sm:self-auto"
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-white font-black text-xs flex items-center gap-1.5 self-start sm:self-auto"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>Buka Buzz Feed Komunitas</span>
@@ -872,7 +872,7 @@ export const UserPage: React.FC = () => {
                     <select
                       value={newBuzzFilmId}
                       onChange={e => setNewBuzzFilmId(e.target.value)}
-                      className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-300 focus:outline-none focus:border-[#00F0FF] max-w-[200px]"
+                      className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-300 focus:outline-none focus:border-[#FF2E7E] max-w-[200px]"
                     >
                       <option value="">Tag Film (Opsional)</option>
                       {films.map(f => (
@@ -884,7 +884,7 @@ export const UserPage: React.FC = () => {
 
                     {/* Optional score */}
                     <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-slate-400 text-xs">
-                      <Star className="w-3 h-3 text-[#FFD000] fill-current" />
+                      <Star className="w-3 h-3 text-[#FF2E7E] fill-current" />
                       <input
                         type="number"
                         min="1"
@@ -901,7 +901,7 @@ export const UserPage: React.FC = () => {
                   <button
                     type="submit"
                     disabled={!newBuzzContent.trim()}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] text-white font-bold text-xs disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-1.5 self-end sm:self-auto"
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-white font-bold text-xs disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-1.5 self-end sm:self-auto"
                   >
                     <Send className="w-3.5 h-3.5" />
                     <span>Kirim Buzz</span>
@@ -951,7 +951,7 @@ export const UserPage: React.FC = () => {
                           </div>
                         </div>
                         {buzz.skorSotoyMention && (
-                          <div className="bg-black/60 border border-[#FFD000]/40 px-2.5 py-1 rounded-xl text-[#FFD000] font-black text-xs flex items-center gap-1">
+                          <div className="bg-black/60 border border-[#FF2E7E]/40 px-2.5 py-1 rounded-xl text-[#FF2E7E] font-black text-xs flex items-center gap-1">
                             <Star className="w-3 h-3 fill-current" />
                             <span>{buzz.skorSotoyMention.toFixed(1)}</span>
                           </div>
@@ -969,7 +969,7 @@ export const UserPage: React.FC = () => {
                           onClick={() => navigateTo('film-detail', { filmId: buzz.taggedFilm!.id })}
                           className="p-2.5 rounded-xl bg-black/40 border border-slate-800 flex items-center justify-between hover:border-slate-700 cursor-pointer"
                         >
-                          <span className="text-xs font-bold text-[#00F0FF]">
+                          <span className="text-xs font-bold text-[#FF2E7E]">
                             🎬 {buzz.taggedFilm.title} ({buzz.taggedFilm.year})
                           </span>
                           <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
@@ -987,9 +987,9 @@ export const UserPage: React.FC = () => {
                         <div className="flex items-center gap-1.5 shrink-0">
                           <button
                             onClick={() => navigateTo('buzz-detail', { buzzId: buzz.id })}
-                            className="flex items-center gap-1 sm:gap-1.5 hover:text-[#00F0FF] text-slate-300 transition-colors bg-slate-900 border border-slate-800 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl font-semibold shrink-0 text-xs"
+                            className="flex items-center gap-1 sm:gap-1.5 hover:text-[#FF2E7E] text-slate-300 transition-colors bg-slate-900 border border-slate-800 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl font-semibold shrink-0 text-xs"
                           >
-                            <MessageSquare className="w-3.5 h-3.5 text-[#00F0FF]" />
+                            <MessageSquare className="w-3.5 h-3.5 text-[#FF2E7E]" />
                             <span>{buzz.repliesCount || 0} <span className="hidden xs:inline">Balasan</span></span>
                           </button>
 
@@ -1031,11 +1031,11 @@ export const UserPage: React.FC = () => {
         {/* TAB 2: REPLIES & BALASAN DISKUSI */}
         {/* ========================================================================= */}
         {activeUserTab === 'replies' && (
-          <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
+          <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
               <div>
                 <h3 className="font-display font-black text-xl text-white flex items-center gap-2.5">
-                  <CornerDownRight className="w-5 h-5 text-[#00F0FF]" />
+                  <CornerDownRight className="w-5 h-5 text-[#FF2E7E]" />
                   <span>{isOwnProfile ? 'Balasan & Komentar Saya' : `Balasan Diskusi ${targetUser.name}`}</span>
                 </h3>
                 <p className="text-slate-400 text-xs mt-1">
@@ -1048,7 +1048,7 @@ export const UserPage: React.FC = () => {
                 onClick={() => navigateTo('community-feed')}
                 className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-bold text-xs flex items-center gap-1.5 self-start sm:self-auto transition-colors"
               >
-                <MessageSquare className="w-3.5 h-3.5 text-[#00F0FF]" />
+                <MessageSquare className="w-3.5 h-3.5 text-[#FF2E7E]" />
                 <span>Jelajahi Buzz Feed</span>
               </button>
             </div>
@@ -1083,7 +1083,7 @@ export const UserPage: React.FC = () => {
                       {/* Context badge: Replying to ... */}
                       <div className="flex items-center justify-between text-xs text-slate-400 pb-2.5 border-b border-slate-800/60">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <CornerDownRight className="w-3.5 h-3.5 text-[#00F0FF] shrink-0" />
+                          <CornerDownRight className="w-3.5 h-3.5 text-[#FF2E7E] shrink-0" />
                           <span>
                             {reply.replyToUser ? (
                               <>
@@ -1137,7 +1137,7 @@ export const UserPage: React.FC = () => {
                           <span>{reply.likes || 0} Suka</span>
                         </div>
 
-                        <span className="text-slate-400 group-hover:text-[#00F0FF] transition-colors flex items-center gap-1 font-semibold text-xs">
+                        <span className="text-slate-400 group-hover:text-[#FF2E7E] transition-colors flex items-center gap-1 font-semibold text-xs">
                           <span>Lihat di Utas Lengkap</span>
                           <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                         </span>
@@ -1154,7 +1154,7 @@ export const UserPage: React.FC = () => {
         {/* TAB 3: REPOSTS */}
         {/* ========================================================================= */}
         {activeUserTab === 'reposts' && (
-          <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
+          <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
               <div>
                 <h3 className="font-display font-black text-xl text-white flex items-center gap-2.5">
@@ -1223,7 +1223,7 @@ export const UserPage: React.FC = () => {
                           </div>
                         </div>
                         {buzz.skorSotoyMention && (
-                          <div className="bg-black/60 border border-[#FFD000]/40 px-2.5 py-1 rounded-xl text-[#FFD000] font-black text-xs flex items-center gap-1">
+                          <div className="bg-black/60 border border-[#FF2E7E]/40 px-2.5 py-1 rounded-xl text-[#FF2E7E] font-black text-xs flex items-center gap-1">
                             <Star className="w-3 h-3 fill-current" />
                             <span>{buzz.skorSotoyMention.toFixed(1)}</span>
                           </div>
@@ -1241,7 +1241,7 @@ export const UserPage: React.FC = () => {
                           onClick={() => navigateTo('film-detail', { filmId: buzz.taggedFilm!.id })}
                           className="p-2.5 rounded-xl bg-black/40 border border-slate-800 flex items-center justify-between hover:border-slate-700 cursor-pointer"
                         >
-                          <span className="text-xs font-bold text-[#00F0FF]">
+                          <span className="text-xs font-bold text-[#FF2E7E]">
                             🎬 {buzz.taggedFilm.title} ({buzz.taggedFilm.year})
                           </span>
                           <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
@@ -1259,9 +1259,9 @@ export const UserPage: React.FC = () => {
                         <div className="flex items-center gap-1.5 shrink-0">
                           <button
                             onClick={() => navigateTo('buzz-detail', { buzzId: buzz.id })}
-                            className="flex items-center gap-1 sm:gap-1.5 hover:text-[#00F0FF] text-slate-300 transition-colors bg-slate-900 border border-slate-800 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl font-semibold shrink-0 text-xs"
+                            className="flex items-center gap-1 sm:gap-1.5 hover:text-[#FF2E7E] text-slate-300 transition-colors bg-slate-900 border border-slate-800 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl font-semibold shrink-0 text-xs"
                           >
-                            <MessageSquare className="w-3.5 h-3.5 text-[#00F0FF]" />
+                            <MessageSquare className="w-3.5 h-3.5 text-[#FF2E7E]" />
                             <span>{buzz.repliesCount || 0} <span className="hidden xs:inline">Balasan</span></span>
                           </button>
 
@@ -1303,7 +1303,7 @@ export const UserPage: React.FC = () => {
         {/* TAB 2: PERPUSTAKAAN SAYA (LIBRARY - FILMS & ARTICLES) */}
         {/* ========================================================================= */}
         {activeUserTab === 'watchlist' && (
-          <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
+          <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
               <div>
                 <h3 className="font-display font-black text-xl text-white flex items-center gap-2.5">
@@ -1338,7 +1338,7 @@ export const UserPage: React.FC = () => {
                   onClick={() => setLibrarySubTab('articles')}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
                     librarySubTab === 'articles'
-                      ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-[#00F0FF] border border-cyan-500/40 shadow-sm'
+                      ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-[#FF2E7E] border border-cyan-500/40 shadow-sm'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
@@ -1386,7 +1386,7 @@ export const UserPage: React.FC = () => {
                           alt={film.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
-                        <div className="absolute top-2 left-2 bg-black/80 px-2 py-0.5 rounded text-[11px] font-bold text-[#FFD000] border border-[#FFD000]/40 flex items-center gap-1">
+                        <div className="absolute top-2 left-2 bg-black/80 px-2 py-0.5 rounded text-[11px] font-bold text-[#FF2E7E] border border-[#FF2E7E]/40 flex items-center gap-1">
                           <Star className="w-3 h-3 fill-current" />
                           <span>{film.skorSotoy.toFixed(1)}</span>
                         </div>
@@ -1434,7 +1434,7 @@ export const UserPage: React.FC = () => {
 
                         <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
                           <div className="flex items-center gap-1 text-[10px] text-slate-400">
-                            <Tv className="w-3 h-3 text-[#00F0FF]" />
+                            <Tv className="w-3 h-3 text-[#FF2E7E]" />
                             <span>{film.whereToWatch[0]?.platform || 'Bioskop'}</span>
                           </div>
                           <button
@@ -1490,7 +1490,7 @@ export const UserPage: React.FC = () => {
                           alt={article.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
-                        <div className="absolute top-2 left-2 bg-black/80 px-2.5 py-1 rounded text-[10px] font-bold text-[#00F0FF] uppercase border border-[#00F0FF]/30">
+                        <div className="absolute top-2 left-2 bg-black/80 px-2.5 py-1 rounded text-[10px] font-bold text-[#FF2E7E] uppercase border border-[#FF2E7E]/30">
                           {article.category}
                         </div>
                         {isOwnProfile ? (
@@ -1512,8 +1512,8 @@ export const UserPage: React.FC = () => {
                             }}
                             className={`absolute top-2 right-2 p-1.5 rounded-lg shadow transition-colors ${
                               savedArticles.includes(article.id)
-                                ? 'bg-[#00F0FF] text-slate-950'
-                                : 'bg-black/70 hover:bg-[#00F0FF] hover:text-slate-950 text-white'
+                                ? 'bg-[#FF2E7E] text-slate-950'
+                                : 'bg-black/70 hover:bg-[#FF2E7E] hover:text-slate-950 text-white'
                             }`}
                             title={savedArticles.includes(article.id) ? 'Tersimpan di Baca Nanti' : 'Simpan ke Baca Nanti'}
                           >
@@ -1529,7 +1529,7 @@ export const UserPage: React.FC = () => {
                             <span>•</span>
                             <span>{article.readTime}</span>
                           </div>
-                          <h4 className="font-display font-black text-sm text-white group-hover:text-[#00F0FF] transition-colors line-clamp-2 leading-snug">
+                          <h4 className="font-display font-black text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-2 leading-snug">
                             {article.title}
                           </h4>
                           <p className="text-slate-400 text-xs line-clamp-2 mt-1.5">
@@ -1541,7 +1541,7 @@ export const UserPage: React.FC = () => {
                           <span className="text-[10px] text-slate-500">{article.publishedAt}</span>
                           <button
                             onClick={() => navigateTo('article-detail', { articleId: article.id })}
-                            className="text-xs font-bold text-[#00F0FF] hover:underline flex items-center gap-1"
+                            className="text-xs font-bold text-[#FF2E7E] hover:underline flex items-center gap-1"
                           >
                             <span>Baca Artikel</span>
                             <ChevronRight className="w-3 h-3" />
@@ -1560,11 +1560,11 @@ export const UserPage: React.FC = () => {
         {/* TAB 3: SKOR & ULASAN SAYA */}
         {/* ========================================================================= */}
         {activeUserTab === 'reviews' && (
-          <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
+          <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
               <div>
                 <h3 className="font-display font-black text-xl text-white flex items-center gap-2.5">
-                  <Star className="w-5 h-5 text-[#FFD000] fill-current" />
+                  <Star className="w-5 h-5 text-[#FF2E7E] fill-current" />
                   <span>{isOwnProfile ? 'Kumpulan Ulasan & Skor Sotoy Saya' : `Ulasan & Skor Sinema ${targetUser.name}`}</span>
                 </h3>
                 <p className="text-slate-400 text-xs mt-1">
@@ -1576,7 +1576,7 @@ export const UserPage: React.FC = () => {
               {isOwnProfile && (
                 <button
                   onClick={() => navigateTo('film-database')}
-                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FFD000] to-[#FF8008] text-slate-950 font-black text-xs flex items-center gap-1.5 self-start sm:self-auto"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-slate-950 font-black text-xs flex items-center gap-1.5 self-start sm:self-auto"
                 >
                   <Star className="w-3.5 h-3.5 fill-current" />
                   <span>Nilai Film Lainnya</span>
@@ -1600,7 +1600,7 @@ export const UserPage: React.FC = () => {
                 {isOwnProfile && (
                   <button
                     onClick={() => navigateTo('film-database')}
-                    className="px-5 py-2.5 rounded-xl bg-[#FFD000] text-slate-950 font-black text-xs"
+                    className="px-5 py-2.5 rounded-xl bg-[#FF2E7E] text-slate-950 font-black text-xs"
                   >
                     Beri Nilai Film Pertama
                   </button>
@@ -1627,7 +1627,7 @@ export const UserPage: React.FC = () => {
                           <div>
                             <h4
                               onClick={() => targetFilm && navigateTo('film-detail', { filmId: targetFilm.id })}
-                              className="font-display font-black text-sm text-white hover:text-[#00F0FF] cursor-pointer"
+                              className="font-display font-black text-sm text-white hover:text-[#FF2E7E] cursor-pointer"
                             >
                               {targetFilm ? targetFilm.title : 'Film Terkait'}
                             </h4>
@@ -1637,7 +1637,7 @@ export const UserPage: React.FC = () => {
                           </div>
                         </div>
 
-                        <div className="bg-black/60 border border-[#FFD000]/40 px-3 py-1.5 rounded-xl text-[#FFD000] font-black text-sm flex items-center gap-1.5 self-start sm:self-auto">
+                        <div className="bg-black/60 border border-[#FF2E7E]/40 px-3 py-1.5 rounded-xl text-[#FF2E7E] font-black text-sm flex items-center gap-1.5 self-start sm:self-auto">
                           <Star className="w-4 h-4 fill-current" />
                           <span>{rev.score.toFixed(1)}</span>
                           <span className="text-slate-500 text-xs">/ 5.0</span>
@@ -1685,14 +1685,14 @@ export const UserPage: React.FC = () => {
                             className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-[#FF2E7E]/20 text-slate-300 hover:text-white border border-slate-700 hover:border-[#FF2E7E]/40 font-bold text-xs flex items-center gap-1.5 transition-colors"
                             title="Bagikan Skor & Ulasan ke Instagram / Sosmed"
                           >
-                            <Share2 className="w-3 h-3 text-[#00F0FF]" />
+                            <Share2 className="w-3 h-3 text-[#FF2E7E]" />
                             <span>Bagikan</span>
                           </button>
 
                           {targetFilm && (
                             <button
                               onClick={() => navigateTo('film-detail', { filmId: targetFilm.id })}
-                              className="text-[#00F0FF] hover:underline flex items-center gap-1 font-bold"
+                              className="text-[#FF2E7E] hover:underline flex items-center gap-1 font-bold"
                             >
                               <span>Detail Film</span>
                               <ChevronRight className="w-3 h-3" />
@@ -1712,7 +1712,7 @@ export const UserPage: React.FC = () => {
         {/* TAB: ARTIKEL EDITORIAL DITERBITKAN */}
         {/* ========================================================================= */}
         {activeUserTab === 'articles' && (
-          <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
+          <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
               <div>
                 <h3 className="font-display font-black text-xl text-white flex items-center gap-2.5">
@@ -1733,7 +1733,7 @@ export const UserPage: React.FC = () => {
                     onClick={() => {
                       showToast('Editor artikel siap! Silakan buat draf artikel barumu.');
                     }}
-                    className="px-3.5 py-1.5 bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] text-white text-xs font-black rounded-xl hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5"
+                    className="px-3.5 py-1.5 bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-white text-xs font-black rounded-xl hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Tulis Artikel Baru</span>
@@ -1768,7 +1768,7 @@ export const UserPage: React.FC = () => {
                         alt={art.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
-                      <div className="absolute top-2.5 left-2.5 bg-black/70 backdrop-blur-sm text-[10px] uppercase font-black text-[#00F0FF] px-2.5 py-0.5 rounded-md border border-[#00F0FF]/30">
+                      <div className="absolute top-2.5 left-2.5 bg-black/70 backdrop-blur-sm text-[10px] uppercase font-black text-[#FF2E7E] px-2.5 py-0.5 rounded-md border border-[#FF2E7E]/30">
                         {art.category}
                       </div>
                       <div className="absolute bottom-2.5 right-2.5 bg-black/75 backdrop-blur-sm text-[10px] text-slate-300 font-bold px-2 py-0.5 rounded flex items-center gap-1">
@@ -1789,7 +1789,7 @@ export const UserPage: React.FC = () => {
 
                       <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
                         <span>{art.publishedAt}</span>
-                        <span className="text-[#00F0FF] font-bold group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                        <span className="text-[#FF2E7E] font-bold group-hover:translate-x-1 transition-transform flex items-center gap-1">
                           <span>Baca Artikel</span>
                           <ChevronRight className="w-3 h-3" />
                         </span>
@@ -1809,7 +1809,7 @@ export const UserPage: React.FC = () => {
           <div className="pt-2">
             <React.Suspense fallback={
               <div className="py-12 flex flex-col items-center justify-center gap-3">
-                <Loader2 className="w-8 h-8 text-[#00F0FF] animate-spin" />
+                <Loader2 className="w-8 h-8 text-[#FF2E7E] animate-spin" />
                 <p className="text-xs text-slate-400 font-bold">Memuat Dasbor Admin...</p>
               </div>
             }>
@@ -1825,10 +1825,10 @@ export const UserPage: React.FC = () => {
         {/* ========================================================================= */}
         {followModalType !== null && (
           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-            <div className="bg-[#121324] border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-[#171A1F] border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
               <div className="flex items-center justify-between pb-4 border-b border-slate-800">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-[#00F0FF]/20 text-[#00F0FF] flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-xl bg-[#FF2E7E]/20 text-[#FF2E7E] flex items-center justify-center">
                     <Users className="w-5 h-5" />
                   </div>
                   <div>
@@ -1864,7 +1864,7 @@ export const UserPage: React.FC = () => {
                   placeholder="Cari dalam daftar ini..."
                   value={modalSearchQuery}
                   onChange={e => setModalSearchQuery(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF]"
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
                 />
               </div>
 
@@ -1923,7 +1923,7 @@ export const UserPage: React.FC = () => {
                             <div className="text-[11px] text-slate-400 flex items-center gap-2">
                               <span>{u.handle}</span>
                               <span>•</span>
-                              <span className="text-[#00F0FF]">{u.roleTitle}</span>
+                              <span className="text-[#FF2E7E]">{u.roleTitle}</span>
                             </div>
                           </div>
                         </div>
@@ -1934,7 +1934,7 @@ export const UserPage: React.FC = () => {
                             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
                               following
                                 ? 'bg-slate-800 text-slate-300 border border-slate-700 hover:bg-red-500/20 hover:text-red-400'
-                                : 'bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] text-white shadow-sm hover:brightness-110 active:scale-95'
+                                : 'bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-white shadow-sm hover:brightness-110 active:scale-95'
                             }`}
                           >
                             {following ? (

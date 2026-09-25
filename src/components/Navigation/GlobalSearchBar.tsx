@@ -95,7 +95,7 @@ export const HighlightText: React.FC<{ text: string; query: string; className?: 
     <span className={className}>
       {parts.map((part, i) =>
         regex.test(part) ? (
-          <mark key={i} className="bg-[#FFD000]/30 text-[#FFD000] font-black rounded-sm px-0.5">
+          <mark key={i} className="bg-[#FF2E7E]/30 text-[#FF2E7E] font-black rounded-sm px-0.5">
             {part}
           </mark>
         ) : (
@@ -568,9 +568,9 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
           aria-expanded={isOpen}
           aria-autocomplete="list"
           aria-controls="global-search-dropdown"
-          className={`w-full bg-[#121324] border text-xs text-white placeholder-slate-400 rounded-2xl pl-9 pr-14 py-2 transition-all shadow-inner focus:outline-none ${
+          className={`w-full bg-[#171A1F] border text-xs text-white placeholder-slate-400 rounded-2xl pl-9 pr-14 py-2 transition-all shadow-inner focus:outline-none ${
             isOpen
-              ? 'border-[#FFD000] ring-2 ring-[#FFD000]/20 bg-[#16172a]'
+              ? 'border-[#FF2E7E] ring-2 ring-[#FF2E7E]/20 bg-[#171A1F]'
               : 'border-slate-800 hover:border-slate-700'
           }`}
         />
@@ -608,14 +608,14 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
       {isOpen && (
         <div
           id="global-search-dropdown"
-          className={`bg-[#0f101d] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150 ${
+          className={`bg-[#171A1F] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150 ${
             isMobile
               ? 'mt-2 w-full max-h-[75vh] flex flex-col'
               : 'absolute left-0 lg:left-auto lg:right-0 top-full mt-2 w-[340px] sm:w-[460px] md:w-[540px] lg:w-[620px] max-h-[80vh] flex flex-col'
           }`}
         >
           {/* Header Bar with Category Filters (Film, Article, Buzz, User, Semua) */}
-          <div className="p-3 bg-[#131424] border-b border-slate-800/90 space-y-2.5">
+          <div className="p-3 bg-[#171A1F] border-b border-slate-800/90 space-y-2.5">
             {/* Category Filter Scope Toggles */}
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-nowrap py-0.5">
@@ -645,7 +645,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                   onClick={() => setActiveCategory('film')}
                   className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
                     activeCategory === 'film'
-                      ? 'bg-[#FFD000] text-slate-950 shadow'
+                      ? 'bg-[#FF2E7E] text-slate-950 shadow'
                       : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                   }`}
                   title="Filter hanya Film & Series"
@@ -665,7 +665,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                   onClick={() => setActiveCategory('article')}
                   className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
                     activeCategory === 'article'
-                      ? 'bg-[#00F0FF] text-slate-950 shadow'
+                      ? 'bg-[#FF2E7E] text-slate-950 shadow'
                       : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                   }`}
                   title="Filter hanya Artikel & Berita"
@@ -734,7 +734,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
               <div className="pt-2 border-t border-slate-800/80 space-y-1.5 animate-in fade-in duration-150">
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="text-slate-400 font-bold flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-[#FFD000]" />
+                    <Sparkles className="w-3 h-3 text-[#FF2E7E]" />
                     <span>Saran Cepat Autocomplete (Firestore)</span>
                   </span>
                   {isSearchingFirestore && (
@@ -757,13 +757,13 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                           navigateTo('article-detail', { articleId: sugg.id });
                         }
                       }}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-700/80 hover:border-[#FFD000] text-slate-200 hover:text-white text-xs font-semibold transition-all group max-w-full truncate"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-700/80 hover:border-[#FF2E7E] text-slate-200 hover:text-white text-xs font-semibold transition-all group max-w-full truncate"
                       title={`Buka ${sugg.title}`}
                     >
                       {sugg.type === 'film' ? (
-                        <Film className="w-3 h-3 text-[#FFD000] shrink-0" />
+                        <Film className="w-3 h-3 text-[#FF2E7E] shrink-0" />
                       ) : (
-                        <FileText className="w-3 h-3 text-[#00F0FF] shrink-0" />
+                        <FileText className="w-3 h-3 text-[#FF2E7E] shrink-0" />
                       )}
                       <span className="truncate">{sugg.title}</span>
                       {sugg.extra && (
@@ -787,7 +787,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                 {recentSearches.length > 0 && (
                   <div id="recent-searches-block" className="space-y-2">
                     <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-wider text-slate-400">
-                      <div className="flex items-center gap-1.5 text-[#FFD000]">
+                      <div className="flex items-center gap-1.5 text-[#FF2E7E]">
                         <Clock className="w-3.5 h-3.5" />
                         <span>Pencarian Terakhir (5 Terakhir)</span>
                       </div>
@@ -809,7 +809,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                           className="flex items-center justify-between p-2 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 cursor-pointer transition-colors group"
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
-                            <Clock className="w-3.5 h-3.5 text-slate-500 group-hover:text-[#FFD000] transition-colors shrink-0" />
+                            <Clock className="w-3.5 h-3.5 text-slate-500 group-hover:text-[#FF2E7E] transition-colors shrink-0" />
                             <span className="text-xs font-medium text-slate-200 group-hover:text-white truncate">
                               {item}
                             </span>
@@ -842,7 +842,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                       <button
                         key={kw}
                         onClick={() => handleApplyKeyword(kw)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-[#FFD000] text-slate-300 hover:text-white text-xs font-semibold transition-all hover:scale-105 active:scale-95"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-[#FF2E7E] text-slate-300 hover:text-white text-xs font-semibold transition-all hover:scale-105 active:scale-95"
                       >
                         <Search className="w-3 h-3 text-slate-500" />
                         <span>{kw}</span>
@@ -863,14 +863,14 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                         onItemSelect?.();
                         navigateTo('film-database');
                       }}
-                      className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-[#FFD000] hover:bg-slate-800/50 flex items-center justify-between text-left transition-all group"
+                      className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-[#FF2E7E] hover:bg-slate-800/50 flex items-center justify-between text-left transition-all group"
                     >
                       <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-lg bg-[#FFD000]/10 text-[#FFD000] flex items-center justify-center">
+                        <div className="w-7 h-7 rounded-lg bg-[#FF2E7E]/10 text-[#FF2E7E] flex items-center justify-center">
                           <Film className="w-4 h-4" />
                         </div>
                         <div>
-                          <div className="text-xs font-bold text-white group-hover:text-[#FFD000] transition-colors">
+                          <div className="text-xs font-bold text-white group-hover:text-[#FF2E7E] transition-colors">
                             Database Film
                           </div>
                           <div className="text-[10px] text-slate-400">Katalog skor & ulasan</div>
@@ -921,14 +921,14 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                   {activeCategory !== 'all' && (
                     <button
                       onClick={() => setActiveCategory('all')}
-                      className="text-xs font-bold text-[#00F0FF] hover:underline"
+                      className="text-xs font-bold text-[#FF2E7E] hover:underline"
                     >
                       Buka Semua Kategori
                     </button>
                   )}
                   <button
                     onClick={handleClear}
-                    className="text-xs font-bold text-[#FFD000] hover:underline"
+                    className="text-xs font-bold text-[#FF2E7E] hover:underline"
                   >
                     Hapus Kata Kunci
                   </button>
@@ -941,14 +941,14 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                 {(activeCategory === 'all' || activeCategory === 'film') && matchingFilms.length > 0 && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between pb-1 border-b border-slate-800">
-                      <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-[#FFD000]">
+                      <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-[#FF2E7E]">
                         <Film className="w-3.5 h-3.5" />
                         <span>Film & Tayangan ({matchingFilms.length})</span>
                       </div>
                       {activeCategory === 'all' && matchingFilms.length > 3 && (
                         <button
                           onClick={() => setActiveCategory('film')}
-                          className="text-[11px] font-bold text-[#FFD000] hover:underline"
+                          className="text-[11px] font-bold text-[#FF2E7E] hover:underline"
                         >
                           Lihat semua film ({matchingFilms.length}) →
                         </button>
@@ -968,7 +968,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                             onClick={() => handleSelectResult({ id: `film-${film.id}`, type: 'film', data: film })}
                             className={`p-2 rounded-xl flex items-center gap-3 cursor-pointer transition-all ${
                               isSelected
-                                ? 'bg-gradient-to-r from-[#FFD000]/15 to-transparent border border-[#FFD000] shadow-md'
+                                ? 'bg-gradient-to-r from-[#FF2E7E]/15 to-transparent border border-[#FF2E7E] shadow-md'
                                 : 'bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800/80 hover:border-slate-700'
                             }`}
                           >
@@ -999,7 +999,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                               </div>
 
                               <div className="flex items-center gap-2 mt-1">
-                                <span className="text-[10px] font-medium text-[#FFD000] flex items-center gap-0.5">
+                                <span className="text-[10px] font-medium text-[#FF2E7E] flex items-center gap-0.5">
                                   <Star className="w-3 h-3 fill-current" />
                                   <span>{film.skorSotoy.toFixed(1)}</span>
                                 </span>
@@ -1021,14 +1021,14 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                 {(activeCategory === 'all' || activeCategory === 'article') && matchingArticles.length > 0 && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between pb-1 border-b border-slate-800">
-                      <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-[#00F0FF]">
+                      <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-[#FF2E7E]">
                         <FileText className="w-3.5 h-3.5" />
                         <span>Artikel & Berita ({matchingArticles.length})</span>
                       </div>
                       {activeCategory === 'all' && matchingArticles.length > 3 && (
                         <button
                           onClick={() => setActiveCategory('article')}
-                          className="text-[11px] font-bold text-[#00F0FF] hover:underline"
+                          className="text-[11px] font-bold text-[#FF2E7E] hover:underline"
                         >
                           Lihat semua artikel ({matchingArticles.length}) →
                         </button>
@@ -1048,7 +1048,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                             onClick={() => handleSelectResult({ id: `article-${art.id}`, type: 'article', data: art })}
                             className={`p-2 rounded-xl flex items-center gap-3 cursor-pointer transition-all ${
                               isSelected
-                                ? 'bg-gradient-to-r from-[#00F0FF]/15 to-transparent border border-[#00F0FF] shadow-md'
+                                ? 'bg-gradient-to-r from-[#FF2E7E]/15 to-transparent border border-[#FF2E7E] shadow-md'
                                 : 'bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800/80 hover:border-slate-700'
                             }`}
                           >
@@ -1140,7 +1140,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                                   {buzz.author.handle}
                                 </span>
                                 {buzz.taggedFilm && (
-                                  <span className="text-[9px] bg-amber-500/10 text-[#FFD000] border border-amber-500/20 px-1.5 py-0.2 rounded font-medium truncate max-w-[140px]">
+                                  <span className="text-[9px] bg-amber-500/10 text-[#FF2E7E] border border-amber-500/20 px-1.5 py-0.2 rounded font-medium truncate max-w-[140px]">
                                     🎬 {buzz.taggedFilm.title}
                                   </span>
                                 )}
@@ -1248,7 +1248,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
           </div>
 
           {/* Bottom Action Footer */}
-          <div className="p-2.5 bg-[#121324] border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+          <div className="p-2.5 bg-[#171A1F] border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1">
                 <CornerDownLeft className="w-3 h-3 text-slate-400" />
@@ -1263,7 +1263,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                   onItemSelect?.();
                   navigateTo('search', { searchQuery });
                 }}
-                className="font-bold text-[#00F0FF] hover:underline"
+                className="font-bold text-[#FF2E7E] hover:underline"
               >
                 Halaman Cari Lengkap →
               </button>
@@ -1273,7 +1273,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                   onItemSelect?.();
                   navigateTo('film-database');
                 }}
-                className="font-bold text-[#FFD000] hover:underline"
+                className="font-bold text-[#FF2E7E] hover:underline"
               >
                 Film →
               </button>

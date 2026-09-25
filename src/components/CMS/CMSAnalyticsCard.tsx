@@ -105,22 +105,18 @@ export const CMSAnalyticsCard: React.FC<CMSAnalyticsCardProps> = ({ mode }) => {
   }[timeRange];
 
   return (
-    <div className="p-6 rounded-3xl bg-gradient-to-b from-[#141527] to-[#0D0E15] border border-slate-800 shadow-2xl relative overflow-hidden space-y-6">
+    <div className="p-6 rounded-2xl bg-[#171A1F] border border-white/[0.08] relative overflow-hidden space-y-6">
       
-      {/* Background glow lines */}
-      <div className="absolute top-0 right-0 w-48 h-48 bg-pink-500/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
-
       {/* Card Header & Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.08] pb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-pink-500/10 border border-pink-500/30 flex items-center justify-center text-[#FF2E7E]">
+          <div className="w-10 h-10 rounded-xl bg-[#FF2E7E]/10 border border-[#FF2E7E]/20 flex items-center justify-center text-[#FF2E7E]">
             <Activity className="w-5 h-5" />
           </div>
           <div>
             <h3 className="text-base font-black text-white tracking-tight flex items-center gap-2">
               <span>{mode === 'writer' ? 'Analisis Kinerja Saya' : 'Ringkasan Analisis Editorial'}</span>
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-cyan-500/15 text-[#00F0FF] border border-cyan-500/25 uppercase tracking-wider">
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-white/[0.06] text-slate-300 border border-white/10 uppercase tracking-wider font-mono">
                 CMS Live
               </span>
             </h3>
@@ -131,14 +127,14 @@ export const CMSAnalyticsCard: React.FC<CMSAnalyticsCardProps> = ({ mode }) => {
         </div>
 
         {/* Time Filter Toggles */}
-        <div className="bg-slate-950 p-0.5 rounded-xl border border-slate-800 flex items-center self-start sm:self-auto">
+        <div className="bg-[#0E1013] p-0.5 rounded-xl border border-white/10 flex items-center self-start sm:self-auto">
           {(['7days', '30days', 'alltime'] as TimeRange[]).map((range) => (
             <button
               key={range}
               onClick={() => setTimeRange(range)}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all cursor-pointer ${
                 timeRange === range
-                  ? 'bg-pink-600 text-white shadow-md'
+                  ? 'bg-[#FF2E7E] text-white shadow-sm'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -152,55 +148,55 @@ export const CMSAnalyticsCard: React.FC<CMSAnalyticsCardProps> = ({ mode }) => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         
         {/* Metric 1: Total Views */}
-        <div className="p-5 rounded-2xl bg-slate-950/60 border border-slate-850 hover:border-pink-500/30 transition-all flex flex-col justify-between group">
+        <div className="p-5 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:border-white/15 transition-all flex flex-col justify-between group">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Pembaca</span>
-            <div className="w-8 h-8 rounded-lg bg-pink-500/10 flex items-center justify-center text-[#FF2E7E]">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider font-mono">Total Pembaca</span>
+            <div className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-slate-300">
               <Eye className="w-4.5 h-4.5" />
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-2xl font-black text-white tracking-tight">
+            <div className="text-2xl font-black text-white tracking-tight font-mono tabular-nums">
               {stats.totalViews.toLocaleString('id-ID')}
             </div>
-            <p className="text-[10px] text-slate-500 mt-1 flex items-center gap-1">
-              <TrendingUp className="w-3 h-3 text-emerald-400 animate-pulse" />
+            <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
+              <TrendingUp className="w-3 h-3 text-emerald-400" />
               <span>Tayangan terhitung pada {rangeLabel}</span>
             </p>
           </div>
         </div>
 
         {/* Metric 2: Unique Readers */}
-        <div className="p-5 rounded-2xl bg-slate-950/60 border border-slate-850 hover:border-cyan-500/30 transition-all flex flex-col justify-between group">
+        <div className="p-5 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:border-white/15 transition-all flex flex-col justify-between group">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pembaca Unik</span>
-            <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center text-[#00F0FF]">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider font-mono">Pembaca Unik</span>
+            <div className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-slate-300">
               <Users className="w-4.5 h-4.5" />
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-2xl font-black text-white tracking-tight">
+            <div className="text-2xl font-black text-white tracking-tight font-mono tabular-nums">
               {stats.uniqueReaders.toLocaleString('id-ID')}
             </div>
-            <p className="text-[10px] text-slate-500 mt-1">
-              Est. <strong className="text-cyan-400">82%</strong> jangkauan pembaca organik
+            <p className="text-[10px] text-slate-400 mt-1">
+              Est. <strong className="text-white font-mono tabular-nums">82%</strong> jangkauan pembaca organik
             </p>
           </div>
         </div>
 
         {/* Metric 3: Engagement Rate */}
-        <div className="p-5 rounded-2xl bg-slate-950/60 border border-slate-850 hover:border-amber-500/30 transition-all flex flex-col justify-between group">
+        <div className="p-5 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:border-white/15 transition-all flex flex-col justify-between group">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tingkat Keterlibatan</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider font-mono">Tingkat Keterlibatan</span>
+            <div className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-slate-300">
               <Sparkles className="w-4.5 h-4.5" />
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-2xl font-black text-white tracking-tight">
+            <div className="text-2xl font-black text-white tracking-tight font-mono tabular-nums">
               {stats.engagementRate}%
             </div>
-            <p className="text-[10px] text-slate-500 mt-1">
+            <p className="text-[10px] text-slate-400 mt-1">
               Rasio Likes ({stats.totalLikes}) & Komentar ({stats.totalComments})
             </p>
           </div>
@@ -210,24 +206,24 @@ export const CMSAnalyticsCard: React.FC<CMSAnalyticsCardProps> = ({ mode }) => {
 
       {/* Top Performing Showcase */}
       {stats.topArticle && (
-        <div className="p-4 rounded-2xl bg-[#121324]/80 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.08] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-[#FF2E7E]/10 border border-[#FF2E7E]/20 flex items-center justify-center text-[#FF2E7E] shrink-0">
               <Award className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-[9px] font-bold text-pink-400 uppercase tracking-wider block">
+              <span className="text-[10px] font-semibold text-[#FF2E7E] uppercase tracking-wider block font-mono">
                 Karya Berkinerja Terbaik
               </span>
               <h4 className="text-xs font-black text-white line-clamp-1 mt-0.5">
                 {stats.topArticle.title}
               </h4>
               <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400">
-                <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[9px] font-semibold">
-                  {stats.topArticle.category.toUpperCase()}
+                <span className="px-1.5 py-0.5 rounded bg-white/[0.06] text-slate-300 text-[9px] font-mono uppercase">
+                  {stats.topArticle.category}
                 </span>
                 <span>•</span>
-                <span>{(stats.topArticle.views || 0).toLocaleString('id-ID')} Tayangan</span>
+                <span className="font-mono tabular-nums">{(stats.topArticle.views || 0).toLocaleString('id-ID')} Tayangan</span>
               </div>
             </div>
           </div>
@@ -238,12 +234,12 @@ export const CMSAnalyticsCard: React.FC<CMSAnalyticsCardProps> = ({ mode }) => {
                 <img
                   src={stats.topArticle.author.avatar}
                   alt={stats.topArticle.author.name}
-                  className="w-5 h-5 rounded-full object-cover border border-slate-700"
+                  className="w-5 h-5 rounded-full object-cover border border-white/20"
                 />
-                <span className="font-semibold">{stats.topArticle.author.name}</span>
+                <span className="font-semibold text-slate-300">{stats.topArticle.author.name}</span>
               </div>
             )}
-            <div className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-colors">
+            <div className="w-7 h-7 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] flex items-center justify-center text-slate-300 hover:text-white transition-colors">
               <ArrowUpRight className="w-4 h-4" />
             </div>
           </div>

@@ -638,7 +638,7 @@ export const AdminCatalogManager: React.FC = () => {
         <div>
           <h2 className="font-display font-black text-xl text-white tracking-tight flex items-center gap-2.5">
             <span>Katalog Database Film & Series</span>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/20 text-[#FFD000] border border-amber-500/30 font-sans font-bold">
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-white/[0.06] text-slate-300 border border-white/10 font-mono">
               {films.length} Judul Terindeks
             </span>
           </h2>
@@ -652,25 +652,25 @@ export const AdminCatalogManager: React.FC = () => {
           <button
             onClick={() => setIsBatchModalOpen(true)}
             id="admin-batch-import-btn"
-            className="px-3.5 py-2.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/40 text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm"
+            className="px-3.5 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-slate-200 hover:text-white border border-white/10 text-xs font-semibold transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
             title="Import banyak film sekaligus dengan daftar ID TMDB"
           >
-            <Layers className="w-4 h-4 text-purple-400" />
+            <Layers className="w-4 h-4 text-slate-400" />
             <span>Import Massal TMDB</span>
           </button>
 
           <button
             onClick={() => handleOpenAddModal(true)}
-            className="px-3.5 py-2.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm"
+            className="px-3.5 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-slate-200 hover:text-white border border-white/10 text-xs font-semibold transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
             title="Cari dan impor metadata film/serial secara otomatis dari TMDB"
           >
-            <Sparkles className="w-4 h-4 text-cyan-400" />
+            <Sparkles className="w-4 h-4 text-[#FF2E7E]" />
             <span>Import dari TMDB</span>
           </button>
 
           <button
             onClick={() => handleOpenAddModal(false)}
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 text-xs font-black hover:brightness-110 transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
+            className="px-4 py-2.5 rounded-xl bg-[#FF2E7E] hover:bg-[#e0266e] text-white text-xs font-semibold transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
             <span>+ Tambah Film Manual</span>
@@ -679,7 +679,7 @@ export const AdminCatalogManager: React.FC = () => {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-[#121324] border border-slate-800 rounded-2xl p-4 space-y-3 shadow-sm">
+      <div className="bg-[#171A1F] border border-white/[0.08] rounded-2xl p-4 space-y-3 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           {/* Format Filter Pills */}
           <div className="flex items-center gap-1.5 overflow-x-auto text-xs font-medium pb-1 sm:pb-0 scrollbar-none">
@@ -689,8 +689,8 @@ export const AdminCatalogManager: React.FC = () => {
                 onClick={() => setTypeFilter(tab)}
                 className={`px-3 py-1.5 rounded-lg capitalize transition-colors whitespace-nowrap ${
                   typeFilter === tab
-                    ? 'bg-amber-500/20 text-[#FFD000] font-bold border border-amber-500/40'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    ? 'bg-[#FF2E7E] text-white font-semibold shadow-sm'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                 }`}
               >
                 {tab === 'all' ? 'Semua Format' : tab}
@@ -706,16 +706,16 @@ export const AdminCatalogManager: React.FC = () => {
               placeholder="Cari judul, sutradara, genre..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-750 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 transition-colors"
+              className="w-full bg-[#0E1013] border border-white/10 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] transition-colors"
             />
           </div>
         </div>
 
         {/* Bulk Actions Floating/Contextual Bar */}
         {selectedFilmIds.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-gradient-to-r from-amber-500/15 via-purple-500/15 to-cyan-500/15 border border-amber-500/40 rounded-xl animate-in fade-in slide-in-from-top-2 duration-200 shadow-md">
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-[#171A1F] border border-white/15 rounded-xl animate-in fade-in slide-in-from-top-2 duration-200 shadow-md">
             <div className="flex items-center gap-2.5">
-              <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-amber-500 text-slate-950 font-black text-xs">
+              <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-white/[0.08] text-white font-mono text-xs">
                 {selectedFilmIds.length}
               </span>
               <span className="text-xs font-bold text-white">
@@ -756,7 +756,7 @@ export const AdminCatalogManager: React.FC = () => {
                 className="px-2.5 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-750 text-amber-300 border border-amber-500/30 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
                 title="Jadikan film pilihan sebagai Rekomendasi Unggulan"
               >
-                <Award className="w-3.5 h-3.5 text-amber-400" />
+                <Award className="w-3.5 h-3.5 text-cyan-400" />
                 <span>+ Unggulan</span>
               </button>
 
@@ -816,13 +816,13 @@ export const AdminCatalogManager: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleSelectAllFiltered}
-                    className="p-1 rounded hover:bg-slate-750 text-slate-400 hover:text-amber-400 transition-colors cursor-pointer"
+                    className="p-1 rounded hover:bg-slate-750 text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer"
                     title={isAllSelected ? "Batalkan pilihan semua" : "Pilih semua film di tabel"}
                   >
                     {isAllSelected ? (
-                      <CheckSquare className="w-4 h-4 text-amber-400" />
+                      <CheckSquare className="w-4 h-4 text-cyan-400" />
                     ) : isSomeSelected ? (
-                      <MinusSquare className="w-4 h-4 text-amber-400" />
+                      <MinusSquare className="w-4 h-4 text-cyan-400" />
                     ) : (
                       <Square className="w-4 h-4 text-slate-500" />
                     )}
@@ -865,7 +865,7 @@ export const AdminCatalogManager: React.FC = () => {
                           className="p-1 rounded hover:bg-slate-750 text-slate-400 transition-colors cursor-pointer"
                         >
                           {isSelected ? (
-                            <CheckSquare className="w-4 h-4 text-amber-400" />
+                            <CheckSquare className="w-4 h-4 text-cyan-400" />
                           ) : (
                             <Square className="w-4 h-4 text-slate-600 group-hover:text-slate-400" />
                           )}
@@ -884,12 +884,12 @@ export const AdminCatalogManager: React.FC = () => {
                             <div className="flex items-center gap-1.5">
                               <span 
                                 onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                                className="font-bold text-white hover:text-[#FFD000] cursor-pointer transition-colors text-xs block truncate max-w-[200px]"
+                                className="font-semibold text-white hover:text-[#FF2E7E] cursor-pointer transition-colors text-xs block truncate max-w-[200px]"
                               >
                                 {film.title}
                               </span>
                               {film.featuredRecommendation && (
-                                <span className="p-0.5 rounded bg-amber-500/20 text-amber-400" title="Rekomendasi Unggulan">
+                                <span className="p-0.5 rounded bg-white/[0.08] text-white" title="Rekomendasi Unggulan">
                                   <Star className="w-3 h-3 fill-current" />
                                 </span>
                               )}
@@ -908,19 +908,13 @@ export const AdminCatalogManager: React.FC = () => {
 
                       {/* Type */}
                       <td className="p-3.5">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
-                          film.type === 'series'
-                            ? 'bg-cyan-500/20 text-[#00F0FF] border border-cyan-500/30'
-                            : film.type === 'anime'
-                            ? 'bg-pink-500/20 text-[#FF2E7E] border border-pink-500/30'
-                            : 'bg-amber-500/20 text-[#FFD000] border border-amber-500/30'
-                        }`}>
+                        <span className="px-2 py-0.5 rounded bg-white/[0.06] text-slate-300 border border-white/10 text-[10px] font-semibold uppercase tracking-wider font-mono">
                           {film.type || 'Movie'}
                         </span>
                       </td>
 
                       {/* Year */}
-                      <td className="p-3.5 text-slate-300 font-bold">
+                      <td className="p-3.5 text-slate-300 font-semibold font-mono tabular-nums">
                         {film.year || '-'}
                       </td>
 
@@ -938,7 +932,7 @@ export const AdminCatalogManager: React.FC = () => {
                       <td className="p-3.5">
                         <div className="flex flex-wrap gap-1 max-w-[150px]">
                           {(film.genres || []).slice(0, 2).map((g, i) => (
-                            <span key={i} className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300">
+                            <span key={i} className="text-[10px] px-1.5 py-0.2 rounded bg-white/[0.05] text-slate-300 font-mono">
                               {g}
                             </span>
                           ))}
@@ -947,8 +941,8 @@ export const AdminCatalogManager: React.FC = () => {
 
                       {/* Skor Sotoy */}
                       <td className="p-3.5">
-                        <div className="flex items-center gap-1 text-amber-400 font-medium text-xs">
-                          <Star className="w-3.5 h-3.5 fill-current" />
+                        <div className="flex items-center gap-1 text-slate-200 font-semibold text-xs font-mono tabular-nums">
+                          <Star className="w-3.5 h-3.5 fill-[#FF2E7E] text-[#FF2E7E]" />
                           <span>{(film.skorSotoy || 8.0).toFixed(1)}</span>
                         </div>
                       </td>
@@ -958,14 +952,14 @@ export const AdminCatalogManager: React.FC = () => {
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => handleOpenEditModal(film)}
-                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-amber-500/20 text-slate-400 hover:text-[#FFD000] transition-colors"
+                            className="p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-white transition-colors cursor-pointer"
                             title="Sunting Metadata Film"
                           >
                             <Edit className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-cyan-500/20 text-slate-400 hover:text-[#00F0FF] transition-colors"
+                            className="p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-[#FF2E7E] transition-colors cursor-pointer"
                             title="Buka Halaman Film"
                           >
                             <Eye className="w-3.5 h-3.5" />
@@ -996,32 +990,32 @@ export const AdminCatalogManager: React.FC = () => {
       {/* ADD / EDIT METADATA MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
-          <div className="bg-[#121324] border border-amber-500/40 rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-5 my-8 max-h-[90vh] overflow-y-auto custom-scrollbar">
+          <div className="bg-[#171A1F] border border-white/10 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-5 my-8 max-h-[90vh] overflow-y-auto custom-scrollbar">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2.5 text-amber-400 font-display font-bold text-base">
-                <Film className="w-5 h-5" />
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+              <div className="flex items-center gap-2.5 text-white font-display font-bold text-base">
+                <Film className="w-5 h-5 text-[#FF2E7E]" />
                 <span>{editingFilmId ? 'Sunting Metadata Film' : 'Tambah Film Baru ke Database'}</span>
               </div>
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/[0.05] transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* TMDB Quick Import Section */}
-            <div className="bg-gradient-to-br from-[#151930] via-[#111425] to-[#0d0e1a] border border-cyan-500/35 rounded-2xl p-4 space-y-3.5 relative overflow-hidden shadow-lg">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-slate-800">
+            <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-4 space-y-3.5 relative overflow-hidden shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-white/[0.08]">
                 <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                  <div className="p-1.5 rounded-lg bg-white/[0.05] text-[#FF2E7E] border border-white/10">
                     <Sparkles className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="font-display font-bold text-xs sm:text-sm text-cyan-200 flex items-center gap-1.5">
+                    <h3 className="font-display font-bold text-xs sm:text-sm text-white flex items-center gap-1.5">
                       <span>Import Cepat dari TMDB</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-mono">
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-white/[0.06] text-slate-300 border border-white/10 font-mono">
                         Auto-fill
                       </span>
                     </h3>
@@ -1239,7 +1233,7 @@ export const AdminCatalogManager: React.FC = () => {
                     value={formData.title}
                     onChange={e => setFormData({ ...formData, title: e.target.value })}
                     placeholder="Contoh: Oppenheimer"
-                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00F0FF]"
                   />
                 </div>
 
@@ -1253,7 +1247,7 @@ export const AdminCatalogManager: React.FC = () => {
                     value={formData.originalTitle}
                     onChange={e => setFormData({ ...formData, originalTitle: e.target.value })}
                     placeholder="Contoh: Oppenheimer (2023)"
-                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00F0FF]"
                   />
                 </div>
 
@@ -1265,7 +1259,7 @@ export const AdminCatalogManager: React.FC = () => {
                   <select
                     value={formData.type}
                     onChange={e => setFormData({ ...formData, type: e.target.value as any })}
-                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00F0FF]"
                   >
                     <option value="movie">Movie (Film Layar Lebar)</option>
                     <option value="series">Series (Serial Televisi / Web)</option>
@@ -1282,7 +1276,7 @@ export const AdminCatalogManager: React.FC = () => {
                     type="number"
                     value={formData.year}
                     onChange={e => setFormData({ ...formData, year: Number(e.target.value) })}
-                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00F0FF]"
                   />
                 </div>
 
@@ -1296,7 +1290,7 @@ export const AdminCatalogManager: React.FC = () => {
                     value={formData.duration}
                     onChange={e => setFormData({ ...formData, duration: e.target.value })}
                     placeholder="Contoh: 3h 0m atau 10 Episodes"
-                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00F0FF]"
                   />
                 </div>
 
@@ -1313,7 +1307,7 @@ export const AdminCatalogManager: React.FC = () => {
                     value={formData.poster}
                     onChange={e => setFormData({ ...formData, poster: e.target.value })}
                     placeholder="https://images.unsplash.com/... atau tautan gambar poster"
-                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00F0FF]"
                   />
                 </div>
 
@@ -1330,7 +1324,7 @@ export const AdminCatalogManager: React.FC = () => {
                     value={formData.backdrop}
                     onChange={e => setFormData({ ...formData, backdrop: e.target.value })}
                     placeholder="https://images.unsplash.com/... atau tautan gambar landscape"
-                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00F0FF]"
                   />
                 </div>
 
@@ -1344,7 +1338,7 @@ export const AdminCatalogManager: React.FC = () => {
                     value={formData.director}
                     onChange={e => setFormData({ ...formData, director: e.target.value })}
                     placeholder="Contoh: Christopher Nolan"
-                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00F0FF]"
                   />
                 </div>
 
@@ -1358,7 +1352,7 @@ export const AdminCatalogManager: React.FC = () => {
                     value={formData.writer}
                     onChange={e => setFormData({ ...formData, writer: e.target.value })}
                     placeholder="Contoh: Christopher Nolan, Kai Bird"
-                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00F0FF]"
                   />
                 </div>
 
@@ -1372,7 +1366,7 @@ export const AdminCatalogManager: React.FC = () => {
                     value={formData.studio}
                     onChange={e => setFormData({ ...formData, studio: e.target.value })}
                     placeholder="Contoh: Universal Pictures, Warner Bros, Syncopy"
-                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00F0FF]"
                   />
                 </div>
 
@@ -1386,7 +1380,7 @@ export const AdminCatalogManager: React.FC = () => {
                     value={formData.cast}
                     onChange={e => setFormData({ ...formData, cast: e.target.value })}
                     placeholder="Cillian Murphy, Emily Blunt, Matt Damon, Robert Downey Jr."
-                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00F0FF]"
                   />
                 </div>
 
@@ -1474,7 +1468,7 @@ export const AdminCatalogManager: React.FC = () => {
                     value={formData.genres}
                     onChange={e => setFormData({ ...formData, genres: e.target.value })}
                     placeholder="Biography, Drama, History"
-                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00F0FF]"
                   />
                 </div>
 
@@ -1490,7 +1484,7 @@ export const AdminCatalogManager: React.FC = () => {
                     max="5"
                     value={formData.skorSotoy}
                     onChange={e => setFormData({ ...formData, skorSotoy: parseFloat(e.target.value) })}
-                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-amber-300 font-bold focus:outline-none focus:border-amber-400"
+                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-amber-300 font-bold focus:outline-none focus:border-[#00F0FF]"
                   />
                 </div>
 
@@ -1498,7 +1492,7 @@ export const AdminCatalogManager: React.FC = () => {
                 <div className="sm:col-span-2 space-y-2 pt-2 border-t border-slate-800/80">
                   <div className="flex items-center justify-between">
                     <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                      <Tag className="w-3.5 h-3.5 text-amber-400" />
+                      <Tag className="w-3.5 h-3.5 text-cyan-400" />
                       <span>Tagar Film & Auto-Tagging Rekomendasi</span>
                     </label>
                     <span className="text-[10px] text-slate-400">
@@ -1512,7 +1506,7 @@ export const AdminCatalogManager: React.FC = () => {
                       formData.tags.map((tag, idx) => (
                         <span
                           key={idx}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30 text-xs font-semibold"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-xs font-semibold"
                         >
                           #{tag}
                           <button
@@ -1591,7 +1585,7 @@ export const AdminCatalogManager: React.FC = () => {
                         }
                       }}
                       placeholder="Ketik tag custom (cth: 90s cinema, thriller, oscar-winner) lalu tekan Enter..."
-                      className="flex-1 bg-slate-900 border border-slate-750 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
+                      className="flex-1 bg-slate-900 border border-slate-750 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF]"
                     />
                     <button
                       type="button"
@@ -1619,7 +1613,7 @@ export const AdminCatalogManager: React.FC = () => {
                     value={formData.trailerUrl}
                     onChange={e => setFormData({ ...formData, trailerUrl: e.target.value })}
                     placeholder="https://www.youtube.com/watch?v=..."
-                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00F0FF]"
                   />
                 </div>
 
@@ -1633,7 +1627,7 @@ export const AdminCatalogManager: React.FC = () => {
                     value={formData.synopsis}
                     onChange={e => setFormData({ ...formData, synopsis: e.target.value })}
                     placeholder="Tuliskan sinopsis film secara mendalam..."
-                    className="w-full bg-slate-900 border border-slate-750 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-amber-400 resize-none"
+                    className="w-full bg-slate-900 border border-slate-750 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-[#00F0FF] resize-none"
                   />
                 </div>
               </div>
@@ -1662,7 +1656,7 @@ export const AdminCatalogManager: React.FC = () => {
                     // Explicit trigger in case form.onSubmit does not bubble or is intercepted
                     handleSaveFilm(e);
                   }}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 text-xs font-black transition-all shadow-md shadow-amber-500/20 flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed hover:brightness-110 cursor-pointer"
+                  className="px-5 py-2 rounded-xl bg-[#FF2E7E] hover:bg-[#e0266e] text-white text-xs font-black transition-all shadow-md shadow-amber-500/20 flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed hover:brightness-110 cursor-pointer"
                 >
                   {isSubmitting ? (
                     <>
@@ -1699,10 +1693,10 @@ export const AdminCatalogManager: React.FC = () => {
         >
           <div
             id="delete-film-modal-card"
-            className="bg-[#121324] border border-red-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5 text-center"
+            className="bg-[#171A1F] border border-red-500/30 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 text-center"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto text-red-400">
+            <div className="w-14 h-14 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto text-red-400">
               <Trash2 className="w-7 h-7 stroke-[2]" />
             </div>
 
@@ -1723,7 +1717,7 @@ export const AdminCatalogManager: React.FC = () => {
                 id="cancel-delete-film-btn"
                 onClick={() => setFilmToDelete(null)}
                 disabled={isDeletingFilm}
-                className="flex-1 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold text-xs transition-all disabled:opacity-50 cursor-pointer"
+                className="flex-1 py-2.5 px-4 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-slate-300 font-semibold text-xs transition-all disabled:opacity-50 cursor-pointer"
               >
                 Batal
               </button>
@@ -1732,7 +1726,7 @@ export const AdminCatalogManager: React.FC = () => {
                 id="confirm-delete-film-btn"
                 onClick={confirmDelete}
                 disabled={isDeletingFilm}
-                className="flex-1 py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs transition-all shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
+                className="flex-1 py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-semibold text-xs transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
               >
                 {isDeletingFilm ? (
                   <>
@@ -1758,10 +1752,10 @@ export const AdminCatalogManager: React.FC = () => {
           onClick={() => !isBulkOperating && setShowBulkDeleteModal(false)}
         >
           <div
-            className="bg-[#121324] border border-red-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5 text-center"
+            className="bg-[#171A1F] border border-red-500/30 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 text-center"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto text-red-400">
+            <div className="w-14 h-14 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto text-red-400">
               <Trash2 className="w-7 h-7 stroke-[2]" />
             </div>
 
@@ -1775,7 +1769,7 @@ export const AdminCatalogManager: React.FC = () => {
             </div>
 
             {/* List preview */}
-            <div className="max-h-36 overflow-y-auto bg-slate-900/80 border border-slate-800 rounded-xl p-3 text-left divide-y divide-slate-800/60 custom-scrollbar">
+            <div className="max-h-36 overflow-y-auto bg-black/30 border border-white/10 rounded-xl p-3 text-left divide-y divide-white/[0.06] custom-scrollbar">
               {selectedFilmIds.map(id => {
                 const item = films.find(f => f.id === id);
                 return (
@@ -1830,18 +1824,18 @@ export const AdminCatalogManager: React.FC = () => {
           onClick={() => !isBulkOperating && setShowBulkFormatModal(false)}
         >
           <div
-            className="bg-[#121324] border border-cyan-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5"
+            className="bg-[#171A1F] border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <div className="flex items-center gap-2.5 text-cyan-400 font-display font-bold text-base">
-                <Tv className="w-5 h-5" />
+            <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
+              <div className="flex items-center gap-2.5 text-white font-display font-bold text-base">
+                <Tv className="w-5 h-5 text-[#FF2E7E]" />
                 <span>Ubah Format {selectedFilmIds.length} Film</span>
               </div>
               <button
                 type="button"
                 onClick={() => setShowBulkFormatModal(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/[0.05] transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1857,15 +1851,15 @@ export const AdminCatalogManager: React.FC = () => {
                   key={fmt}
                   type="button"
                   onClick={() => setBulkTargetFormat(fmt)}
-                  className={`p-3.5 rounded-2xl border text-center transition-all ${
+                  className={`p-3.5 rounded-xl border text-center transition-all cursor-pointer ${
                     bulkTargetFormat === fmt
-                      ? 'bg-cyan-500/20 border-cyan-400 text-cyan-200 shadow-md shadow-cyan-500/20 font-black'
-                      : 'bg-slate-900 border-slate-750 text-slate-400 hover:text-white hover:bg-slate-800 font-bold'
+                      ? 'bg-[#FF2E7E] border-[#FF2E7E] text-white shadow-sm font-semibold'
+                      : 'bg-black/30 border-white/10 text-slate-400 hover:text-white hover:bg-white/[0.05] font-medium'
                   }`}
                 >
                   <div className="text-xs uppercase tracking-wider">{fmt}</div>
-                  <div className="text-[10px] text-slate-500 mt-1 capitalize font-normal">
-                    {fmt === 'movie' ? 'Film Layar Lebar' : fmt === 'series' ? 'Serial TV' : 'Animasi'}
+                  <div className="text-[10px] text-slate-400 mt-1 capitalize font-normal">
+                    {fmt === 'movie' ? 'Layar Lebar' : fmt === 'series' ? 'Serial TV' : 'Anime'}
                   </div>
                 </button>
               ))}
@@ -1876,7 +1870,7 @@ export const AdminCatalogManager: React.FC = () => {
                 type="button"
                 onClick={() => setShowBulkFormatModal(false)}
                 disabled={isBulkOperating}
-                className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold text-xs transition-all disabled:opacity-50"
+                className="py-2.5 px-4 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-slate-300 font-semibold text-xs transition-all disabled:opacity-50 cursor-pointer"
               >
                 Batal
               </button>
@@ -1884,7 +1878,7 @@ export const AdminCatalogManager: React.FC = () => {
                 type="button"
                 onClick={() => handleBulkFormatChange(bulkTargetFormat)}
                 disabled={isBulkOperating}
-                className="py-2.5 px-5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-black text-xs transition-all shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
+                className="py-2.5 px-5 rounded-xl bg-[#FF2E7E] hover:bg-[#e0266e] text-white font-semibold text-xs transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
               >
                 {isBulkOperating ? (
                   <>
@@ -1910,18 +1904,18 @@ export const AdminCatalogManager: React.FC = () => {
           onClick={() => !isBulkOperating && setShowBulkTagModal(false)}
         >
           <div
-            className="bg-[#121324] border border-purple-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5"
+            className="bg-[#171A1F] border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <div className="flex items-center gap-2.5 text-purple-400 font-display font-bold text-base">
-                <Tag className="w-5 h-5" />
+            <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
+              <div className="flex items-center gap-2.5 text-white font-display font-bold text-base">
+                <Tag className="w-5 h-5 text-[#FF2E7E]" />
                 <span>Tambah Tag Massal</span>
               </div>
               <button
                 type="button"
                 onClick={() => setShowBulkTagModal(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/[0.05] transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1933,7 +1927,7 @@ export const AdminCatalogManager: React.FC = () => {
 
             <div className="space-y-3">
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1 font-mono">
                   Tag Cepat
                 </label>
                 <div className="flex flex-wrap gap-1.5">
@@ -1947,7 +1941,7 @@ export const AdminCatalogManager: React.FC = () => {
                           setBulkTagInput([...current, tag].join(', '));
                         }
                       }}
-                      className="px-2.5 py-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[11px] font-bold transition-colors"
+                      className="px-2.5 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 border border-white/10 text-[11px] font-medium transition-colors cursor-pointer"
                     >
                       +{tag}
                     </button>

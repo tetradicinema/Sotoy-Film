@@ -369,7 +369,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
               // Dual Glowing Neon Ring around Foto Profil
               ctx.beginPath();
               ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2 + 3, 0, Math.PI * 2);
-              ctx.strokeStyle = '#00F0FF';
+              ctx.strokeStyle = '#FF2E7E';
               ctx.lineWidth = 6;
               ctx.stroke();
 
@@ -391,7 +391,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
             ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
             ctx.fillStyle = '#1e243b';
             ctx.fill();
-            ctx.strokeStyle = '#00F0FF';
+            ctx.strokeStyle = '#FF2E7E';
             ctx.lineWidth = 5;
             ctx.stroke();
 
@@ -421,7 +421,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           ctx.fillText(displayAuthorName, cardX + cardW / 2, badgePillY + 80);
 
           // Handle / Meta info
-          ctx.fillStyle = '#00F0FF';
+          ctx.fillStyle = '#FF2E7E';
           ctx.font = 'bold 22px sans-serif';
           ctx.fillText(data.meta || '@warga.sotoy di Sotoy Film', cardX + cardW / 2, badgePillY + 115);
           ctx.textAlign = 'left';
@@ -437,7 +437,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           ctx.stroke();
 
           // Big quotation marks
-          ctx.fillStyle = '#FFD000';
+          ctx.fillStyle = '#FF2E7E';
           ctx.font = '900 90px serif';
           ctx.fillText('“', cardX + 75, quoteBoxY + 80);
 
@@ -458,7 +458,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
               ctx.fillStyle = '#222742';
               drawRoundRectPath(ctx, tagX, tagY - 24, tWidth + 24, 34, 10);
               ctx.fill();
-              ctx.fillStyle = '#00F0FF';
+              ctx.fillStyle = '#FF2E7E';
               ctx.fillText(tagStr, tagX + 12, tagY);
               tagX += tWidth + 36;
             }
@@ -485,7 +485,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
               // Ring glowing outline
               ctx.beginPath();
               ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2 + 2, 0, Math.PI * 2);
-              ctx.strokeStyle = '#00F0FF';
+              ctx.strokeStyle = '#FF2E7E';
               ctx.lineWidth = 5;
               ctx.stroke();
 
@@ -500,7 +500,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
             ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
             ctx.fillStyle = '#1e243b';
             ctx.fill();
-            ctx.strokeStyle = '#00F0FF';
+            ctx.strokeStyle = '#FF2E7E';
             ctx.lineWidth = 4;
             ctx.stroke();
             ctx.fillStyle = '#FFFFFF';
@@ -524,7 +524,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           ctx.font = '900 36px sans-serif';
           ctx.fillText(displayAuthorName, textStartX, avatarY + 76);
 
-          ctx.fillStyle = '#00F0FF';
+          ctx.fillStyle = '#FF2E7E';
           ctx.font = 'bold 20px sans-serif';
           ctx.fillText(data.meta || 'Pengulas Pop-Culture @ Sotoy Film', textStartX, avatarY + 110);
 
@@ -547,7 +547,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           ctx.fill();
           ctx.stroke();
 
-          ctx.fillStyle = '#FFD000';
+          ctx.fillStyle = '#FF2E7E';
           ctx.font = '900 64px serif';
           ctx.fillText('“', cardX + 65, currentContentY + 55);
 
@@ -621,7 +621,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
 
         // Author Byline
         if (data.authorName) {
-          ctx.fillStyle = '#FFD000';
+          ctx.fillStyle = '#FF2E7E';
           ctx.font = 'bold 22px sans-serif';
           ctx.fillText(`★ Ditulis oleh: ${data.authorName}`, cardX + 45, currentContentY);
           currentContentY += 40;
@@ -724,7 +724,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
             ctx.restore();
 
             // Glowing border
-            ctx.strokeStyle = '#FFD000';
+            ctx.strokeStyle = '#FF2E7E';
             ctx.lineWidth = 4;
             drawRoundRectPath(ctx, posterThumbX, posterThumbY, posterThumbW, posterThumbH, 20);
             ctx.stroke();
@@ -737,7 +737,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           curY = wrapText(data.filmTitle || data.title, cardX + cardW / 2, curY, cardW - 120, 56, 2, 'center');
 
           // C. Year & Genres Meta
-          ctx.fillStyle = '#00F0FF';
+          ctx.fillStyle = '#FF2E7E';
           ctx.font = 'bold 22px sans-serif';
           const metaStr = [data.filmYear, (data.filmGenres || []).slice(0, 3).join(' • ')].filter(Boolean).join(' | ');
           if (metaStr) {
@@ -756,14 +756,14 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           const badgeY = curY + 15;
 
           ctx.fillStyle = 'rgba(14, 16, 32, 0.95)';
-          ctx.strokeStyle = '#FFD000';
+          ctx.strokeStyle = '#FF2E7E';
           ctx.lineWidth = 3;
           drawRoundRectPath(ctx, badgeX, badgeY, badgeW, badgeH, 24);
           ctx.fill();
           ctx.stroke();
 
           // Stars & Score inside badge
-          ctx.fillStyle = '#FFD000';
+          ctx.fillStyle = '#FF2E7E';
           ctx.font = '500 52px sans-serif';
           ctx.textAlign = 'center';
           ctx.fillText(`★ ${displayScore.toFixed(1)}`, cardX + cardW / 2 - 40, badgeY + 58);
@@ -772,7 +772,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           ctx.fillText('/ 10.0', cardX + cardW / 2 + 80, badgeY + 58);
 
           // Verdict tag below score
-          ctx.fillStyle = '#00F0FF';
+          ctx.fillStyle = '#FF2E7E';
           ctx.font = '900 18px sans-serif';
           ctx.fillText(`★ ${getScoreVerdict(displayScore)} ★`, cardX + cardW / 2, badgeY + 94);
           ctx.textAlign = 'left';
@@ -806,7 +806,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
 
                 ctx.beginPath();
                 ctx.arc(cardX + 80, revY, 28, 0, Math.PI * 2);
-                ctx.strokeStyle = '#00F0FF';
+                ctx.strokeStyle = '#FF2E7E';
                 ctx.lineWidth = 3;
                 ctx.stroke();
                 revAvatarLoaded = true;
@@ -819,7 +819,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
             ctx.font = 'bold 24px sans-serif';
             ctx.fillText(revName ? `Ulasan oleh ${revName}` : 'Ulasan Komunitas', revAvatarLoaded ? cardX + 125 : cardX + 65, revY - 3);
 
-            ctx.fillStyle = '#FFD000';
+            ctx.fillStyle = '#FF2E7E';
             ctx.font = 'bold 16px sans-serif';
             ctx.fillText(data.reviewerRole || 'Warga Sotoy Film', revAvatarLoaded ? cardX + 125 : cardX + 65, revY + 20);
 
@@ -853,7 +853,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
             ctx.drawImage(posterImg, posterX, posterY, posterW, posterH);
             ctx.restore();
 
-            ctx.strokeStyle = '#FFD000';
+            ctx.strokeStyle = '#FF2E7E';
             ctx.lineWidth = 4;
             drawRoundRectPath(ctx, posterX, posterY, posterW, posterH, 20);
             ctx.stroke();
@@ -869,7 +869,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           rY = wrapText(data.filmTitle || data.title, rightX, rY, rightW, 46, 2);
 
           // Meta
-          ctx.fillStyle = '#00F0FF';
+          ctx.fillStyle = '#FF2E7E';
           ctx.font = 'bold 20px sans-serif';
           const metaStr = [data.filmYear, (data.filmGenres || []).slice(0, 2).join(' • ')].filter(Boolean).join(' | ');
           if (metaStr) {
@@ -883,13 +883,13 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           const scoreBoxW = rightW;
           const scoreBoxH = 80;
           ctx.fillStyle = 'rgba(14, 16, 32, 0.95)';
-          ctx.strokeStyle = '#FFD000';
+          ctx.strokeStyle = '#FF2E7E';
           ctx.lineWidth = 2.5;
           drawRoundRectPath(ctx, rightX, rY, scoreBoxW, scoreBoxH, 18);
           ctx.fill();
           ctx.stroke();
 
-          ctx.fillStyle = '#FFD000';
+          ctx.fillStyle = '#FF2E7E';
           ctx.font = '500 42px sans-serif';
           ctx.fillText(`★ ${displayScore.toFixed(1)}`, rightX + 25, rY + 54);
 
@@ -897,7 +897,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           ctx.font = 'bold 20px sans-serif';
           ctx.fillText('/ 10.0', rightX + 175, rY + 54);
 
-          ctx.fillStyle = '#00F0FF';
+          ctx.fillStyle = '#FF2E7E';
           ctx.font = '900 16px sans-serif';
           ctx.fillText(getScoreVerdict(displayScore), rightX + 240, rY + 52);
 
@@ -915,7 +915,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           let bottomRevY = rY + 35;
           const revName = data.reviewerName || data.authorName;
           if (revName) {
-            ctx.fillStyle = '#FFD000';
+            ctx.fillStyle = '#FF2E7E';
             ctx.font = 'bold 20px sans-serif';
             ctx.fillText(`★ Ulasan oleh: ${revName} (${data.reviewerRole || 'Warga Sotoy'})`, cardX + 70, bottomRevY);
             bottomRevY += 32;
@@ -936,7 +936,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
       }
 
       // 6. Card Footer Branding
-      ctx.fillStyle = '#FFD000';
+      ctx.fillStyle = '#FF2E7E';
       ctx.font = 'bold 24px sans-serif';
       const bottomMeta = isFilmRating
         ? '★ Ulas & Nilai Film Ini di Sotoy Film'
@@ -950,7 +950,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
       ctx.font = 'bold 22px sans-serif';
       ctx.fillText('Baca ulasan & ikuti diskusi di sotoyfilm.id', 70, height - 70);
 
-      ctx.fillStyle = '#00F0FF';
+      ctx.fillStyle = '#FF2E7E';
       ctx.font = 'bold 22px sans-serif';
       const formatLabel = format === 'story' ? 'Instagram Story Card (9:16)' : 'Instagram Feed Card (1:1)';
       ctx.fillText(formatLabel, width - 380, height - 70);
@@ -1021,13 +1021,13 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
     >
       <div
         id="social-share-modal"
-        className="relative w-full max-w-lg bg-[#121324] border border-slate-700/80 rounded-3xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+        className="relative w-full max-w-lg bg-[#171A1F] border border-slate-700/80 rounded-3xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#FF2E7E] via-[#FF8008] to-[#FFD000] p-0.5 shadow-md shadow-[#FF2E7E]/20">
-              <div className="w-full h-full bg-[#121324] rounded-[10px] flex items-center justify-center text-[#FF2E7E]">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#FF2E7E] via-[#e0266e] to-[#FF2E7E] p-0.5 shadow-md shadow-sm">
+              <div className="w-full h-full bg-[#171A1F] rounded-[10px] flex items-center justify-center text-[#FF2E7E]">
                 <Share2 className="w-4 h-4" />
               </div>
             </div>
@@ -1056,7 +1056,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
             onClick={() => setActiveTab('quick')}
             className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
               activeTab === 'quick'
-                ? 'bg-[#00F0FF] text-slate-950 shadow-md shadow-[#00F0FF]/20'
+                ? 'bg-[#FF2E7E] text-slate-950 shadow-md shadow-sm'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -1068,7 +1068,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
             onClick={() => setActiveTab('ig_story')}
             className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
               activeTab === 'ig_story'
-                ? 'bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] text-white shadow-md shadow-[#FF2E7E]/25'
+                ? 'bg-[#FF2E7E] text-white shadow-md shadow-sm'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -1105,7 +1105,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                   }`}
                 />
               ) : (
-                <div className="w-14 h-14 rounded-xl bg-slate-800 flex items-center justify-center text-[#00F0FF] shrink-0">
+                <div className="w-14 h-14 rounded-xl bg-slate-800 flex items-center justify-center text-[#FF2E7E] shrink-0">
                   <Film className="w-6 h-6" />
                 </div>
               )}
@@ -1113,7 +1113,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
               <div className="min-w-0 flex-1">
                 {isFilmRating && (
                   <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                    <span className="bg-[#FFD000]/20 text-[#FFD000] border border-[#FFD000]/40 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <span className="bg-[#FF2E7E]/20 text-[#FF2E7E] border border-[#FF2E7E]/40 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
                       <Star className="w-3 h-3 fill-current" />
                       <span>{displayScore.toFixed(1)} / 5.0</span>
                     </span>
@@ -1130,7 +1130,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                     {data.meta}
                   </span>
                 )}
-                <div className="text-[10px] text-[#00F0FF] font-semibold mt-1">
+                <div className="text-[10px] text-[#FF2E7E] font-semibold mt-1">
                   sotoyfilm.id
                 </div>
               </div>
@@ -1160,9 +1160,9 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
             {typeof navigator !== 'undefined' && typeof navigator.share === 'function' && (
               <button
                 onClick={handleNativeShare}
-                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#FF2E7E]/20 to-[#00F0FF]/20 border border-[#00F0FF]/30 hover:border-[#00F0FF] text-xs font-bold text-white flex items-center justify-center gap-2 transition-all"
+                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#FF2E7E]/20 to-[#FF2E7E]/20 border border-[#FF2E7E]/30 hover:border-[#FF2E7E] text-xs font-bold text-white flex items-center justify-center gap-2 transition-all"
               >
-                <Share2 className="w-3.5 h-3.5 text-[#00F0FF]" />
+                <Share2 className="w-3.5 h-3.5 text-[#FF2E7E]" />
                 <span>Bagikan via Menu Sistem HP (Native Share)</span>
               </button>
             )}
@@ -1180,7 +1180,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
                     copiedLink
                       ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/20'
-                      : 'bg-[#00F0FF] text-black hover:bg-[#00d0e0]'
+                      : 'bg-[#FF2E7E] text-black hover:bg-[#00d0e0]'
                   }`}
                 >
                   {copiedLink ? (
@@ -1209,7 +1209,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
             <div
               className={`relative mx-auto w-[240px] aspect-[9/16] rounded-2xl overflow-hidden ${
                 isFilmRating
-                  ? 'border-2 border-[#FFD000]/60 shadow-2xl bg-cover bg-center'
+                  ? 'border-2 border-[#FF2E7E]/60 shadow-2xl bg-cover bg-center'
                   : 'bg-gradient-to-b from-[#15162b] via-[#10111e] to-[#090a10] border border-[#FF2E7E]/40 shadow-2xl'
               } p-4 flex flex-col justify-between text-left`}
               style={
@@ -1231,7 +1231,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                 <span
                   className={`text-[8px] px-1.5 py-0.5 rounded font-bold ${
                     isFilmRating
-                      ? 'text-[#FFD000] bg-[#FFD000]/20 border border-[#FFD000]/30'
+                      ? 'text-[#FF2E7E] bg-[#FF2E7E]/20 border border-[#FF2E7E]/30'
                       : 'text-slate-300 bg-white/10'
                   }`}
                 >
@@ -1248,7 +1248,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                       <img
                         src={data.authorAvatar || data.image}
                         alt={data.authorName || 'Foto Profil'}
-                        className="w-16 h-16 rounded-full object-cover ring-4 ring-[#00F0FF]/50 border-2 border-white shadow-xl"
+                        className="w-16 h-16 rounded-full object-cover ring-4 ring-[#FF2E7E]/50 border-2 border-white shadow-xl"
                       />
                       <span className="absolute -bottom-1 -right-1 bg-[#FF2E7E] text-white text-[7px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow">
                         BUZZ
@@ -1258,12 +1258,12 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                       <div className="font-bold text-xs text-white leading-tight">
                         {data.authorName || data.title.replace('Buzz Diskusi: ', '')}
                       </div>
-                      <div className="text-[9px] text-[#00F0FF] font-semibold">
+                      <div className="text-[9px] text-[#FF2E7E] font-semibold">
                         {data.meta || 'Opini Pop-Culture @ Sotoy Film'}
                       </div>
                     </div>
                     <div className="p-2.5 bg-white/5 border border-white/10 rounded-2xl w-full text-left">
-                      <Quote className="w-3 h-3 text-[#FFD000] mb-1 opacity-80" />
+                      <Quote className="w-3 h-3 text-[#FF2E7E] mb-1 opacity-80" />
                       <p className="text-[10px] text-slate-200 italic line-clamp-4 leading-snug">
                         "{data.text || 'Opini komunitas sinema di platform Sotoy Film...'}"
                       </p>
@@ -1303,7 +1303,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                             className="w-4 h-4 rounded-full object-cover border border-white/20"
                           />
                         )}
-                        <span className="text-[9px] text-[#FFD000] font-bold truncate">
+                        <span className="text-[9px] text-[#FF2E7E] font-bold truncate">
                           ★ Oleh: {data.authorName}
                         </span>
                       </div>
@@ -1313,7 +1313,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                   /* FILM RATING & ULASAN: CARD KHUSUS DENGAN BACKGROUND POSTER FILM */
                   <div className="flex flex-col items-center text-center space-y-2">
                     {/* Elevated Movie Poster Thumbnail */}
-                    <div className="relative w-20 h-28 rounded-xl overflow-hidden border-2 border-[#FFD000] shadow-2xl ring-2 ring-[#FFD000]/30 shrink-0">
+                    <div className="relative w-20 h-28 rounded-xl overflow-hidden border-2 border-[#FF2E7E] shadow-2xl ring-2 ring-[#FF2E7E]/30 shrink-0">
                       <img
                         src={data.filmPoster || data.image || data.imageUrl}
                         alt={data.filmTitle || data.title}
@@ -1326,7 +1326,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                       <h4 className="font-display font-black text-xs text-white leading-tight line-clamp-2">
                         {data.filmTitle || data.title}
                       </h4>
-                      <div className="text-[8px] text-[#00F0FF] font-semibold mt-0.5 truncate">
+                      <div className="text-[8px] text-[#FF2E7E] font-semibold mt-0.5 truncate">
                         {[data.filmYear, (data.filmGenres || []).slice(0, 2).join(', ')].filter(Boolean).join(' • ')}
                       </div>
                     </div>
@@ -1353,7 +1353,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                             <img
                               src={data.reviewerAvatar}
                               alt={data.reviewerName || 'Reviewer'}
-                              className="w-4 h-4 rounded-full object-cover border border-[#00F0FF]"
+                              className="w-4 h-4 rounded-full object-cover border border-[#FF2E7E]"
                             />
                           )}
                           <span className="text-[8px] text-slate-300 font-bold truncate">
@@ -1376,7 +1376,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
 
               {/* Bottom footer */}
               <div className="relative z-10 pt-2 border-t border-white/10 flex items-center justify-between">
-                <span className="text-[8px] font-bold text-[#FFD000] truncate max-w-[140px]">
+                <span className="text-[8px] font-bold text-[#FF2E7E] truncate max-w-[140px]">
                   {isFilmRating ? '★ Skor & Ulasan di Sotoy Film' : `★ ${data.meta || 'Sotoy Film'}`}
                 </span>
                 <span className="text-[8px] text-cyan-400 font-mono">
@@ -1391,7 +1391,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                 id="download-ig-story-card-btn"
                 onClick={() => handleDownloadInstagramVisual('story')}
                 disabled={isGeneratingImage}
-                className="w-full py-3 bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] hover:brightness-110 active:scale-98 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-[#FF2E7E]/25 flex items-center justify-center gap-2 transition-all"
+                className="w-full py-3 bg-[#FF2E7E] hover:brightness-110 active:scale-98 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-sm flex items-center justify-center gap-2 transition-all"
               >
                 <Download className="w-4 h-4" />
                 <span>{isGeneratingImage ? 'Membuat Gambar...' : 'Unduh Gambar Story (PNG 9:16)'}</span>
@@ -1430,7 +1430,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
               className={`relative mx-auto w-[250px] aspect-square rounded-2xl overflow-hidden ${
                 isFilmRating
                   ? 'border-2 border-amber-500/60 shadow-2xl bg-cover bg-center'
-                  : 'bg-gradient-to-br from-[#18192e] via-[#121324] to-[#0d0e15] border border-amber-500/40 shadow-2xl'
+                  : 'bg-gradient-to-br from-[#171A1F] via-[#171A1F] to-[#0d0e15] border border-amber-500/40 shadow-2xl'
               } p-4 flex flex-col justify-between text-left`}
               style={
                 isFilmRating && (data.filmPoster || data.image || data.imageUrl || data.filmBackdrop)
@@ -1445,7 +1445,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
 
               {/* Top watermark */}
               <div className="relative z-10 flex items-center justify-between border-b border-white/10 pb-2">
-                <span className="text-[10px] font-black tracking-wider text-[#FFD000] uppercase">
+                <span className="text-[10px] font-black tracking-wider text-[#FF2E7E] uppercase">
                   {isFilmRating ? 'SOTOY FILM RATING' : 'Sotoy Film Post'}
                 </span>
                 <span className="text-[8px] text-slate-300 bg-white/10 px-1.5 py-0.5 rounded font-bold">
@@ -1462,13 +1462,13 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                       <img
                         src={data.authorAvatar || data.image}
                         alt={data.authorName || 'Foto Profil'}
-                        className="w-12 h-12 rounded-full object-cover ring-2 ring-[#00F0FF] border border-white/20 shrink-0"
+                        className="w-12 h-12 rounded-full object-cover ring-2 ring-[#FF2E7E] border border-white/20 shrink-0"
                       />
                       <div className="min-w-0 flex-1">
                         <div className="text-xs font-bold text-white truncate">
                           {data.authorName || data.title.replace('Buzz Diskusi: ', '')}
                         </div>
-                        <div className="text-[9px] text-[#00F0FF] truncate">
+                        <div className="text-[9px] text-[#FF2E7E] truncate">
                           {data.meta || 'Opini Pop-Culture @ Sotoy Film'}
                         </div>
                         <span className="inline-block text-[7px] font-black px-1.5 py-0.2 rounded bg-[#FF2E7E]/20 text-[#FF2E7E] border border-[#FF2E7E]/30 uppercase">
@@ -1511,7 +1511,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                             className="w-3.5 h-3.5 rounded-full object-cover border border-white/20"
                           />
                         )}
-                        <span className="text-[8px] text-[#FFD000] font-bold truncate">
+                        <span className="text-[8px] text-[#FF2E7E] font-bold truncate">
                           ★ {data.authorName}
                         </span>
                       </div>
@@ -1521,7 +1521,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                   /* FILM RATING & ULASAN: FEED FORMAT DENGAN BACKGROUND POSTER FILM */
                   <div className="space-y-2">
                     <div className="flex items-center gap-2.5">
-                      <div className="relative w-14 h-20 rounded-lg overflow-hidden border border-[#FFD000] shadow-md shrink-0">
+                      <div className="relative w-14 h-20 rounded-lg overflow-hidden border border-[#FF2E7E] shadow-md shrink-0">
                         <img
                           src={data.filmPoster || data.image || data.imageUrl}
                           alt={data.filmTitle || data.title}
@@ -1555,7 +1555,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                             {data.reviewerName ? `Ulasan oleh ${data.reviewerName}` : 'Ulasan Komunitas'}
                           </span>
                           {data.reviewerRole && (
-                            <span className="text-amber-400 font-bold">{data.reviewerRole}</span>
+                            <span className="text-cyan-400 font-bold">{data.reviewerRole}</span>
                           )}
                         </div>
                         {data.headline && (
@@ -1574,10 +1574,10 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
 
               {/* Bottom footer */}
               <div className="relative z-10 pt-2 border-t border-white/10 flex items-center justify-between">
-                <span className="text-[8px] font-bold text-amber-300 truncate max-w-[130px]">
+                <span className="text-[8px] font-bold text-cyan-300 truncate max-w-[130px]">
                   ★ {data.meta || 'Komunitas Pecinta Sinema'}
                 </span>
-                <span className="text-[8px] text-[#00F0FF] font-mono">
+                <span className="text-[8px] text-[#FF2E7E] font-mono">
                   sotoyfilm.id
                 </span>
               </div>

@@ -1,12 +1,12 @@
 import React from 'react';
-import { Clapperboard, Star, Heart, Sparkles, MessageSquare, Shield, Info, FileText, Scale, Briefcase } from 'lucide-react';
+import { Clapperboard, Star, Info, Shield, Scale, Briefcase } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 export const Footer: React.FC = () => {
   const { navigateTo, currentView } = useApp();
 
   return (
-    <footer id="main-footer" className="bg-[#090A10] border-t border-slate-800/80 pt-12 pb-8 mt-16 text-slate-400 text-xs">
+    <footer id="main-footer" className="bg-[#0E1013] border-t border-white/[0.08] pt-12 pb-8 mt-16 text-slate-400 text-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
@@ -14,12 +14,10 @@ export const Footer: React.FC = () => {
           <div className="lg:col-span-2 space-y-3">
             <div
               onClick={() => navigateTo('home')}
-              className="flex items-center gap-2 cursor-pointer inline-flex"
+              className="flex items-center gap-2 cursor-pointer inline-flex group"
             >
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#FF2E7E] via-[#FFD000] to-[#00F0FF] p-0.5">
-                <div className="w-full h-full bg-[#0D0E15] rounded-[10px] flex items-center justify-center">
-                  <Clapperboard className="w-4 h-4 text-[#FFD000]" />
-                </div>
+              <div className="w-8 h-8 rounded-xl bg-[#171A1F] border border-white/10 flex items-center justify-center text-[#FF2E7E] transition-all group-hover:border-[#FF2E7E]/50">
+                <Clapperboard className="w-4 h-4 text-[#FF2E7E]" />
               </div>
               <div className="flex items-center gap-1 font-display font-black text-xl text-white tracking-tight">
                 <span>SOTOY</span>
@@ -32,10 +30,10 @@ export const Footer: React.FC = () => {
             </p>
 
             <div className="flex items-center gap-2 pt-2">
-              <span className="bg-slate-900 border border-slate-800 text-[#FFD000] text-[10px] font-black px-2.5 py-1 rounded-lg">
+              <span className="bg-[#171A1F] border border-white/[0.08] text-slate-300 text-[10px] font-semibold px-2.5 py-1 rounded-md">
                 ★ 1-5 Bintang Skor Sotoy
               </span>
-              <span className="bg-slate-900 border border-slate-800 text-[#00F0FF] text-[10px] font-black px-2.5 py-1 rounded-lg">
+              <span className="bg-[#171A1F] border border-white/[0.08] text-slate-300 text-[10px] font-semibold px-2.5 py-1 rounded-md">
                 Komunitas Terbuka
               </span>
             </div>
@@ -43,7 +41,7 @@ export const Footer: React.FC = () => {
 
           {/* Nav Col 1: Kategori */}
           <div className="space-y-2">
-            <h4 className="font-bold text-white uppercase tracking-wider text-xs">
+            <h4 className="font-semibold text-white uppercase tracking-wider text-xs font-mono">
               Kategori Artikel
             </h4>
             <ul className="space-y-1.5">
@@ -92,23 +90,23 @@ export const Footer: React.FC = () => {
 
           {/* Nav Col 2: Fitur Utama */}
           <div className="space-y-2">
-            <h4 className="font-bold text-white uppercase tracking-wider text-xs">
+            <h4 className="font-semibold text-white uppercase tracking-wider text-xs font-mono">
               Fitur Interaktif
             </h4>
             <ul className="space-y-1.5">
               <li>
                 <button
                   onClick={() => navigateTo('film-database')}
-                  className="hover:text-[#FFD000] transition-colors flex items-center gap-1"
+                  className="hover:text-white transition-colors flex items-center gap-1.5"
                 >
-                  <Star className="w-3 h-3 text-[#FFD000] fill-current" />
+                  <Star className="w-3.5 h-3.5 text-slate-400" />
                   <span>Rating Film (Skor Sotoy)</span>
                 </button>
               </li>
               <li>
                 <button
                   onClick={() => navigateTo('film-recommendations')}
-                  className="hover:text-[#00F0FF] transition-colors"
+                  className="hover:text-white transition-colors"
                 >
                   Rekomendasi Film Mood
                 </button>
@@ -116,7 +114,7 @@ export const Footer: React.FC = () => {
               <li>
                 <button
                   onClick={() => navigateTo('community-feed')}
-                  className="hover:text-[#FF2E7E] transition-colors"
+                  className="hover:text-white transition-colors"
                 >
                   Live Feed Buzz Sotoy
                 </button>
@@ -124,7 +122,7 @@ export const Footer: React.FC = () => {
               <li>
                 <button
                   onClick={() => navigateTo('user-profile')}
-                  className="hover:text-[#00F0FF] transition-colors"
+                  className="hover:text-white transition-colors"
                 >
                   Profil & Dashboard Saya
                 </button>
@@ -142,7 +140,7 @@ export const Footer: React.FC = () => {
 
           {/* Nav Col 3: Informasi & Legal */}
           <div className="space-y-2">
-            <h4 className="font-bold text-white uppercase tracking-wider text-xs">
+            <h4 className="font-semibold text-white uppercase tracking-wider text-xs font-mono">
               Informasi & Legalitas
             </h4>
             <ul className="space-y-1.5">
@@ -150,10 +148,10 @@ export const Footer: React.FC = () => {
                 <button
                   onClick={() => navigateTo('about-us')}
                   className={`hover:text-white transition-colors flex items-center gap-1.5 ${
-                    currentView === 'about-us' ? 'text-[#00F0FF] font-bold' : ''
+                    currentView === 'about-us' ? 'text-[#FF2E7E] font-semibold' : ''
                   }`}
                 >
-                  <Info className="w-3 h-3" />
+                  <Info className="w-3.5 h-3.5 text-slate-400" />
                   <span>Tentang Kami (About Us)</span>
                 </button>
               </li>
@@ -161,10 +159,10 @@ export const Footer: React.FC = () => {
                 <button
                   onClick={() => navigateTo('privacy-policy')}
                   className={`hover:text-white transition-colors flex items-center gap-1.5 ${
-                    currentView === 'privacy-policy' ? 'text-[#00F0FF] font-bold' : ''
+                    currentView === 'privacy-policy' ? 'text-[#FF2E7E] font-semibold' : ''
                   }`}
                 >
-                  <Shield className="w-3 h-3" />
+                  <Shield className="w-3.5 h-3.5 text-slate-400" />
                   <span>Kebijakan Privasi</span>
                 </button>
               </li>
@@ -172,10 +170,10 @@ export const Footer: React.FC = () => {
                 <button
                   onClick={() => navigateTo('terms-conditions')}
                   className={`hover:text-white transition-colors flex items-center gap-1.5 ${
-                    currentView === 'terms-conditions' ? 'text-[#FFD000] font-bold' : ''
+                    currentView === 'terms-conditions' ? 'text-[#FF2E7E] font-semibold' : ''
                   }`}
                 >
-                  <Scale className="w-3 h-3" />
+                  <Scale className="w-3.5 h-3.5 text-slate-400" />
                   <span>Syarat & Ketentuan</span>
                 </button>
               </li>
@@ -183,42 +181,42 @@ export const Footer: React.FC = () => {
                 <button
                   onClick={() => navigateTo('business-inquiries')}
                   className={`hover:text-white transition-colors flex items-center gap-1.5 ${
-                    currentView === 'business-inquiries' ? 'text-[#FF2E7E] font-bold' : ''
+                    currentView === 'business-inquiries' ? 'text-[#FF2E7E] font-semibold' : ''
                   }`}
                 >
-                  <Briefcase className="w-3 h-3" />
+                  <Briefcase className="w-3.5 h-3.5 text-slate-400" />
                   <span>Kemitraan & Bisnis</span>
                 </button>
               </li>
             </ul>
 
-            <div className="pt-3 border-t border-slate-800/80">
-              <div className="text-[11px] font-bold text-slate-400 mb-1">Peran Akun:</div>
-              <div className="text-[10px] space-y-0.5 text-slate-500">
-                <div>• <span className="text-[#00F0FF]">Warga</span>: Penonton</div>
-                <div>• <span className="text-[#FFD000]">Si Paling Sotoy</span>: Kritikus</div>
-                <div>• <span className="text-[#FF2E7E]">Penulis</span>: Jurnalis</div>
+            <div className="pt-3 border-t border-white/[0.08]">
+              <div className="text-[11px] font-semibold text-slate-400 mb-1">Peran Akun:</div>
+              <div className="text-[11px] space-y-0.5 text-slate-400">
+                <div>• <span className="text-white font-medium">Warga</span>: Penonton</div>
+                <div>• <span className="text-white font-medium">Si Paling Sotoy</span>: Kritikus</div>
+                <div>• <span className="text-[#FF2E7E] font-medium">Penulis</span>: Jurnalis</div>
               </div>
             </div>
           </div>
         </div>
 
         {/* BOTTOM MENU NAVIGATION BAR */}
-        <div id="footer-bottom-menu" className="pt-6 border-t border-slate-800/80">
-          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-3 flex flex-wrap items-center justify-center sm:justify-between gap-3 text-xs">
-            <div className="text-slate-400 font-bold flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#00F0FF] animate-pulse" />
+        <div id="footer-bottom-menu" className="pt-6 border-t border-white/[0.08]">
+          <div className="bg-[#171A1F] border border-white/[0.08] rounded-xl p-3 flex flex-wrap items-center justify-center sm:justify-between gap-3 text-xs">
+            <div className="text-slate-400 font-semibold flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#FF2E7E]" />
               <span>Menu Bawah / Quick Links:</span>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
               <button
                 id="bottom-menu-about"
                 onClick={() => navigateTo('about-us')}
-                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 font-bold ${
+                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-xs font-semibold ${
                   currentView === 'about-us'
-                    ? 'bg-[#00F0FF] text-slate-950 shadow-md shadow-[#00F0FF]/20'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                    ? 'bg-[#FF2E7E] text-white shadow-sm'
+                    : 'text-slate-300 hover:text-white hover:bg-white/[0.04]'
                 }`}
               >
                 <Info className="w-3.5 h-3.5" />
@@ -228,10 +226,10 @@ export const Footer: React.FC = () => {
               <button
                 id="bottom-menu-privacy"
                 onClick={() => navigateTo('privacy-policy')}
-                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 font-bold ${
+                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-xs font-semibold ${
                   currentView === 'privacy-policy'
-                    ? 'bg-[#00F0FF] text-slate-950 shadow-md shadow-[#00F0FF]/20'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                    ? 'bg-[#FF2E7E] text-white shadow-sm'
+                    : 'text-slate-300 hover:text-white hover:bg-white/[0.04]'
                 }`}
               >
                 <Shield className="w-3.5 h-3.5" />
@@ -241,10 +239,10 @@ export const Footer: React.FC = () => {
               <button
                 id="bottom-menu-terms"
                 onClick={() => navigateTo('terms-conditions')}
-                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 font-bold ${
+                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-xs font-semibold ${
                   currentView === 'terms-conditions'
-                    ? 'bg-[#FFD000] text-slate-950 shadow-md shadow-[#FFD000]/20'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                    ? 'bg-[#FF2E7E] text-white shadow-sm'
+                    : 'text-slate-300 hover:text-white hover:bg-white/[0.04]'
                 }`}
               >
                 <Scale className="w-3.5 h-3.5" />
@@ -254,10 +252,10 @@ export const Footer: React.FC = () => {
               <button
                 id="bottom-menu-business"
                 onClick={() => navigateTo('business-inquiries')}
-                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 font-bold ${
+                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-xs font-semibold ${
                   currentView === 'business-inquiries'
-                    ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/20'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                    ? 'bg-[#FF2E7E] text-white shadow-sm'
+                    : 'text-slate-300 hover:text-white hover:bg-white/[0.04]'
                 }`}
               >
                 <Briefcase className="w-3.5 h-3.5" />
@@ -270,7 +268,7 @@ export const Footer: React.FC = () => {
         {/* Sponsor space & copyright */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-slate-500 text-[11px]">
           <div>
-            © {new Date().getFullYear()} <strong>Sotoy Film</strong>. All rights reserved. Bebas berpendapat, tetap santun.
+            © {new Date().getFullYear()} <strong className="text-slate-400 font-semibold">Sotoy Film</strong>. All rights reserved. Bebas berpendapat, tetap santun.
           </div>
           <div className="flex items-center gap-4">
             <button

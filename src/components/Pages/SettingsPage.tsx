@@ -335,7 +335,7 @@ export const SettingsPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
           <div>
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#00F0FF] shadow-sm shadow-[#00F0FF]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[#FF2E7E] shadow-sm shadow-[#FF2E7E]" />
               <h1 className="font-display font-black text-2xl sm:text-3xl text-white tracking-tight">
                 Pengaturan Akun & Pusat Aktivitas
               </h1>
@@ -362,7 +362,7 @@ export const SettingsPage: React.FC = () => {
               onClick={() => navigateTo('user-profile')}
               className="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors"
             >
-              <UserIcon className="w-3.5 h-3.5 text-[#00F0FF]" />
+              <UserIcon className="w-3.5 h-3.5 text-[#FF2E7E]" />
               <span>Lihat Dashboard</span>
             </button>
           </div>
@@ -372,7 +372,7 @@ export const SettingsPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
           {/* Subpage Navigation Sidebar */}
-          <aside className="lg:col-span-4 bg-[#121324] border border-slate-800 rounded-3xl p-3 sm:p-4 space-y-1 shadow-xl">
+          <aside className="lg:col-span-4 bg-[#171A1F] border border-slate-800 rounded-3xl p-3 sm:p-4 space-y-1 shadow-xl">
             <div className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-800/80 mb-2">
               Kategori Pengaturan
             </div>
@@ -387,7 +387,7 @@ export const SettingsPage: React.FC = () => {
                   onClick={() => setActiveSettingsTab(item.id)}
                   className={`w-full text-left p-3 rounded-2xl transition-all flex items-center justify-between group ${
                     isActive
-                      ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/10 border border-[#00F0FF]/40 text-white shadow-lg shadow-cyan-500/10'
+                      ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/10 border border-[#FF2E7E]/40 text-white shadow-lg shadow-cyan-500/10'
                       : 'hover:bg-slate-850 text-slate-300 hover:text-white'
                   }`}
                 >
@@ -395,14 +395,14 @@ export const SettingsPage: React.FC = () => {
                     <div
                       className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
                         isActive
-                          ? 'bg-[#00F0FF] text-black font-black'
+                          ? 'bg-[#FF2E7E] text-black font-black'
                           : 'bg-slate-800 text-slate-400 group-hover:text-white'
                       }`}
                     >
                       <Icon className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
-                      <div className={`text-xs font-bold truncate ${isActive ? 'text-[#00F0FF]' : 'text-white'}`}>
+                      <div className={`text-xs font-bold truncate ${isActive ? 'text-[#FF2E7E]' : 'text-white'}`}>
                         {item.label}
                       </div>
                       <div className="text-[10px] text-slate-400 truncate">
@@ -412,7 +412,7 @@ export const SettingsPage: React.FC = () => {
                   </div>
                   <ChevronRight
                     className={`w-4 h-4 shrink-0 transition-transform ${
-                      isActive ? 'text-[#00F0FF] translate-x-0.5' : 'text-slate-600 group-hover:text-slate-400'
+                      isActive ? 'text-[#FF2E7E] translate-x-0.5' : 'text-slate-600 group-hover:text-slate-400'
                     }`}
                   />
                 </button>
@@ -439,7 +439,7 @@ export const SettingsPage: React.FC = () => {
           </aside>
 
           {/* Subpage Active Content Pane */}
-          <section className="lg:col-span-8 bg-[#121324] border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-6">
+          <section className="lg:col-span-8 bg-[#171A1F] border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-6">
             
             {/* =================================================================== */}
             {/* SUBPAGE 1: PROFIL & UPLOAD FOTO DARI DEVICE */}
@@ -448,7 +448,7 @@ export const SettingsPage: React.FC = () => {
               <div id="settings-pane-profile" className="space-y-6 animate-in fade-in duration-200">
                 <div className="border-b border-slate-800 pb-4">
                   <h2 className="text-lg font-display font-black text-white flex items-center gap-2">
-                    <UserIcon className="w-5 h-5 text-[#00F0FF]" />
+                    <UserIcon className="w-5 h-5 text-[#FF2E7E]" />
                     <span>Identitas Profil & Foto Perangkat</span>
                   </h2>
                   <p className="text-xs text-slate-400 mt-0.5">
@@ -468,7 +468,7 @@ export const SettingsPage: React.FC = () => {
                       <img
                         src={avatarPreview}
                         alt={name}
-                        className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover ring-2 ring-[#00F0FF] shadow-xl"
+                        className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover ring-2 ring-[#FF2E7E] shadow-xl"
                       />
                       <button
                         type="button"
@@ -476,7 +476,7 @@ export const SettingsPage: React.FC = () => {
                         className="absolute inset-0 bg-black/60 rounded-2xl flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-bold gap-1"
                         title="Klik untuk memilih foto"
                       >
-                        <Camera className="w-5 h-5 text-[#00F0FF]" />
+                        <Camera className="w-5 h-5 text-[#FF2E7E]" />
                         <span>Ganti Foto</span>
                       </button>
                     </div>
@@ -504,7 +504,7 @@ export const SettingsPage: React.FC = () => {
                           type="button"
                           id="btn-upload-from-device"
                           onClick={() => fileInputRef.current?.click()}
-                          className="px-4 py-2 rounded-xl bg-[#00F0FF] hover:bg-[#00d0e0] text-black font-black text-xs flex items-center gap-2 shadow-lg shadow-cyan-500/20 transition-all hover:scale-105"
+                          className="px-4 py-2 rounded-xl bg-[#FF2E7E] hover:bg-[#00d0e0] text-black font-black text-xs flex items-center gap-2 shadow-lg shadow-cyan-500/20 transition-all hover:scale-105"
                         >
                           <Upload className="w-3.5 h-3.5" />
                           <span>Pilih Foto dari Galeri / Device</span>
@@ -537,7 +537,7 @@ export const SettingsPage: React.FC = () => {
                         value={name}
                         onChange={e => setName(e.target.value)}
                         required
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF]"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
                       />
                     </div>
 
@@ -548,7 +548,7 @@ export const SettingsPage: React.FC = () => {
                         value={handle}
                         onChange={e => setHandle(e.target.value)}
                         required
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF]"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
                       />
                     </div>
                   </div>
@@ -559,7 +559,7 @@ export const SettingsPage: React.FC = () => {
                       value={bio}
                       onChange={e => setBio(e.target.value)}
                       rows={3}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF] resize-none"
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] resize-none"
                       placeholder="Ceritakan seleramu tentang film, sutradara favorit, atau gaya visual yang kamu sukai..."
                     />
                   </div>
@@ -568,7 +568,7 @@ export const SettingsPage: React.FC = () => {
                     <button
                       type="submit"
                       id="save-profile-btn"
-                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#00F0FF] to-[#00A3FF] hover:brightness-110 text-black font-black text-xs flex items-center gap-2 shadow-lg shadow-cyan-500/20 transition-all"
+                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#FF2E7E] to-[#00A3FF] hover:brightness-110 text-black font-black text-xs flex items-center gap-2 shadow-lg shadow-cyan-500/20 transition-all"
                     >
                       <Save className="w-3.5 h-3.5" />
                       <span>Simpan Perubahan Profil</span>
@@ -664,7 +664,7 @@ export const SettingsPage: React.FC = () => {
                   linkType: 'film',
                   linkId: r.filmId,
                   imageUrl: film?.poster,
-                  badgeColor: 'text-[#FFD000] bg-amber-500/10 border-amber-500/30',
+                  badgeColor: 'text-[#FF2E7E] bg-amber-500/10 border-amber-500/30',
                 });
               });
 
@@ -682,7 +682,7 @@ export const SettingsPage: React.FC = () => {
                   linkType: 'buzz',
                   linkId: b.id,
                   imageUrl: currentUser.avatar,
-                  badgeColor: 'text-[#00F0FF] bg-cyan-500/10 border-cyan-500/30',
+                  badgeColor: 'text-[#FF2E7E] bg-cyan-500/10 border-cyan-500/30',
                 });
               });
 
@@ -714,7 +714,7 @@ export const SettingsPage: React.FC = () => {
                   {/* Header */}
                   <div className="border-b border-slate-800 pb-4">
                     <h2 className="text-lg font-display font-black text-white flex items-center gap-2">
-                      <Activity className="w-5 h-5 text-[#00F0FF]" />
+                      <Activity className="w-5 h-5 text-[#FF2E7E]" />
                       <span>Pusat Riwayat Aktivitas (Activity Centre)</span>
                     </h2>
                     <p className="text-xs text-slate-400 mt-0.5">
@@ -784,7 +784,7 @@ export const SettingsPage: React.FC = () => {
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Buzz Opini</span>
-                        <MessageSquare className="w-3.5 h-3.5 text-[#00F0FF]" />
+                        <MessageSquare className="w-3.5 h-3.5 text-[#FF2E7E]" />
                       </div>
                       <div className="text-xl font-black text-white mt-1.5 font-mono">{userBuzzPosts.length}</div>
                       <div className="text-[10px] text-cyan-400 mt-0.5">Thread Terkirim</div>
@@ -814,7 +814,7 @@ export const SettingsPage: React.FC = () => {
                         onClick={() => setActivityCategory('all')}
                         className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
                           activityCategory === 'all'
-                            ? 'bg-[#00F0FF] text-black shadow-md shadow-cyan-500/20'
+                            ? 'bg-[#FF2E7E] text-black shadow-md shadow-cyan-500/20'
                             : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                         }`}
                       >
@@ -890,7 +890,7 @@ export const SettingsPage: React.FC = () => {
                         value={activitySearch}
                         onChange={e => setActivitySearch(e.target.value)}
                         placeholder="Cari aktivitas..."
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#00F0FF]"
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
                       />
                     </div>
                   </div>
@@ -922,7 +922,7 @@ export const SettingsPage: React.FC = () => {
                               setActivityCategory('all');
                               setActivitySearch('');
                             }}
-                            className="text-xs font-bold text-[#00F0FF] hover:underline"
+                            className="text-xs font-bold text-[#FF2E7E] hover:underline"
                           >
                             Tampilkan Semua Aktivitas
                           </button>
@@ -963,7 +963,7 @@ export const SettingsPage: React.FC = () => {
                                 </span>
                               </div>
 
-                              <h4 className="text-xs sm:text-sm font-bold text-white group-hover:text-[#00F0FF] transition-colors truncate">
+                              <h4 className="text-xs sm:text-sm font-bold text-white group-hover:text-[#FF2E7E] transition-colors truncate">
                                 {item.title}
                               </h4>
 
@@ -984,7 +984,7 @@ export const SettingsPage: React.FC = () => {
                             {item.linkType === 'film' && item.linkId && (
                               <button
                                 onClick={() => navigateTo('film-detail', { filmId: item.linkId })}
-                                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-[#00F0FF] hover:text-black text-slate-300 text-xs font-bold transition-all flex items-center gap-1.5"
+                                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-[#FF2E7E] hover:text-black text-slate-300 text-xs font-bold transition-all flex items-center gap-1.5"
                               >
                                 <span>Buka Film</span>
                                 <ExternalLink className="w-3 h-3" />
@@ -1092,7 +1092,7 @@ export const SettingsPage: React.FC = () => {
               <div id="settings-pane-security" className="space-y-6 animate-in fade-in duration-200">
                 <div className="border-b border-slate-800 pb-4">
                   <h2 className="text-lg font-display font-black text-white flex items-center gap-2">
-                    <Lock className="w-5 h-5 text-[#00F0FF]" />
+                    <Lock className="w-5 h-5 text-[#FF2E7E]" />
                     <span>Keamanan Akun & Kredensial</span>
                   </h2>
                   <p className="text-xs text-slate-400 mt-0.5">
@@ -1105,7 +1105,7 @@ export const SettingsPage: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-bold text-white flex items-center gap-2">
-                        <Mail className="w-4 h-4 text-[#00F0FF]" />
+                        <Mail className="w-4 h-4 text-[#FF2E7E]" />
                         <span>Alamat Email Terdaftar</span>
                       </div>
                       <div className="text-xs text-slate-400 mt-0.5">
@@ -1125,7 +1125,7 @@ export const SettingsPage: React.FC = () => {
                         value={newEmail}
                         onChange={e => setNewEmail(e.target.value)}
                         placeholder="contoh@domain.com"
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#00F0FF]"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#FF2E7E]"
                       />
                     </div>
 
@@ -1136,7 +1136,7 @@ export const SettingsPage: React.FC = () => {
                         value={confirmEmail}
                         onChange={e => setConfirmEmail(e.target.value)}
                         placeholder="Ulangi email baru"
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#00F0FF]"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#FF2E7E]"
                       />
                     </div>
 
@@ -1155,7 +1155,7 @@ export const SettingsPage: React.FC = () => {
                 <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4">
                   <div>
                     <div className="text-sm font-bold text-white flex items-center gap-2">
-                      <Key className="w-4 h-4 text-[#FFD000]" />
+                      <Key className="w-4 h-4 text-[#FF2E7E]" />
                       <span>Ganti Kata Sandi (Password)</span>
                     </div>
                     <div className="text-xs text-slate-400 mt-0.5">
@@ -1172,7 +1172,7 @@ export const SettingsPage: React.FC = () => {
                           value={oldPassword}
                           onChange={e => setOldPassword(e.target.value)}
                           placeholder="Masukkan password lama kamu"
-                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#00F0FF] pr-10"
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#FF2E7E] pr-10"
                         />
                         <button
                           type="button"
@@ -1193,7 +1193,7 @@ export const SettingsPage: React.FC = () => {
                             value={newPassword}
                             onChange={e => setNewPassword(e.target.value)}
                             placeholder="Minimal 6 karakter"
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#00F0FF] pr-10"
+                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#FF2E7E] pr-10"
                           />
                           <button
                             type="button"
@@ -1212,7 +1212,7 @@ export const SettingsPage: React.FC = () => {
                           value={confirmPassword}
                           onChange={e => setConfirmPassword(e.target.value)}
                           placeholder="Ulangi kata sandi baru"
-                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#00F0FF]"
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#FF2E7E]"
                         />
                       </div>
                     </div>
@@ -1263,7 +1263,7 @@ export const SettingsPage: React.FC = () => {
                   <div className="space-y-2">
                     <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <Smartphone className="w-4 h-4 text-[#00F0FF]" />
+                        <Smartphone className="w-4 h-4 text-[#FF2E7E]" />
                         <div>
                           <div className="text-xs font-bold text-white flex items-center gap-2">
                             <span>Chrome di Windows 11</span>
@@ -1287,7 +1287,7 @@ export const SettingsPage: React.FC = () => {
               <div id="settings-pane-privacy" className="space-y-6 animate-in fade-in duration-200">
                 <div className="border-b border-slate-800 pb-4">
                   <h2 className="text-lg font-display font-black text-white flex items-center gap-2">
-                    <Shield className="w-5 h-5 text-[#00F0FF]" />
+                    <Shield className="w-5 h-5 text-[#FF2E7E]" />
                     <span>Pengaturan Privasi & Visibilitas Data</span>
                   </h2>
                   <p className="text-xs text-slate-400 mt-0.5">
@@ -1308,7 +1308,7 @@ export const SettingsPage: React.FC = () => {
                       type="button"
                       onClick={() => updateUserSettings({ isPrivateProfile: !userSettings.isPrivateProfile })}
                       className={`w-12 h-6 rounded-full transition-colors relative p-0.5 shrink-0 ${
-                        userSettings.isPrivateProfile ? 'bg-[#00F0FF]' : 'bg-slate-800'
+                        userSettings.isPrivateProfile ? 'bg-[#FF2E7E]' : 'bg-slate-800'
                       }`}
                     >
                       <div
@@ -1354,7 +1354,7 @@ export const SettingsPage: React.FC = () => {
                       type="button"
                       onClick={() => updateUserSettings({ isReviewsPublic: !userSettings.isReviewsPublic })}
                       className={`w-12 h-6 rounded-full transition-colors relative p-0.5 shrink-0 ${
-                        userSettings.isReviewsPublic ? 'bg-[#FFD000]' : 'bg-slate-800'
+                        userSettings.isReviewsPublic ? 'bg-[#FF2E7E]' : 'bg-slate-800'
                       }`}
                     >
                       <div
@@ -1380,7 +1380,7 @@ export const SettingsPage: React.FC = () => {
                           onClick={() => updateUserSettings({ allowTagging: opt.id as any })}
                           className={`p-2 rounded-xl text-xs font-bold border transition-colors ${
                             userSettings.allowTagging === opt.id
-                              ? 'bg-cyan-500/20 border-[#00F0FF] text-[#00F0FF]'
+                              ? 'bg-cyan-500/20 border-[#FF2E7E] text-[#FF2E7E]'
                               : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
                           }`}
                         >
@@ -1441,7 +1441,7 @@ export const SettingsPage: React.FC = () => {
               <div id="settings-pane-preferences" className="space-y-6 animate-in fade-in duration-200">
                 <div className="border-b border-slate-800 pb-4">
                   <h2 className="text-lg font-display font-black text-white flex items-center gap-2">
-                    <Sliders className="w-5 h-5 text-[#00F0FF]" />
+                    <Sliders className="w-5 h-5 text-[#FF2E7E]" />
                     <span>Preferensi Sinema & Pemutar Film</span>
                   </h2>
                   <p className="text-xs text-slate-400 mt-0.5">
@@ -1468,7 +1468,7 @@ export const SettingsPage: React.FC = () => {
                           onClick={() => toggleGenre(genre)}
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                             isFav
-                              ? 'bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] text-white shadow-md shadow-[#FF2E7E]/20'
+                              ? 'bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-white shadow-md shadow-[#FF2E7E]/20'
                               : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-white'
                           }`}
                         >
@@ -1490,7 +1490,7 @@ export const SettingsPage: React.FC = () => {
                         onClick={() => updateUserSettings({ cinemaQuality: quality })}
                         className={`p-3 rounded-xl border text-xs font-bold text-left transition-all ${
                           userSettings.cinemaQuality === quality
-                            ? 'bg-cyan-500/20 border-[#00F0FF] text-[#00F0FF]'
+                            ? 'bg-cyan-500/20 border-[#FF2E7E] text-[#FF2E7E]'
                             : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
                         }`}
                       >
@@ -1514,7 +1514,7 @@ export const SettingsPage: React.FC = () => {
                         onClick={() => updateUserSettings({ language: lang })}
                         className={`p-3 rounded-xl border text-xs font-bold text-left transition-all ${
                           userSettings.language === lang
-                            ? 'bg-cyan-500/20 border-[#00F0FF] text-[#00F0FF]'
+                            ? 'bg-cyan-500/20 border-[#FF2E7E] text-[#FF2E7E]'
                             : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
                         }`}
                       >
@@ -1536,7 +1536,7 @@ export const SettingsPage: React.FC = () => {
                     type="button"
                     onClick={() => updateUserSettings({ autoplayTrailer: !userSettings.autoplayTrailer })}
                     className={`w-12 h-6 rounded-full transition-colors relative p-0.5 shrink-0 ${
-                      userSettings.autoplayTrailer ? 'bg-[#00F0FF]' : 'bg-slate-800'
+                      userSettings.autoplayTrailer ? 'bg-[#FF2E7E]' : 'bg-slate-800'
                     }`}
                   >
                     <div
@@ -1556,7 +1556,7 @@ export const SettingsPage: React.FC = () => {
               <div id="settings-pane-notifications" className="space-y-6 animate-in fade-in duration-200">
                 <div className="border-b border-slate-800 pb-4">
                   <h2 className="text-lg font-display font-black text-white flex items-center gap-2">
-                    <Bell className="w-5 h-5 text-[#00F0FF]" />
+                    <Bell className="w-5 h-5 text-[#FF2E7E]" />
                     <span>Preferensi Notifikasi</span>
                   </h2>
                   <p className="text-xs text-slate-400 mt-0.5">
@@ -1598,7 +1598,7 @@ export const SettingsPage: React.FC = () => {
                       type="button"
                       onClick={() => updateUserSettings({ notifyCuratorBuzz: !userSettings.notifyCuratorBuzz })}
                       className={`w-12 h-6 rounded-full transition-colors relative p-0.5 shrink-0 ${
-                        userSettings.notifyCuratorBuzz ? 'bg-[#00F0FF]' : 'bg-slate-800'
+                        userSettings.notifyCuratorBuzz ? 'bg-[#FF2E7E]' : 'bg-slate-800'
                       }`}
                     >
                       <div
@@ -1620,7 +1620,7 @@ export const SettingsPage: React.FC = () => {
                       type="button"
                       onClick={() => updateUserSettings({ notifyWatchlistRelease: !userSettings.notifyWatchlistRelease })}
                       className={`w-12 h-6 rounded-full transition-colors relative p-0.5 shrink-0 ${
-                        userSettings.notifyWatchlistRelease ? 'bg-[#FFD000]' : 'bg-slate-800'
+                        userSettings.notifyWatchlistRelease ? 'bg-[#FF2E7E]' : 'bg-slate-800'
                       }`}
                     >
                       <div

@@ -112,7 +112,7 @@ export const OnboardingPage: React.FC = () => {
       {/* Decorative ambient gradients */}
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-25">
         <div className="absolute top-[-15%] left-[-10%] w-[50%] h-[50%] bg-[#FF2E7E] rounded-full blur-[140px]" />
-        <div className="absolute bottom-[-15%] right-[-10%] w-[50%] h-[50%] bg-[#00F0FF] rounded-full blur-[140px]" />
+        <div className="absolute bottom-[-15%] right-[-10%] w-[50%] h-[50%] bg-[#FF2E7E] rounded-full blur-[140px]" />
       </div>
 
       <motion.div 
@@ -121,7 +121,7 @@ export const OnboardingPage: React.FC = () => {
         transition={{ duration: 0.4 }}
         className="w-full max-w-2xl relative z-10 my-auto"
       >
-        <div className="bg-[#121324]/90 backdrop-blur-2xl border border-slate-800/80 rounded-3xl sm:rounded-[36px] p-6 sm:p-10 shadow-2xl overflow-hidden">
+        <div className="bg-[#171A1F]/90 backdrop-blur-2xl border border-slate-800/80 rounded-3xl sm:rounded-[36px] p-6 sm:p-10 shadow-2xl overflow-hidden">
           {/* Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF2E7E]/15 border border-[#FF2E7E]/30 text-[#FF2E7E] text-[11px] font-black uppercase tracking-widest mb-3">
@@ -129,7 +129,7 @@ export const OnboardingPage: React.FC = () => {
               <span>Personalisasi Akun</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-display font-black text-white tracking-tight mb-2">
-              Lengkapi Profil <span className="text-[#FFD000]">Cinephile</span> Kamu
+              Lengkapi Profil <span className="text-[#FF2E7E]">Cinephile</span> Kamu
             </h1>
             <p className="text-slate-400 text-xs sm:text-sm max-w-md mx-auto leading-relaxed">
               Atur identitasmu, pilih avatar sinematik, dan tentukan genre favoritmu untuk menjelajahi Sotoy Film.
@@ -141,7 +141,7 @@ export const OnboardingPage: React.FC = () => {
             <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 text-center">
               <div className="flex flex-col items-center">
                 <div className="relative group">
-                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl sm:rounded-3xl overflow-hidden border-2 border-[#FFD000]/40 shadow-xl bg-slate-950">
+                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl sm:rounded-3xl overflow-hidden border-2 border-[#FF2E7E]/40 shadow-xl bg-slate-950">
                     <img 
                       src={selectedAvatar} 
                       alt="Profile Preview" 
@@ -154,7 +154,7 @@ export const OnboardingPage: React.FC = () => {
                     id="onboarding-upload-photo-btn"
                     onClick={() => fileInputRef.current?.click()}
                     aria-label="Upload custom profile photo"
-                    className="absolute bottom-[-6px] right-[-6px] w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-r from-[#FFD000] to-[#FF8008] text-slate-950 rounded-xl flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all"
+                    className="absolute bottom-[-6px] right-[-6px] w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-slate-950 rounded-xl flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all"
                   >
                     <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
@@ -179,7 +179,7 @@ export const OnboardingPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <div className="space-y-1.5">
                 <label className="text-[11px] font-black text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <UserIcon className="w-3.5 h-3.5 text-[#FFD000]" />
+                  <UserIcon className="w-3.5 h-3.5 text-[#FF2E7E]" />
                   Nama Lengkap / Panggilan <span className="text-[#FF2E7E]">*</span>
                 </label>
                 <input
@@ -187,14 +187,14 @@ export const OnboardingPage: React.FC = () => {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Contoh: Budi Nolan"
-                  className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-3.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000]/30 transition-all min-h-[44px]"
+                  className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-3.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#FF2E7E] focus:ring-1 focus:ring-[#FF2E7E]/30 transition-all min-h-[44px]"
                   required
                 />
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-[11px] font-black text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <AtSign className="w-3.5 h-3.5 text-[#00F0FF]" />
+                  <AtSign className="w-3.5 h-3.5 text-[#FF2E7E]" />
                   Username / Handle <span className="text-[#FF2E7E]">*</span>
                 </label>
                 <div className="relative">
@@ -204,7 +204,7 @@ export const OnboardingPage: React.FC = () => {
                     value={handle}
                     onChange={(e) => setHandle(e.target.value.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase())}
                     placeholder="budinolan"
-                    className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl pl-9 pr-4 py-3.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#00F0FF] focus:ring-1 focus:ring-[#00F0FF]/30 transition-all min-h-[44px]"
+                    className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl pl-9 pr-4 py-3.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#FF2E7E] focus:ring-1 focus:ring-[#FF2E7E]/30 transition-all min-h-[44px]"
                     required
                   />
                 </div>
@@ -232,7 +232,7 @@ export const OnboardingPage: React.FC = () => {
             {/* Favorite Genres Selector */}
             <div className="space-y-2.5 pt-1">
               <label className="text-[11px] font-black text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                <Film className="w-3.5 h-3.5 text-[#FFD000]" />
+                <Film className="w-3.5 h-3.5 text-[#FF2E7E]" />
                 Genre Sinema Favorit (Pilih yang kamu suka)
               </label>
               <div className="flex flex-wrap gap-2">
@@ -245,7 +245,7 @@ export const OnboardingPage: React.FC = () => {
                       onClick={() => toggleGenre(genre)}
                       className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 min-h-[40px] ${
                         isChecked
-                          ? 'bg-[#FFD000] text-slate-950 shadow-md shadow-[#FFD000]/20 font-black'
+                          ? 'bg-[#FF2E7E] text-slate-950 shadow-md shadow-[#FF2E7E]/20 font-black'
                           : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
                       }`}
                     >
@@ -262,7 +262,7 @@ export const OnboardingPage: React.FC = () => {
               type="submit"
               id="onboarding-submit-btn"
               disabled={isSubmitting || !name.trim() || !handle.trim()}
-              className="w-full group relative bg-gradient-to-r from-[#FFD000] via-[#FF8008] to-[#FF2E7E] text-slate-950 disabled:opacity-50 disabled:cursor-not-allowed py-4 sm:py-4.5 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-wider shadow-xl shadow-[#FFD000]/20 hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2 min-h-[48px]"
+              className="w-full group relative bg-gradient-to-r from-[#FF2E7E] via-[#e0266e] to-[#FF2E7E] text-slate-950 disabled:opacity-50 disabled:cursor-not-allowed py-4 sm:py-4.5 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-wider shadow-xl shadow-[#FF2E7E]/20 hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2 min-h-[48px]"
             >
               {isSubmitting ? (
                 <>

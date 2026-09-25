@@ -21,7 +21,7 @@ export const TermsPage: React.FC = () => {
         
         {/* Header Title */}
         <div className="space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FFD000]/10 border border-[#FFD000]/30 text-[#FFD000] text-xs font-black uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 text-[#FF2E7E] text-xs font-black uppercase tracking-wider">
             <Scale className="w-3.5 h-3.5" />
             <span>Perjanjian Pengguna Platform</span>
           </div>
@@ -41,9 +41,9 @@ export const TermsPage: React.FC = () => {
         <AdBannerSlot variant="leaderboard" />
 
         {/* Core Principles */}
-        <div className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xl">
+        <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xl">
           <h2 className="font-display font-black text-lg text-white flex items-center gap-2">
-            <FileCheck className="w-5 h-5 text-[#FFD000]" />
+            <FileCheck className="w-5 h-5 text-[#FF2E7E]" />
             <span>Kode Etik Komunitas Warga Sotoy</span>
           </h2>
           <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
@@ -55,7 +55,7 @@ export const TermsPage: React.FC = () => {
         <div className="space-y-8 text-slate-300 text-xs sm:text-sm leading-relaxed">
           
           {/* Section 1 */}
-          <section className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+          <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
             <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
               <span className="text-[#FF2E7E] font-black">1.</span>
               <span>Hak Cipta & Kepemilikan Materi</span>
@@ -74,9 +74,9 @@ export const TermsPage: React.FC = () => {
           </section>
 
           {/* Section 2 */}
-          <section className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+          <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
             <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
-              <span className="text-[#00F0FF] font-black">2.</span>
+              <span className="text-[#FF2E7E] font-black">2.</span>
               <span>Aturan Spoiler & Tata Krama Ulasan</span>
             </h3>
             <p>
@@ -84,7 +84,7 @@ export const TermsPage: React.FC = () => {
             </p>
             <div className="space-y-3 pt-1">
               <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-900/80 border border-slate-800">
-                <AlertTriangle className="w-5 h-5 text-[#FFD000] shrink-0 mt-0.5" />
+                <AlertTriangle className="w-5 h-5 text-[#FF2E7E] shrink-0 mt-0.5" />
                 <div>
                   <div className="font-bold text-white text-xs mb-1">Peringatan Spoiler Wajib</div>
                   <div className="text-slate-400 text-[11px] leading-relaxed">
@@ -106,9 +106,9 @@ export const TermsPage: React.FC = () => {
           </section>
 
           {/* Section 3 */}
-          <section className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+          <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
             <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
-              <span className="text-[#FFD000] font-black">3.</span>
+              <span className="text-[#FF2E7E] font-black">3.</span>
               <span>Integritas Sistem Skor Sotoy & Anti-Review Bombing</span>
             </h3>
             <p>
@@ -122,7 +122,7 @@ export const TermsPage: React.FC = () => {
           </section>
 
           {/* Section 4 */}
-          <section className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+          <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
             <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
               <span className="text-purple-400 font-black">4.</span>
               <span>Kewenangan Moderasi & Penegakan Sanksi</span>
@@ -133,7 +133,7 @@ export const TermsPage: React.FC = () => {
           </section>
 
           {/* Section 5 */}
-          <section className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+          <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
             <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
               <span className="text-emerald-400 font-black">5.</span>
               <span>Hukum yang Berlaku</span>
@@ -155,7 +155,7 @@ export const TermsPage: React.FC = () => {
           </button>
           <button
             onClick={() => navigateTo('business-inquiries')}
-            className="text-xs font-bold text-[#FFD000] hover:underline"
+            className="text-xs font-bold text-[#FF2E7E] hover:underline"
           >
             Info Kemitraan & Bisnis →
           </button>

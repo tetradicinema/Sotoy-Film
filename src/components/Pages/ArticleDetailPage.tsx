@@ -220,7 +220,7 @@ export const ArticleDetailPage: React.FC = () => {
           {/* MAIN ARTICLE COLUMN (8 Columns) */}
           <div className="lg:col-span-8 space-y-8">
             {/* Article Container */}
-            <article className="bg-[#121324] border border-slate-800 rounded-3xl overflow-hidden shadow-2xl p-6 sm:p-10 space-y-6">
+            <article className="bg-[#171A1F] border border-slate-800 rounded-3xl overflow-hidden shadow-2xl p-6 sm:p-10 space-y-6">
           
           {/* Category & Tags Header */}
           <div className="flex items-center justify-between flex-wrap gap-2">
@@ -269,14 +269,14 @@ export const ArticleDetailPage: React.FC = () => {
                   onClick={() => navigateTo('user-profile', { userId: author.id })}
                   src={author.avatarURL || author.avatar}
                   alt={author.displayName || author.name}
-                  className="w-10 h-10 rounded-full object-cover ring-2 ring-[#FFD000] cursor-pointer hover:scale-105 transition-transform"
+                  className="w-10 h-10 rounded-full object-cover ring-2 ring-[#FF2E7E] cursor-pointer hover:scale-105 transition-transform"
                   title={`Kunjungi profil ${author.displayName || author.name}`}
                 />
                 <div>
                   <div className="text-sm font-bold text-white flex items-center gap-1.5 flex-wrap">
                     <span
                       onClick={() => navigateTo('user-profile', { userId: author.id })}
-                      className="cursor-pointer hover:text-[#00F0FF] transition-colors"
+                      className="cursor-pointer hover:text-[#FF2E7E] transition-colors"
                       title={`Kunjungi profil ${author.displayName || author.name}`}
                     >
                       {author.displayName || author.name}
@@ -305,7 +305,7 @@ export const ArticleDetailPage: React.FC = () => {
                         className={`ml-1 px-2.5 py-0.5 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 ${
                           isLoggedIn && isFollowing(author.id)
                             ? 'bg-slate-800 text-slate-300 border border-slate-700 hover:bg-red-500/20 hover:text-red-400'
-                            : 'bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] text-white shadow-sm hover:brightness-110 active:scale-95'
+                            : 'bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-white shadow-sm hover:brightness-110 active:scale-95'
                         }`}
                         title={isLoggedIn && isFollowing(author.id) ? 'Klik untuk batal ikuti' : 'Ikuti Penulis ini'}
                       >
@@ -361,7 +361,7 @@ export const ArticleDetailPage: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    <Bookmark className="w-4 h-4 text-[#00F0FF]" />
+                    <Bookmark className="w-4 h-4 text-[#FF2E7E]" />
                     <span>+ Simpan ke Library</span>
                   </>
                 )}
@@ -379,7 +379,7 @@ export const ArticleDetailPage: React.FC = () => {
               <button
                 id="article-share-btn"
                 onClick={handleShare}
-                className="flex items-center gap-1.5 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-[#00F0FF] border border-cyan-500/40 hover:bg-[#00F0FF] hover:text-slate-950 px-3 py-1.5 rounded-xl transition-all font-bold"
+                className="flex items-center gap-1.5 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-[#FF2E7E] border border-cyan-500/40 hover:bg-[#FF2E7E] hover:text-slate-950 px-3 py-1.5 rounded-xl transition-all font-bold"
                 title="Bagikan ke WhatsApp, X, FB, dll"
               >
                 <Share2 className="w-4 h-4" />
@@ -409,7 +409,7 @@ export const ArticleDetailPage: React.FC = () => {
               }
               if (para.startsWith('**') && para.endsWith('**')) {
                 return (
-                  <div key={idx} className="bg-[#FFD000]/10 border border-[#FFD000]/30 p-4 rounded-2xl text-[#FFD000] font-bold">
+                  <div key={idx} className="bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 p-4 rounded-2xl text-[#FF2E7E] font-bold">
                     {para.replace(/\*\*/g, '')}
                   </div>
                 );
@@ -439,7 +439,7 @@ export const ArticleDetailPage: React.FC = () => {
           <div className="mt-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-[#181a30] to-slate-900 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="space-y-1 text-center sm:text-left">
               <div className="text-xs font-bold text-white flex items-center justify-center sm:justify-start gap-2">
-                <Share2 className="w-4 h-4 text-[#00F0FF]" />
+                <Share2 className="w-4 h-4 text-[#FF2E7E]" />
                 <span>Bagikan Artikel & Ulasan Ini ke Media Sosial</span>
               </div>
               <p className="text-[11px] text-slate-400">
@@ -448,7 +448,7 @@ export const ArticleDetailPage: React.FC = () => {
             </div>
             <button
               onClick={handleShare}
-              className="px-5 py-2.5 bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] text-white text-xs font-black rounded-xl shadow-lg shadow-[#FF2E7E]/25 hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 shrink-0"
+              className="px-5 py-2.5 bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-white text-xs font-black rounded-xl shadow-lg shadow-[#FF2E7E]/25 hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 shrink-0"
             >
               <Share2 className="w-4 h-4" />
               <span>Bagikan Sekarang</span>
@@ -460,15 +460,15 @@ export const ArticleDetailPage: React.FC = () => {
         {discussedFilm && (
           <section
             id="article-discussed-film-box"
-            className="bg-gradient-to-br from-[#1B1429] via-[#151628] to-[#10111f] border-2 border-[#FFD000]/40 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden"
+            className="bg-[#171A1F] border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden"
           >
-            <div className="flex items-center justify-between pb-4 mb-6 border-b border-slate-800 flex-wrap gap-2">
+            <div className="flex items-center justify-between pb-4 mb-6 border-b border-white/10 flex-wrap gap-2">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-[#FFD000]/20 flex items-center justify-center text-[#FFD000]">
+                <div className="w-8 h-8 rounded-xl bg-[#FF2E7E]/20 flex items-center justify-center text-[#FF2E7E]">
                   <Film className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-[#FFD000] block">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#FF2E7E] block">
                     Film yang Dibahas dalam Artikel Ini
                   </span>
                   <h3 className="font-display font-black text-xl text-white">
@@ -497,7 +497,7 @@ export const ArticleDetailPage: React.FC = () => {
                     alt={discussedFilm.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
-                  <div className="absolute top-2 right-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/40 text-[#FFD000] font-black text-xs">
+                  <div className="absolute top-2 right-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FF2E7E]/40 text-[#FF2E7E] font-black text-xs">
                     ★ {discussedFilm.skorSotoy.toFixed(1)}
                   </div>
                 </div>
@@ -535,7 +535,7 @@ export const ArticleDetailPage: React.FC = () => {
                   <div>
                     <div className="text-[10px] text-slate-400 font-medium">Skor Komunitas Sotoy</div>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="text-lg font-medium text-[#FFD000]">★ {discussedFilm.skorSotoy.toFixed(1)}</span>
+                      <span className="text-lg font-medium text-[#FF2E7E]">★ {discussedFilm.skorSotoy.toFixed(1)}</span>
                       <span className="text-[11px] text-slate-400">/ 10.0 ({discussedFilm.totalVotes} ulasan)</span>
                     </div>
                   </div>
@@ -543,7 +543,7 @@ export const ArticleDetailPage: React.FC = () => {
                   <div>
                     <div className="text-[10px] text-slate-400 font-medium">Skor Si Paling Sotoy</div>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="text-lg font-medium text-[#00F0FF]">
+                      <span className="text-lg font-medium text-[#FF2E7E]">
                         ★ {discussedFilm.criticsSkorSotoy ? discussedFilm.criticsSkorSotoy.toFixed(1) : discussedFilm.skorSotoy.toFixed(1)}
                       </span>
                       <span className="text-[11px] text-slate-400">/ 10.0 (Critic Verified)</span>
@@ -568,7 +568,7 @@ export const ArticleDetailPage: React.FC = () => {
                         setRateModalOpen(true);
                       }
                     }}
-                    className="px-5 py-2.5 bg-gradient-to-r from-[#FFD000] to-[#FF8008] text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-[#FFD000]/20 hover:brightness-110 active:scale-95 transition-all flex items-center gap-2"
+                    className="px-5 py-2.5 bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-[#FF2E7E]/20 hover:brightness-110 active:scale-95 transition-all flex items-center gap-2"
                   >
                     <Star className="w-4 h-4 fill-current" />
                     <span>Beri Skor Sotoy & Ulas Film Ini</span>
@@ -605,9 +605,9 @@ export const ArticleDetailPage: React.FC = () => {
         <AdBannerSlot variant="infeed" />
 
         {/* Comments Section */}
-        <div id="article-comments" className="bg-[#121324] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6">
+        <div id="article-comments" className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-800">
-            <MessageCircle className="w-5 h-5 text-[#00F0FF]" />
+            <MessageCircle className="w-5 h-5 text-[#FF2E7E]" />
             <h3 className="font-display font-black text-lg text-white">
               Diskusi Komentar ({comments.length})
             </h3>
@@ -616,7 +616,7 @@ export const ArticleDetailPage: React.FC = () => {
           {/* Comment input form or Login Requirement */}
           {!isLoggedIn ? (
             <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 text-center space-y-3">
-              <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-[#00F0FF] flex items-center justify-center mx-auto border border-cyan-500/30">
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-[#FF2E7E] flex items-center justify-center mx-auto border border-cyan-500/30">
                 <Lock className="w-5 h-5" />
               </div>
               <div>
@@ -629,7 +629,7 @@ export const ArticleDetailPage: React.FC = () => {
                 type="button"
                 id="login-to-comment-btn"
                 onClick={() => setLoginModalOpen(true)}
-                className="px-5 py-2.5 bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] text-white text-xs font-bold rounded-xl shadow-md shadow-[#FF2E7E]/20 hover:brightness-110 active:scale-95 transition-all inline-flex items-center gap-2"
+                className="px-5 py-2.5 bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-white text-xs font-bold rounded-xl shadow-md shadow-[#FF2E7E]/20 hover:brightness-110 active:scale-95 transition-all inline-flex items-center gap-2"
               >
                 <LogIn className="w-4 h-4" />
                 <span>Masuk (Log In) Sekarang</span>
@@ -686,7 +686,7 @@ export const ArticleDetailPage: React.FC = () => {
                 <div
                   key={rel.id}
                   onClick={() => navigateTo('article-detail', { articleId: rel.id })}
-                  className="bg-[#121324] border border-slate-800 rounded-2xl overflow-hidden p-3 hover:border-[#FF2E7E] cursor-pointer group transition-all"
+                  className="bg-[#171A1F] border border-slate-800 rounded-2xl overflow-hidden p-3 hover:border-[#FF2E7E] cursor-pointer group transition-all"
                 >
                   <img
                     src={rel.coverImage}

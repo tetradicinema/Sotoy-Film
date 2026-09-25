@@ -131,22 +131,22 @@ export const ComposeBuzzModal: React.FC = () => {
     >
       <div
         id="compose-buzz-modal-container"
-        className="bg-[#121324] border border-slate-700/80 rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-200"
+        className="bg-[#171A1F] border border-white/10 rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-200"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-800 bg-slate-900/60">
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-white/10 bg-[#171A1F]">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-[#FF2E7E] to-[#FF8008] p-0.5 shadow-md flex items-center justify-center">
+            <div className="w-9 h-9 rounded-2xl bg-[#FF2E7E] p-0.5 shadow-md flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-black text-white">Tulis Buzz Baru</h2>
+              <h2 className="text-base sm:text-lg font-black text-white">Write New Buzz</h2>
               <p className="text-xs text-slate-400">Bagikan opini, teori, atau review singkat film kamu</p>
             </div>
           </div>
           <button
             onClick={handleClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/[0.08] transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -159,10 +159,10 @@ export const ComposeBuzzModal: React.FC = () => {
               <img
                 src={currentUser.avatar}
                 alt={currentUser.name}
-                className="w-10 h-10 rounded-full object-cover ring-2 ring-[#00F0FF]/30 shrink-0 mt-1"
+                className="w-10 h-10 rounded-full object-cover ring-2 ring-[#FF2E7E]/30 shrink-0 mt-1"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 ring-2 ring-slate-700 shrink-0 mt-1">
+              <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center text-slate-400 ring-2 ring-white/10 shrink-0 mt-1">
                 <UserIcon className="w-5 h-5" />
               </div>
             )}
@@ -173,15 +173,15 @@ export const ComposeBuzzModal: React.FC = () => {
                 value={postContent}
                 onChange={setPostContent}
                 placeholder="Apa opini sinematik unikmu hari ini? Ketik '@' untuk mention warga lain..."
-                className="w-full bg-slate-900/90 border border-slate-700/80 rounded-2xl p-3.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-[#00F0FF] focus:ring-2 focus:ring-[#00F0FF]/20 resize-none transition-all"
+                className="w-full bg-[#0E1013] border border-white/10 rounded-2xl p-3.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-[#FF2E7E] resize-none transition-all"
                 autoFocus
               />
 
               {/* Tagged Preview Chips */}
               {(selectedFilm || selectedArticle) && (
-                <div className="flex flex-wrap items-center gap-2 mt-3 pt-2 border-t border-slate-800">
+                <div className="flex flex-wrap items-center gap-2 mt-3 pt-2 border-t border-white/10">
                   {selectedFilm && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#FFD000]/10 border border-[#FFD000]/30 text-xs font-semibold text-[#FFD000]">
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 text-xs font-semibold text-[#FF2E7E]">
                       <Film className="w-3.5 h-3.5" />
                       <span>{selectedFilm.title}</span>
                       <button
@@ -212,8 +212,8 @@ export const ComposeBuzzModal: React.FC = () => {
 
               {/* Photo Preview / Compressing indicator */}
               {isCompressingImage ? (
-                <div className="flex items-center gap-3 p-3 mt-3 bg-slate-900/90 border border-slate-800 rounded-2xl animate-pulse">
-                  <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center shrink-0">
+                <div className="flex items-center gap-3 p-3 mt-3 bg-[#0E1013] border border-white/10 rounded-2xl animate-pulse">
+                  <div className="w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center shrink-0">
                     <Loader2 className="w-5 h-5 text-[#FF2E7E] animate-spin" />
                   </div>
                   <div className="space-y-0.5">
@@ -222,7 +222,7 @@ export const ComposeBuzzModal: React.FC = () => {
                   </div>
                 </div>
               ) : attachedImagePreview ? (
-                <div className="relative rounded-2xl overflow-hidden border border-slate-700 bg-slate-900 group max-w-sm mt-3 shadow-md">
+                <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-[#0E1013] group max-w-sm mt-3 shadow-md">
                   <img
                     src={attachedImagePreview}
                     alt="Preview foto lampiran"
@@ -232,7 +232,7 @@ export const ComposeBuzzModal: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleRemoveImage}
-                    className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 hover:bg-red-500 text-white transition-colors shadow-lg cursor-pointer"
+                    className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 hover:bg-[#FF2E7E] text-white transition-colors shadow-lg cursor-pointer"
                     title="Hapus foto lampiran"
                   >
                     <X className="w-4 h-4" />
@@ -254,7 +254,7 @@ export const ComposeBuzzModal: React.FC = () => {
                   className="hidden"
                 />
 
-                <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-slate-800">
+                <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-white/10">
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -263,7 +263,7 @@ export const ComposeBuzzModal: React.FC = () => {
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                         attachedImageDataUrl
                           ? 'bg-[#FF2E7E]/20 text-[#FF2E7E] border border-[#FF2E7E]/40'
-                          : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-750'
+                          : 'bg-white/[0.06] text-slate-300 hover:text-white hover:bg-white/[0.12] border border-white/10'
                       }`}
                       title="Lampirkan foto (JPG, PNG, WEBP, HEIC)"
                     >
@@ -283,11 +283,11 @@ export const ComposeBuzzModal: React.FC = () => {
                       }}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                         selectedFilmId
-                          ? 'bg-[#FFD000]/20 text-[#FFD000] border border-[#FFD000]/40'
-                          : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-750'
+                          ? 'bg-[#FF2E7E]/20 text-[#FF2E7E] border border-[#FF2E7E]/40'
+                          : 'bg-white/[0.06] text-slate-300 hover:text-white hover:bg-white/[0.12] border border-white/10'
                       }`}
                     >
-                      <Film className="w-3.5 h-3.5 text-[#FFD000]" />
+                      <Film className="w-3.5 h-3.5 text-[#FF2E7E]" />
                       <span>Tag Film</span>
                     </button>
 
@@ -300,7 +300,7 @@ export const ComposeBuzzModal: React.FC = () => {
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                         selectedArticleId
                           ? 'bg-[#FF2E7E]/20 text-[#FF2E7E] border border-[#FF2E7E]/40'
-                          : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-750'
+                          : 'bg-white/[0.06] text-slate-300 hover:text-white hover:bg-white/[0.12] border border-white/10'
                       }`}
                     >
                       <FileText className="w-3.5 h-3.5 text-[#FF2E7E]" />
@@ -310,7 +310,7 @@ export const ComposeBuzzModal: React.FC = () => {
 
                   {/* Rating Selector if film tagged */}
                   {selectedFilmId && (
-                    <div className="flex items-center gap-1.5 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-700">
+                    <div className="flex items-center gap-1.5 bg-[#0E1013] px-3 py-1.5 rounded-xl border border-white/10">
                       <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
                         <Star className="w-3 h-3 text-[#FFD000] fill-current" />
                         Skor:
@@ -318,11 +318,11 @@ export const ComposeBuzzModal: React.FC = () => {
                       <select
                         value={skorMention || ''}
                         onChange={e => setSkorMention(e.target.value ? Number(e.target.value) : undefined)}
-                        className="bg-slate-800 text-[#FFD000] font-bold text-xs rounded-lg px-2 py-0.5 border border-slate-700 focus:outline-none focus:border-[#FFD000] cursor-pointer"
+                        className="bg-white/[0.06] text-[#FFD000] font-bold text-xs rounded-lg px-2 py-0.5 border border-[#FFD000]/30 focus:outline-none focus:border-[#FFD000] cursor-pointer"
                       >
-                        <option value="" className="text-slate-400 bg-slate-900">Pilih Skor (1-10)</option>
+                        <option value="" className="text-slate-400 bg-[#171A1F]">Pilih Skor (1-10)</option>
                         {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map(num => (
-                          <option key={num} value={num} className="bg-slate-900 text-[#FFD000]">
+                          <option key={num} value={num} className="bg-[#171A1F] text-[#FFD000]">
                             ★ {num}.0 / 10.0
                           </option>
                         ))}
@@ -333,7 +333,7 @@ export const ComposeBuzzModal: React.FC = () => {
 
                 {/* Dropdown Menu for Tagging */}
                 {dropdownOpen && (
-                  <div className="absolute left-0 bottom-full mb-2 w-full bg-[#181a30] border border-slate-700 rounded-2xl p-3 shadow-2xl z-30 space-y-2">
+                  <div className="absolute left-0 bottom-full mb-2 w-full bg-[#171A1F] border border-white/10 rounded-2xl p-3 shadow-2xl z-30 space-y-2">
                     <div className="relative">
                       <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                       <input
@@ -345,7 +345,7 @@ export const ComposeBuzzModal: React.FC = () => {
                             ? 'Cari film berdasarkan judul...'
                             : 'Cari artikel berdasarkan judul...'
                         }
-                        className="w-full pl-9 pr-3 py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-[#00F0FF]"
+                        className="w-full pl-9 pr-3 py-1.5 bg-[#0E1013] border border-white/10 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-[#FF2E7E]"
                       />
                     </div>
 
@@ -362,7 +362,7 @@ export const ComposeBuzzModal: React.FC = () => {
                                   setDropdownOpen(false);
                                   setSearchQuery('');
                                 }}
-                                className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-800 text-left transition-colors"
+                                className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-white/[0.06] text-left transition-colors"
                               >
                                 <div className="flex items-center gap-2 min-w-0">
                                   <img
@@ -378,7 +378,7 @@ export const ComposeBuzzModal: React.FC = () => {
                                   </div>
                                 </div>
                                 {selectedFilmId === f.id && (
-                                  <Check className="w-4 h-4 text-[#FFD000]" />
+                                  <Check className="w-4 h-4 text-[#FF2E7E]" />
                                 )}
                               </button>
                             ))
@@ -393,7 +393,7 @@ export const ComposeBuzzModal: React.FC = () => {
                                   setDropdownOpen(false);
                                   setSearchQuery('');
                                 }}
-                                className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-800 text-left transition-colors"
+                                className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-white/[0.06] text-left transition-colors"
                               >
                                 <div className="min-w-0">
                                   <div className="text-xs font-bold text-white truncate">
@@ -414,7 +414,7 @@ export const ComposeBuzzModal: React.FC = () => {
           </div>
 
           {/* Submit Footer */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
             <button
               type="button"
               onClick={handleClose}
@@ -427,7 +427,7 @@ export const ComposeBuzzModal: React.FC = () => {
               id="modal-buzz-submit-btn"
               type="submit"
               disabled={!postContent.trim() || isCompressingImage || isSubmittingPost}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#FF2E7E] to-[#FF8008] text-white text-xs font-bold hover:brightness-110 shadow-lg shadow-[#FF2E7E]/20 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="px-5 py-2.5 rounded-xl bg-[#FF2E7E] hover:bg-[#e0266e] text-white text-xs font-bold shadow-md transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {isSubmittingPost ? (
                 <>

@@ -68,7 +68,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
     >
       <div
         id="rate-film-modal-container"
-        className="bg-[#151624] border border-slate-700/80 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-200"
+        className="bg-[#171A1F] border border-slate-700/80 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-200"
       >
         {/* Header with film backdrop */}
         <div className="relative h-28 w-full overflow-hidden bg-slate-900">
@@ -77,7 +77,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
             alt={film.title}
             className="w-full h-full object-cover opacity-30"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#151624] via-transparent to-black/60" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-black/60" />
 
           <button
             id="close-rate-modal-btn"
@@ -94,7 +94,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
               className="w-12 h-16 object-cover rounded-lg border-2 border-white/20 shadow-lg -mb-2"
             />
             <div>
-              <span className="text-[10px] font-black text-[#FFD000] uppercase tracking-wider">
+              <span className="text-[10px] font-black text-[#FF2E7E] uppercase tracking-wider">
                 Beri Penilaian & Review
               </span>
               <h3 className="font-display font-black text-white text-base leading-tight line-clamp-1">
@@ -106,7 +106,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
 
         {!isLoggedIn ? (
           <div className="p-8 text-center space-y-4">
-            <div className="w-14 h-14 rounded-2xl bg-amber-500/20 text-[#FFD000] flex items-center justify-center mx-auto border border-amber-500/30">
+            <div className="w-14 h-14 rounded-2xl bg-[#FF2E7E]/20 text-[#FF2E7E] flex items-center justify-center mx-auto border border-[#FF2E7E]/30">
               <Lock className="w-7 h-7" />
             </div>
             <h3 className="font-display font-black text-xl text-white">
@@ -130,7 +130,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
                   onClose();
                   setLoginModalOpen(true);
                 }}
-                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#FFD000] to-[#FF8008] text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-lg shadow-[#FFD000]/20 hover:brightness-110 active:scale-95 transition-all"
+                className="flex-1 py-2.5 rounded-xl bg-[#FF2E7E] text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-lg shadow-sm hover:brightness-110 active:scale-95 transition-all"
               >
                 <LogIn className="w-4 h-4" />
                 <span>Masuk Sekarang</span>
@@ -158,7 +158,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
                 />
                 <div>
                   <h4 className="font-display font-black text-sm text-white line-clamp-1">{film.title}</h4>
-                  <p className="text-[11px] text-slate-400">Skor Kamu: <span className="text-[#FFD000] font-medium">★ {score.toFixed(1)} / 10.0</span></p>
+                  <p className="text-[11px] text-slate-400">Skor Kamu: <span className="text-[#FFD000] font-bold">★ {score.toFixed(1)} / 10.0</span></p>
                 </div>
               </div>
             </div>
@@ -168,7 +168,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
                 type="button"
                 id="rate-modal-share-now-btn"
                 onClick={handleShareReview}
-                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#FF2E7E] via-[#FF8008] to-[#FFD000] text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-[#FF2E7E]/20 hover:brightness-110 active:scale-95 transition-all"
+                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#FF2E7E] via-[#e0266e] to-[#FF2E7E] text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-sm hover:brightness-110 active:scale-95 transition-all"
               >
                 <Share2 className="w-4 h-4 text-slate-950" />
                 <span>Bagikan ke Instagram / Sosmed</span>
@@ -195,7 +195,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
 
               {/* Big Score Display */}
               <div className="flex items-center justify-center gap-2 my-2">
-                <span className="font-display font-medium text-4xl text-[#FFD000] drop-shadow-[0_0_12px_rgba(255,208,0,0.4)]">
+                <span className="font-display font-black text-4xl text-[#FFD000] drop-shadow-[0_0_12px_rgba(255,208,0,0.4)]">
                   {score.toFixed(1)}
                 </span>
                 <span className="text-slate-500 font-medium text-lg">/ 10.0</span>
@@ -236,7 +236,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
                   step="0.1"
                   value={score}
                   onChange={e => setScore(parseFloat(e.target.value))}
-                  className="w-full accent-[#FFD000] cursor-pointer"
+                  className="w-full accent-[#FF2E7E] cursor-pointer"
                 />
                 <div className="flex justify-between text-[10px] text-slate-500 font-bold px-1">
                   <span>1.0 (Bencana)</span>
@@ -258,7 +258,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
                 value={headline}
                 onChange={e => setHeadline(e.target.value)}
                 placeholder="Contoh: Visualnya gila, tapi pacing paruh kedua agak kedodoran..."
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FFD000]"
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
               />
             </div>
 
@@ -273,7 +273,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
                 placeholder="Ceritakan apa yang kamu sukai atau kurang sukai dari akting, cerita, sinematografi, atau musiknya..."
                 required
                 rows={4}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FFD000] resize-none"
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] resize-none"
               />
             </div>
 
@@ -287,7 +287,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
                 />
                 <span>Mengulas sebagai: <strong>{currentUser.name}</strong></span>
               </div>
-              <span className="text-[#FFD000] font-black uppercase text-[10px]">
+              <span className="text-[#FF2E7E] font-black uppercase text-[10px]">
                 {currentUser.roleTitle.split(' ')[0]}
               </span>
             </div>
@@ -304,7 +304,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
               <button
                 id="submit-rate-film-btn"
                 type="submit"
-                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#FFD000] to-[#FF8008] text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-lg shadow-[#FFD000]/20 hover:brightness-110 active:scale-95 transition-transform"
+                className="flex-1 py-2.5 rounded-xl bg-[#FF2E7E] text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-lg shadow-sm hover:brightness-110 active:scale-95 transition-transform"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>Kirim Skor Sotoy</span>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Film, MessageSquare, User, LogIn, Plus } from 'lucide-react';
+import { Home, Film, MessageSquare, LogIn, Plus } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 export const MobileBottomNav: React.FC = () => {
@@ -23,14 +23,14 @@ export const MobileBottomNav: React.FC = () => {
     <nav
       id="mobile-bottom-navigation-bar"
       aria-label="Navigasi Bawah Mobile"
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0D0E15]/95 backdrop-blur-xl border-t border-slate-800/90 shadow-[0_-8px_24px_rgba(0,0,0,0.5)] px-2 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))]"
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0E1013]/95 backdrop-blur-xl border-t border-white/[0.08] shadow-[0_-8px_24px_rgba(14,16,19,0.8)] px-2 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))]"
     >
       <div className="flex items-center justify-around max-w-md mx-auto">
         {/* 1. Beranda */}
         <button
           id="mobile-bottom-nav-home"
           onClick={() => navigateTo('home')}
-          className={`flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl transition-all duration-200 min-h-[44px] ${
+          className={`flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-lg transition-all duration-200 min-h-[44px] ${
             isHomeActive
               ? 'text-[#FF2E7E]'
               : 'text-slate-400 hover:text-slate-200'
@@ -39,10 +39,10 @@ export const MobileBottomNav: React.FC = () => {
           <div className="relative">
             <Home className={`w-5 h-5 transition-transform ${isHomeActive ? 'scale-110 stroke-[2.5]' : 'stroke-2'}`} />
             {isHomeActive && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#FF2E7E] shadow-[0_0_8px_#FF2E7E]" />
+              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#FF2E7E]" />
             )}
           </div>
-          <span className={`text-[10px] mt-1 tracking-tight font-bold ${isHomeActive ? 'text-white' : 'text-slate-400'}`}>
+          <span className={`text-[10px] mt-1 tracking-tight font-semibold ${isHomeActive ? 'text-white' : 'text-slate-400'}`}>
             Beranda
           </span>
         </button>
@@ -51,19 +51,19 @@ export const MobileBottomNav: React.FC = () => {
         <button
           id="mobile-bottom-nav-films"
           onClick={() => navigateTo('film-database')}
-          className={`flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl transition-all duration-200 min-h-[44px] ${
+          className={`flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-lg transition-all duration-200 min-h-[44px] ${
             isFilmActive
-              ? 'text-[#FFD000]'
+              ? 'text-[#FF2E7E]'
               : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           <div className="relative">
             <Film className={`w-5 h-5 transition-transform ${isFilmActive ? 'scale-110 stroke-[2.5]' : 'stroke-2'}`} />
             {isFilmActive && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#FFD000] shadow-[0_0_8px_#FFD000]" />
+              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#FF2E7E]" />
             )}
           </div>
-          <span className={`text-[10px] mt-1 tracking-tight font-bold ${isFilmActive ? 'text-white' : 'text-slate-400'}`}>
+          <span className={`text-[10px] mt-1 tracking-tight font-semibold ${isFilmActive ? 'text-white' : 'text-slate-400'}`}>
             Film
           </span>
         </button>
@@ -82,10 +82,10 @@ export const MobileBottomNav: React.FC = () => {
           title="Tulis Buzz Baru"
           aria-label="Tulis Buzz Baru"
         >
-          <div className="w-9 h-9 -mt-2 rounded-full bg-gradient-to-tr from-[#FF2E7E] to-[#FF8008] text-white flex items-center justify-center shadow-lg shadow-[#FF2E7E]/30 group-active:scale-95 transition-transform">
+          <div className="w-9 h-9 -mt-2 rounded-full bg-[#FF2E7E] text-white flex items-center justify-center shadow-md shadow-[#FF2E7E]/25 group-active:scale-95 transition-transform">
             <Plus className="w-5 h-5 stroke-[2.5]" />
           </div>
-          <span className="text-[10px] mt-0.5 tracking-tight font-black text-[#FF2E7E]">
+          <span className="text-[10px] mt-0.5 tracking-tight font-bold text-[#FF2E7E]">
             Tulis
           </span>
         </button>
@@ -94,20 +94,19 @@ export const MobileBottomNav: React.FC = () => {
         <button
           id="mobile-bottom-nav-buzz"
           onClick={() => navigateTo('community-feed')}
-          className={`flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl transition-all duration-200 min-h-[44px] ${
+          className={`flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-lg transition-all duration-200 min-h-[44px] ${
             isBuzzActive
-              ? 'text-[#00F0FF]'
+              ? 'text-[#FF2E7E]'
               : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           <div className="relative">
             <MessageSquare className={`w-5 h-5 transition-transform ${isBuzzActive ? 'scale-110 stroke-[2.5]' : 'stroke-2'}`} />
-            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#FF2E7E] animate-pulse" />
             {isBuzzActive && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#00F0FF] shadow-[0_0_8px_#00F0FF]" />
+              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#FF2E7E]" />
             )}
           </div>
-          <span className={`text-[10px] mt-1 tracking-tight font-bold ${isBuzzActive ? 'text-white' : 'text-slate-400'}`}>
+          <span className={`text-[10px] mt-1 tracking-tight font-semibold ${isBuzzActive ? 'text-white' : 'text-slate-400'}`}>
             Buzz
           </span>
         </button>
@@ -117,7 +116,7 @@ export const MobileBottomNav: React.FC = () => {
           <button
             id="mobile-bottom-nav-profile"
             onClick={() => navigateTo('user-profile', { userId: currentUser.id, userTab: 'buzz' })}
-            className={`flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl transition-all duration-200 min-h-[44px] ${
+            className={`flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-lg transition-all duration-200 min-h-[44px] ${
               isProfileActive
                 ? 'text-white'
                 : 'text-slate-400 hover:text-slate-200'
@@ -129,20 +128,20 @@ export const MobileBottomNav: React.FC = () => {
                 alt={currentUser.name}
                 className={`w-5 h-5 rounded-full object-cover transition-all ${
                   isProfileActive
-                    ? 'ring-2 ring-[#00F0FF] scale-110'
-                    : 'ring-1 ring-slate-700'
+                    ? 'ring-2 ring-[#FF2E7E] scale-110'
+                    : 'ring-1 ring-white/20'
                 }`}
               />
               {unreadNotificationsCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] px-1 bg-[#FF2E7E] text-white text-[8px] font-black rounded-full flex items-center justify-center border border-slate-900 shadow-md">
+                <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] px-1 bg-[#FF2E7E] text-white text-[8px] font-mono tabular-nums font-bold rounded-full flex items-center justify-center border border-[#0E1013] shadow-md">
                   {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
                 </span>
               )}
               {isProfileActive && (
-                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#00F0FF] shadow-[0_0_8px_#00F0FF]" />
+                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#FF2E7E]" />
               )}
             </div>
-            <span className={`text-[10px] mt-1 tracking-tight font-bold ${isProfileActive ? 'text-white' : 'text-slate-400'}`}>
+            <span className={`text-[10px] mt-1 tracking-tight font-semibold ${isProfileActive ? 'text-white' : 'text-slate-400'}`}>
               Profil
             </span>
           </button>
@@ -150,12 +149,12 @@ export const MobileBottomNav: React.FC = () => {
           <button
             id="mobile-bottom-nav-login"
             onClick={() => setLoginModalOpen(true)}
-            className="flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl transition-all duration-200 min-h-[44px] text-[#00F0FF] hover:text-cyan-300"
+            className="flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-lg transition-all duration-200 min-h-[44px] text-[#FF2E7E] hover:text-[#e0266e]"
           >
             <div className="relative">
               <LogIn className="w-5 h-5 stroke-2" />
             </div>
-            <span className="text-[10px] mt-1 tracking-tight font-bold text-[#00F0FF]">
+            <span className="text-[10px] mt-1 tracking-tight font-semibold text-[#FF2E7E]">
               Masuk
             </span>
           </button>
