@@ -372,7 +372,10 @@ export const FilmDatabasePage: React.FC = () => {
           </div>
 
           {/* Genre Category Pills */}
-          <div className="flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-800">
+          <div
+            className="flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-none scroll-smooth touch-pan-x"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
             {GENRE_CATEGORIES.map(cat => {
               const Icon = cat.icon;
               const count = getGenreCount(cat.id);
@@ -383,7 +386,7 @@ export const FilmDatabasePage: React.FC = () => {
                   key={cat.id}
                   id={`genre-pill-${cat.id.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
                   onClick={() => setSelectedGenre(isActive ? 'all' : cat.id)}
-                  className={`flex-shrink-0 inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl border text-xs font-bold transition-all duration-200 cursor-pointer select-none ${
+                  className={`flex-shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer select-none min-h-[44px] active:scale-95 ${
                     isActive
                       ? cat.activeClass
                       : `${cat.badgeClass} hover:scale-[1.02]`
@@ -505,13 +508,16 @@ export const FilmDatabasePage: React.FC = () => {
           {/* Filter Toolbar */}
           <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800 text-xs">
             {/* Format Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto py-1">
-              <span className="text-slate-400 font-bold mr-1">Format:</span>
+            <div
+              className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none scroll-smooth touch-pan-x"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
+              <span className="text-slate-400 font-bold mr-1 shrink-0">Format:</span>
               <button
                 onClick={() => setSelectedFormat('all')}
-                className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                className={`px-3.5 py-2 rounded-xl font-bold transition-all shrink-0 min-h-[38px] cursor-pointer active:scale-95 ${
                   selectedFormat === 'all'
-                    ? 'bg-white text-slate-950 shadow'
+                    ? 'bg-white text-slate-950 shadow-md font-black'
                     : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                 }`}
               >
@@ -519,9 +525,9 @@ export const FilmDatabasePage: React.FC = () => {
               </button>
               <button
                 onClick={() => setSelectedFormat('movie')}
-                className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                className={`px-3.5 py-2 rounded-xl font-bold transition-all shrink-0 min-h-[38px] cursor-pointer active:scale-95 ${
                   selectedFormat === 'movie'
-                    ? 'bg-[#FF2E7E] text-white shadow'
+                    ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
                     : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                 }`}
               >
@@ -529,9 +535,9 @@ export const FilmDatabasePage: React.FC = () => {
               </button>
               <button
                 onClick={() => setSelectedFormat('series')}
-                className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                className={`px-3.5 py-2 rounded-xl font-bold transition-all shrink-0 min-h-[38px] cursor-pointer active:scale-95 ${
                   selectedFormat === 'series'
-                    ? 'bg-[#FF2E7E] text-slate-950 shadow'
+                    ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
                     : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                 }`}
               >
@@ -539,9 +545,9 @@ export const FilmDatabasePage: React.FC = () => {
               </button>
               <button
                 onClick={() => setSelectedFormat('anime')}
-                className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                className={`px-3.5 py-2 rounded-xl font-bold transition-all shrink-0 min-h-[38px] cursor-pointer active:scale-95 ${
                   selectedFormat === 'anime'
-                    ? 'bg-[#FF2E7E] text-slate-950 shadow'
+                    ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
                     : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                 }`}
               >

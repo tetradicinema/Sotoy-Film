@@ -338,7 +338,10 @@ export const SearchPage: React.FC = () => {
 
         {/* Category Tabs Filter */}
         {hasQuery && (
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none mb-6 border-b border-slate-800">
+          <div
+            className="flex items-center gap-2 overflow-x-auto pb-3 pt-0.5 scrollbar-none mb-6 border-b border-slate-800 scroll-smooth touch-pan-x"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
             {[
               { id: 'all', label: 'Semua Hasil', count: totalResults, icon: Filter },
               { id: 'film', label: 'Film', count: matchingFilms.length, icon: Film },
@@ -353,17 +356,17 @@ export const SearchPage: React.FC = () => {
                   key={tab.id}
                   id={`search-tab-${tab.id}`}
                   onClick={() => setActiveTab(tab.id as SearchTab)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all ${
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all shrink-0 min-h-[44px] cursor-pointer active:scale-95 ${
                     isActive
-                      ? 'bg-[#FF2E7E] text-white shadow-lg shadow-[#FF2E7E]/20'
-                      : 'bg-[#171A1F] text-slate-400 hover:text-white border border-slate-800 hover:border-slate-700'
+                      ? 'bg-[#FF2E7E] text-white shadow-lg shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
+                      : 'bg-[#171A1F] text-slate-400 hover:text-white border border-slate-800 hover:border-slate-700 hover:bg-white/[0.04]'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
                   <span>{tab.label}</span>
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
-                      isActive ? 'bg-black/30 text-white' : 'bg-slate-800 text-slate-300'
+                      isActive ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-300'
                     }`}
                   >
                     {tab.count}

@@ -659,18 +659,23 @@ export const UserPage: React.FC = () => {
         {/* MAIN USER NAVIGATION TABS (PRIMARY + OVERFLOW 'LAINNYA') */}
         {/* ========================================================================= */}
         <div className={`user-profile-tab-wrapper ${moreMenuOpen ? 'dropdown-open' : ''}`}>
-          <div className={`user-profile-tab-list flex items-stretch gap-1.5 md:gap-2 pb-1 border-b border-slate-800 w-full scrollbar-none flex-nowrap ${moreMenuOpen ? 'dropdown-open overflow-visible' : 'overflow-x-auto md:overflow-visible'}`}>
+          <div
+            className={`user-profile-tab-list flex items-stretch gap-2 pb-2 border-b border-slate-800 w-full scrollbar-none flex-nowrap scroll-smooth touch-pan-x ${
+              moreMenuOpen ? 'dropdown-open overflow-visible' : 'overflow-x-auto md:overflow-visible'
+            }`}
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
             {/* TAB 1: BUZZ (TAB UTAMA DASHBOARD) */}
             <button
               id="user-tab-buzz"
               onClick={() => setActiveUserTab('buzz')}
-              className={`flex-1 min-w-fit px-3 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap ${
+              className={`min-h-[44px] px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap active:scale-95 ${
                 activeUserTab === 'buzz'
-                  ? 'bg-gradient-to-r from-pink-500/20 to-rose-500/20 text-[#FF2E7E] border border-pink-500/40 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent'
               }`}
             >
-              <MessageSquare className="w-3.5 h-3.5" />
+              <MessageSquare className="w-4 h-4" />
               <span>Buzz ({myBuzz.length})</span>
             </button>
 
@@ -678,13 +683,13 @@ export const UserPage: React.FC = () => {
             <button
               id="user-tab-replies"
               onClick={() => setActiveUserTab('replies')}
-              className={`flex-1 min-w-fit px-3 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap ${
+              className={`min-h-[44px] px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap active:scale-95 ${
                 activeUserTab === 'replies'
-                  ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-[#FF2E7E] border border-cyan-500/40 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent'
               }`}
             >
-              <CornerDownRight className="w-3.5 h-3.5" />
+              <CornerDownRight className="w-4 h-4" />
               <span>Replies ({myReplies.length})</span>
             </button>
 
@@ -692,13 +697,13 @@ export const UserPage: React.FC = () => {
             <button
               id="user-tab-reviews"
               onClick={() => setActiveUserTab('reviews')}
-              className={`flex-1 min-w-fit px-3 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap ${
+              className={`min-h-[44px] px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap active:scale-95 ${
                 activeUserTab === 'reviews'
-                  ? 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-[#FF2E7E] border border-amber-500/40 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent'
               }`}
             >
-              <Star className="w-3.5 h-3.5" />
+              <Star className="w-4 h-4" />
               <span>Skor ({myReviews.length})</span>
             </button>
 
@@ -706,13 +711,13 @@ export const UserPage: React.FC = () => {
             <button
               id="user-tab-watchlist"
               onClick={() => setActiveUserTab('watchlist')}
-              className={`flex-1 min-w-fit px-3 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap ${
+              className={`min-h-[44px] px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap active:scale-95 ${
                 activeUserTab === 'watchlist'
-                  ? 'bg-gradient-to-r from-teal-500/20 to-emerald-500/20 text-teal-300 border border-teal-500/40 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent'
               }`}
             >
-              <Bookmark className="w-3.5 h-3.5" />
+              <Bookmark className="w-4 h-4" />
               <span>Watchlist ({myWatchlistFilms.length + mySavedArticles.length})</span>
             </button>
 
@@ -721,19 +726,19 @@ export const UserPage: React.FC = () => {
               <button
                 id="user-tab-more"
                 onClick={() => setMoreMenuOpen(prev => !prev)}
-                className={`min-w-fit px-3 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap ${
+                className={`min-h-[44px] px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap active:scale-95 ${
                   isSecondaryActive || moreMenuOpen
-                    ? 'bg-gradient-to-r from-purple-500/20 to-indigo-500/20 text-purple-300 border border-purple-500/40 shadow-sm'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent'
                 }`}
                 aria-expanded={moreMenuOpen}
                 aria-haspopup="true"
                 title="Menu Tab Lainnya"
               >
-                <MoreHorizontal className="w-3.5 h-3.5" />
+                <MoreHorizontal className="w-4 h-4" />
                 <span>Lainnya</span>
                 {isSecondaryActive && (
-                  <span className="w-2 h-2 rounded-full bg-[#FF2E7E] ring-2 ring-[#0E1013]" />
+                  <span className="w-2 h-2 rounded-full bg-white ring-2 ring-[#FF2E7E]" />
                 )}
               </button>
 
@@ -746,17 +751,19 @@ export const UserPage: React.FC = () => {
                       setActiveUserTab('reposts');
                       setMoreMenuOpen(false);
                     }}
-                    className={`w-full text-left p-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
+                    className={`w-full text-left p-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors min-h-[40px] cursor-pointer ${
                       activeUserTab === 'reposts'
-                        ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-300 border border-emerald-500/40'
+                        ? 'bg-[#FF2E7E] text-white'
                         : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      <Repeat2 className="w-3.5 h-3.5 text-emerald-400" />
+                      <Repeat2 className="w-3.5 h-3.5" />
                       <span>Reposts</span>
                     </div>
-                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">
+                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${
+                      activeUserTab === 'reposts' ? 'bg-white/20 text-white' : 'bg-emerald-500/20 text-emerald-300'
+                    }`}>
                       {myReposts.length}
                     </span>
                   </button>
@@ -769,17 +776,19 @@ export const UserPage: React.FC = () => {
                         setActiveUserTab('articles');
                         setMoreMenuOpen(false);
                       }}
-                      className={`w-full text-left p-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
+                      className={`w-full text-left p-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors min-h-[40px] cursor-pointer ${
                         activeUserTab === 'articles'
-                          ? 'bg-pink-500/20 text-pink-300 border border-pink-500/40'
+                          ? 'bg-[#FF2E7E] text-white'
                           : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        <PenSquare className="w-3.5 h-3.5 text-[#FF2E7E]" />
-                        <span>Artikel</span>
+                        <PenSquare className="w-3.5 h-3.5" />
+                        <span>Artikel Ditulis</span>
                       </div>
-                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 font-bold">
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${
+                        activeUserTab === 'articles' ? 'bg-white/20 text-white' : 'bg-pink-500/20 text-pink-300'
+                      }`}>
                         {myArticles.length}
                       </span>
                     </button>
@@ -793,17 +802,19 @@ export const UserPage: React.FC = () => {
                         setActiveUserTab('admin');
                         setMoreMenuOpen(false);
                       }}
-                      className={`w-full text-left p-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
+                      className={`w-full text-left p-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors min-h-[40px] cursor-pointer ${
                         activeUserTab === 'admin'
-                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                          ? 'bg-[#FF2E7E] text-white'
                           : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        <Shield className="w-3.5 h-3.5 text-amber-400" />
+                        <Shield className="w-3.5 h-3.5" />
                         <span>Dasbor Admin</span>
                       </div>
-                      <span className="text-[10px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-black">
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                        activeUserTab === 'admin' ? 'bg-white/20 text-white' : 'bg-amber-500/20 text-amber-300'
+                      }`}>
                         ADMIN
                       </span>
                     </button>

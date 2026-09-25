@@ -266,43 +266,46 @@ export const HeroSection: React.FC = () => {
             <div className="bg-[#171A1F] border border-white/[0.08] rounded-3xl p-5 flex-1 flex flex-col shadow-xl">
               
               {/* Segmented Control Filter Tabs */}
-              <div className="flex items-center p-1 bg-black/40 rounded-xl border border-white/[0.06] mb-4">
+              <div
+                className="flex items-center p-1 bg-black/40 rounded-xl border border-white/[0.06] mb-4 overflow-x-auto scrollbar-none flex-nowrap scroll-smooth touch-pan-x"
+                style={{ WebkitOverflowScrolling: 'touch' }}
+              >
                 <button
                   id="hero-tab-trending"
                   onClick={() => setActiveTab('trending')}
-                  className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                  className={`flex-1 min-w-[90px] py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 min-h-[42px] cursor-pointer active:scale-95 ${
                     activeTab === 'trending'
-                      ? 'bg-white/[0.12] text-white shadow-sm'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 font-bold'
+                      : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                   }`}
                 >
-                  <Flame className="w-3.5 h-3.5 text-[#FF2E7E]" />
+                  <Flame className="w-3.5 h-3.5 text-current" />
                   <span>Trending</span>
                 </button>
 
                 <button
                   id="hero-tab-towatch"
                   onClick={() => setActiveTab('to-watch')}
-                  className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                  className={`flex-1 min-w-[90px] py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 min-h-[42px] cursor-pointer active:scale-95 ${
                     activeTab === 'to-watch'
-                      ? 'bg-white/[0.12] text-white shadow-sm'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 font-bold'
+                      : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                   }`}
                 >
-                  <Bookmark className="w-3.5 h-3.5 text-slate-300" />
+                  <Bookmark className="w-3.5 h-3.5 text-current" />
                   <span>To Watch</span>
                 </button>
 
                 <button
                   id="hero-tab-gearaddict"
                   onClick={() => setActiveTab('gear-addict')}
-                  className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                  className={`flex-1 min-w-[90px] py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 min-h-[42px] cursor-pointer active:scale-95 ${
                     activeTab === 'gear-addict'
-                      ? 'bg-white/[0.12] text-white shadow-sm'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 font-bold'
+                      : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                   }`}
                 >
-                  <Camera className="w-3.5 h-3.5 text-white" />
+                  <Camera className="w-3.5 h-3.5 text-current" />
                   <span>Gear</span>
                 </button>
               </div>

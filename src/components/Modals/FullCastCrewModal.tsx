@@ -121,17 +121,20 @@ export const FullCastCrewModal: React.FC<FullCastCrewModalProps> = ({
         <div className="p-4 sm:p-5 border-b border-slate-800/80 bg-slate-900/50 space-y-3">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             {/* Tabs */}
-            <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-2xl border border-slate-800 shrink-0">
+            <div
+              className="flex items-center gap-1.5 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800 overflow-x-auto scrollbar-none flex-nowrap scroll-smooth touch-pan-x max-w-full shrink-0"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
               <button
                 id="tab-cast-crew-all"
                 onClick={() => {
                   setActiveTab('all');
                   setSelectedDepartment('all');
                 }}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 min-h-[44px] cursor-pointer active:scale-95 ${
                   activeTab === 'all'
-                    ? 'bg-[#FF2E7E] text-slate-950 shadow-md shadow-[#FF2E7E]/10'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent'
                 }`}
               >
                 <Users className="w-3.5 h-3.5" />
@@ -144,10 +147,10 @@ export const FullCastCrewModal: React.FC<FullCastCrewModalProps> = ({
                   setActiveTab('cast');
                   setSelectedDepartment('all');
                 }}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 min-h-[44px] cursor-pointer active:scale-95 ${
                   activeTab === 'cast'
-                    ? 'bg-[#FF2E7E] text-slate-950 font-black shadow-md shadow-[#FF2E7E]/15'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent'
                 }`}
               >
                 <Film className="w-3.5 h-3.5" />
@@ -157,10 +160,10 @@ export const FullCastCrewModal: React.FC<FullCastCrewModalProps> = ({
               <button
                 id="tab-cast-crew-crew"
                 onClick={() => setActiveTab('crew')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 min-h-[44px] cursor-pointer active:scale-95 ${
                   activeTab === 'crew'
-                    ? 'bg-[#FF2E7E] text-white font-black shadow-md shadow-sm'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent'
                 }`}
               >
                 <Clapperboard className="w-3.5 h-3.5" />
@@ -192,17 +195,20 @@ export const FullCastCrewModal: React.FC<FullCastCrewModalProps> = ({
 
           {/* Department Filter Pills for Crew */}
           {activeTab !== 'cast' && departments.length > 0 && (
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none pt-1">
+            <div
+              className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none pt-1 scroll-smooth touch-pan-x"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
               <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1 mr-1 shrink-0">
                 <Filter className="w-3 h-3" />
                 <span>Departemen:</span>
               </span>
               <button
                 onClick={() => setSelectedDepartment('all')}
-                className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border shrink-0 transition-all ${
+                className={`text-xs font-bold px-3.5 py-2 rounded-xl border shrink-0 transition-all min-h-[40px] flex items-center justify-center cursor-pointer active:scale-95 ${
                   selectedDepartment === 'all'
-                    ? 'bg-slate-700 text-white border-slate-500'
-                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+                    ? 'bg-[#FF2E7E] text-white border-[#FF2E7E] shadow-md shadow-[#FF2E7E]/25'
+                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700'
                 }`}
               >
                 Semua Departemen
@@ -211,10 +217,10 @@ export const FullCastCrewModal: React.FC<FullCastCrewModalProps> = ({
                 <button
                   key={dept}
                   onClick={() => setSelectedDepartment(dept)}
-                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border shrink-0 transition-all ${
+                  className={`text-xs font-bold px-3.5 py-2 rounded-xl border shrink-0 transition-all min-h-[40px] flex items-center justify-center cursor-pointer active:scale-95 ${
                     selectedDepartment === dept
-                      ? 'bg-[#FF2E7E]/20 text-[#FF2E7E] border-[#FF2E7E]/60 font-bold'
-                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+                      ? 'bg-[#FF2E7E] text-white border-[#FF2E7E] shadow-md shadow-[#FF2E7E]/25'
+                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700'
                   }`}
                 >
                   {dept}

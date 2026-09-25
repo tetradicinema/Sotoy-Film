@@ -999,18 +999,23 @@ export const FilmDetailPage: React.FC = () => {
               </div>
 
               {/* Review Filter Tabs (Kritikus vs Komunitas) */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-slate-800/80">
+              <div
+                className="flex items-center gap-2 overflow-x-auto pb-1.5 border-b border-slate-800/80 scrollbar-none scroll-smooth touch-pan-x"
+                style={{ WebkitOverflowScrolling: 'touch' }}
+              >
                 <button
                   id="review-filter-all"
                   onClick={() => setReviewFilter('all')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                  className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 min-h-[44px] cursor-pointer active:scale-95 ${
                     reviewFilter === 'all'
-                      ? 'bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-white shadow-md'
-                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                      ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
+                      : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800/80 border border-slate-800'
                   }`}
                 >
                   <span>Semua Ulasan</span>
-                  <span className="bg-black/30 px-1.5 py-0.2 rounded-full text-[10px]">
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                    reviewFilter === 'all' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'
+                  }`}>
                     {filmReviews.length}
                   </span>
                 </button>
@@ -1018,15 +1023,17 @@ export const FilmDetailPage: React.FC = () => {
                 <button
                   id="review-filter-critics"
                   onClick={() => setReviewFilter('critics')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                  className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 min-h-[44px] cursor-pointer active:scale-95 ${
                     reviewFilter === 'critics'
-                      ? 'bg-[#FF2E7E] text-slate-950 shadow-md shadow-[#FF2E7E]/30 font-black'
-                      : 'bg-slate-900 text-slate-400 hover:text-[#FF2E7E] border border-slate-800'
+                      ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
+                      : 'bg-slate-900 text-slate-400 hover:text-[#FF2E7E] hover:bg-slate-800/80 border border-slate-800'
                   }`}
                 >
-                  <Star className="w-3 h-3 fill-current" />
+                  <Star className={`w-3.5 h-3.5 ${reviewFilter === 'critics' ? 'fill-current text-white' : 'text-amber-400'}`} />
                   <span>Ulasan Kritikus (Si Paling Sotoy)</span>
-                  <span className="bg-black/20 px-1.5 py-0.2 rounded-full text-[10px]">
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                    reviewFilter === 'critics' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'
+                  }`}>
                     {criticsReviews.length}
                   </span>
                 </button>
@@ -1034,15 +1041,17 @@ export const FilmDetailPage: React.FC = () => {
                 <button
                   id="review-filter-community"
                   onClick={() => setReviewFilter('community')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                  className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shrink-0 min-h-[44px] cursor-pointer active:scale-95 ${
                     reviewFilter === 'community'
-                      ? 'bg-[#FF2E7E] text-slate-950 shadow-md shadow-[#FF2E7E]/30 font-black'
-                      : 'bg-slate-900 text-slate-400 hover:text-[#FF2E7E] border border-slate-800'
+                      ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
+                      : 'bg-slate-900 text-slate-400 hover:text-[#FF2E7E] hover:bg-slate-800/80 border border-slate-800'
                   }`}
                 >
-                  <Users className="w-3 h-3" />
+                  <Users className="w-3.5 h-3.5" />
                   <span>Komunitas Sotoy</span>
-                  <span className="bg-black/20 px-1.5 py-0.2 rounded-full text-[10px]">
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                    reviewFilter === 'community' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'
+                  }`}>
                     {communityReviews.length}
                   </span>
                 </button>

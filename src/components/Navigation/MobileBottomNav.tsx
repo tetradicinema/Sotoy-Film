@@ -23,14 +23,15 @@ export const MobileBottomNav: React.FC = () => {
     <nav
       id="mobile-bottom-navigation-bar"
       aria-label="Navigasi Bawah Mobile"
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0E1013]/95 backdrop-blur-xl border-t border-white/[0.08] shadow-[0_-8px_24px_rgba(14,16,19,0.8)] px-2 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))]"
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0E1013]/95 backdrop-blur-xl border-t border-white/[0.08] shadow-[0_-8px_24px_rgba(14,16,19,0.8)] px-2 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] overflow-auto scrollbar-none scroll-smooth touch-pan-x"
+      style={{ overflow: 'auto', WebkitOverflowScrolling: 'touch' }}
     >
-      <div className="flex items-center justify-around max-w-md mx-auto">
+      <div className="flex items-center justify-around min-w-max sm:min-w-full w-full max-w-md mx-auto gap-1 px-0.5">
         {/* 1. Beranda */}
         <button
           id="mobile-bottom-nav-home"
           onClick={() => navigateTo('home')}
-          className={`flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-lg transition-all duration-200 min-h-[44px] ${
+          className={`flex flex-col items-center justify-center flex-1 min-w-[56px] shrink-0 py-1 px-1 rounded-lg transition-all duration-200 min-h-[44px] ${
             isHomeActive
               ? 'text-[#FF2E7E]'
               : 'text-slate-400 hover:text-slate-200'
@@ -51,7 +52,7 @@ export const MobileBottomNav: React.FC = () => {
         <button
           id="mobile-bottom-nav-films"
           onClick={() => navigateTo('film-database')}
-          className={`flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-lg transition-all duration-200 min-h-[44px] ${
+          className={`flex flex-col items-center justify-center flex-1 min-w-[56px] shrink-0 py-1 px-1 rounded-lg transition-all duration-200 min-h-[44px] ${
             isFilmActive
               ? 'text-[#FF2E7E]'
               : 'text-slate-400 hover:text-slate-200'
@@ -78,7 +79,7 @@ export const MobileBottomNav: React.FC = () => {
               setIsComposeBuzzOpen(true);
             }
           }}
-          className="flex flex-col items-center justify-center flex-1 py-1 px-1 transition-all duration-200 min-h-[44px] group"
+          className="flex flex-col items-center justify-center flex-1 min-w-[56px] shrink-0 py-1 px-1 transition-all duration-200 min-h-[44px] group"
           title="Tulis Buzz Baru"
           aria-label="Tulis Buzz Baru"
         >
@@ -94,7 +95,7 @@ export const MobileBottomNav: React.FC = () => {
         <button
           id="mobile-bottom-nav-buzz"
           onClick={() => navigateTo('community-feed')}
-          className={`flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-lg transition-all duration-200 min-h-[44px] ${
+          className={`flex flex-col items-center justify-center flex-1 min-w-[56px] shrink-0 py-1 px-1 rounded-lg transition-all duration-200 min-h-[44px] ${
             isBuzzActive
               ? 'text-[#FF2E7E]'
               : 'text-slate-400 hover:text-slate-200'
@@ -116,7 +117,7 @@ export const MobileBottomNav: React.FC = () => {
           <button
             id="mobile-bottom-nav-profile"
             onClick={() => navigateTo('user-profile', { userId: currentUser.id, userTab: 'buzz' })}
-            className={`flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-lg transition-all duration-200 min-h-[44px] ${
+            className={`flex flex-col items-center justify-center flex-1 min-w-[56px] shrink-0 py-1 px-1 rounded-lg transition-all duration-200 min-h-[44px] ${
               isProfileActive
                 ? 'text-white'
                 : 'text-slate-400 hover:text-slate-200'
@@ -149,7 +150,7 @@ export const MobileBottomNav: React.FC = () => {
           <button
             id="mobile-bottom-nav-login"
             onClick={() => setLoginModalOpen(true)}
-            className="flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-lg transition-all duration-200 min-h-[44px] text-[#FF2E7E] hover:text-[#e0266e]"
+            className="flex flex-col items-center justify-center flex-1 min-w-[56px] shrink-0 py-1 px-1 rounded-lg transition-all duration-200 min-h-[44px] text-[#FF2E7E] hover:text-[#e0266e]"
           >
             <div className="relative">
               <LogIn className="w-5 h-5 stroke-2" />

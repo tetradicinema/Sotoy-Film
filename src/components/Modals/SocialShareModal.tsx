@@ -1051,13 +1051,16 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         </div>
 
         {/* Tab Selection */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-2xl">
+        <div
+          className="flex items-center gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-2xl overflow-x-auto scrollbar-none flex-nowrap scroll-smooth touch-pan-x"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           <button
             onClick={() => setActiveTab('quick')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+            className={`flex-1 min-w-[105px] py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 min-h-[44px] cursor-pointer active:scale-95 ${
               activeTab === 'quick'
-                ? 'bg-[#FF2E7E] text-slate-950 shadow-md shadow-sm'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent'
             }`}
           >
             <Share2 className="w-3.5 h-3.5" />
@@ -1066,10 +1069,10 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
 
           <button
             onClick={() => setActiveTab('ig_story')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+            className={`flex-1 min-w-[105px] py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 min-h-[44px] cursor-pointer active:scale-95 ${
               activeTab === 'ig_story'
-                ? 'bg-[#FF2E7E] text-white shadow-md shadow-sm'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent'
             }`}
           >
             <Camera className="w-3.5 h-3.5" />
@@ -1078,10 +1081,10 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
 
           <button
             onClick={() => setActiveTab('ig_feed')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+            className={`flex-1 min-w-[105px] py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 min-h-[44px] cursor-pointer active:scale-95 ${
               activeTab === 'ig_feed'
-                ? 'bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#FCB045] text-white shadow-md shadow-[#FD1D1D]/25'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#FCB045] text-white shadow-md shadow-[#FD1D1D]/25 font-bold border border-amber-400/40'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent'
             }`}
           >
             <Instagram className="w-3.5 h-3.5" />

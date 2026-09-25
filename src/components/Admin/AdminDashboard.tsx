@@ -205,10 +205,10 @@ export const AdminDashboard: React.FC = () => {
         {/* Navigation Tabs Bar pointing to Standalone URLs */}
         <div className="relative">
           <nav 
-            className="admin-navigation-list flex items-center gap-2 overflow-x-auto pb-3 border-b border-white/10 flex-nowrap scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
+            className="admin-navigation-list flex items-center gap-2 overflow-x-auto pb-3 border-b border-white/10 flex-nowrap scrollbar-none scroll-smooth touch-pan-x"
             aria-label="Admin Navigation List"
             style={{
-              scrollbarWidth: 'thin',
+              scrollbarWidth: 'none',
               WebkitOverflowScrolling: 'touch',
             }}
           >
@@ -216,9 +216,9 @@ export const AdminDashboard: React.FC = () => {
             <Link
               to="/admin/analytics"
               id="admin-tab-analytics"
-              className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
+              className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 min-h-[44px] active:scale-95 ${
                 activeTab === 'analytics'
-                  ? 'bg-[#FF2E7E] text-white shadow-sm'
+                  ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
                   : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
               }`}
             >
@@ -230,9 +230,9 @@ export const AdminDashboard: React.FC = () => {
             <Link
               to="/admin/users"
               id="admin-tab-users"
-              className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
+              className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 min-h-[44px] active:scale-95 ${
                 activeTab === 'users'
-                  ? 'bg-[#FF2E7E] text-white shadow-sm'
+                  ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
                   : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
               }`}
             >
@@ -244,9 +244,9 @@ export const AdminDashboard: React.FC = () => {
             <Link
               to="/admin/moderation"
               id="admin-tab-moderation"
-              className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 relative ${
+              className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 relative min-h-[44px] active:scale-95 ${
                 activeTab === 'moderation'
-                  ? 'bg-[#FF2E7E] text-white shadow-sm'
+                  ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
                   : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
               }`}
             >
@@ -263,9 +263,9 @@ export const AdminDashboard: React.FC = () => {
             <Link
               to="/admin/catalog"
               id="admin-tab-catalog"
-              className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
+              className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 min-h-[44px] active:scale-95 ${
                 activeTab === 'catalog'
-                  ? 'bg-[#FF2E7E] text-white shadow-sm'
+                  ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
                   : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
               }`}
             >
@@ -277,9 +277,9 @@ export const AdminDashboard: React.FC = () => {
             <Link
               to="/admin/storage"
               id="admin-tab-storage"
-              className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
+              className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 min-h-[44px] active:scale-95 ${
                 activeTab === 'storage'
-                  ? 'bg-[#FF2E7E] text-white shadow-sm'
+                  ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
                   : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
               }`}
             >
@@ -291,9 +291,9 @@ export const AdminDashboard: React.FC = () => {
             <Link
               to="/admin/appeals"
               id="admin-tab-appeals"
-              className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 relative ${
+              className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 relative min-h-[44px] active:scale-95 ${
                 activeTab === 'appeals'
-                  ? 'bg-[#FF2E7E] text-white shadow-sm'
+                  ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
                   : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
               }`}
             >
@@ -310,9 +310,9 @@ export const AdminDashboard: React.FC = () => {
             <Link
               to="/admin/audit"
               id="admin-tab-audit"
-              className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 ${
+              className={`px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 min-h-[44px] active:scale-95 ${
                 activeTab === 'audit'
-                  ? 'bg-[#FF2E7E] text-white shadow-sm'
+                  ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
                   : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
               }`}
             >

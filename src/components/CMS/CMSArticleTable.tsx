@@ -413,77 +413,90 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
   return (
     <div className="space-y-6">
       {/* 1. WORDPRESS-STYLE STATUS TABS */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-slate-800 scrollbar-none text-xs font-bold">
+      <div
+        className="flex items-center gap-2 overflow-x-auto pb-1.5 border-b border-slate-800 scrollbar-none text-xs font-bold scroll-smooth touch-pan-x"
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
         <button
           onClick={() => setStatusFilter('all')}
-          className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+          className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer min-h-[44px] shrink-0 active:scale-95 ${
             statusFilter === 'all'
-              ? 'bg-slate-800 text-white border border-slate-700 shadow-sm'
-              : 'text-slate-400 hover:text-white hover:bg-slate-850'
+              ? 'bg-slate-800 text-white border border-slate-600 shadow-md'
+              : 'text-slate-400 hover:text-white hover:bg-slate-850 border border-transparent'
           }`}
         >
           <span>Semua</span>
-          <span className="px-1.5 py-0.2 rounded-full bg-slate-700 text-slate-300 text-[10px] font-black">
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+            statusFilter === 'all' ? 'bg-white/20 text-white' : 'bg-slate-700 text-slate-300'
+          }`}>
             {statusCounts.all}
           </span>
         </button>
 
         <button
           onClick={() => setStatusFilter('published')}
-          className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+          className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer min-h-[44px] shrink-0 active:scale-95 ${
             statusFilter === 'published'
-              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shadow-sm'
-              : 'text-slate-400 hover:text-white hover:bg-slate-850'
+              ? 'bg-emerald-500 text-slate-950 font-black border border-emerald-400 shadow-md shadow-emerald-500/25'
+              : 'text-slate-400 hover:text-white hover:bg-slate-850 border border-transparent'
           }`}
         >
-          <Check className="w-3.5 h-3.5 text-emerald-400" />
+          <Check className={`w-3.5 h-3.5 ${statusFilter === 'published' ? 'text-slate-950 stroke-[3]' : 'text-emerald-400'}`} />
           <span>Terbit</span>
-          <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black">
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+            statusFilter === 'published' ? 'bg-black/20 text-slate-950' : 'bg-emerald-500/20 text-emerald-300'
+          }`}>
             {statusCounts.published}
           </span>
         </button>
 
         <button
           onClick={() => setStatusFilter('draft')}
-          className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+          className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer min-h-[44px] shrink-0 active:scale-95 ${
             statusFilter === 'draft'
-              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-sm'
-              : 'text-slate-400 hover:text-white hover:bg-slate-850'
+              ? 'bg-cyan-500 text-slate-950 font-black border border-cyan-400 shadow-md shadow-cyan-500/25'
+              : 'text-slate-400 hover:text-white hover:bg-slate-850 border border-transparent'
           }`}
         >
-          <Clock className="w-3.5 h-3.5 text-cyan-400" />
+          <Clock className={`w-3.5 h-3.5 ${statusFilter === 'draft' ? 'text-slate-950 stroke-[3]' : 'text-cyan-400'}`} />
           <span>Draf</span>
-          <span className="px-1.5 py-0.2 rounded-full bg-cyan-500/20 text-cyan-300 text-[10px] font-black">
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+            statusFilter === 'draft' ? 'bg-black/20 text-slate-950' : 'bg-cyan-500/20 text-cyan-300'
+          }`}>
             {statusCounts.draft}
           </span>
         </button>
 
         <button
           onClick={() => setStatusFilter('scheduled')}
-          className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+          className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer min-h-[44px] shrink-0 active:scale-95 ${
             statusFilter === 'scheduled'
-              ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30 shadow-sm'
-              : 'text-slate-400 hover:text-white hover:bg-slate-850'
+              ? 'bg-blue-500 text-slate-950 font-black border border-blue-400 shadow-md shadow-blue-500/25'
+              : 'text-slate-400 hover:text-white hover:bg-slate-850 border border-transparent'
           }`}
         >
-          <Calendar className="w-3.5 h-3.5 text-blue-400" />
+          <Calendar className={`w-3.5 h-3.5 ${statusFilter === 'scheduled' ? 'text-slate-950 stroke-[3]' : 'text-blue-400'}`} />
           <span>Terjadwal</span>
-          <span className="px-1.5 py-0.2 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-black">
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+            statusFilter === 'scheduled' ? 'bg-black/20 text-slate-950' : 'bg-blue-500/20 text-blue-300'
+          }`}>
             {statusCounts.scheduled}
           </span>
         </button>
 
         <button
           onClick={() => setStatusFilter('trash')}
-          className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+          className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer min-h-[44px] shrink-0 active:scale-95 ${
             statusFilter === 'trash'
-              ? 'bg-red-500/20 text-red-300 border border-red-500/30 shadow-sm'
-              : 'text-slate-400 hover:text-white hover:bg-slate-850'
+              ? 'bg-red-500 text-white font-black border border-red-400 shadow-md shadow-red-500/25'
+              : 'text-slate-400 hover:text-white hover:bg-slate-850 border border-transparent'
           }`}
         >
-          <Trash2 className="w-3.5 h-3.5 text-red-400" />
+          <Trash2 className={`w-3.5 h-3.5 ${statusFilter === 'trash' ? 'text-white' : 'text-red-400'}`} />
           <span>Sampah</span>
-          <span className="px-1.5 py-0.2 rounded-full bg-red-500/20 text-red-300 text-[10px] font-black">
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+            statusFilter === 'trash' ? 'bg-white/20 text-white' : 'bg-red-500/20 text-red-300'
+          }`}>
             {statusCounts.trash}
           </span>
         </button>

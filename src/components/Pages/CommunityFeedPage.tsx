@@ -586,7 +586,10 @@ export const CommunityFeedPage: React.FC = () => {
           
           {/* Mobile & Tablet Sticky Feed Tabs (Clean, native 1-tap switcher) */}
           <div className="lg:hidden sticky top-14 z-20 -mx-2 px-2 py-2 bg-[#0A0A0E]/95 backdrop-blur-md border-b border-slate-800/80">
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
+            <div
+              className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1 scroll-smooth touch-pan-x"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
               {[
                 { id: 'for-you', label: 'Untukmu', icon: Flame },
                 { id: 'following', label: 'Mengikuti', icon: Users, badge: followingIds.length > 0 ? followingIds.length : null },
@@ -601,7 +604,7 @@ export const CommunityFeedPage: React.FC = () => {
                     key={tab.id}
                     id={`mobile-buzz-tab-${tab.id}`}
                     onClick={() => setBuzzFeedTab(tab.id as BuzzFeedTab)}
-                    className={`relative flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors shrink-0 ${
+                    className={`relative flex items-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all shrink-0 min-h-[44px] cursor-pointer active:scale-95 ${
                       isActive
                         ? 'text-white'
                         : 'bg-slate-900/90 text-slate-400 hover:text-white border border-slate-800'
@@ -618,7 +621,9 @@ export const CommunityFeedPage: React.FC = () => {
                       <Icon className="w-3.5 h-3.5" />
                       <span>{tab.label}</span>
                       {tab.badge ? (
-                        <span className="text-[10px] bg-black/40 text-white px-1.5 py-0.2 rounded-full font-mono">
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                          isActive ? 'bg-black/30 text-white' : 'bg-slate-800 text-slate-400'
+                        }`}>
                           {tab.badge}
                         </span>
                       ) : null}
