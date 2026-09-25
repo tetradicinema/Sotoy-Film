@@ -13,6 +13,15 @@ import {
   Tv,
   Camera,
   BookOpen,
+  Menu,
+  X,
+  ChevronRight,
+  LogOut,
+  Bookmark,
+  Settings,
+  FileText,
+  Shield,
+  Award,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
@@ -44,6 +53,8 @@ export const Navbar: React.FC = () => {
 
   const [activeDropdown, setActiveDropdown] = useState<MainCategory | null>(null);
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [expandedMobileCategories, setExpandedMobileCategories] = useState<Record<string, boolean>>({});
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Close user dropdown when clicking outside
@@ -55,6 +66,30 @@ export const Navbar: React.FC = () => {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
+
+  // Handle escape key to close menus
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsMobileMenuOpen(false);
+        setRoleDropdownOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const categoriesConfig: {
@@ -125,19 +160,37 @@ export const Navbar: React.FC = () => {
       {/* Main Navbar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-4">
-          {/* Brand Logo */}
-          <div
-            id="brand-logo"
-            onClick={() => navigateTo('home')}
-            className="flex items-center cursor-pointer group shrink-0 select-none transition-transform active:scale-95 p-2 -m-2"
-          >
-            <img
-              src="/sotoy-logo-full.png"
-              alt="Sotoy Film — Pop-Culture & Cinema"
-              loading="eager"
-              fetchPriority="high"
-              className="h-14 md:h-[68px] w-auto -my-2 object-contain transition-all duration-300 group-hover:scale-[1.015] group-hover:opacity-90"
-            />
+          {/* Left: Mobile 3-Line Hamburger Menu Button & Brand Logo */}
+          <div className="flex items-center gap-2">
+            {/* Mobile Hamburger Button (Button garis 3) */}
+            <button
+              id="mobile-menu-toggle-btn"
+              type="button"
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="lg:hidden p-2 -ml-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/[0.08] transition-colors focus:outline-none focus:ring-2 focus:ring-[#FF2E7E]/50"
+              aria-label="Buka Menu Navigasi"
+              aria-expanded={isMobileMenuOpen}
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+
+            {/* Brand Logo */}
+            <div
+              id="brand-logo"
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                navigateTo('home');
+              }}
+              className="flex items-center cursor-pointer group shrink-0 select-none transition-transform active:scale-95 p-2 -m-2"
+            >
+              <img
+                src="/sotoy-logo-full.png"
+                alt="Sotoy Film — Pop-Culture & Cinema"
+                loading="eager"
+                fetchPriority="high"
+                className="h-14 md:h-[68px] w-auto -my-2 object-contain transition-all duration-300 group-hover:scale-[1.015] group-hover:opacity-90"
+              />
+            </div>
           </div>
 
           {/* Desktop Category Navigation */}
@@ -249,22 +302,6 @@ export const Navbar: React.FC = () => {
             {/* Global Notification Bell */}
             {isLoggedIn && (
               <NotificationBell mode="global" />
-            )}
-
-            {!(isAdmin || currentUser.role === 'admin') && (isWriter || currentUser.role === 'penulis_sotoy' || currentUser.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02') && (
-              <button
-                id="navbar-writer-mode-pill"
-                onClick={() => navigateTo('writer-dashboard')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all border shadow-sm ${
-                  currentView === 'writer-dashboard'
-                    ? 'bg-[#FF2E7E] text-white border-[#FF2E7E]'
-                    : 'bg-[#FF2E7E]/10 text-[#FF2E7E] border-[#FF2E7E]/30 hover:bg-[#FF2E7E] hover:text-white'
-                }`}
-                title="Dasbor CMS Penulis"
-              >
-                <PenSquare className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">DASBOR PENULIS</span>
-              </button>
             )}
 
             {/* Unified Menu Trigger: Circular Profile Photo Avatar Button */}
@@ -638,6 +675,421 @@ export const Navbar: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Mobile Hidden Menu Drawer (Menu Garis 3) */}
+      {isMobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-[70]">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-300 animate-in fade-in"
+            onClick={() => setIsMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+
+          {/* Drawer Sheet */}
+          <div
+            id="mobile-drawer-menu"
+            className="fixed inset-y-0 left-0 w-[86%] max-w-sm bg-[#121418] border-r border-white/10 shadow-2xl flex flex-col z-[71] overflow-hidden animate-in slide-in-from-left duration-300"
+          >
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/[0.08] bg-[#0E1013]/90">
+              <div
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  navigateTo('home');
+                }}
+                className="flex items-center cursor-pointer select-none"
+              >
+                <img
+                  src="/sotoy-logo-full.png"
+                  alt="Sotoy Film"
+                  className="h-9 w-auto object-contain"
+                />
+              </div>
+
+              <button
+                id="mobile-menu-close-btn"
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/[0.08] transition-colors focus:outline-none"
+                aria-label="Tutup Menu Navigasi"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Mobile Search Bar inside Drawer */}
+            <div className="p-3 border-b border-white/[0.08] bg-[#171A1F]/50">
+              <GlobalSearchBar
+                isMobile={true}
+                placeholder="Cari film, artikel, buzz..."
+                onItemSelect={() => setIsMobileMenuOpen(false)}
+              />
+            </div>
+
+            {/* Scrollable Navigation Body */}
+            <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4 scrollbar-thin">
+              {/* Quick Navigation Links */}
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-2 mb-1.5">
+                  Menu Utama
+                </div>
+                <div className="space-y-1">
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      navigateTo('home');
+                    }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                      currentView === 'home'
+                        ? 'bg-[#FF2E7E] text-white shadow-sm'
+                        : 'text-slate-300 hover:text-white hover:bg-white/[0.06]'
+                    }`}
+                  >
+                    <Home className="w-4 h-4 shrink-0" />
+                    <span>Beranda</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      navigateTo('film-database');
+                    }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                      currentView === 'film-database' || currentView === 'film-detail'
+                        ? 'bg-[#FF2E7E] text-white shadow-sm'
+                        : 'text-slate-300 hover:text-white hover:bg-white/[0.06]'
+                    }`}
+                  >
+                    <Film className="w-4 h-4 shrink-0" />
+                    <span>Film Database</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      navigateTo('community-feed');
+                    }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                      currentView === 'community-feed'
+                        ? 'bg-[#FF2E7E] text-white shadow-sm'
+                        : 'text-slate-300 hover:text-white hover:bg-white/[0.06]'
+                    }`}
+                  >
+                    <MessageSquare className="w-4 h-4 shrink-0" />
+                    <span>Buzz Komunitas</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      navigateTo('film-recommendations');
+                    }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                      currentView === 'film-recommendations'
+                        ? 'bg-[#FF2E7E] text-white shadow-sm'
+                        : 'text-slate-300 hover:text-white hover:bg-white/[0.06]'
+                    }`}
+                  >
+                    <Sparkles className="w-4 h-4 shrink-0 text-amber-400" />
+                    <span>Rekomendasi Film</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Categories & Subcategories (Accordion) */}
+              <div className="border-t border-white/[0.08] pt-3">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-2 mb-1.5 flex items-center justify-between">
+                  <span>Kategori Konten</span>
+                  <span className="text-[10px] text-slate-500 font-normal">Pilih & Jelajahi</span>
+                </div>
+                <div className="space-y-1">
+                  {categoriesConfig.map(cat => {
+                    const isExpanded = !!expandedMobileCategories[cat.id];
+                    const isSelected = activeCategory === cat.id && currentView === 'category';
+                    const CatIcon = cat.icon;
+
+                    return (
+                      <div key={cat.id} className="rounded-xl overflow-hidden bg-white/[0.02] border border-white/[0.05]">
+                        <div className="flex items-center justify-between">
+                          <button
+                            onClick={() => {
+                              setIsMobileMenuOpen(false);
+                              handleCategoryClick(cat.id);
+                            }}
+                            className={`flex-1 flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-left transition-colors ${
+                              isSelected
+                                ? 'text-[#FF2E7E]'
+                                : 'text-slate-200 hover:text-white'
+                            }`}
+                          >
+                            <CatIcon className={`w-4 h-4 ${isSelected ? 'text-[#FF2E7E]' : 'text-slate-400'}`} />
+                            <span>{cat.name}</span>
+                          </button>
+
+                          {cat.subCategories.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setExpandedMobileCategories(prev => ({
+                                  ...prev,
+                                  [cat.id]: !prev[cat.id],
+                                }));
+                              }}
+                              className="px-2.5 py-2.5 text-slate-400 hover:text-white transition-colors"
+                              aria-label={`Toggle subkategori ${cat.name}`}
+                            >
+                              <ChevronDown
+                                className={`w-4 h-4 transition-transform duration-200 ${
+                                  isExpanded ? 'rotate-180 text-[#FF2E7E]' : ''
+                                }`}
+                              />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Collapsible Subcategories */}
+                        {isExpanded && cat.subCategories.length > 0 && (
+                          <div className="px-3 pb-2 pt-0.5 space-y-1 bg-black/20 border-t border-white/[0.04]">
+                            {cat.subCategories.map(sub => (
+                              <button
+                                key={sub.id}
+                                onClick={() => {
+                                  setIsMobileMenuOpen(false);
+                                  handleCategoryClick(cat.id, sub.id);
+                                }}
+                                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
+                                  activeCategory === cat.id && activeSubCategory === sub.id
+                                    ? 'bg-[#FF2E7E]/20 text-[#FF2E7E] font-semibold'
+                                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
+                                }`}
+                              >
+                                <span>{sub.label}</span>
+                                <ChevronRight className="w-3 h-3 opacity-60" />
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* User Account / Membership Section */}
+              <div className="border-t border-white/[0.08] pt-3">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-2 mb-1.5">
+                  Akun & Preferensi
+                </div>
+
+                {isLoggedIn ? (
+                  <div className="space-y-2">
+                    {/* User Card */}
+                    <div className="flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                      <img
+                        src={currentUser.avatar}
+                        alt={currentUser.name}
+                        className="w-10 h-10 rounded-xl object-cover ring-1 ring-white/20 shrink-0"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-bold text-white truncate">{currentUser.name}</div>
+                        <div className="text-[11px] text-slate-400 truncate">{currentUser.handle}</div>
+                        <div className="mt-1">
+                          <RoleBadge role={currentUser.role} size="sm" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <button
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          navigateTo('user-profile', { userId: currentUser.id, userTab: 'buzz' });
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors ${
+                          currentView === 'user-profile' && activeUserTab === 'buzz'
+                            ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] font-semibold'
+                            : 'text-slate-300 hover:bg-white/[0.05] hover:text-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <UserIcon className="w-4 h-4 text-slate-400" />
+                          <span>Profil Saya</span>
+                        </div>
+                        <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          navigateTo('user-profile', { userId: currentUser.id, userTab: 'watchlist' });
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors ${
+                          currentView === 'user-profile' && activeUserTab === 'watchlist'
+                            ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] font-semibold'
+                            : 'text-slate-300 hover:bg-white/[0.05] hover:text-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Bookmark className="w-4 h-4 text-slate-400" />
+                          <span>Watchlist</span>
+                        </div>
+                        <span className="bg-white/10 text-slate-300 font-mono tabular-nums text-[10px] px-2 py-0.5 rounded-md">
+                          {watchlist.length + savedArticles.length}
+                        </span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          navigateTo('settings');
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors ${
+                          currentView === 'settings'
+                            ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] font-semibold'
+                            : 'text-slate-300 hover:bg-white/[0.05] hover:text-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Settings className="w-4 h-4 text-slate-400" />
+                          <span>Pengaturan</span>
+                        </div>
+                        <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+                      </button>
+
+                      {(currentUser.role === 'si_paling_sotoy' || isCritic) && (
+                        <button
+                          onClick={() => {
+                            setIsMobileMenuOpen(false);
+                            navigateTo('critic-dashboard');
+                          }}
+                          className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors ${
+                            currentView === 'critic-dashboard'
+                              ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] font-semibold'
+                              : 'text-slate-300 hover:bg-white/[0.05] hover:text-white'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <Award className="w-4 h-4 text-amber-400" />
+                            <span>Dasbor Kritikus</span>
+                          </div>
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+                        </button>
+                      )}
+
+                      {(currentUser.role === 'penulis_sotoy' || currentUser.role === 'admin' || isWriter || isAdmin || currentUser.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02') && (
+                        <div className="pt-2 border-t border-white/[0.06] space-y-1">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1 mb-1">
+                            CMS & Kepenulisan
+                          </div>
+                          <button
+                            onClick={() => {
+                              setIsMobileMenuOpen(false);
+                              navigateTo('writer-dashboard');
+                            }}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors ${
+                              currentView === 'writer-dashboard'
+                                ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] font-semibold'
+                                : 'text-slate-300 hover:bg-white/[0.05] hover:text-white'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <PenSquare className="w-4 h-4 text-[#FF2E7E]" />
+                              <span>Dasbor Penulis</span>
+                            </div>
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setIsMobileMenuOpen(false);
+                              navigateTo('cms');
+                            }}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors ${
+                              currentView === 'cms' || currentView === 'cms-workspace'
+                                ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] font-semibold'
+                                : 'text-slate-300 hover:bg-white/[0.05] hover:text-white'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <FileText className="w-4 h-4 text-slate-400" />
+                              <span>Halaman CMS</span>
+                            </div>
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+                          </button>
+                        </div>
+                      )}
+
+                      {(currentUser.role === 'admin' || isAdmin) && (
+                        <div className="pt-2 border-t border-white/[0.06] space-y-1">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1 mb-1">
+                            Admin Panel
+                          </div>
+                          <Link
+                            to="/admin"
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors ${
+                              currentView === 'admin-dashboard'
+                                ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] font-semibold'
+                                : 'text-slate-300 hover:bg-white/[0.05] hover:text-white'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <Shield className="w-4 h-4 text-[#FF2E7E]" />
+                              <span>Admin Dashboard</span>
+                            </div>
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+                          </Link>
+                        </div>
+                      )}
+
+                      {/* Logout Button */}
+                      <button
+                        onClick={() => {
+                          logout();
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-red-400 hover:bg-red-500/10 transition-colors mt-2"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <LogOut className="w-4 h-4" />
+                          <span>Keluar dari Akun</span>
+                        </div>
+                        <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3.5 rounded-xl bg-gradient-to-b from-[#1E232B] to-[#14171C] border border-white/10 space-y-2.5">
+                    <div className="flex items-center gap-2 text-xs font-bold text-white">
+                      <Sparkles className="w-4 h-4 text-[#FF2E7E]" />
+                      <span>Masuk ke Sotoy Film</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                      Bergabung bersama komunitas sinema: review film, buat daftar watchlist, dan diskusi buzz film terbaru.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setLoginModalOpen(true);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="w-full py-2.5 px-3 rounded-xl bg-[#FF2E7E] hover:bg-[#e0266e] text-white text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-md shadow-[#FF2E7E]/20"
+                    >
+                      <LogIn className="w-4 h-4" />
+                      <span>Masuk / Daftar Akun</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Drawer Footer */}
+            <div className="px-4 py-3 border-t border-white/[0.08] bg-[#0E1013]/90 text-[11px] text-slate-400 text-center flex items-center justify-between">
+              <span>Sotoy Film</span>
+              <span className="text-[10px] text-slate-400">Pop-Culture & Cinema</span>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

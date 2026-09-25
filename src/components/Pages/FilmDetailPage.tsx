@@ -445,7 +445,7 @@ export const FilmDetailPage: React.FC = () => {
 
               {/* Film Title & Sotoy Certified Badge */}
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5">
-                <h1 className="font-display font-black text-2xl sm:text-4xl lg:text-5xl text-white tracking-tight leading-tight">
+                <h1 className="font-display font-bold text-xl sm:text-2xl text-white tracking-tight leading-tight">
                   {film.title}
                 </h1>
 

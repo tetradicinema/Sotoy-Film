@@ -314,26 +314,14 @@ export const FilmDatabasePage: React.FC = () => {
   }, [allUsers]);
 
   return (
-    <div className="min-h-screen py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+    <div className="min-h-screen py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         
-        {/* Header Hero Banner */}
-        <div
-          id="film-database-header"
-          className="bg-gradient-to-br from-[#181428] via-[#141529] to-[#0d0e19] border border-[#FF2E7E]/40 rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden"
-        >
-          <div className="absolute -right-16 -top-16 w-80 h-80 bg-[#FF2E7E]/15 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -left-16 -bottom-16 w-80 h-80 bg-[#FF2E7E]/15 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="relative z-10 max-w-3xl">
-            <h1 className="font-display font-black text-3xl sm:text-5xl text-white tracking-tight leading-tight mb-3">
-              Film Database
-            </h1>
-
-            <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
-              Katalog lengkap film bioskop, series drama prestisius, dan anime terkini. Bandingkan Skor Komunitas penonton dengan ulasan kurator Si Paling Sotoy, serta telusuri ulasan populer komunitas.
-            </p>
-          </div>
+        {/* Header Title */}
+        <div id="film-database-header" className="pb-1">
+          <h1 className="font-display font-bold text-xl sm:text-2xl text-white tracking-tight">
+            Film Database
+          </h1>
         </div>
 
         {/* ========================================================================= */}

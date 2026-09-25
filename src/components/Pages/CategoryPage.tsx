@@ -148,27 +148,14 @@ export const CategoryPage: React.FC = () => {
           currentTitle={currentSubCategory ? currentSubCategory.toUpperCase() : meta.title}
         />
 
-        {/* Category Hero Banner */}
-        <div
-          id="category-header-banner"
-          className="relative rounded-3xl p-6 sm:p-10 overflow-hidden border border-slate-800 shadow-2xl bg-[#171A1F] flex flex-col items-start gap-5"
-        >
-          <div
-            className="absolute -right-16 -top-16 w-80 h-80 rounded-full blur-3xl opacity-20 pointer-events-none"
-            style={{ backgroundColor: meta.accentColor }}
-          />
-
-          <div className="max-w-3xl relative z-10">
-            <h1 className="font-display font-black text-3xl sm:text-5xl text-white tracking-tight mb-3">
-              {meta.title}
-            </h1>
-            <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-              {meta.subtitle}
-            </p>
-          </div>
+        {/* Category Header */}
+        <div id="category-header-banner" className="space-y-4">
+          <h1 className="font-display font-bold text-xl sm:text-2xl text-white tracking-tight">
+            {meta.title}
+          </h1>
 
           {/* Subcategories Filter Pills */}
-          <div className="flex items-center gap-2 flex-wrap relative z-10">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               id="cat-subcat-all"
               onClick={() => navigateTo('category', { category: currentCategory, subCategory: null })}

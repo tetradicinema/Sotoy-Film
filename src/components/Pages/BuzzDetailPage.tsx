@@ -221,9 +221,6 @@ export const BuzzDetailPage: React.FC = () => {
             id={`buzz-thread-main-${buzz.id}`}
             className="p-6 sm:p-7 rounded-3xl bg-[#171A1F] border border-white/10 shadow-2xl relative overflow-hidden space-y-5"
           >
-            {/* Ambient subtle glow */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-[#FF2E7E]/5 rounded-full blur-3xl pointer-events-none" />
-
             {/* Utas Utama Header Identity Pill */}
             <div className="flex items-center justify-between pb-3 border-b border-white/10 relative z-10">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 text-[#FF2E7E] text-xs font-mono font-bold tracking-wide">
