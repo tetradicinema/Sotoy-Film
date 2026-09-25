@@ -196,6 +196,29 @@ export const CommunityFeedPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Overflow menu state for post cards
+  const [openMenuPostId, setOpenMenuPostId] = useState<string | null>(null);
+
+  // Close overflow menu on outside click or escape
+  useEffect(() => {
+    if (!openMenuPostId) return;
+    const handleOutsideMenu = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.buzz-menu-container')) {
+        setOpenMenuPostId(null);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpenMenuPostId(null);
+    };
+    document.addEventListener('mousedown', handleOutsideMenu);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideMenu);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [openMenuPostId]);
+
   // Close dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -1035,7 +1058,7 @@ export const CommunityFeedPage: React.FC = () => {
         {/* ========================================================================= */}
         {/* BUZZ POSTS STREAM WITH RICH PREVIEW CARDS */}
         {/* ========================================================================= */}
-        <div className="space-y-4">
+        <div className="border-t border-white/10">
           {isLoadingBuzz && buzzList.length === 0 ? (
             <BuzzFeedSkeleton count={4} />
           ) : (
@@ -1065,7 +1088,7 @@ export const CommunityFeedPage: React.FC = () => {
                     scale: { duration: 0.22, ease: 'easeOut' },
                   }}
                   id={`buzz-feed-card-${post.feedKey || post.id}`}
-                  className="bg-[#171A1F] border border-white/10 hover:border-white/20 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl transition-colors space-y-3.5 sm:space-y-4"
+                  className="border-b border-white/10 py-4 sm:py-5 space-y-3.5 transition-colors"
                 >
                 {/* Repost Indicator Header */}
                 {post.isRepost && post.repostedBy && (
@@ -1102,7 +1125,7 @@ export const CommunityFeedPage: React.FC = () => {
                     <img
                       src={post.author.avatar}
                       alt={post.author.name}
-                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover ring-2 ring-transparent group-hover:ring-[#FF2E7E] transition-all shrink-0"
+                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover ring-1 ring-white/10 group-hover:ring-[#FF2E7E] transition-all shrink-0"
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -1122,16 +1145,16 @@ export const CommunityFeedPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0">
                     {/* Optional quick score badge */}
                     {post.skorSotoyMention && (
-                      <div className="bg-[#FF2E7E]/15 border border-[#FF2E7E]/40 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-xl text-[#FF2E7E] text-[11px] sm:text-xs font-black flex items-center gap-1 shrink-0">
+                      <div className="bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 px-2 py-0.5 rounded-lg text-[#FF2E7E] text-[11px] font-semibold flex items-center gap-1 shrink-0">
                         <Star className="w-3 h-3 fill-current" />
                         <span>{post.skorSotoyMention.toFixed(1)}</span>
                       </div>
                     )}
 
-                    {/* Follow / Unfollow Button for any other user */}
+                    {/* Follow / Unfollow Button for any other user (understated outline Threads style) */}
                     {(!isLoggedIn || post.author.id !== currentUser.id) && (
                       <button
                         id={`buzz-follow-btn-${post.id}`}
@@ -1144,10 +1167,10 @@ export const CommunityFeedPage: React.FC = () => {
                           }
                           toggleFollowUser(post.author.id);
                         }}
-                        className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1 sm:gap-1.5 shadow-sm shrink-0 ${
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all flex items-center gap-1 shrink-0 cursor-pointer ${
                           isLoggedIn && isFollowing(post.author.id)
-                            ? 'bg-white/[0.06] text-slate-300 border border-white/10 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/40'
-                            : 'bg-[#FF2E7E] hover:bg-[#e0266e] text-white active:scale-95'
+                            ? 'bg-transparent text-slate-400 border border-white/15 hover:border-red-500/40 hover:text-red-400'
+                            : 'bg-transparent text-slate-200 hover:text-white border border-white/20 hover:border-white/40 active:scale-95'
                         }`}
                         title={
                           isLoggedIn && isFollowing(post.author.id)
@@ -1163,27 +1186,52 @@ export const CommunityFeedPage: React.FC = () => {
                           </>
                         ) : (
                           <>
-                            <UserPlus className="w-3 h-3 shrink-0" />
-                            <span>+ Ikuti</span>
+                            <UserPlus className="w-3 h-3 shrink-0 text-slate-400" />
+                            <span>Ikuti</span>
                           </>
                         )}
                       </button>
                     )}
 
-                    {/* Delete button for author or admin */}
+                    {/* Overflow Menu ("•••") with Delete action — only shown if user has delete permission */}
                     {isLoggedIn && (post.author.id === currentUser.id || currentUser.role === 'admin') && (
-                      <button
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          if (window.confirm('Hapus postingan ini?')) {
-                            await deleteBuzzPost(post.id);
-                          }
-                        }}
-                        className="p-1.5 sm:p-2 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all shadow-sm shrink-0"
-                        title="Hapus Postingan"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 sm:w-4" />
-                      </button>
+                      <div className="relative buzz-menu-container shrink-0">
+                        <button
+                          id={`buzz-more-menu-${post.id}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenMenuPostId(openMenuPostId === post.id ? null : post.id);
+                          }}
+                          className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+                          title="Menu Opsi"
+                          aria-label="Menu Opsi"
+                          aria-expanded={openMenuPostId === post.id}
+                        >
+                          <MoreHorizontal className="w-4 h-4" />
+                        </button>
+
+                        {openMenuPostId === post.id && (
+                          <div
+                            className="absolute right-0 top-full mt-1 w-32 bg-[#171A1F] border border-white/10 rounded-xl p-1 shadow-2xl z-30 animate-in fade-in zoom-in-95 duration-100"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              id={`buzz-delete-btn-${post.id}`}
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                setOpenMenuPostId(null);
+                                if (window.confirm('Hapus postingan ini?')) {
+                                  await deleteBuzzPost(post.id);
+                                }
+                              }}
+                              className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-2 transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Hapus</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1338,26 +1386,24 @@ export const CommunityFeedPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Footer Controls: Quick Reaction Bar, Replies, Share, Save */}
-                <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-4 text-xs text-slate-400">
-                  <div className="overflow-x-auto scrollbar-none min-w-0 flex-1">
+                {/* Footer Controls: Minimal Threads-style Icon Row */}
+                <div className="pt-2 flex items-center justify-between gap-3 text-xs text-slate-400 select-none">
+                  <div className="flex items-center gap-4 sm:gap-6">
                     <QuickReactionBar
                       buzzId={post.id}
                       reactions={post.reactions}
                       myReaction={post.myReaction}
                     />
-                  </div>
 
-                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                     <button
                       id={`buzz-reply-trigger-${post.id}`}
                       onClick={() => navigateTo('buzz-detail', { buzzId: post.id })}
-                      className="flex items-center gap-1 sm:gap-1.5 hover:text-[#FF2E7E] text-slate-300 transition-colors group cursor-pointer bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl text-xs shrink-0"
+                      className="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 transition-opacity hover:opacity-80 active:scale-95 cursor-pointer text-xs shrink-0 py-1"
                       title="Buka halaman diskusi & balas buzz ini"
                     >
-                      <MessageSquare className="w-3.5 h-3.5 text-[#FF2E7E] group-hover:scale-110 transition-transform" />
-                      <span className="font-semibold">
-                        {(post.replies && post.replies.length > 0 ? post.replies.length : post.repliesCount) || 0} <span className="hidden xs:inline">Balasan</span>
+                      <MessageSquare className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-current" />
+                      <span className="font-medium text-slate-400">
+                        {(post.replies && post.replies.length > 0 ? post.replies.length : post.repliesCount) || 0}
                       </span>
                     </button>
 
@@ -1365,52 +1411,48 @@ export const CommunityFeedPage: React.FC = () => {
                       id={`buzz-repost-${post.id}`}
                       onClick={() => toggleRepostBuzzPost(post.id)}
                       disabled={currentUser?.id === post.author?.id}
-                      className={`flex items-center gap-1 sm:gap-1.5 transition-colors border p-1.5 sm:px-3 sm:py-1.5 rounded-xl text-xs shrink-0 ${
+                      className={`flex items-center gap-1.5 transition-opacity hover:opacity-80 active:scale-95 text-xs shrink-0 py-1 cursor-pointer ${
                         currentUser?.id && post.repostedByUsers?.[currentUser.id]
-                          ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 font-bold'
+                          ? 'text-emerald-400'
                           : currentUser?.id === post.author?.id
-                            ? 'bg-white/[0.02] border-white/5 text-slate-600 cursor-not-allowed opacity-50'
-                            : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-slate-300 hover:text-emerald-400'
+                            ? 'text-slate-600 cursor-not-allowed opacity-50'
+                            : 'text-slate-400 hover:text-slate-200'
                       }`}
                       title={
                         currentUser?.id === post.author?.id
                           ? 'Kamu tidak bisa me-repost postinganmu sendiri'
                           : currentUser?.id && post.repostedByUsers?.[currentUser.id]
                             ? 'Batalkan Repost'
-                            : 'Repost — akan muncul di feed pengikutmu'
+                            : 'Repost'
                       }
                     >
-                      <Repeat2 className={`w-3.5 h-3.5 ${currentUser?.id && post.repostedByUsers?.[currentUser.id] ? 'text-emerald-400 stroke-[2.5]' : ''}`} />
-                      <span className="font-semibold">
-                        {post.repostsCount || 0} <span className="hidden sm:inline">Repost</span>
+                      <Repeat2 className={`w-4 h-4 sm:w-[18px] sm:h-[18px] ${currentUser?.id && post.repostedByUsers?.[currentUser.id] ? 'stroke-[2.2]' : ''}`} />
+                      <span className={`font-medium ${currentUser?.id && post.repostedByUsers?.[currentUser.id] ? 'text-emerald-400' : 'text-slate-400'}`}>
+                        {post.repostsCount || 0}
                       </span>
                     </button>
 
                     <button
                       onClick={() => handleShareBuzz(post)}
-                      className="flex items-center gap-1 sm:gap-1.5 hover:text-[#FF2E7E] transition-colors bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 p-1.5 sm:px-3 sm:py-1.5 rounded-xl text-slate-300 text-xs shrink-0"
+                      className="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 transition-opacity hover:opacity-80 active:scale-95 cursor-pointer text-xs shrink-0 py-1"
                       title="Bagikan Buzz ini ke Media Sosial"
                     >
-                      <Share2 className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline font-semibold">Bagikan</span>
-                    </button>
-
-                    <button
-                      id={`buzz-save-${post.id}`}
-                      onClick={() => toggleSaveBuzz(post.id)}
-                      className={`flex items-center gap-1 sm:gap-1.5 transition-colors border p-1.5 sm:px-3 sm:py-1.5 rounded-xl text-xs shrink-0 ${
-                        savedBuzzIds.includes(post.id)
-                          ? 'bg-white/20 border-white/40 text-white font-bold'
-                          : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-slate-300'
-                      }`}
-                      title={savedBuzzIds.includes(post.id) ? 'Hapus dari Tersimpan' : 'Simpan Buzz ini'}
-                    >
-                      <Bookmark className={`w-3.5 h-3.5 ${savedBuzzIds.includes(post.id) ? 'fill-current text-white' : ''}`} />
-                      <span className="hidden sm:inline font-semibold">
-                        {savedBuzzIds.includes(post.id) ? 'Disimpan' : 'Simpan'}
-                      </span>
+                      <Share2 className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-current" />
                     </button>
                   </div>
+
+                  <button
+                    id={`buzz-save-${post.id}`}
+                    onClick={() => toggleSaveBuzz(post.id)}
+                    className={`flex items-center gap-1.5 transition-opacity hover:opacity-80 active:scale-95 text-xs shrink-0 py-1 cursor-pointer ${
+                      savedBuzzIds.includes(post.id)
+                        ? 'text-white'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                    title={savedBuzzIds.includes(post.id) ? 'Hapus dari Tersimpan' : 'Simpan Buzz ini'}
+                  >
+                    <Bookmark className={`w-4 h-4 sm:w-[18px] sm:h-[18px] ${savedBuzzIds.includes(post.id) ? 'fill-current text-white' : 'text-current'}`} />
+                  </button>
                 </div>
               </motion.div>
             );

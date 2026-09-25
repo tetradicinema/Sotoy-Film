@@ -7,7 +7,7 @@ interface BuzzFeedSkeletonProps {
 
 export const BuzzFeedSkeleton: React.FC<BuzzFeedSkeletonProps> = ({ count = 4 }) => {
   return (
-    <div className="space-y-4" aria-busy="true" aria-label="Memuat linimasa Komunitas...">
+    <div className="divide-y divide-white/10" aria-busy="true" aria-label="Memuat linimasa Komunitas...">
       {Array.from({ length: count }).map((_, index) => (
         <BuzzCardSkeleton key={`buzz-skeleton-${index}`} hasMedia={index % 2 === 1} />
       ))}

@@ -976,33 +976,31 @@ export const UserPage: React.FC = () => {
                         </div>
                       )}
 
-                      <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-2 text-xs text-slate-400">
-                        <div className="overflow-x-auto scrollbar-none min-w-0 flex-1 pr-1">
+                      <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-3 text-xs text-slate-400 select-none">
+                        <div className="flex items-center gap-4 sm:gap-6">
                           <QuickReactionBar
                             buzzId={buzz.id}
                             reactions={buzz.reactions}
                             myReaction={buzz.myReaction}
                           />
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
                           <button
                             onClick={() => navigateTo('buzz-detail', { buzzId: buzz.id })}
-                            className="flex items-center gap-1 sm:gap-1.5 hover:text-[#FF2E7E] text-slate-300 transition-colors bg-slate-900 border border-slate-800 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl font-semibold shrink-0 text-xs"
+                            className="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 transition-opacity hover:opacity-80 active:scale-95 cursor-pointer text-xs shrink-0 py-1"
                           >
-                            <MessageSquare className="w-3.5 h-3.5 text-[#FF2E7E]" />
-                            <span>{buzz.repliesCount || 0} <span className="hidden xs:inline">Balasan</span></span>
+                            <MessageSquare className="w-4 h-4 text-current" />
+                            <span className="font-medium text-slate-400">{buzz.repliesCount || 0}</span>
                           </button>
 
                           <button
                             id={`user-page-repost-${buzz.id}`}
                             onClick={() => toggleRepostBuzzPost(buzz.id)}
                             disabled={currentUser?.id === buzz.author?.id}
-                            className={`flex items-center gap-1 sm:gap-1.5 transition-colors border p-1.5 sm:px-3 sm:py-1.5 rounded-xl text-xs shrink-0 ${
+                            className={`flex items-center gap-1.5 transition-opacity hover:opacity-80 active:scale-95 text-xs shrink-0 py-1 cursor-pointer ${
                               currentUser?.id && buzz.repostedByUsers?.[currentUser.id]
-                                ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 font-bold'
+                                ? 'text-emerald-400'
                                 : currentUser?.id === buzz.author?.id
-                                  ? 'bg-slate-900/40 border-slate-800 text-slate-600 cursor-not-allowed opacity-50'
-                                  : 'bg-slate-900 border border-slate-800 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-400'
+                                  ? 'text-slate-600 cursor-not-allowed opacity-50'
+                                  : 'text-slate-400 hover:text-slate-200'
                             }`}
                             title={
                               currentUser?.id === buzz.author?.id
@@ -1012,9 +1010,9 @@ export const UserPage: React.FC = () => {
                                   : 'Repost — akan muncul di feed pengikutmu'
                             }
                           >
-                            <Repeat2 className={`w-3.5 h-3.5 ${currentUser?.id && buzz.repostedByUsers?.[currentUser.id] ? 'text-emerald-400 stroke-[2.5]' : ''}`} />
-                            <span className="font-semibold">
-                              {buzz.repostsCount || 0} <span className="hidden sm:inline">Repost</span>
+                            <Repeat2 className={`w-4 h-4 ${currentUser?.id && buzz.repostedByUsers?.[currentUser.id] ? 'stroke-[2.2]' : ''}`} />
+                            <span className={`font-medium ${currentUser?.id && buzz.repostedByUsers?.[currentUser.id] ? 'text-emerald-400' : 'text-slate-400'}`}>
+                              {buzz.repostsCount || 0}
                             </span>
                           </button>
                         </div>
@@ -1248,33 +1246,31 @@ export const UserPage: React.FC = () => {
                         </div>
                       )}
 
-                      <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-2 text-xs text-slate-400">
-                        <div className="overflow-x-auto scrollbar-none min-w-0 flex-1 pr-1">
+                      <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-3 text-xs text-slate-400 select-none">
+                        <div className="flex items-center gap-4 sm:gap-6">
                           <QuickReactionBar
                             buzzId={buzz.id}
                             reactions={buzz.reactions}
                             myReaction={buzz.myReaction}
                           />
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
                           <button
                             onClick={() => navigateTo('buzz-detail', { buzzId: buzz.id })}
-                            className="flex items-center gap-1 sm:gap-1.5 hover:text-[#FF2E7E] text-slate-300 transition-colors bg-slate-900 border border-slate-800 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl font-semibold shrink-0 text-xs"
+                            className="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 transition-opacity hover:opacity-80 active:scale-95 cursor-pointer text-xs shrink-0 py-1"
                           >
-                            <MessageSquare className="w-3.5 h-3.5 text-[#FF2E7E]" />
-                            <span>{buzz.repliesCount || 0} <span className="hidden xs:inline">Balasan</span></span>
+                            <MessageSquare className="w-4 h-4 text-current" />
+                            <span className="font-medium text-slate-400">{buzz.repliesCount || 0}</span>
                           </button>
 
                           <button
                             id={`repost-tab-action-${buzz.id}`}
                             onClick={() => toggleRepostBuzzPost(buzz.id)}
                             disabled={currentUser?.id === buzz.author?.id}
-                            className={`flex items-center gap-1 sm:gap-1.5 transition-colors border p-1.5 sm:px-3 sm:py-1.5 rounded-xl text-xs shrink-0 ${
+                            className={`flex items-center gap-1.5 transition-opacity hover:opacity-80 active:scale-95 text-xs shrink-0 py-1 cursor-pointer ${
                               currentUser?.id && buzz.repostedByUsers?.[currentUser.id]
-                                ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 font-bold'
+                                ? 'text-emerald-400'
                                 : currentUser?.id === buzz.author?.id
-                                  ? 'bg-slate-900/40 border-slate-800 text-slate-600 cursor-not-allowed opacity-50'
-                                  : 'bg-slate-900 border border-slate-800 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-400'
+                                  ? 'text-slate-600 cursor-not-allowed opacity-50'
+                                  : 'text-slate-400 hover:text-slate-200'
                             }`}
                             title={
                               currentUser?.id === buzz.author?.id
@@ -1284,9 +1280,9 @@ export const UserPage: React.FC = () => {
                                   : 'Repost — akan muncul di feed pengikutmu'
                             }
                           >
-                            <Repeat2 className={`w-3.5 h-3.5 ${currentUser?.id && buzz.repostedByUsers?.[currentUser.id] ? 'text-emerald-400 stroke-[2.5]' : ''}`} />
-                            <span className="font-semibold">
-                              {buzz.repostsCount || 0} <span className="hidden sm:inline">Repost</span>
+                            <Repeat2 className={`w-4 h-4 ${currentUser?.id && buzz.repostedByUsers?.[currentUser.id] ? 'stroke-[2.2]' : ''}`} />
+                            <span className={`font-medium ${currentUser?.id && buzz.repostedByUsers?.[currentUser.id] ? 'text-emerald-400' : 'text-slate-400'}`}>
+                              {buzz.repostsCount || 0}
                             </span>
                           </button>
                         </div>

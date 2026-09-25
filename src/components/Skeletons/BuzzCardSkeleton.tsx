@@ -8,13 +8,13 @@ export const BuzzCardSkeleton: React.FC<BuzzCardSkeletonProps> = ({ hasMedia = f
   return (
     <div
       aria-hidden="true"
-      className="bg-[#171A1F] border border-white/[0.08]/80 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl space-y-3.5 sm:space-y-4 animate-pulse select-none"
+      className="border-b border-white/10 py-4 sm:py-5 space-y-3.5 animate-pulse select-none"
     >
       {/* Post Author Info Row */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           {/* Avatar Skeleton */}
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-800 shrink-0" />
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-800 shrink-0" />
 
           {/* Names and Meta Skeleton */}
           <div className="space-y-1.5 min-w-0 flex-1">
@@ -63,19 +63,16 @@ export const BuzzCardSkeleton: React.FC<BuzzCardSkeletonProps> = ({ hasMedia = f
       </div>
 
       {/* Footer Controls Row */}
-      <div className="pt-3 border-t border-white/[0.08]/80 flex items-center justify-between gap-4">
-        {/* Quick Reactions Skeleton */}
-        <div className="flex items-center gap-1.5 overflow-hidden">
-          <div className="h-7 w-20 sm:w-28 rounded-xl bg-slate-800/70" />
-          <div className="h-7 w-12 rounded-xl bg-slate-800/40 hidden sm:block" />
+      <div className="pt-2 flex items-center justify-between gap-4">
+        {/* Minimal Actions Skeleton */}
+        <div className="flex items-center gap-5 sm:gap-6">
+          <div className="h-4 w-9 bg-slate-800/70 rounded" />
+          <div className="h-4 w-9 bg-slate-800/70 rounded" />
+          <div className="h-4 w-9 bg-slate-800/70 rounded" />
+          <div className="h-4 w-4 bg-slate-800/50 rounded" />
         </div>
 
-        {/* Actions (Reply, Share, Bookmark) */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="h-7 w-16 sm:w-20 rounded-xl bg-slate-800/70" />
-          <div className="h-7 w-8 sm:w-16 rounded-xl bg-slate-800/50" />
-          <div className="h-7 w-8 sm:w-16 rounded-xl bg-slate-800/50" />
-        </div>
+        <div className="h-4 w-4 bg-slate-800/50 rounded" />
       </div>
     </div>
   );

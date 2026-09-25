@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   MessageSquare,
@@ -22,6 +22,7 @@ import {
   User as UserIcon,
   Trash2,
   Repeat2,
+  MoreHorizontal,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
@@ -65,6 +66,26 @@ export const BuzzDetailPage: React.FC = () => {
   } | null>(null);
   const [highlightedReplyId, setHighlightedReplyId] = useState<string | null>(null);
   const [collapsedThreads, setCollapsedThreads] = useState<Record<string, boolean>>({});
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleOutsideMenu = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.buzz-detail-menu-container')) {
+        setMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleOutsideMenu);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideMenu);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [menuOpen]);
 
   const toggleThreadCollapse = (replyId: string) => {
     setCollapsedThreads(prev => ({
@@ -272,25 +293,15 @@ export const BuzzDetailPage: React.FC = () => {
               </div>
 
               {/* Delete, Follow Button & Score Badge */}
-              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                {isLoggedIn && currentUser?.id === buzz.author.id && (
-                  <button
-                    onClick={async () => {
-                      if (window.confirm('Hapus postingan ini?')) {
-                        const success = await deleteBuzzPost(buzz.id);
-                        if (success) {
-                          navigateTo('community-feed');
-                        }
-                      }
-                    }}
-                    className="p-1.5 sm:p-2 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all shadow-sm"
-                    title="Hapus Postingan"
-                  >
-                    <Trash2 className="w-4 h-4 sm:w-5" />
-                  </button>
+              <div className="flex items-center gap-2 shrink-0">
+                {buzz.skorSotoyMention && (
+                  <div className="bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 px-2 py-0.5 rounded-lg text-[#FF2E7E] text-[11px] font-semibold flex items-center gap-1 shrink-0">
+                    <Star className="w-3 h-3 fill-current" />
+                    <span>{buzz.skorSotoyMention.toFixed(1)}</span>
+                  </div>
                 )}
 
-                {isLoggedIn && currentUser?.id !== buzz.author.id && (
+                {(!isLoggedIn || currentUser?.id !== buzz.author.id) && (
                   <button
                     onClick={() => {
                       if (!isLoggedIn) {
@@ -300,10 +311,10 @@ export const BuzzDetailPage: React.FC = () => {
                       }
                       toggleFollowUser(buzz.author.id);
                     }}
-                    className={`px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1 sm:gap-1.5 shadow-sm shrink-0 ${
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all flex items-center gap-1 shrink-0 cursor-pointer ${
                       isLoggedIn && isFollowing(buzz.author.id)
-                        ? 'bg-white/[0.06] text-slate-300 border border-white/10 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/40'
-                        : 'bg-[#FF2E7E] hover:bg-[#e0266e] text-white active:scale-95'
+                        ? 'bg-transparent text-slate-400 border border-white/15 hover:border-red-500/40 hover:text-red-400'
+                        : 'bg-transparent text-slate-200 hover:text-white border border-white/20 hover:border-white/40 active:scale-95'
                     }`}
                   >
                     {isLoggedIn && isFollowing(buzz.author.id) ? (
@@ -314,17 +325,47 @@ export const BuzzDetailPage: React.FC = () => {
                       </>
                     ) : (
                       <>
-                        <UserPlus className="w-3.5 h-3.5 shrink-0" />
-                        <span>+ Ikuti</span>
+                        <UserPlus className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                        <span>Ikuti</span>
                       </>
                     )}
                   </button>
                 )}
 
-                {buzz.skorSotoyMention && (
-                  <div className="bg-[#FF2E7E]/15 border border-[#FF2E7E]/40 px-2 py-0.5 sm:px-3 sm:py-1 rounded-xl text-[#FF2E7E] text-[11px] sm:text-xs font-medium flex items-center gap-1 shrink-0">
-                    <Star className="w-3 h-3 fill-current" />
-                    <span>{buzz.skorSotoyMention.toFixed(1)}</span>
+                {isLoggedIn && (currentUser?.id === buzz.author.id || currentUser?.role === 'admin') && (
+                  <div className="relative buzz-detail-menu-container shrink-0">
+                    <button
+                      onClick={() => setMenuOpen(prev => !prev)}
+                      className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+                      title="Menu Opsi"
+                      aria-label="Menu Opsi"
+                      aria-expanded={menuOpen}
+                    >
+                      <MoreHorizontal className="w-4 h-4" />
+                    </button>
+
+                    {menuOpen && (
+                      <div
+                        className="absolute right-0 top-full mt-1 w-32 bg-[#171A1F] border border-white/10 rounded-xl p-1 shadow-2xl z-30 animate-in fade-in zoom-in-95 duration-100"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          onClick={async () => {
+                            setMenuOpen(false);
+                            if (window.confirm('Hapus postingan ini?')) {
+                              const success = await deleteBuzzPost(buzz.id);
+                              if (success) {
+                                navigateTo('community-feed');
+                              }
+                            }
+                          }}
+                          className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-2 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Hapus</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -441,66 +482,58 @@ export const BuzzDetailPage: React.FC = () => {
             )}
 
             {/* Interaction Action Bar with Quick Reactions */}
-            <div className="pt-4 border-t border-white/10 flex items-center justify-between gap-4 text-xs text-slate-400">
-              <div className="overflow-x-auto scrollbar-none min-w-0 flex-1">
+            <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-4 text-xs text-slate-400 select-none">
+              <div className="flex items-center gap-4 sm:gap-6">
                 <QuickReactionBar
                   buzzId={buzz.id}
                   reactions={buzz.reactions}
                   myReaction={buzz.myReaction}
                 />
-              </div>
 
-              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <button
                   onClick={() => {
                     setReplyingTo(null);
                     const comp = document.getElementById('buzz-reply-composer');
                     comp?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FF2E7E]/10 hover:bg-[#FF2E7E]/20 border border-[#FF2E7E]/30 hover:border-[#FF2E7E] text-[#FF2E7E] transition-all font-semibold text-xs shrink-0 cursor-pointer"
-                  title="Beri balasan langsung ke Utas Utama ini"
+                  className="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 transition-opacity hover:opacity-80 active:scale-95 cursor-pointer text-xs shrink-0 py-1"
+                  title="Balas Utas ini"
                 >
-                  <CornerDownRight className="w-3.5 h-3.5" />
-                  <span className="hidden xs:inline">Tanggapi Utas</span>
+                  <MessageSquare className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-current" />
+                  <span className="font-medium text-slate-400">{replies.length}</span>
                 </button>
-
-                <div className="flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-white/[0.06] border border-white/10 text-slate-300 font-semibold text-xs shrink-0">
-                  <MessageSquare className="w-3.5 h-3.5 text-[#FF2E7E]" />
-                  <span>{replies.length} <span className="hidden xs:inline">Balasan</span></span>
-                </div>
 
                 <button
                   id={`buzz-detail-repost-${buzz.id}`}
                   onClick={() => toggleRepostBuzzPost(buzz.id)}
                   disabled={currentUser?.id === buzz.author?.id}
-                  className={`flex items-center gap-1 sm:gap-1.5 transition-colors border p-1.5 sm:px-3 sm:py-1.5 rounded-xl text-xs shrink-0 ${
+                  className={`flex items-center gap-1.5 transition-opacity hover:opacity-80 active:scale-95 text-xs shrink-0 py-1 cursor-pointer ${
                     currentUser?.id && buzz.repostedByUsers?.[currentUser.id]
-                      ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 font-bold'
+                      ? 'text-emerald-400'
                       : currentUser?.id === buzz.author?.id
-                        ? 'bg-white/[0.02] border-white/5 text-slate-600 cursor-not-allowed opacity-50'
-                        : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/10 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-400'
+                        ? 'text-slate-600 cursor-not-allowed opacity-50'
+                        : 'text-slate-400 hover:text-slate-200'
                   }`}
                   title={
                     currentUser?.id === buzz.author?.id
                       ? 'Kamu tidak bisa me-repost postinganmu sendiri'
                       : currentUser?.id && buzz.repostedByUsers?.[currentUser.id]
                         ? 'Batalkan Repost'
-                        : 'Repost — akan muncul di feed pengikutmu'
+                        : 'Repost'
                   }
                 >
-                  <Repeat2 className={`w-3.5 h-3.5 ${currentUser?.id && buzz.repostedByUsers?.[currentUser.id] ? 'text-emerald-400 stroke-[2.5]' : ''}`} />
-                  <span className="font-semibold">
-                    {buzz.repostsCount || 0} <span className="hidden sm:inline">Repost</span>
+                  <Repeat2 className={`w-4 h-4 sm:w-[18px] sm:h-[18px] ${currentUser?.id && buzz.repostedByUsers?.[currentUser.id] ? 'stroke-[2.2]' : ''}`} />
+                  <span className={`font-medium ${currentUser?.id && buzz.repostedByUsers?.[currentUser.id] ? 'text-emerald-400' : 'text-slate-400'}`}>
+                    {buzz.repostsCount || 0}
                   </span>
                 </button>
 
                 <button
                   onClick={handleShare}
-                  className="flex items-center gap-1.5 p-1.5 sm:px-3.5 sm:py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-[#FF2E7E]/50 text-slate-300 hover:text-[#FF2E7E] transition-all font-semibold text-xs shrink-0"
-                  title="Bagikan Buzz ini ke Instagram Stories atau WhatsApp"
+                  className="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 transition-opacity hover:opacity-80 active:scale-95 cursor-pointer text-xs shrink-0 py-1"
+                  title="Bagikan Buzz ini"
                 >
-                  <Share2 className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Bagikan</span>
+                  <Share2 className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-current" />
                 </button>
               </div>
             </div>
@@ -817,45 +850,49 @@ export const BuzzDetailPage: React.FC = () => {
                               <MentionText content={reply.content} />
                             </div>
 
-                            {/* Actions Toolbar */}
-                            <div className="pt-2.5 border-t border-white/10 flex items-center justify-between gap-2 text-xs text-slate-400 flex-wrap">
-                              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                            {/* Actions Toolbar: Minimal Threads-style Icon Row */}
+                            <div className="pt-2 border-t border-white/10 flex items-center justify-between gap-3 text-xs text-slate-400">
+                              <div className="flex items-center gap-4 sm:gap-5">
+                                <button
+                                  onClick={() => likeBuzzReply(buzz.id, reply.id)}
+                                  className={`flex items-center gap-1.5 transition-opacity hover:opacity-80 active:scale-95 text-xs py-1 cursor-pointer ${
+                                    reply.likedByMe
+                                      ? 'text-[#FF2E7E]'
+                                      : 'text-slate-400 hover:text-slate-200'
+                                  }`}
+                                  title="Suka balasan"
+                                >
+                                  <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${reply.likedByMe ? 'fill-current text-[#FF2E7E]' : 'text-current'}`} />
+                                  <span className={`font-medium ${reply.likedByMe ? 'text-[#FF2E7E]' : 'text-slate-400'}`}>
+                                    {reply.likes || 0}
+                                  </span>
+                                </button>
+
                                 <button
                                   onClick={() => handleStartReply(reply.id, reply.author)}
-                                  className={`flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                                  className={`flex items-center gap-1.5 transition-opacity hover:opacity-80 active:scale-95 text-xs py-1 cursor-pointer ${
                                     isReplyingToThis
-                                      ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/30'
-                                      : 'text-[#FF2E7E] hover:bg-[#FF2E7E]/15 bg-[#FF2E7E]/5 border border-[#FF2E7E]/20'
+                                      ? 'text-[#FF2E7E] font-semibold'
+                                      : 'text-slate-400 hover:text-slate-200'
                                   }`}
                                   title={`Balas komentar @${reply.author.handle.replace('@', '')}`}
                                 >
-                                  <CornerDownRight className="w-3.5 h-3.5" />
-                                  <span>Balas</span>
+                                  <CornerDownRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                  <span className="font-medium">Balas</span>
                                 </button>
 
-                                <button
-                                  onClick={() => likeBuzzReply(buzz.id, reply.id)}
-                                  className={`flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg transition-colors border ${
-                                    reply.likedByMe
-                                      ? 'text-rose-400 bg-rose-500/15 border-rose-500/30'
-                                      : 'text-slate-400 hover:text-rose-300 hover:bg-rose-500/10 border-white/10'
-                                  }`}
-                                >
-                                  <Heart className={`w-3.5 h-3.5 ${reply.likedByMe ? 'fill-current' : ''}`} />
-                                  <span>{reply.likes || 0}</span>
-                                </button>
-
-                                {isLoggedIn && currentUser?.id === reply.author.id && (
+                                {isLoggedIn && (currentUser?.id === reply.author.id || currentUser?.role === 'admin') && (
                                   <button
                                     onClick={async () => {
                                       if (window.confirm('Hapus balasan ini?')) {
                                         await deleteBuzzReply(buzz.id, reply.id);
                                       }
                                     }}
-                                    className="flex items-center gap-1 text-[11px] font-bold text-red-400 hover:bg-red-500/10 px-2 py-1 rounded-lg transition-colors border border-transparent hover:border-red-500/20 cursor-pointer"
+                                    className="flex items-center gap-1 text-[11px] font-medium text-slate-400 hover:text-red-400 transition-colors p-1 cursor-pointer"
+                                    title="Hapus Balasan"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
-                                    <span>Hapus</span>
+                                    <span className="hidden xs:inline">Hapus</span>
                                   </button>
                                 )}
                               </div>
