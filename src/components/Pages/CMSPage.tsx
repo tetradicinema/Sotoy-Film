@@ -157,44 +157,76 @@ export const CMSPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Compact Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <ShieldCheck className="w-5 h-5 text-[#FF2E7E] shrink-0" />
-            <h1 className="font-display font-bold text-xl sm:text-2xl text-white tracking-tight">
-              {isUserAdmin ? 'Full Control CMS & Editorial' : 'Ruang Kerja Redaksi & Artikel'}
-            </h1>
-          </div>
+        {/* Dedicated Page Hero Banner */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#170e2b] via-[#171A1F] to-[#1a0f2e] border-2 border-[#FF2E7E]/60 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-purple-950/40">
+          <div className="absolute top-0 right-1/4 w-80 h-80 bg-[#FF2E7E]/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-10 -left-10 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
 
-          {/* Admin Scope Switcher (All Articles vs. My Articles Only) */}
-          {isUserAdmin && (
-            <div className="bg-slate-900/90 border border-slate-800 p-1.5 rounded-xl flex items-center gap-1.5 self-start md:self-auto">
-              <button
-                id="cms-scope-all-btn"
-                onClick={() => setAdminScope('all')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                  adminScope === 'all'
-                    ? 'bg-[#FF2E7E] text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Semua Artikel</span>
-              </button>
-              <button
-                id="cms-scope-mine-btn"
-                onClick={() => setAdminScope('mine')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                  adminScope === 'mine'
-                    ? 'bg-[#FF2E7E] text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
-                }`}
-              >
-                <PenSquare className="w-3.5 h-3.5" />
-                <span>Artikel Saya Saja</span>
-              </button>
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="flex items-start sm:items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#FF2E7E] to-[#A855F7] p-0.5 shadow-xl shadow-purple-600/30 shrink-0">
+                <div className="w-full h-full bg-[#110e1d] rounded-[14px] flex items-center justify-center">
+                  <ShieldCheck className="w-8 h-8 text-[#C48BFF] animate-pulse" />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h1 className="font-display font-black text-white text-2xl sm:text-3xl tracking-tight">
+                    {isUserAdmin ? 'Full Control CMS & Editorial' : 'Ruang Kerja Redaksi & Artikel'}
+                  </h1>
+
+                  <div className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-black uppercase tracking-widest rounded-full shadow-lg border ${
+                    isUserAdmin
+                      ? 'bg-[#FF2E7E] text-white border-purple-400/40 shadow-purple-900/60'
+                      : 'bg-pink-500/20 text-[#FF2E7E] border-pink-500/40 shadow-pink-900/40'
+                  }`}>
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-200"></span>
+                    </span>
+                    <span>{isUserAdmin ? 'FULL CONTROL CMS' : 'WRITER WORKSPACE'}</span>
+                  </div>
+                </div>
+
+                <p className="text-slate-300 text-xs sm:text-sm mt-1.5 max-w-2xl leading-relaxed">
+                  {isUserAdmin 
+                    ? 'Halaman terpisah berdedikasi tinggi untuk mengelola seluruh konten artikel, draf redaksi, jadwal rilis berkala, reatribusi penulis, hingga pemantauan impresi pembaca platform.'
+                    : 'Pusat komando editorial mandiri Anda untuk menyusun artikel mendalam, merevisi naskah draf, dan memantau performa keterbacaan karya.'}
+                </p>
+              </div>
             </div>
-          )}
+
+            {/* Admin Scope Switcher (All Articles vs. My Articles Only) */}
+            {isUserAdmin && (
+              <div className="bg-slate-950/60 border border-purple-500/30 p-2 rounded-2xl flex items-center gap-1.5 self-start lg:self-center">
+                <button
+                  id="cms-scope-all-btn"
+                  onClick={() => setAdminScope('all')}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                    adminScope === 'all'
+                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-950/40 border border-purple-400/40'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Semua Artikel ({currentUser.role === 'admin' ? 'Global' : 'Platform'})</span>
+                </button>
+                <button
+                  id="cms-scope-mine-btn"
+                  onClick={() => setAdminScope('mine')}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                    adminScope === 'mine'
+                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-950/40 border border-purple-400/40'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                  }`}
+                >
+                  <PenSquare className="w-3.5 h-3.5" />
+                  <span>Artikel Saya Saja</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* The Full Featured CMS Article Workspace */}

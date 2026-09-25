@@ -9,10 +9,7 @@ import {
   Eye, 
   CheckCircle2,
   ScrollText,
-  BarChart3,
-  FileText,
-  ExternalLink,
-  Award
+  BarChart3
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { AdminStatsOverview } from './AdminStatsOverview';
@@ -32,7 +29,6 @@ export const AdminDashboard: React.FC = () => {
     currentUser, 
     isAdmin, 
     isWriter,
-    criticSubmissions,
     moderationReports,
     appeals
   } = useApp();
@@ -52,7 +48,6 @@ export const AdminDashboard: React.FC = () => {
 
   const activeTab = getActiveTab();
 
-  const pendingCriticsCount = (criticSubmissions || []).filter(s => s.status === 'pending').length;
   const pendingReportsCount = moderationReports.filter(r => r.status === 'pending').length;
   const pendingAppealsCount = appeals.filter(a => a.status === 'pending').length;
 

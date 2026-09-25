@@ -332,12 +332,17 @@ export const SettingsPage: React.FC = () => {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-800">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#FF2E7E] shadow-sm shadow-[#FF2E7E]" />
-            <h1 className="font-display font-bold text-xl sm:text-2xl text-white tracking-tight">
-              Pengaturan Akun & Pusat Aktivitas
-            </h1>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#FF2E7E] shadow-sm shadow-[#FF2E7E]" />
+              <h1 className="font-display font-black text-2xl sm:text-3xl text-white tracking-tight">
+                Pengaturan Akun & Pusat Aktivitas
+              </h1>
+            </div>
+            <p className="text-slate-400 text-xs sm:text-sm mt-1">
+              Kelola identitas, foto profil dari perangkat, keamanan data, privasi, serta pantau progres kurasimu.
+            </p>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">

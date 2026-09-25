@@ -262,72 +262,77 @@ export const SearchPage: React.FC = () => {
           </button>
         </div>
 
-        {/* Search Header */}
-        <div className="mb-6 space-y-4">
-          <h1 className="text-xl sm:text-2xl font-bold font-display text-white tracking-tight flex items-center gap-2.5">
-            <Search className="w-5 h-5 text-[#FF2E7E] shrink-0" />
-            <span>Cari di Sotoy Film</span>
-          </h1>
+        {/* Search Header Banner */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#171A1F] via-[#1a1735] to-[#171A1F] border border-slate-800 p-5 sm:p-8 mb-6 shadow-2xl">
+          <div className="relative z-10 max-w-3xl">
+            <h1 className="text-2xl sm:text-4xl font-black font-display text-white tracking-tight flex items-center gap-3">
+              <Search className="w-7 h-7 sm:w-8 sm:h-8 text-[#FF2E7E] shrink-0" />
+              <span>Cari di Sotoy Film</span>
+            </h1>
+            <p className="text-slate-400 text-xs sm:text-sm mt-1.5 leading-relaxed">
+              Jelajahi basis data film, ulasan mendalam kritikus, artikel pop-culture, dan diskusikan di Buzz Komunitas.
+            </p>
 
-          {/* Main Search Input Form */}
-          <form onSubmit={handleSearchSubmit}>
-            <div className="relative flex items-center">
-              <div className="absolute left-4 pointer-events-none text-slate-400">
-                <Search className="w-5 h-5 text-[#FF2E7E]" />
-              </div>
-              <input
-                ref={inputRef}
-                id="search-page-main-input"
-                type="text"
-                value={localQuery}
-                onChange={e => {
-                  setLocalQuery(e.target.value);
-                  setSearchQuery(e.target.value);
-                }}
-                placeholder="Ketik judul film, sutradara, artikel, atau topik buzz..."
-                className="w-full pl-12 pr-28 py-3.5 sm:py-4 rounded-2xl bg-black/60 border-2 border-slate-700/80 hover:border-[#FF2E7E]/50 focus:border-[#FF2E7E] focus:ring-4 focus:ring-[#FF2E7E]/15 text-white placeholder-slate-400 text-sm sm:text-base outline-none transition-all shadow-inner"
-              />
-              <div className="absolute right-3 flex items-center gap-1.5">
-                {localQuery && (
+            {/* Main Search Input Form */}
+            <form onSubmit={handleSearchSubmit} className="mt-5 sm:mt-6">
+              <div className="relative flex items-center">
+                <div className="absolute left-4 pointer-events-none text-slate-400">
+                  <Search className="w-5 h-5 text-[#FF2E7E]" />
+                </div>
+                <input
+                  ref={inputRef}
+                  id="search-page-main-input"
+                  type="text"
+                  value={localQuery}
+                  onChange={e => {
+                    setLocalQuery(e.target.value);
+                    setSearchQuery(e.target.value);
+                  }}
+                  placeholder="Ketik judul film, sutradara, artikel, atau topik buzz..."
+                  className="w-full pl-12 pr-28 py-3.5 sm:py-4 rounded-2xl bg-black/60 border-2 border-slate-700/80 hover:border-[#FF2E7E]/50 focus:border-[#FF2E7E] focus:ring-4 focus:ring-[#FF2E7E]/15 text-white placeholder-slate-400 text-sm sm:text-base outline-none transition-all shadow-inner"
+                />
+                <div className="absolute right-3 flex items-center gap-1.5">
+                  {localQuery && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLocalQuery('');
+                        setSearchQuery('');
+                        inputRef.current?.focus();
+                      }}
+                      className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                      title="Hapus ketikan"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                   <button
-                    type="button"
-                    onClick={() => {
-                      setLocalQuery('');
-                      setSearchQuery('');
-                      inputRef.current?.focus();
-                    }}
-                    className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
-                    title="Hapus ketikan"
+                    type="submit"
+                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-white text-xs font-bold hover:brightness-110 shadow-md shadow-[#FF2E7E]/25 transition-all"
                   >
-                    <X className="w-4 h-4" />
+                    Cari
                   </button>
-                )}
-                <button
-                  type="submit"
-                  className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-white text-xs font-bold hover:brightness-110 shadow-md shadow-[#FF2E7E]/25 transition-all"
-                >
-                  Cari
-                </button>
+                </div>
               </div>
-            </div>
-          </form>
+            </form>
 
-          {/* Trending Quick Search Chips */}
-          <div className="flex items-center gap-2 flex-wrap pt-1">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-[#FF2E7E]" />
-              <span>Trending:</span>
-            </span>
-            {TRENDING_SEARCHES.map(kw => (
-              <button
-                key={kw}
-                type="button"
-                onClick={() => handleSelectKeyword(kw)}
-                className="px-2.5 py-1 rounded-lg text-xs bg-white/5 hover:bg-[#FF2E7E]/20 text-slate-300 hover:text-[#FF2E7E] border border-white/10 hover:border-[#FF2E7E]/40 transition-all font-medium"
-              >
-                {kw}
-              </button>
-            ))}
+            {/* Trending Quick Search Chips */}
+            <div className="mt-4 flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-[#FF2E7E]" />
+                <span>Trending:</span>
+              </span>
+              {TRENDING_SEARCHES.map(kw => (
+                <button
+                  key={kw}
+                  type="button"
+                  onClick={() => handleSelectKeyword(kw)}
+                  className="px-2.5 py-1 rounded-lg text-xs bg-white/5 hover:bg-[#FF2E7E]/20 text-slate-300 hover:text-[#FF2E7E] border border-white/10 hover:border-[#FF2E7E]/40 transition-all font-medium"
+                >
+                  {kw}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

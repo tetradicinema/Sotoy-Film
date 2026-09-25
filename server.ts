@@ -1,6 +1,6 @@
 import express from "express";
 import path from "path";
-import { handleTmdbRequest } from "./api/tmdb.ts";
+import { handleTmdbRequest } from "./api/tmdb";
 
 async function startServer() {
   const app = express();
