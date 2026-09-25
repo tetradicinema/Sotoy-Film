@@ -15,6 +15,7 @@ import {
   User as UserIcon,
   Folder,
   ChevronDown,
+  Sparkles,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Article, MainCategory, SubCategory, UserRole } from '../../types';
