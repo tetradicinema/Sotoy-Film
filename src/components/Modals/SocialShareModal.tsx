@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   X,
   Copy,
@@ -17,6 +17,7 @@ import {
   Star,
   Award,
 } from 'lucide-react';
+import { toBlob } from 'html-to-image';
 import { useApp } from '../../context/AppContext';
 
 export interface ShareData {
@@ -60,6 +61,221 @@ export const getStarsString = (score: number): string => {
   return '★'.repeat(fullStars) + '☆'.repeat(5 - fullStars);
 };
 
+// Helper to pre-fetch external cross-origin images as Data URLs with retry & cache-buster
+const urlToDataUrl = async (url: string): Promise<string> => {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+
+  const tryFetch = async (targetUrl: string): Promise<string> => {
+    const res = await fetch(targetUrl, { mode: 'cors' });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const blob = await res.blob();
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result);
+        } else {
+          reject(new Error('FileReader did not produce a data URL'));
+        }
+      };
+      reader.onerror = () => reject(reader.error || new Error('FileReader error'));
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  try {
+    return await tryFetch(url);
+  } catch (err1) {
+    try {
+      const cacheBustUrl = `${url}${url.includes('?') ? '&' : '?'}cb=${Date.now()}`;
+      return await tryFetch(cacheBustUrl);
+    } catch (err2) {
+      console.warn(`[SocialShareModal] Failed to pre-fetch image as data URL after retry (${url}):`, err2);
+      return url;
+    }
+  }
+};
+
+// Helper to wait until all images within a DOM container are completely loaded and decoded before capturing
+const waitForImages = async (container: HTMLElement): Promise<void> => {
+  const imgs = Array.from(container.querySelectorAll('img'));
+  await Promise.all(
+    imgs.map((img) => {
+      if (img.complete && img.naturalWidth > 0) {
+        return img.decode ? img.decode().catch(() => {}) : Promise.resolve();
+      }
+      return new Promise<void>((resolve) => {
+        const onDone = () => {
+          img.removeEventListener('load', onDone);
+          img.removeEventListener('error', onDone);
+          if (img.decode) {
+            img.decode().catch(() => {}).finally(() => resolve());
+          } else {
+            resolve();
+          }
+        };
+        img.addEventListener('load', onDone);
+        img.addEventListener('error', onDone);
+        setTimeout(onDone, 3000);
+      });
+    })
+  );
+};
+
+// =============================================================================
+// SINGLE SOURCE OF TRUTH: Film Rating Instagram Story Card (1080x1920)
+// Designed edge-to-edge for Instagram Stories with proportional safe-zone spacing:
+// - Top watermark padding: ~5-6% (110px on 1920px height)
+// - Bottom footer padding: ~4-5% (90px on 1920px height)
+// - Horizontal safe padding: ~4-5% (50px on 1080px width)
+// Both the modal preview (scaled via CSS scale 0.25) and DOM-to-image PNG export
+// render from this exact component, guaranteeing 100% visual parity with zero drift.
+// =============================================================================
+interface FilmRatingStoryCardProps {
+  data: ShareData;
+  displayScore: number;
+  posterUrl?: string;
+  reviewerAvatarUrl?: string;
+}
+
+export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
+  data,
+  displayScore,
+  posterUrl,
+  reviewerAvatarUrl,
+}) => {
+  const genresStr = (data.filmGenres || []).slice(0, 3).join(' • ');
+  const metaStr = [data.filmYear, genresStr].filter(Boolean).join(' | ');
+  const reviewerName = data.reviewerName || data.authorName;
+  const reviewerAvatar = reviewerAvatarUrl || data.reviewerAvatar || data.authorAvatar;
+  const reviewerRole = data.reviewerRole;
+
+  return (
+    <div
+      className="relative w-[1080px] h-[1920px] bg-[#0E1013] overflow-hidden flex flex-col justify-between text-left select-none"
+      style={{ width: '1080px', height: '1920px' }}
+    >
+      {/* 1. Full-Bleed Film Poster (Top 62% of card, edge-to-edge x=0, y=0) */}
+      {posterUrl && (
+        <div className="absolute inset-x-0 top-0 h-[62%] overflow-hidden pointer-events-none">
+          <img
+            src={posterUrl}
+            alt={data.filmTitle || data.title}
+            className="w-full h-full object-cover"
+            crossOrigin="anonymous"
+          />
+          {/* Subtle top vignette for watermark contrast on bright posters */}
+          <div className="absolute inset-x-0 top-0 h-[260px] bg-gradient-to-b from-[#0E1013]/90 via-[#0E1013]/40 to-transparent pointer-events-none" />
+        </div>
+      )}
+
+      {/* 2. Dark Scrim fading poster into solid dark #0E1013 background */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            'linear-gradient(to bottom, transparent 0%, transparent 26%, rgba(14, 16, 19, 0.72) 46%, rgba(14, 16, 19, 0.96) 62%, #0E1013 76%, #0E1013 100%)',
+        }}
+      />
+
+      {/* Top Watermark Overlay (Proportional safe-zone: ~5-6% = 110px top padding, 4-5% = 50px horizontal padding) */}
+      <div className="relative z-10 pt-[110px] px-[50px] flex items-center justify-between">
+        <img
+          src="/sotoy-logo-full.png"
+          alt="Sotoy Film"
+          className="h-[75px] w-auto object-contain drop-shadow-lg"
+          crossOrigin="anonymous"
+        />
+        <div className="px-5 py-2 rounded-full font-black text-xs tracking-wider text-[#FF2E7E] bg-[#0E1013]/90 border border-[#FF2E7E]/40 backdrop-blur-md shadow-lg">
+          SKOR & ULASAN
+        </div>
+      </div>
+
+      {/* Center & Lower Content (Proportional 50px horizontal safe-zone padding) */}
+      <div className="relative z-10 px-[50px] flex-1 flex flex-col justify-end text-center space-y-4 pb-5">
+        {/* Film Title & Meta */}
+        <div className="space-y-1.5">
+          <h1 className="font-display font-black text-[44px] text-white leading-[1.18] line-clamp-2 drop-shadow-md">
+            {data.filmTitle || data.title}
+          </h1>
+          {metaStr && (
+            <div className="text-[20px] text-[#FF2E7E] font-bold tracking-wide">
+              {metaStr}
+            </div>
+          )}
+        </div>
+
+        {/* Rating Display (Centered, dominant number, NO box) */}
+        <div className="py-0.5">
+          <div className="flex items-center justify-center gap-3">
+            <Star className="w-13 h-13 text-[#FFD000] fill-current drop-shadow" />
+            <span className="font-display font-black text-[92px] text-[#FFD000] leading-none tracking-tight">
+              {displayScore.toFixed(1)}
+            </span>
+            <span className="text-[26px] text-slate-400 font-bold self-end mb-2">/ 10.0</span>
+          </div>
+          <div className="text-[20px] font-black text-[#00F0FF] uppercase tracking-widest mt-1">
+            ★ {getScoreVerdict(displayScore)} ★
+          </div>
+        </div>
+
+        {/* Reviewer Row */}
+        {(reviewerName || reviewerAvatar) && (
+          <div className="flex items-center justify-center gap-3 pt-0.5">
+            {reviewerAvatar ? (
+              <img
+                src={reviewerAvatar}
+                alt={reviewerName || 'Reviewer'}
+                className="w-10 h-10 rounded-full object-cover border-2 border-[#FF2E7E] shadow-md"
+                crossOrigin="anonymous"
+              />
+            ) : (
+              <Quote className="w-5 h-5 text-[#FF2E7E] opacity-90 inline" />
+            )}
+            <span className="text-[20px] text-slate-200 font-bold truncate max-w-[620px]">
+              Ulasan oleh {reviewerName || 'Cinephile'}
+              {reviewerRole && (
+                <span className="text-[18px] text-[#FF2E7E] font-semibold ml-2">
+                  ({reviewerRole})
+                </span>
+              )}
+            </span>
+          </div>
+        )}
+
+        {/* Headline Quote */}
+        {data.headline && (
+          <div className="text-[24px] font-bold text-white line-clamp-1 italic px-2 leading-snug">
+            “{data.headline}”
+          </div>
+        )}
+
+        {/* Review Excerpt */}
+        {(data.reviewText || data.text) && (
+          <p className="text-[20px] text-slate-300 italic line-clamp-3 leading-[1.4] px-2">
+            “{data.reviewText || data.text}”
+          </p>
+        )}
+      </div>
+
+      {/* Card Bottom Footer (Proportional safe-zone: ~4-5% = 90px bottom padding, 4-5% = 50px horizontal padding) */}
+      <div className="relative z-10 px-[50px] pb-[90px] pt-2">
+        <div className="pt-4 border-t border-white/15 flex items-center justify-between">
+          <span className="text-[20px] font-bold text-[#FF2E7E]">
+            ★ Ulas & Nilai Film di Sotoy Film
+          </span>
+          <span className="text-[20px] text-[#00F0FF] font-mono font-bold">
+            sotoyfilm.my.id
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 interface SocialShareModalProps {
   isOpen?: boolean;
   onClose?: () => void;
@@ -78,10 +294,40 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCaption, setCopiedCaption] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const storyExportRef = useRef<HTMLDivElement>(null);
+  const [exportPosterUrl, setExportPosterUrl] = useState<string | undefined>(undefined);
+  const [exportAvatarUrl, setExportAvatarUrl] = useState<string | undefined>(undefined);
 
   const isOpen = propIsOpen !== undefined ? propIsOpen : shareModalData !== null;
   const onClose = propOnClose || closeShareModal;
   const data = propData !== undefined ? propData : shareModalData;
+
+  const posterUrl = data ? data.filmPoster || data.image || data.imageUrl || data.filmBackdrop : undefined;
+
+  // Pre-fetch poster & reviewer avatar as data URLs for CORS-safe HTML-to-Image capture
+  useEffect(() => {
+    let isMounted = true;
+    if (posterUrl) {
+      urlToDataUrl(posterUrl).then((dataUrl) => {
+        if (isMounted) setExportPosterUrl(dataUrl);
+      });
+    } else {
+      setExportPosterUrl(undefined);
+    }
+
+    const rawAvatar = data?.reviewerAvatar || data?.authorAvatar;
+    if (rawAvatar) {
+      urlToDataUrl(rawAvatar).then((dataUrl) => {
+        if (isMounted) setExportAvatarUrl(dataUrl);
+      });
+    } else {
+      setExportAvatarUrl(undefined);
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [posterUrl, data?.reviewerAvatar, data?.authorAvatar]);
 
   if (!isOpen || !data) return null;
 
@@ -213,10 +459,97 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
       ? data.skorSotoy
       : 4.5;
 
-  // Generate high-resolution Instagram Card PNG using Canvas
+  // Generate high-resolution Instagram Card PNG using Canvas / DOM Capture
   const handleDownloadInstagramVisual = async (format: 'story' | 'feed') => {
     setIsGeneratingImage(true);
     try {
+      // 1. Film Rating Story (9:16) - DOM-to-Image capture from single source of truth JSX component
+      if (isFilmRating && format === 'story') {
+        if (typeof document !== 'undefined' && document.fonts?.ready) {
+          await document.fonts.ready;
+        }
+
+        // Ensure poster and reviewer avatar data URLs are fully resolved before capture
+        let currentExportPoster = exportPosterUrl;
+        if (!currentExportPoster && posterUrl) {
+          currentExportPoster = await urlToDataUrl(posterUrl);
+          setExportPosterUrl(currentExportPoster);
+        }
+
+        let currentExportAvatar = exportAvatarUrl;
+        const rawAvatar = data.reviewerAvatar || data.authorAvatar;
+        if (!currentExportAvatar && rawAvatar) {
+          currentExportAvatar = await urlToDataUrl(rawAvatar);
+          setExportAvatarUrl(currentExportAvatar);
+        }
+
+        // Give React & the browser layout two animation frames to commit the updated export container DOM
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+        if (!storyExportRef.current) {
+          throw new Error('Elemen export visual belum siap.');
+        }
+
+        await waitForImages(storyExportRef.current);
+
+        const blob = await toBlob(storyExportRef.current, {
+          width: 1080,
+          height: 1920,
+          pixelRatio: 1,
+          cacheBust: true,
+        });
+
+        if (!blob) {
+          throw new Error('Gagal mengonversi kartu menjadi gambar.');
+        }
+
+        const fileName = `sotoyfilm-rating-story-${Date.now()}.png`;
+
+        // Check if Web Share API with file support is available (reliable on iOS Safari & mobile devices)
+        const file = new File([blob], fileName, { type: 'image/png' });
+        const canShareFiles =
+          typeof navigator.share === 'function' &&
+          typeof navigator.canShare === 'function' &&
+          navigator.canShare({ files: [file] });
+
+        let sharedViaSheet = false;
+
+        if (canShareFiles) {
+          try {
+            const shareTitle = `Sotoy Film - ${data.filmTitle || data.title || 'Visual Card'}`;
+            await navigator.share({
+              files: [file],
+              title: shareTitle,
+            });
+            sharedViaSheet = true;
+            showToast('Gambar Story (.PNG) siap disimpan ke galeri foto!');
+          } catch (shareErr: any) {
+            if (
+              shareErr?.name === 'AbortError' ||
+              shareErr?.message?.toLowerCase().includes('abort') ||
+              shareErr?.message?.toLowerCase().includes('cancel')
+            ) {
+              return;
+            }
+            console.warn('[SocialShareModal] Native share failed, falling back to direct download:', shareErr);
+          }
+        }
+
+        if (!sharedViaSheet) {
+          const blobUrl = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.download = fileName;
+          link.href = blobUrl;
+          link.click();
+          setTimeout(() => {
+            URL.revokeObjectURL(blobUrl);
+          }, 1000);
+
+          showToast('Gambar Story (.PNG) berhasil diunduh! Siap diunggah ke Instagram Stories.');
+        }
+        return;
+      }
+
       const width = 1080;
       const height = format === 'story' ? 1920 : 1080;
 
@@ -267,23 +600,27 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
       ctx.fillRect(0, 0, width, height);
 
       // 3. Outer border accent
-      ctx.strokeStyle = '#222538';
-      ctx.lineWidth = 4;
-      ctx.strokeRect(36, 36, width - 72, height - 72);
+      if (!isFilmRating || format !== 'story') {
+        ctx.strokeStyle = '#222538';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(36, 36, width - 72, height - 72);
+      }
 
-      // 4. Header Branding Bar
-      ctx.fillStyle = '#FF2E7E';
-      ctx.font = '900 36px sans-serif';
-      ctx.fillText('SOTOY FILM', 70, format === 'story' ? 130 : 100);
+      // 4. Header Branding Bar (Rendered for other formats; story film rating uses in-card full-bleed logo watermark)
+      if (!isFilmRating || format !== 'story') {
+        ctx.fillStyle = '#FF2E7E';
+        ctx.font = '900 36px sans-serif';
+        ctx.fillText('SOTOY FILM', 70, format === 'story' ? 130 : 100);
 
-      ctx.fillStyle = '#94A3B8';
-      ctx.font = 'bold 20px sans-serif';
-      const badgeText = isFilmRating
-        ? '• SKOR SOTOY & ULASAN FILM'
-        : isArticle
-        ? '• ARTIKEL SINEMA & FEATURE'
-        : '• OPINI BUZZ KOMUNITAS';
-      ctx.fillText(badgeText, 320, format === 'story' ? 128 : 98);
+        ctx.fillStyle = '#94A3B8';
+        ctx.font = 'bold 20px sans-serif';
+        const badgeText = isFilmRating
+          ? '• SKOR SOTOY & ULASAN FILM'
+          : isArticle
+          ? '• ARTIKEL SINEMA & FEATURE'
+          : '• OPINI BUZZ KOMUNITAS';
+        ctx.fillText(badgeText, 320, format === 'story' ? 128 : 98);
+      }
 
       // 5. Main Card Container
       const cardX = 70;
@@ -291,12 +628,14 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
       const cardW = width - 140;
       const cardH = format === 'story' ? height - 330 : height - 230;
 
-      ctx.fillStyle = '#101221';
-      ctx.strokeStyle = '#2c3047';
-      ctx.lineWidth = 3;
-      drawRoundRectPath(ctx, cardX, cardY, cardW, cardH, 32);
-      ctx.fill();
-      ctx.stroke();
+      if (!isFilmRating || format !== 'story') {
+        ctx.fillStyle = '#101221';
+        ctx.strokeStyle = '#2c3047';
+        ctx.lineWidth = 3;
+        drawRoundRectPath(ctx, cardX, cardY, cardW, cardH, 32);
+        ctx.fill();
+        ctx.stroke();
+      }
 
       // Text wrapping helper
       const wrapText = (
@@ -657,7 +996,6 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         // =====================================================================
         // FILM RATING & ULASAN: CARD KHUSUS DENGAN BACKGROUND POSTER FILM!
         // =====================================================================
-        const posterUrl = data.filmPoster || data.image || data.imageUrl || data.filmBackdrop;
         let posterLoaded = false;
         let posterImg: HTMLImageElement | null = null;
 
@@ -670,176 +1008,44 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           }
         }
 
-        // 1. Draw Poster as Card Background with Moody Cinematic Gradient Overlay
+        // FEED FORMAT (1:1) - PRESERVED EXACTLY
         if (posterLoaded && posterImg) {
-          ctx.save();
-          drawRoundRectPath(ctx, cardX, cardY, cardW, cardH, 32);
-          ctx.clip();
-
-          const imgRatio = posterImg.width / posterImg.height;
-          const cardRatio = cardW / cardH;
-          let drawW = cardW;
-          let drawH = cardH;
-          let drawX = cardX;
-          let drawY = cardY;
-          if (imgRatio > cardRatio) {
-            drawW = cardH * imgRatio;
-            drawX = cardX - (drawW - cardW) / 2;
-          } else {
-            drawH = cardW / imgRatio;
-            drawY = cardY - (drawH - cardH) / 2;
-          }
-          ctx.drawImage(posterImg, drawX, drawY, drawW, drawH);
-
-          // Dark atmospheric vignette & gradient overlay on top of poster
-          const overlayGrad = ctx.createLinearGradient(cardX, cardY, cardX, cardY + cardH);
-          overlayGrad.addColorStop(0, 'rgba(8, 10, 20, 0.84)');
-          overlayGrad.addColorStop(0.35, 'rgba(10, 12, 26, 0.89)');
-          overlayGrad.addColorStop(0.7, 'rgba(8, 10, 22, 0.94)');
-          overlayGrad.addColorStop(1, 'rgba(5, 6, 14, 0.98)');
-          ctx.fillStyle = overlayGrad;
-          ctx.fillRect(cardX, cardY, cardW, cardH);
-          ctx.restore();
-
-          // Gold border accent around poster card
-          ctx.strokeStyle = 'rgba(255, 208, 0, 0.5)';
-          ctx.lineWidth = 3.5;
-          drawRoundRectPath(ctx, cardX, cardY, cardW, cardH, 32);
-          ctx.stroke();
-        }
-
-        if (format === 'story') {
-          // STORY FORMAT (9:16)
-          // A. Floating elevated movie poster in upper section
-          const posterThumbW = 280;
-          const posterThumbH = 410;
-          const posterThumbX = cardX + (cardW - posterThumbW) / 2;
-          const posterThumbY = cardY + 50;
-
-          if (posterLoaded && posterImg) {
             ctx.save();
-            drawRoundRectPath(ctx, posterThumbX, posterThumbY, posterThumbW, posterThumbH, 20);
+            drawRoundRectPath(ctx, cardX, cardY, cardW, cardH, 32);
             ctx.clip();
-            ctx.drawImage(posterImg, posterThumbX, posterThumbY, posterThumbW, posterThumbH);
+
+            const imgRatio = posterImg.width / posterImg.height;
+            const cardRatio = cardW / cardH;
+            let drawW = cardW;
+            let drawH = cardH;
+            let drawX = cardX;
+            let drawY = cardY;
+            if (imgRatio > cardRatio) {
+              drawW = cardH * imgRatio;
+              drawX = cardX - (drawW - cardW) / 2;
+            } else {
+              drawH = cardW / imgRatio;
+              drawY = cardY - (drawH - cardH) / 2;
+            }
+            ctx.drawImage(posterImg, drawX, drawY, drawW, drawH);
+
+            // Dark atmospheric vignette & gradient overlay on top of poster
+            const overlayGrad = ctx.createLinearGradient(cardX, cardY, cardX, cardY + cardH);
+            overlayGrad.addColorStop(0, 'rgba(8, 10, 20, 0.84)');
+            overlayGrad.addColorStop(0.35, 'rgba(10, 12, 26, 0.89)');
+            overlayGrad.addColorStop(0.7, 'rgba(8, 10, 22, 0.94)');
+            overlayGrad.addColorStop(1, 'rgba(5, 6, 14, 0.98)');
+            ctx.fillStyle = overlayGrad;
+            ctx.fillRect(cardX, cardY, cardW, cardH);
             ctx.restore();
 
-            // Glowing border
-            ctx.strokeStyle = '#FF2E7E';
-            ctx.lineWidth = 4;
-            drawRoundRectPath(ctx, posterThumbX, posterThumbY, posterThumbW, posterThumbH, 20);
+            // Gold border accent around poster card
+            ctx.strokeStyle = 'rgba(255, 208, 0, 0.5)';
+            ctx.lineWidth = 3.5;
+            drawRoundRectPath(ctx, cardX, cardY, cardW, cardH, 32);
             ctx.stroke();
           }
 
-          // B. Film Title
-          let curY = posterThumbY + posterThumbH + 50;
-          ctx.fillStyle = '#FFFFFF';
-          ctx.font = '900 46px sans-serif';
-          curY = wrapText(data.filmTitle || data.title, cardX + cardW / 2, curY, cardW - 120, 56, 2, 'center');
-
-          // C. Year & Genres Meta
-          ctx.fillStyle = '#FF2E7E';
-          ctx.font = 'bold 22px sans-serif';
-          const metaStr = [data.filmYear, (data.filmGenres || []).slice(0, 3).join(' • ')].filter(Boolean).join(' | ');
-          if (metaStr) {
-            ctx.textAlign = 'center';
-            ctx.fillText(metaStr, cardX + cardW / 2, curY + 6);
-            ctx.textAlign = 'left';
-            curY += 40;
-          } else {
-            curY += 15;
-          }
-
-          // D. Huge Skor Sotoy Rating Badge
-          const badgeW = 480;
-          const badgeH = 114;
-          const badgeX = cardX + (cardW - badgeW) / 2;
-          const badgeY = curY + 15;
-
-          ctx.fillStyle = 'rgba(14, 16, 32, 0.95)';
-          ctx.strokeStyle = '#FF2E7E';
-          ctx.lineWidth = 3;
-          drawRoundRectPath(ctx, badgeX, badgeY, badgeW, badgeH, 24);
-          ctx.fill();
-          ctx.stroke();
-
-          // Stars & Score inside badge
-          ctx.fillStyle = '#FF2E7E';
-          ctx.font = '500 52px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(`★ ${displayScore.toFixed(1)}`, cardX + cardW / 2 - 40, badgeY + 58);
-          ctx.fillStyle = '#94A3B8';
-          ctx.font = 'bold 24px sans-serif';
-          ctx.fillText('/ 10.0', cardX + cardW / 2 + 80, badgeY + 58);
-
-          // Verdict tag below score
-          ctx.fillStyle = '#FF2E7E';
-          ctx.font = '900 18px sans-serif';
-          ctx.fillText(`★ ${getScoreVerdict(displayScore)} ★`, cardX + cardW / 2, badgeY + 94);
-          ctx.textAlign = 'left';
-
-          // E. Reviewer & Review Box (if review or headline present)
-          const reviewBoxY = badgeY + badgeH + 35;
-          const reviewBoxH = Math.max(340, cardY + cardH - reviewBoxY - 70);
-          ctx.fillStyle = 'rgba(16, 18, 34, 0.88)';
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-          ctx.lineWidth = 2;
-          drawRoundRectPath(ctx, cardX + 40, reviewBoxY, cardW - 80, reviewBoxH, 24);
-          ctx.fill();
-          ctx.stroke();
-
-          let revY = reviewBoxY + 45;
-          // Reviewer avatar & name
-          const revAvatarUrl = data.reviewerAvatar || data.authorAvatar;
-          const revName = data.reviewerName || data.authorName;
-          if (revAvatarUrl || revName) {
-            let revAvatarLoaded = false;
-            if (revAvatarUrl) {
-              try {
-                const revImg = await loadCanvasImage(revAvatarUrl);
-                ctx.save();
-                ctx.beginPath();
-                ctx.arc(cardX + 80, revY, 26, 0, Math.PI * 2);
-                ctx.closePath();
-                ctx.clip();
-                ctx.drawImage(revImg, cardX + 54, revY - 26, 52, 52);
-                ctx.restore();
-
-                ctx.beginPath();
-                ctx.arc(cardX + 80, revY, 28, 0, Math.PI * 2);
-                ctx.strokeStyle = '#FF2E7E';
-                ctx.lineWidth = 3;
-                ctx.stroke();
-                revAvatarLoaded = true;
-              } catch {
-                // fallback
-              }
-            }
-
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = 'bold 24px sans-serif';
-            ctx.fillText(revName ? `Ulasan oleh ${revName}` : 'Ulasan Komunitas', revAvatarLoaded ? cardX + 125 : cardX + 65, revY - 3);
-
-            ctx.fillStyle = '#FF2E7E';
-            ctx.font = 'bold 16px sans-serif';
-            ctx.fillText(data.reviewerRole || 'Warga Sotoy Film', revAvatarLoaded ? cardX + 125 : cardX + 65, revY + 20);
-
-            revY += 55;
-          }
-
-          // Headline
-          if (data.headline) {
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = '900 28px sans-serif';
-            revY = wrapText(`"${data.headline}"`, cardX + 65, revY + 15, cardW - 130, 36, 2);
-          }
-
-          // Review excerpt
-          ctx.fillStyle = '#CBD5E1';
-          ctx.font = 'italic 24px sans-serif';
-          const rText = data.reviewText || data.text || 'Simak ulasan lengkap dan skor sinema di platform Sotoy Film.';
-          wrapText(`"${rText}"`, cardX + 65, revY + 15, cardW - 130, 34, 4);
-
-        } else {
           // FEED FORMAT (1:1)
           const posterW = 270;
           const posterH = 390;
@@ -933,40 +1139,88 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           const rText = data.reviewText || data.text || 'Simak ulasan lengkap dan skor sinema di platform Sotoy Film.';
           wrapText(`"${rText}"`, cardX + 70, bottomRevY, cardW - 140, 28, 3);
         }
+
+      // 6. Card Footer Branding & Outer Footer (for standard card layouts; story film rating has its own edge-to-edge footer)
+      if (!isFilmRating || format !== 'story') {
+        ctx.fillStyle = '#FF2E7E';
+        ctx.font = 'bold 24px sans-serif';
+        const bottomMeta = isFilmRating
+          ? '★ Ulas & Nilai Film Ini di Sotoy Film'
+          : isBuzz
+          ? '★ Obrolan Pop-Culture Terkurasi'
+          : '★ Baca Analisis Lengkap di Sotoy Film';
+        ctx.fillText(bottomMeta, cardX + 45, cardY + cardH - 45);
+
+        // 7. Outer Canvas Footer
+        ctx.fillStyle = '#64748B';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.fillText('sotoyfilm.my.id', 70, height - 70);
       }
 
-      // 6. Card Footer Branding
-      ctx.fillStyle = '#FF2E7E';
-      ctx.font = 'bold 24px sans-serif';
-      const bottomMeta = isFilmRating
-        ? '★ Ulas & Nilai Film Ini di Sotoy Film'
-        : isBuzz
-        ? '★ Obrolan Pop-Culture Terkurasi'
-        : '★ Baca Analisis Lengkap di Sotoy Film';
-      ctx.fillText(bottomMeta, cardX + 45, cardY + cardH - 45);
+      // Export image to PNG Blob
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((b) => resolve(b), 'image/png');
+      });
 
-      // 7. Outer Canvas Footer
-      ctx.fillStyle = '#64748B';
-      ctx.font = 'bold 22px sans-serif';
-      ctx.fillText('Baca ulasan & ikuti diskusi di sotoyfilm.id', 70, height - 70);
+      if (!blob) {
+        throw new Error('Gagal mengonversi kanvas menjadi gambar.');
+      }
 
-      ctx.fillStyle = '#FF2E7E';
-      ctx.font = 'bold 22px sans-serif';
-      const formatLabel = format === 'story' ? 'Instagram Story Card (9:16)' : 'Instagram Feed Card (1:1)';
-      ctx.fillText(formatLabel, width - 380, height - 70);
+      const fileName = `sotoyfilm-${isFilmRating ? 'rating' : isBuzz ? 'buzz' : 'artikel'}-${format}-${Date.now()}.png`;
 
-      // Export image to PNG
-      const dataUrl = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = `sotoyfilm-${isFilmRating ? 'rating' : isBuzz ? 'buzz' : 'artikel'}-${format}-${Date.now()}.png`;
-      link.href = dataUrl;
-      link.click();
+      // Check if Web Share API with file support is available (reliable on iOS Safari & mobile devices)
+      const file = new File([blob], fileName, { type: 'image/png' });
+      const canShareFiles =
+        typeof navigator.share === 'function' &&
+        typeof navigator.canShare === 'function' &&
+        navigator.canShare({ files: [file] });
 
-      showToast(
-        format === 'story'
-          ? 'Gambar Story (.PNG) berhasil diunduh! Siap diunggah ke Instagram Stories.'
-          : 'Gambar Feed (.PNG) berhasil diunduh! Siap diunggah ke Instagram Feed.'
-      );
+      let sharedViaSheet = false;
+
+      if (canShareFiles) {
+        try {
+          const shareTitle = `Sotoy Film - ${data.filmTitle || data.title || 'Visual Card'}`;
+          await navigator.share({
+            files: [file],
+            title: shareTitle,
+          });
+          sharedViaSheet = true;
+          showToast(
+            format === 'story'
+              ? 'Gambar Story (.PNG) siap disimpan ke galeri foto!'
+              : 'Gambar Feed (.PNG) siap disimpan ke galeri foto!'
+          );
+        } catch (shareErr: any) {
+          // If user dismissed / cancelled the native share sheet, ignore gracefully without showing error toast
+          if (
+            shareErr?.name === 'AbortError' ||
+            shareErr?.message?.toLowerCase().includes('abort') ||
+            shareErr?.message?.toLowerCase().includes('cancel')
+          ) {
+            return;
+          }
+          console.warn('[SocialShareModal] Native share failed, falling back to direct download:', shareErr);
+        }
+      }
+
+      // Desktop fallback or when Web Share with files is unsupported / failed:
+      // Use Blob URL (<a download>) instead of base64 data URL
+      if (!sharedViaSheet) {
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = fileName;
+        link.href = blobUrl;
+        link.click();
+        setTimeout(() => {
+          URL.revokeObjectURL(blobUrl);
+        }, 1000);
+
+        showToast(
+          format === 'story'
+            ? 'Gambar Story (.PNG) berhasil diunduh! Siap diunggah ke Instagram Stories.'
+            : 'Gambar Feed (.PNG) berhasil diunduh! Siap diunggah ke Instagram Feed.'
+        );
+      }
     } catch (err) {
       console.error(err);
       showToast('Gagal membuat gambar otomatis.');
@@ -1023,6 +1277,38 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         id="social-share-modal"
         className="relative w-full max-w-lg bg-[#171A1F] border border-slate-700/80 rounded-3xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
       >
+        {/* Off-screen export container for exact 1080x1920 DOM capture */}
+        {isFilmRating && (
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'fixed',
+              left: '-9999px',
+              top: 0,
+              width: '1080px',
+              height: '1920px',
+              overflow: 'hidden',
+              pointerEvents: 'none',
+              zIndex: -9999,
+            }}
+          >
+            <div
+              ref={storyExportRef}
+              style={{
+                width: '1080px',
+                height: '1920px',
+              }}
+            >
+              <FilmRatingStoryCard
+                data={data}
+                displayScore={displayScore}
+                posterUrl={exportPosterUrl || posterUrl}
+                reviewerAvatarUrl={exportAvatarUrl || data.reviewerAvatar || data.authorAvatar}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">
           <div className="flex items-center gap-2.5">
@@ -1209,184 +1495,123 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         {activeTab === 'ig_story' && (
           <div className="space-y-4 animate-in fade-in duration-150">
             {/* Visual Story Card Preview */}
-            <div
-              className={`relative mx-auto w-[240px] aspect-[9/16] rounded-2xl overflow-hidden ${
-                isFilmRating
-                  ? 'border-2 border-[#FF2E7E]/60 shadow-2xl bg-cover bg-center'
-                  : 'bg-gradient-to-b from-[#15162b] via-[#10111e] to-[#090a10] border border-[#FF2E7E]/40 shadow-2xl'
-              } p-4 flex flex-col justify-between text-left`}
-              style={
-                isFilmRating && (data.filmPoster || data.image || data.imageUrl || data.filmBackdrop)
-                  ? { backgroundImage: `url(${data.filmPoster || data.image || data.imageUrl || data.filmBackdrop})` }
-                  : undefined
-              }
-            >
-              {/* Dark Cinematic Vignette Overlay on top of Poster */}
-              {isFilmRating && (
-                <div className="absolute inset-0 bg-gradient-to-b from-[#080a14]/90 via-[#0c0e1e]/85 to-[#05060c]/98 backdrop-blur-[1px]" />
-              )}
-
-              {/* Top watermark */}
-              <div className="relative z-10 flex items-center justify-between border-b border-white/10 pb-2">
-                <span className="text-[9px] font-black tracking-widest text-[#FF2E7E] uppercase">
-                  {isFilmRating ? 'SOTOY FILM' : 'Sotoy Film'}
-                </span>
-                <span
-                  className={`text-[8px] px-1.5 py-0.5 rounded font-bold ${
-                    isFilmRating
-                      ? 'text-[#FF2E7E] bg-[#FF2E7E]/20 border border-[#FF2E7E]/30'
-                      : 'text-slate-300 bg-white/10'
-                  }`}
+            {isFilmRating ? (
+              <div className="relative mx-auto w-[270px] h-[480px] overflow-hidden shadow-2xl rounded-2xl bg-[#0E1013] select-none">
+                <div
+                  style={{
+                    width: '1080px',
+                    height: '1920px',
+                    transform: 'scale(0.25)',
+                    transformOrigin: 'top left',
+                    pointerEvents: 'none',
+                  }}
                 >
-                  {isFilmRating ? 'RATING & ULASAN' : isBuzz ? 'BUZZ STORY' : isArticle ? 'ARTIKEL STORY' : 'STORIES'}
-                </span>
+                  <FilmRatingStoryCard
+                    data={data}
+                    displayScore={displayScore}
+                    posterUrl={posterUrl}
+                    reviewerAvatarUrl={data.reviewerAvatar || data.authorAvatar}
+                  />
+                </div>
               </div>
+            ) : (
+              <div
+                className="relative mx-auto w-[240px] aspect-[9/16] rounded-2xl overflow-hidden bg-gradient-to-b from-[#15162b] via-[#10111e] to-[#090a10] border border-[#FF2E7E]/40 shadow-2xl p-4 flex flex-col justify-between text-left"
+              >
+                {/* Top watermark */}
+                <div className="relative z-10 flex items-center justify-between border-b border-white/10 pb-2">
+                  <span className="text-[9px] font-black tracking-widest text-[#FF2E7E] uppercase">
+                    Sotoy Film
+                  </span>
+                  <span className="text-[8px] px-1.5 py-0.5 rounded font-bold text-slate-300 bg-white/10">
+                    {isBuzz ? 'BUZZ STORY' : isArticle ? 'ARTIKEL STORY' : 'STORIES'}
+                  </span>
+                </div>
 
-              {/* Center Content: Dynamic by Type */}
-              <div className="relative z-10 py-1 space-y-2 overflow-hidden flex-1 flex flex-col justify-center">
-                {isBuzz ? (
-                  /* BUZZ FEED: Munculkan FOTO PROFIL */
-                  <div className="flex flex-col items-center text-center space-y-2">
-                    <div className="relative">
-                      <img
-                        src={data.authorAvatar || data.image}
-                        alt={data.authorName || 'Foto Profil'}
-                        className="w-16 h-16 rounded-full object-cover ring-4 ring-[#FF2E7E]/50 border-2 border-white shadow-xl"
-                      />
-                      <span className="absolute -bottom-1 -right-1 bg-[#FF2E7E] text-white text-[7px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow">
-                        BUZZ
-                      </span>
-                    </div>
-                    <div>
-                      <div className="font-bold text-xs text-white leading-tight">
-                        {data.authorName || data.title.replace('Buzz Diskusi: ', '')}
-                      </div>
-                      <div className="text-[9px] text-[#FF2E7E] font-semibold">
-                        {data.meta || 'Opini Pop-Culture @ Sotoy Film'}
-                      </div>
-                    </div>
-                    <div className="p-2.5 bg-white/5 border border-white/10 rounded-2xl w-full text-left">
-                      <Quote className="w-3 h-3 text-[#FF2E7E] mb-1 opacity-80" />
-                      <p className="text-[10px] text-slate-200 italic line-clamp-4 leading-snug">
-                        "{data.text || 'Opini komunitas sinema di platform Sotoy Film...'}"
-                      </p>
-                    </div>
-                  </div>
-                ) : isArticle ? (
-                  /* ARTIKEL: Munculkan IMAGE ARTICLE */
-                  <div className="space-y-2">
-                    {(data.image || data.imageUrl) && (
-                      <div className="relative w-full aspect-[16/10] rounded-xl overflow-hidden border border-white/10 shadow-lg">
+                {/* Center Content: Dynamic by Type */}
+                <div className="relative z-10 py-1 space-y-2 overflow-hidden flex-1 flex flex-col justify-center">
+                  {isBuzz ? (
+                    /* BUZZ FEED: Munculkan FOTO PROFIL */
+                    <div className="flex flex-col items-center text-center space-y-2">
+                      <div className="relative">
                         <img
-                          src={data.image || data.imageUrl}
-                          alt={data.title}
-                          className="w-full h-full object-cover"
+                          src={data.authorAvatar || data.image}
+                          alt={data.authorName || 'Foto Profil'}
+                          className="w-16 h-16 rounded-full object-cover ring-4 ring-[#FF2E7E]/50 border-2 border-white shadow-xl"
                         />
-                        {data.category && (
-                          <span className="absolute top-1.5 left-1.5 bg-[#FF2E7E] text-white text-[8px] font-black uppercase px-2 py-0.5 rounded shadow">
-                            {data.category}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    <h4 className="font-display font-black text-xs text-white leading-tight line-clamp-3">
-                      {data.title}
-                    </h4>
-                    {data.text && (
-                      <p className="text-[9px] text-slate-300 line-clamp-2 leading-snug">
-                        {data.text}
-                      </p>
-                    )}
-                    {data.authorName && (
-                      <div className="flex items-center gap-1.5 pt-0.5">
-                        {data.authorAvatar && (
-                          <img
-                            src={data.authorAvatar}
-                            alt={data.authorName}
-                            className="w-4 h-4 rounded-full object-cover border border-white/20"
-                          />
-                        )}
-                        <span className="text-[9px] text-[#FF2E7E] font-bold truncate">
-                          ★ Oleh: {data.authorName}
+                        <span className="absolute -bottom-1 -right-1 bg-[#FF2E7E] text-white text-[7px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow">
+                          BUZZ
                         </span>
                       </div>
-                    )}
-                  </div>
-                ) : (
-                  /* FILM RATING & ULASAN: CARD KHUSUS DENGAN BACKGROUND POSTER FILM */
-                  <div className="flex flex-col items-center text-center space-y-2">
-                    {/* Elevated Movie Poster Thumbnail */}
-                    <div className="relative w-20 h-28 rounded-xl overflow-hidden border-2 border-[#FF2E7E] shadow-2xl ring-2 ring-[#FF2E7E]/30 shrink-0">
-                      <img
-                        src={data.filmPoster || data.image || data.imageUrl}
-                        alt={data.filmTitle || data.title}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-
-                    {/* Film Title & Year */}
-                    <div className="w-full px-1">
-                      <h4 className="font-display font-black text-xs text-white leading-tight line-clamp-2">
-                        {data.filmTitle || data.title}
-                      </h4>
-                      <div className="text-[8px] text-[#FF2E7E] font-semibold mt-0.5 truncate">
-                        {[data.filmYear, (data.filmGenres || []).slice(0, 2).join(', ')].filter(Boolean).join(' • ')}
-                      </div>
-                    </div>
-
-                    {/* Big Skor Sotoy Badge */}
-                    <div className="bg-slate-950/90 border border-[#FFD000]/60 rounded-xl px-2.5 py-1.5 shadow-lg w-full">
-                      <div className="flex items-center justify-center gap-1">
-                        <Star className="w-3.5 h-3.5 text-[#FFD000] fill-current" />
-                        <span className="font-display font-medium text-base text-[#FFD000]">
-                          {displayScore.toFixed(1)}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-medium">/ 10.0</span>
-                      </div>
-                      <div className="text-[7.5px] font-black text-cyan-300 uppercase tracking-wider mt-0.5">
-                        ★ {getScoreVerdict(displayScore)} ★
-                      </div>
-                    </div>
-
-                    {/* Review Snippet (if exists) */}
-                    {(data.headline || data.reviewText || data.reviewerName) && (
-                      <div className="p-2 bg-white/5 border border-white/10 rounded-xl w-full text-left space-y-0.5">
-                        <div className="flex items-center gap-1.5">
-                          {data.reviewerAvatar && (
-                            <img
-                              src={data.reviewerAvatar}
-                              alt={data.reviewerName || 'Reviewer'}
-                              className="w-4 h-4 rounded-full object-cover border border-[#FF2E7E]"
-                            />
-                          )}
-                          <span className="text-[8px] text-slate-300 font-bold truncate">
-                            {data.reviewerName ? `Oleh: ${data.reviewerName}` : 'Ulasan Komunitas'}
-                          </span>
+                      <div>
+                        <div className="font-bold text-xs text-white leading-tight">
+                          {data.authorName || data.title.replace('Buzz Diskusi: ', '')}
                         </div>
-                        {data.headline && (
-                          <div className="text-[8.5px] font-bold text-white line-clamp-1">
-                            "{data.headline}"
-                          </div>
-                        )}
-                        <p className="text-[8px] text-slate-300 italic line-clamp-2 leading-tight">
-                          "{data.reviewText || data.text}"
+                        <div className="text-[9px] text-[#FF2E7E] font-semibold">
+                          {data.meta || 'Opini Pop-Culture @ Sotoy Film'}
+                        </div>
+                      </div>
+                      <div className="p-2.5 bg-white/5 border border-white/10 rounded-2xl w-full text-left">
+                        <Quote className="w-3 h-3 text-[#FF2E7E] mb-1 opacity-80" />
+                        <p className="text-[10px] text-slate-200 italic line-clamp-4 leading-snug">
+                          "{data.text || 'Opini komunitas sinema di platform Sotoy Film...'}"
                         </p>
                       </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                    </div>
+                  ) : (
+                    /* ARTIKEL: Munculkan IMAGE ARTICLE */
+                    <div className="space-y-2">
+                      {(data.image || data.imageUrl) && (
+                        <div className="relative w-full aspect-[16/10] rounded-xl overflow-hidden border border-white/10 shadow-lg">
+                          <img
+                            src={data.image || data.imageUrl}
+                            alt={data.title}
+                            className="w-full h-full object-cover"
+                          />
+                          {data.category && (
+                            <span className="absolute top-1.5 left-1.5 bg-[#FF2E7E] text-white text-[8px] font-black uppercase px-2 py-0.5 rounded shadow">
+                              {data.category}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <h4 className="font-display font-black text-xs text-white leading-tight line-clamp-3">
+                        {data.title}
+                      </h4>
+                      {data.text && (
+                        <p className="text-[9px] text-slate-300 line-clamp-2 leading-snug">
+                          {data.text}
+                        </p>
+                      )}
+                      {data.authorName && (
+                        <div className="flex items-center gap-1.5 pt-0.5">
+                          {data.authorAvatar && (
+                            <img
+                              src={data.authorAvatar}
+                              alt={data.authorName}
+                              className="w-4 h-4 rounded-full object-cover border border-white/20"
+                            />
+                          )}
+                          <span className="text-[9px] text-[#FF2E7E] font-bold truncate">
+                            ★ Oleh: {data.authorName}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
 
-              {/* Bottom footer */}
-              <div className="relative z-10 pt-2 border-t border-white/10 flex items-center justify-between">
-                <span className="text-[8px] font-bold text-[#FF2E7E] truncate max-w-[140px]">
-                  {isFilmRating ? '★ Skor & Ulasan di Sotoy Film' : `★ ${data.meta || 'Sotoy Film'}`}
-                </span>
-                <span className="text-[8px] text-cyan-400 font-mono">
-                  sotoyfilm.id
-                </span>
+                {/* Bottom footer */}
+                <div className="relative z-10 pt-2 border-t border-white/10 flex items-center justify-between">
+                  <span className="text-[8px] font-bold text-[#FF2E7E] truncate max-w-[140px]">
+                    ★ {data.meta || 'Sotoy Film'}
+                  </span>
+                  <span className="text-[8px] text-cyan-400 font-mono">
+                    sotoyfilm.my.id
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Action Buttons for IG Stories */}
             <div className="space-y-2 pt-1">

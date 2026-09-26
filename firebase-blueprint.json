@@ -213,9 +213,23 @@
         "timestamp": { "type": "string" }
       },
       "required": ["id", "action", "actorId", "actorName", "timestamp"]
+    },
+    "RemovedMockFilm": {
+      "title": "RemovedMockFilm",
+      "description": "Marker document for INITIAL_FILMS mock items removed from global catalog",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "removedAt": { "type": "string" }
+      },
+      "required": ["id", "removedAt"]
     }
   },
   "firestore": {
+    "/removedMockFilms/{filmId}": {
+      "schema": "RemovedMockFilm",
+      "description": "Markers for mock films that have been removed from the global catalog"
+    },
     "/auditLogs/{logId}": {
       "schema": "AuditLog",
       "description": "Administrative audit logs"

@@ -368,27 +368,6 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const DELETED_FILMS_STORAGE_KEY = 'sotoy_deleted_film_ids';
-
-const getDeletedFilmIds = (): Set<string> => {
-  try {
-    const raw = localStorage.getItem(DELETED_FILMS_STORAGE_KEY);
-    return raw ? new Set(JSON.parse(raw)) : new Set();
-  } catch {
-    return new Set();
-  }
-};
-
-const recordDeletedFilmId = (id: string) => {
-  try {
-    const set = getDeletedFilmIds();
-    set.add(id);
-    localStorage.setItem(DELETED_FILMS_STORAGE_KEY, JSON.stringify(Array.from(set)));
-  } catch (e) {
-    console.error('[AppContext] Failed saving deleted film ID to localStorage:', e);
-  }
-};
-
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Authentication & Session States
   const [currentUser, setCurrentUser] = useState<User>(() => GUEST_USER);
@@ -431,6 +410,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
   const [articles, setArticles] = useState<Article[]>([]);
   const [films, setFilms] = useState<FilmItem[]>([]);
+  const removedMockFilmIdsRef = React.useRef<Set<string>>(new Set());
   const [rawBuzzList, setRawBuzzList] = useState<BuzzPost[]>([]);
   const [isLoadingArticles, setIsLoadingArticles] = useState<boolean>(true);
   const [isLoadingFilms, setIsLoadingFilms] = useState<boolean>(true);
@@ -688,6 +668,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Initialize Real-time Firestore Sync Subscriptions
   useEffect(() => {
+    let latestFirestoreFilmMap = new Map<string, FilmItem>();
+    let hasReceivedFilms = false;
+
+    const syncFilmsWithRemovedMarkers = (currentFilmMap: Map<string, FilmItem>, removedSet: Set<string>) => {
+      const mergedMap = new Map<string, FilmItem>(currentFilmMap);
+      for (const init of INITIAL_FILMS) {
+        if (!mergedMap.has(init.id) && !removedSet.has(init.id)) {
+          mergedMap.set(init.id, init);
+        }
+      }
+      const merged = Array.from(mergedMap.values()).filter(f => !removedSet.has(f.id));
+      setFilms(merged.sort((a, b) => (a.trendingRank || 99) - (b.trendingRank || 99)));
+      setIsLoadingFilms(false);
+    };
+
+    const unsubRemovedMockFilms = onSnapshot(
+      collection(db, 'removedMockFilms'),
+      (snapshot) => {
+        const removedSet = new Set<string>();
+        snapshot.forEach(docSnap => {
+          removedSet.add(docSnap.id);
+          const data = docSnap.data();
+          if (data?.id) removedSet.add(data.id);
+        });
+        removedMockFilmIdsRef.current = removedSet;
+        if (hasReceivedFilms) {
+          syncFilmsWithRemovedMarkers(latestFirestoreFilmMap, removedSet);
+        }
+      },
+      (err) => {
+        console.warn('[Firestore] removedMockFilms subscription notice:', err.message);
+      }
+    );
+
     const unsubFilms = onSnapshot(
       collection(db, 'films'),
       (snapshot) => {
@@ -711,21 +725,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             });
           }
         });
-        const deletedIds = getDeletedFilmIds();
-        for (const init of INITIAL_FILMS) {
-          if (!filmMap.has(init.id) && !deletedIds.has(init.id)) {
-            filmMap.set(init.id, init);
-          }
-        }
-        const merged = Array.from(filmMap.values()).filter(f => !deletedIds.has(f.id));
-        setFilms(merged.sort((a, b) => (a.trendingRank || 99) - (b.trendingRank || 99)));
-        setIsLoadingFilms(false);
+        latestFirestoreFilmMap = filmMap;
+        hasReceivedFilms = true;
+        syncFilmsWithRemovedMarkers(filmMap, removedMockFilmIdsRef.current);
       },
       (err) => {
         console.warn('[Firestore] films subscription fallback to initial mock:', err.message);
-        const deletedIds = getDeletedFilmIds();
-        setFilms(INITIAL_FILMS.filter(f => !deletedIds.has(f.id)));
-        setIsLoadingFilms(false);
+        const fallbackMap = new Map<string, FilmItem>();
+        syncFilmsWithRemovedMarkers(fallbackMap, removedMockFilmIdsRef.current);
       }
     );
 
@@ -903,6 +910,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     return () => {
+      unsubRemovedMockFilms();
       unsubFilms();
       unsubArticles();
       unsubBuzz();
@@ -3758,9 +3766,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteFilm = async (id: string): Promise<boolean> => {
     console.log('[AppContext] === [deleteFilm INVOKED] ===', { id });
-    // Immediately record in persistent deleted set and remove from state
-    recordDeletedFilmId(id);
+    // Immediately remove from in-memory state
     setFilms(prev => prev.filter(f => f.id !== id));
+
+    // If deleting a film whose ID matches an INITIAL_FILMS mock entry, write marker to removedMockFilms collection
+    const isMockFilm = INITIAL_FILMS.some(m => m.id === id);
+    if (isMockFilm) {
+      try {
+        console.log('[AppContext] Writing marker to Firestore removedMockFilms/' + id);
+        await setDoc(doc(db, 'removedMockFilms', id), {
+          id,
+          removedAt: new Date().toISOString(),
+        });
+        removedMockFilmIdsRef.current.add(id);
+      } catch (err) {
+        console.error('[AppContext] Error writing to removedMockFilms:', err);
+      }
+    }
 
     try {
       console.log('[AppContext] Calling Firestore deleteDoc on path: films/' + id);
@@ -3771,15 +3793,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (error: any) {
       console.error('[AppContext] Firestore deleteDoc ERROR for filmId:', id, error);
       const errMsg = error?.message || 'Gagal menghapus dari database Firestore.';
-      showToast(`Catatan: Film dihapus dari katalog lokal (${errMsg})`);
+      showToast(`Catatan: Film dihapus dari katalog (${errMsg})`);
       return false;
     }
   };
 
   const bulkDeleteFilms = async (filmIds: string[]): Promise<boolean> => {
     console.log('[AppContext] === [bulkDeleteFilms INVOKED] ===', { filmIds });
-    filmIds.forEach(id => recordDeletedFilmId(id));
     setFilms(prev => prev.filter(f => !filmIds.includes(f.id)));
+
+    // Mark any INITIAL_FILMS mock entries in removedMockFilms in Firestore
+    const mockIds = filmIds.filter(id => INITIAL_FILMS.some(m => m.id === id));
+    if (mockIds.length > 0) {
+      try {
+        await Promise.all(
+          mockIds.map(id => {
+            removedMockFilmIdsRef.current.add(id);
+            return setDoc(doc(db, 'removedMockFilms', id), {
+              id,
+              removedAt: new Date().toISOString(),
+            });
+          })
+        );
+      } catch (err) {
+        console.error('[AppContext] Error writing bulk removedMockFilms:', err);
+      }
+    }
 
     try {
       await Promise.all(
@@ -3790,7 +3829,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (error: any) {
       console.error('[AppContext] Firestore bulk delete error:', error);
       const errMsg = error?.message || 'Gagal menghapus dari database Firestore.';
-      showToast(`Catatan: Film dihapus dari katalog lokal (${errMsg})`);
+      showToast(`Catatan: Film dihapus dari katalog (${errMsg})`);
       return false;
     }
   };

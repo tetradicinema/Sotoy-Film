@@ -1,15 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Clock,
   Share2,
   ChevronRight,
   ArrowRight,
+  ChevronDown,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
 import { MainCategory, Article } from '../../types';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { EditorialSidebar } from '../Common/EditorialSidebar';
+import {
+  ContentCategoryMobileMenu,
+  CATEGORY_OPTIONS,
+} from './ContentCategoryMobileMenu';
 
 interface HomeCategoryArticleItemProps {
   article: Article;
@@ -133,6 +138,28 @@ export const HomeCategorySection: React.FC = () => {
   } = useApp();
 
   const [selectedCategoryTab, setSelectedCategoryTab] = useState<MainCategory | 'all'>('all');
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+
+  // Compute article count per category for drawer display
+  const categoryCounts = useMemo(() => {
+    const counts: Record<MainCategory | 'all', number> = {
+      all: publishedArticles.length,
+      movies: 0,
+      series: 0,
+      anime: 0,
+      'cinema-gear': 0,
+      'film-studies': 0,
+    };
+    for (const art of publishedArticles) {
+      if (art.category && counts[art.category as MainCategory] !== undefined) {
+        counts[art.category as MainCategory]++;
+      }
+    }
+    return counts;
+  }, [publishedArticles]);
+
+  const currentCategoryOption = CATEGORY_OPTIONS.find((c) => c.id === selectedCategoryTab);
+  const currentCategoryLabel = currentCategoryOption ? currentCategoryOption.label : 'Semua Artikel';
 
   // Filter articles based on tab
   const filteredArticles = selectedCategoryTab === 'all'
@@ -174,74 +201,55 @@ export const HomeCategorySection: React.FC = () => {
           {/* MAIN ARTICLES COLUMN (8 Columns) */}
           <div className="lg:col-span-8 space-y-6">
             
-            {/* Category Filter Tabs Bar (Cohesive Segmented Control) */}
-            <div className="flex items-center gap-1.5 p-1 bg-black/40 rounded-2xl border border-white/[0.08] overflow-x-auto scrollbar-none">
+            {/* Desktop Category Filter Tabs Bar (Cohesive Segmented Control) */}
+            <div className="hidden lg:flex items-center gap-1.5 p-1 bg-black/40 rounded-2xl border border-white/[0.08] overflow-x-auto scrollbar-none">
+              {CATEGORY_OPTIONS.map((cat) => {
+                const isCatActive = selectedCategoryTab === cat.id;
+                const buttonIdMap: Record<string, string> = {
+                  all: 'filter-cat-all',
+                  movies: 'filter-cat-movies',
+                  series: 'filter-cat-series',
+                  anime: 'filter-cat-anime',
+                  'cinema-gear': 'filter-cat-gear',
+                  'film-studies': 'filter-cat-studies',
+                };
+
+                return (
+                  <button
+                    key={cat.id}
+                    id={buttonIdMap[cat.id]}
+                    onClick={() => setSelectedCategoryTab(cat.id)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
+                      isCatActive
+                        ? 'bg-white/[0.12] text-white shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Mobile Category Trigger Button (Threads-style Drawer Opener) */}
+            <div className="lg:hidden flex items-center justify-between gap-3">
               <button
-                id="filter-cat-all"
-                onClick={() => setSelectedCategoryTab('all')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
-                  selectedCategoryTab === 'all'
-                    ? 'bg-white/[0.12] text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
+                id="mobile-category-drawer-trigger"
+                type="button"
+                onClick={() => setIsMobileDrawerOpen(true)}
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-black/40 hover:bg-black/60 border border-white/[0.10] active:border-white/20 text-xs font-semibold text-white transition-all active:scale-[0.98] min-h-[44px]"
+                aria-haspopup="dialog"
+                aria-expanded={isMobileDrawerOpen}
+                aria-label="Pilih Kategori Konten"
               >
-                Semua Artikel
+                <span className="text-slate-400 font-normal">Kategori:</span>
+                <span className="font-bold text-white">{currentCategoryLabel}</span>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-0.5" />
               </button>
-              <button
-                id="filter-cat-movies"
-                onClick={() => setSelectedCategoryTab('movies')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
-                  selectedCategoryTab === 'movies'
-                    ? 'bg-white/[0.12] text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Movies
-              </button>
-              <button
-                id="filter-cat-series"
-                onClick={() => setSelectedCategoryTab('series')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
-                  selectedCategoryTab === 'series'
-                    ? 'bg-white/[0.12] text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Series
-              </button>
-              <button
-                id="filter-cat-anime"
-                onClick={() => setSelectedCategoryTab('anime')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
-                  selectedCategoryTab === 'anime'
-                    ? 'bg-white/[0.12] text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Anime
-              </button>
-              <button
-                id="filter-cat-gear"
-                onClick={() => setSelectedCategoryTab('cinema-gear')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
-                  selectedCategoryTab === 'cinema-gear'
-                    ? 'bg-white/[0.12] text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Cinema Gear
-              </button>
-              <button
-                id="filter-cat-studies"
-                onClick={() => setSelectedCategoryTab('film-studies')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
-                  selectedCategoryTab === 'film-studies'
-                    ? 'bg-white/[0.12] text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Film Studies
-              </button>
+
+              <span className="text-xs text-slate-500 font-mono tabular-nums">
+                {filteredArticles.length} artikel
+              </span>
             </div>
 
             {/* Articles List */}
@@ -266,6 +274,15 @@ export const HomeCategorySection: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Mobile Content Category Drawer Menu (Threads-style) */}
+      <ContentCategoryMobileMenu
+        isOpen={isMobileDrawerOpen}
+        onClose={() => setIsMobileDrawerOpen(false)}
+        selectedCategory={selectedCategoryTab}
+        onSelectCategory={(cat) => setSelectedCategoryTab(cat)}
+        categoryCounts={categoryCounts}
+      />
     </section>
   );
 };
