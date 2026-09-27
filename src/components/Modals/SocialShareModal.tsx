@@ -249,12 +249,12 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
         </div>
       )}
 
-      {/* 2. Dark Scrim fading poster smoothly into solid dark #0E1013 background */}
+      {/* 2. Single Continuous Dark Scrim fading poster smoothly into solid dark #0E1013 background */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            'linear-gradient(to bottom, transparent 0%, rgba(14, 16, 19, 0.05) 25%, rgba(14, 16, 19, 0.65) 42%, rgba(14, 16, 19, 0.94) 58%, #0E1013 68%, #0E1013 100%)',
+            'linear-gradient(to bottom, transparent 0%, rgba(14, 16, 19, 0.05) 20%, rgba(14, 16, 19, 0.2) 32%, rgba(14, 16, 19, 0.45) 42%, rgba(14, 16, 19, 0.72) 52%, rgba(14, 16, 19, 0.88) 60%, rgba(14, 16, 19, 0.96) 68%, #0E1013 75%, #0E1013 100%)',
         }}
       />
 
@@ -568,40 +568,28 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           ctx.fillRect(0, 0, width, height);
         }
 
-        // 2. Dark Scrim Gradients matching JSX preview exactly
+        // 2. Single Continuous Dark Scrim Gradient covering full height (no separate localized overlay)
         // Top vignette for logo & badge legibility on bright posters (h: 280px)
         const topVignette = ctx.createLinearGradient(0, 0, 0, 280);
-        topVignette.addColorStop(0, 'rgba(14, 16, 19, 0.90)');
-        topVignette.addColorStop(0.5, 'rgba(14, 16, 19, 0.40)');
+        topVignette.addColorStop(0, 'rgba(14, 16, 19, 0.85)');
+        topVignette.addColorStop(0.5, 'rgba(14, 16, 19, 0.35)');
         topVignette.addColorStop(1, 'rgba(14, 16, 19, 0)');
         ctx.fillStyle = topVignette;
         ctx.fillRect(0, 0, width, 280);
 
         // Lower scrim fading poster smoothly into solid dark #0E1013 background (no hard seam)
-        const bottomScrim = ctx.createLinearGradient(0, 0, 0, height);
-        bottomScrim.addColorStop(0, 'rgba(14, 16, 19, 0)');
-        bottomScrim.addColorStop(0.25, 'rgba(14, 16, 19, 0.05)');
-        bottomScrim.addColorStop(0.42, 'rgba(14, 16, 19, 0.65)');
-        bottomScrim.addColorStop(0.58, 'rgba(14, 16, 19, 0.94)');
-        bottomScrim.addColorStop(0.68, '#0E1013');
-        bottomScrim.addColorStop(1, '#0E1013');
-        ctx.fillStyle = bottomScrim;
+        const mainScrim = ctx.createLinearGradient(0, 0, 0, height);
+        mainScrim.addColorStop(0, 'rgba(14, 16, 19, 0)');
+        mainScrim.addColorStop(0.20, 'rgba(14, 16, 19, 0.05)');
+        mainScrim.addColorStop(0.32, 'rgba(14, 16, 19, 0.20)');
+        mainScrim.addColorStop(0.42, 'rgba(14, 16, 19, 0.45)');
+        mainScrim.addColorStop(0.52, 'rgba(14, 16, 19, 0.72)');
+        mainScrim.addColorStop(0.60, 'rgba(14, 16, 19, 0.88)');
+        mainScrim.addColorStop(0.68, 'rgba(14, 16, 19, 0.96)');
+        mainScrim.addColorStop(0.75, '#0E1013');
+        mainScrim.addColorStop(1, '#0E1013');
+        ctx.fillStyle = mainScrim;
         ctx.fillRect(0, 0, width, height);
-
-        // Localized darkening behind rating block and center text
-        const centerDarkening = ctx.createRadialGradient(
-          width / 2,
-          1180,
-          60,
-          width / 2,
-          1180,
-          520
-        );
-        centerDarkening.addColorStop(0, 'rgba(14, 16, 19, 0.90)');
-        centerDarkening.addColorStop(0.75, 'rgba(14, 16, 19, 0.60)');
-        centerDarkening.addColorStop(1, 'rgba(14, 16, 19, 0)');
-        ctx.fillStyle = centerDarkening;
-        ctx.fillRect(0, 800, width, 760);
 
         // 3. Proportional Top Watermark: Sotoy Film Logo + "SKOR & ULASAN" Badge
         const topPad = 110;
