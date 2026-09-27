@@ -17,7 +17,6 @@ import {
   Star,
   Award,
 } from 'lucide-react';
-import { toBlob } from 'html-to-image';
 import { useApp } from '../../context/AppContext';
 
 export interface ShareData {
@@ -61,15 +60,15 @@ export const getStarsString = (score: number): string => {
   return '★'.repeat(fullStars) + '☆'.repeat(5 - fullStars);
 };
 
-// Helper to pre-fetch external cross-origin images as Data URLs with retry & cache-buster
-const urlToDataUrl = async (url: string): Promise<string> => {
+// Helper to pre-fetch external cross-origin images as Data URLs with mode: 'cors' and cache-buster retry
+export const ensureBlobUrl = async (url: string): Promise<string> => {
   if (!url) return '';
   if (url.startsWith('data:') || url.startsWith('blob:')) return url;
 
-  const tryFetch = async (targetUrl: string): Promise<string> => {
+  const tryFetchAsBlobDataUrl = async (targetUrl: string): Promise<string> => {
     const res = await fetch(targetUrl, { mode: 'cors' });
     if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
     }
     const blob = await res.blob();
     return new Promise<string>((resolve, reject) => {
@@ -87,20 +86,63 @@ const urlToDataUrl = async (url: string): Promise<string> => {
   };
 
   try {
-    return await tryFetch(url);
-  } catch (err1) {
+    return await tryFetchAsBlobDataUrl(url);
+  } catch (errInitial) {
     try {
       const cacheBustUrl = `${url}${url.includes('?') ? '&' : '?'}cb=${Date.now()}`;
-      return await tryFetch(cacheBustUrl);
-    } catch (err2) {
-      console.warn(`[SocialShareModal] Failed to pre-fetch image as data URL after retry (${url}):`, err2);
+      return await tryFetchAsBlobDataUrl(cacheBustUrl);
+    } catch (errRetry) {
+      console.warn(`[ensureBlobUrl] Failed to pre-fetch image as data URL after retry (${url}):`, errRetry);
       return url;
     }
   }
 };
 
+// Backwards-compatible alias if referenced elsewhere
+export const urlToDataUrl = ensureBlobUrl;
+
+// Module-level cache for Sotoy Film logo data URL
+let cachedLogoDataUrl: string | null = null;
+
+export const getLogoDataUrl = async (): Promise<string> => {
+  if (cachedLogoDataUrl) return cachedLogoDataUrl;
+  try {
+    const dataUrl = await ensureBlobUrl('/sotoy-logo-full.png');
+    if (dataUrl && dataUrl.startsWith('data:')) {
+      cachedLogoDataUrl = dataUrl;
+      return dataUrl;
+    }
+    // Direct fetch fallback if ensureBlobUrl returned the plain relative path
+    const res = await fetch('/sotoy-logo-full.png');
+    if (res.ok) {
+      const blob = await res.blob();
+      const readerDataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (typeof reader.result === 'string') resolve(reader.result);
+          else reject(new Error('FileReader did not produce a data URL string'));
+        };
+        reader.onerror = () => reject(reader.error || new Error('FileReader error'));
+        reader.readAsDataURL(blob);
+      });
+      cachedLogoDataUrl = readerDataUrl;
+      return readerDataUrl;
+    }
+    console.warn('[getLogoDataUrl] Failed to fetch /sotoy-logo-full.png (non-200), falling back to relative path');
+  } catch (err) {
+    console.warn('[getLogoDataUrl] Error converting /sotoy-logo-full.png to data URL, falling back to relative path:', err);
+  }
+  return '/sotoy-logo-full.png';
+};
+
+const formatImgSrc = (src: string): string => {
+  if (!src) return '(empty src)';
+  if (src.startsWith('data:')) return `${src.slice(0, 32)}... (data URL, len=${src.length})`;
+  return src;
+};
+
 // Helper to wait until all images within a DOM container are completely loaded before capturing
-const waitForImages = async (container: HTMLElement): Promise<void> => {
+export const waitForImages = async (container: HTMLElement): Promise<void> => {
   let imgs = Array.from(container.querySelectorAll('img'));
   if (imgs.length === 0) {
     await new Promise((resolve) => requestAnimationFrame(resolve));
@@ -110,16 +152,40 @@ const waitForImages = async (container: HTMLElement): Promise<void> => {
   await Promise.all(
     imgs.map((img) => {
       if (img.complete) {
+        if (img.naturalWidth === 0 && img.src) {
+          console.warn(`[waitForImages] Image complete but naturalWidth === 0 (failed to load): ${formatImgSrc(img.src)} (alt: ${img.alt || 'none'})`);
+        }
         return Promise.resolve();
       }
+
       return new Promise<void>((resolve) => {
-        const onDone = () => {
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const cleanup = () => {
           img.removeEventListener('load', onDone);
-          img.removeEventListener('error', onDone);
+          img.removeEventListener('error', onError);
+          if (timer) clearTimeout(timer);
+        };
+
+        const onDone = () => {
+          cleanup();
           resolve();
         };
+
+        const onError = (e: Event) => {
+          cleanup();
+          console.warn(`[waitForImages] Failed to load image: ${formatImgSrc(img.src)} (alt: ${img.alt || 'none'})`, e);
+          resolve();
+        };
+
+        // Safety fallback timeout to prevent hanging the export if network stalls
+        timer = setTimeout(() => {
+          cleanup();
+          console.warn(`[waitForImages] Timed out waiting for image to load: ${formatImgSrc(img.src)} (alt: ${img.alt || 'none'})`);
+          resolve();
+        }, 5000);
+
         img.addEventListener('load', onDone);
-        img.addEventListener('error', onDone);
+        img.addEventListener('error', onError);
       });
     })
   );
@@ -141,6 +207,7 @@ interface FilmRatingStoryCardProps {
   reviewerAvatarUrl?: string;
   posterUrlForExport?: string;
   reviewerAvatarUrlForExport?: string;
+  logoUrlForExport?: string;
 }
 
 export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
@@ -150,12 +217,14 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
   reviewerAvatarUrl,
   posterUrlForExport,
   reviewerAvatarUrlForExport,
+  logoUrlForExport,
 }) => {
   const effectivePoster = posterUrlForExport !== undefined ? posterUrlForExport : posterUrl;
   const effectiveAvatar =
     reviewerAvatarUrlForExport !== undefined
       ? reviewerAvatarUrlForExport
       : reviewerAvatarUrl || data.reviewerAvatar || data.authorAvatar;
+  const effectiveLogo = logoUrlForExport || '/sotoy-logo-full.png';
 
   const genresStr = (data.filmGenres || []).slice(0, 3).join(' • ');
   const metaStr = [data.filmYear, genresStr].filter(Boolean).join(' | ');
@@ -167,37 +236,36 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
       className="relative w-[1080px] h-[1920px] bg-[#0E1013] overflow-hidden flex flex-col justify-between text-left select-none"
       style={{ width: '1080px', height: '1920px' }}
     >
-      {/* 1. Full-Bleed Film Poster (Top 62% of card, edge-to-edge x=0, y=0) */}
+      {/* 1. Full-Bleed Film Poster (Full 100% height, edge-to-edge x=0, y=0) */}
       {effectivePoster && (
-        <div className="absolute inset-x-0 top-0 h-[62%] overflow-hidden pointer-events-none">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <img
             src={effectivePoster}
             alt={data.filmTitle || data.title}
             className="w-full h-full object-cover"
-            crossOrigin="anonymous"
           />
           {/* Subtle top vignette for watermark contrast on bright posters */}
-          <div className="absolute inset-x-0 top-0 h-[260px] bg-gradient-to-b from-[#0E1013]/90 via-[#0E1013]/40 to-transparent pointer-events-none" />
+          <div className="absolute inset-x-0 top-0 h-[280px] bg-gradient-to-b from-[#0E1013]/90 via-[#0E1013]/40 to-transparent pointer-events-none" />
         </div>
       )}
 
-      {/* 2. Dark Scrim fading poster into solid dark #0E1013 background */}
+      {/* 2. Dark Scrim fading poster smoothly into solid dark #0E1013 background */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            'linear-gradient(to bottom, transparent 0%, transparent 26%, rgba(14, 16, 19, 0.72) 46%, rgba(14, 16, 19, 0.96) 62%, #0E1013 76%, #0E1013 100%)',
+            'linear-gradient(to bottom, transparent 0%, rgba(14, 16, 19, 0.05) 25%, rgba(14, 16, 19, 0.65) 42%, rgba(14, 16, 19, 0.94) 58%, #0E1013 68%, #0E1013 100%)',
         }}
       />
 
       {/* Top Watermark Overlay (Proportional safe-zone: ~5-6% = 110px top padding, 4-5% = 50px horizontal padding) */}
       <div className="relative z-10 pt-[110px] px-[50px] flex items-center justify-between">
         <img
-          src="/sotoy-logo-full.png"
+          src={effectiveLogo}
           alt="Sotoy Film"
           className="h-[75px] w-auto object-contain drop-shadow-lg"
         />
-        <div className="px-5 py-2 rounded-full font-black text-xs tracking-wider text-[#FF2E7E] bg-[#0E1013]/90 border border-[#FF2E7E]/40 backdrop-blur-md shadow-lg">
+        <div className="px-5 py-2 rounded-full font-black text-xs tracking-wider text-[#FF2E7E] bg-[#0E1013]/90 border border-[#FF2E7E]/40 backdrop-blur-md shadow-lg whitespace-nowrap">
           SKOR & ULASAN
         </div>
       </div>
@@ -238,7 +306,6 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
                 src={effectiveAvatar}
                 alt={reviewerName || 'Reviewer'}
                 className="w-10 h-10 rounded-full object-cover border-2 border-[#FF2E7E] shadow-md"
-                crossOrigin="anonymous"
               />
             ) : (
               <Quote className="w-5 h-5 text-[#FF2E7E] opacity-90 inline" />
@@ -302,40 +369,12 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCaption, setCopiedCaption] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const storyExportRef = useRef<HTMLDivElement>(null);
-  const [exportPosterUrl, setExportPosterUrl] = useState<string | undefined>(undefined);
-  const [exportAvatarUrl, setExportAvatarUrl] = useState<string | undefined>(undefined);
 
   const isOpen = propIsOpen !== undefined ? propIsOpen : shareModalData !== null;
   const onClose = propOnClose || closeShareModal;
   const data = propData !== undefined ? propData : shareModalData;
 
   const posterUrl = data ? data.filmPoster || data.image || data.imageUrl || data.filmBackdrop : undefined;
-
-  // Pre-fetch poster & reviewer avatar as data URLs for CORS-safe HTML-to-Image capture
-  useEffect(() => {
-    let isMounted = true;
-    if (posterUrl) {
-      urlToDataUrl(posterUrl).then((dataUrl) => {
-        if (isMounted) setExportPosterUrl(dataUrl);
-      });
-    } else {
-      setExportPosterUrl(undefined);
-    }
-
-    const rawAvatar = data?.reviewerAvatar || data?.authorAvatar;
-    if (rawAvatar) {
-      urlToDataUrl(rawAvatar).then((dataUrl) => {
-        if (isMounted) setExportAvatarUrl(dataUrl);
-      });
-    } else {
-      setExportAvatarUrl(undefined);
-    }
-
-    return () => {
-      isMounted = false;
-    };
-  }, [posterUrl, data?.reviewerAvatar, data?.authorAvatar]);
 
   if (!isOpen || !data) return null;
 
@@ -471,50 +510,416 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
   const handleDownloadInstagramVisual = async (format: 'story' | 'feed') => {
     setIsGeneratingImage(true);
     try {
-      // 1. Film Rating Story (9:16) - DOM-to-Image capture from single source of truth JSX component
+      // 1. Film Rating Story (9:16) - Direct high-resolution Canvas 2D rendering
       if (isFilmRating && format === 'story') {
         if (typeof document !== 'undefined' && document.fonts?.ready) {
           await document.fonts.ready;
         }
 
-        // Ensure poster and reviewer avatar data URLs are fully resolved before capture
-        let currentExportPoster = exportPosterUrl;
-        if (!currentExportPoster && posterUrl) {
-          currentExportPoster = await urlToDataUrl(posterUrl);
-          setExportPosterUrl(currentExportPoster);
+        const width = 1080;
+        const height = 1920;
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+          showToast('Gagal menginisialisasi perender visual.');
+          setIsGeneratingImage(false);
+          return;
         }
 
-        let currentExportAvatar = exportAvatarUrl;
+        // Base solid background (#0E1013)
+        ctx.fillStyle = '#0E1013';
+        ctx.fillRect(0, 0, width, height);
+
+        // 1. Full-Bleed Film Poster (Full 1080x1920 edge-to-edge cover-fit)
+        const posterUrl = data.filmPoster || data.image || data.imageUrl || data.filmBackdrop;
+        let posterLoaded = false;
+        if (posterUrl) {
+          try {
+            const posterImg = await loadCanvasImage(posterUrl);
+            posterLoaded = true;
+
+            const imgAspect = posterImg.width / posterImg.height;
+            const canvasAspect = width / height; // 1080 / 1920 = 0.5625
+
+            let sx = 0, sy = 0, sWidth = posterImg.width, sHeight = posterImg.height;
+            if (imgAspect > canvasAspect) {
+              sWidth = posterImg.height * canvasAspect;
+              sx = (posterImg.width - sWidth) / 2;
+            } else {
+              sHeight = posterImg.width / canvasAspect;
+              sy = 0; // Focus on top of key art
+            }
+
+            ctx.drawImage(posterImg, sx, sy, sWidth, sHeight, 0, 0, width, height);
+          } catch (posterErr) {
+            console.warn('[SocialShareModal] Poster load failed for canvas, using fallback gradient:', posterErr);
+          }
+        }
+
+        if (!posterLoaded) {
+          const fallbackGrad = ctx.createLinearGradient(0, 0, 0, height);
+          fallbackGrad.addColorStop(0, '#171A21');
+          fallbackGrad.addColorStop(0.5, '#0E1013');
+          fallbackGrad.addColorStop(1, '#08090C');
+          ctx.fillStyle = fallbackGrad;
+          ctx.fillRect(0, 0, width, height);
+        }
+
+        // 2. Dark Scrim Gradients matching JSX preview exactly
+        // Top vignette for logo & badge legibility on bright posters (h: 280px)
+        const topVignette = ctx.createLinearGradient(0, 0, 0, 280);
+        topVignette.addColorStop(0, 'rgba(14, 16, 19, 0.90)');
+        topVignette.addColorStop(0.5, 'rgba(14, 16, 19, 0.40)');
+        topVignette.addColorStop(1, 'rgba(14, 16, 19, 0)');
+        ctx.fillStyle = topVignette;
+        ctx.fillRect(0, 0, width, 280);
+
+        // Lower scrim fading poster smoothly into solid dark #0E1013 background (no hard seam)
+        const bottomScrim = ctx.createLinearGradient(0, 0, 0, height);
+        bottomScrim.addColorStop(0, 'rgba(14, 16, 19, 0)');
+        bottomScrim.addColorStop(0.25, 'rgba(14, 16, 19, 0.05)');
+        bottomScrim.addColorStop(0.42, 'rgba(14, 16, 19, 0.65)');
+        bottomScrim.addColorStop(0.58, 'rgba(14, 16, 19, 0.94)');
+        bottomScrim.addColorStop(0.68, '#0E1013');
+        bottomScrim.addColorStop(1, '#0E1013');
+        ctx.fillStyle = bottomScrim;
+        ctx.fillRect(0, 0, width, height);
+
+        // Localized darkening behind rating block and center text
+        const centerDarkening = ctx.createRadialGradient(
+          width / 2,
+          1180,
+          60,
+          width / 2,
+          1180,
+          520
+        );
+        centerDarkening.addColorStop(0, 'rgba(14, 16, 19, 0.90)');
+        centerDarkening.addColorStop(0.75, 'rgba(14, 16, 19, 0.60)');
+        centerDarkening.addColorStop(1, 'rgba(14, 16, 19, 0)');
+        ctx.fillStyle = centerDarkening;
+        ctx.fillRect(0, 800, width, 760);
+
+        // 3. Proportional Top Watermark: Sotoy Film Logo + "SKOR & ULASAN" Badge
+        const topPad = 110;
+        const sidePad = 50;
+        const logoTargetH = 75;
+
+        // Draw Sotoy Film Logo
+        try {
+          const logoImg = await loadCanvasImage('/sotoy-logo-full.png');
+          const logoW = logoImg.width * (logoTargetH / logoImg.height);
+          ctx.drawImage(logoImg, sidePad, topPad, logoW, logoTargetH);
+        } catch (logoErr) {
+          console.warn('[SocialShareModal] Could not load /sotoy-logo-full.png for canvas:', logoErr);
+          ctx.fillStyle = '#FF2E7E';
+          ctx.font = "900 36px 'Geist', 'Plus Jakarta Sans', sans-serif";
+          ctx.textAlign = 'left';
+          ctx.fillText('SOTOY FILM', sidePad, topPad + 48);
+        }
+
+        // Draw "SKOR & ULASAN" Badge (pill badge with #FF2E7E border & text)
+        const badgeText = 'SKOR & ULASAN';
+        ctx.font = "900 20px 'Geist', 'Plus Jakarta Sans', sans-serif";
+        const badgeTextW = ctx.measureText(badgeText).width;
+        const badgeH = 44;
+        const badgeW = badgeTextW + 40; // 20px padding on each side
+        const badgeX = width - sidePad - badgeW;
+        const badgeY = topPad + (logoTargetH - badgeH) / 2;
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(14, 16, 19, 0.90)';
+        ctx.strokeStyle = 'rgba(255, 46, 126, 0.40)';
+        ctx.lineWidth = 2;
+        drawRoundRectPath(ctx, badgeX, badgeY, badgeW, badgeH, 22);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#FF2E7E';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(badgeText, badgeX + badgeW / 2, badgeY + badgeH / 2);
+        ctx.restore();
+
+        // 4. Sequential Y-Cursor Text Layout (Matching JSX Reference Exactly)
+        const maxTextW = width - (sidePad * 2) - 20; // 960px
+        const filmTitle = data.filmTitle || data.title || '';
+        const genresStr = (data.filmGenres || []).slice(0, 3).join(' • ');
+        const metaStr = [data.filmYear, genresStr].filter(Boolean).join(' | ');
+
+        const getWrappedLines = (
+          text: string,
+          maxWidth: number,
+          font: string,
+          maxLines: number = 3
+        ): string[] => {
+          if (!text) return [];
+          ctx.save();
+          ctx.font = font;
+          const words = text.split(' ');
+          const lines: string[] = [];
+          let currentLine = '';
+
+          for (let i = 0; i < words.length; i++) {
+            const testLine = currentLine ? `${currentLine} ${words[i]}` : words[i];
+            const metrics = ctx.measureText(testLine);
+            if (metrics.width > maxWidth && currentLine) {
+              lines.push(currentLine);
+              currentLine = words[i];
+              if (lines.length === maxLines - 1) {
+                // Last line: append remainder with ellipsis if necessary
+                const remainingWords = words.slice(i).join(' ');
+                let lastLine = remainingWords;
+                while (ctx.measureText(`${lastLine}...`).width > maxWidth && lastLine.includes(' ')) {
+                  lastLine = lastLine.substring(0, lastLine.lastIndexOf(' '));
+                }
+                lines.push(`${lastLine}...`);
+                currentLine = '';
+                break;
+              }
+            } else {
+              currentLine = testLine;
+            }
+          }
+          if (currentLine) {
+            lines.push(currentLine);
+          }
+          ctx.restore();
+          return lines.slice(0, maxLines);
+        };
+
+        // Measure heights of each block
+        const titleFont = "900 44px 'Geist', 'Plus Jakarta Sans', sans-serif";
+        const titleLineH = 54;
+        const titleLines = getWrappedLines(filmTitle, maxTextW, titleFont, 2);
+        const titleHeight = titleLines.length * titleLineH;
+
+        const metaFont = "bold 20px 'Geist', 'Plus Jakarta Sans', sans-serif";
+        const metaLineH = 28;
+        const metaHeight = metaStr ? metaLineH : 0;
+        const metaGap = metaStr ? 8 : 0;
+
+        const ratingBlockGap = 20;
+        const ratingScoreRowH = 92;
+        const verdictGap = 8;
+        const verdictH = 26;
+        const ratingTotalH = ratingBlockGap + ratingScoreRowH + verdictGap + verdictH;
+
+        const reviewerName = data.reviewerName || data.authorName;
+        const reviewerRole = data.reviewerRole;
         const rawAvatar = data.reviewerAvatar || data.authorAvatar;
-        if (!currentExportAvatar && rawAvatar) {
-          currentExportAvatar = await urlToDataUrl(rawAvatar);
-          setExportAvatarUrl(currentExportAvatar);
+        const hasReviewer = Boolean(reviewerName || rawAvatar);
+        const reviewerGap = hasReviewer ? 18 : 0;
+        const reviewerHeight = hasReviewer ? 40 : 0;
+
+        const headlineFont = "bold 24px 'Geist', 'Plus Jakarta Sans', sans-serif";
+        const headlineLineH = 34;
+        const headlineLines = data.headline ? getWrappedLines(`“${data.headline}”`, maxTextW, headlineFont, 2) : [];
+        const headlineGap = headlineLines.length > 0 ? 16 : 0;
+        const headlineHeight = headlineLines.length * headlineLineH;
+
+        const reviewText = data.reviewText || data.text;
+        const reviewFont = "italic 20px 'Plus Jakarta Sans', sans-serif";
+        const reviewLineH = 30;
+        const reviewLines = reviewText ? getWrappedLines(`“${reviewText}”`, maxTextW, reviewFont, 3) : [];
+        const reviewGap = reviewLines.length > 0 ? 14 : 0;
+        const reviewHeight = reviewLines.length * reviewLineH;
+
+        // Total calculated height of all content blocks
+        const totalContentH =
+          titleHeight +
+          metaGap +
+          metaHeight +
+          ratingTotalH +
+          reviewerGap +
+          reviewerHeight +
+          headlineGap +
+          headlineHeight +
+          reviewGap +
+          reviewHeight;
+
+        // Safe vertical range between dark scrim area and footer line (footer line is at 1795px)
+        const availableTop = 1100;
+        const availableBottom = 1755;
+        const availableSpace = availableBottom - availableTop;
+
+        let yCursor =
+          totalContentH < availableSpace
+            ? availableTop + (availableSpace - totalContentH) * 0.55
+            : Math.max(1040, availableBottom - totalContentH);
+
+        // Render sequentially using top baseline
+        ctx.textBaseline = 'top';
+
+        // A. Film Title
+        ctx.font = titleFont;
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'center';
+        for (const line of titleLines) {
+          ctx.fillText(line, width / 2, yCursor);
+          yCursor += titleLineH;
         }
 
-        // Give React and browser layout time to commit the updated export container DOM
-        await new Promise((resolve) => setTimeout(resolve, 80));
-        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-
-        if (!storyExportRef.current) {
-          throw new Error('Elemen export visual belum siap.');
+        // B. Meta String
+        if (metaStr) {
+          yCursor += metaGap;
+          ctx.font = metaFont;
+          ctx.fillStyle = '#FF2E7E';
+          ctx.textAlign = 'center';
+          ctx.fillText(metaStr, width / 2, yCursor);
+          yCursor += metaLineH;
         }
 
-        await waitForImages(storyExportRef.current);
+        // C. Rating Display (Star + Score + / 10.0 + Verdict)
+        yCursor += ratingBlockGap;
+        const scoreStr = displayScore.toFixed(1);
 
-        const blob = await toBlob(storyExportRef.current, {
-          width: 1080,
-          height: 1920,
-          pixelRatio: 1,
-          cacheBust: true,
+        ctx.font = "900 92px 'Geist', 'Plus Jakarta Sans', sans-serif";
+        const scoreW = ctx.measureText(scoreStr).width;
+        ctx.font = "bold 50px sans-serif";
+        const starW = ctx.measureText('★').width;
+        ctx.font = "bold 26px 'Geist', 'Plus Jakarta Sans', sans-serif";
+        const denomW = ctx.measureText('/ 10.0').width;
+
+        const totalRatingRowW = starW + 14 + scoreW + 12 + denomW;
+        const startRatingX = (width - totalRatingRowW) / 2;
+
+        // Draw Star Icon
+        ctx.fillStyle = '#FFD000';
+        ctx.font = "bold 50px sans-serif";
+        ctx.textAlign = 'left';
+        ctx.fillText('★', startRatingX, yCursor + 20);
+
+        // Draw Score Number
+        ctx.fillStyle = '#FFD000';
+        ctx.font = "900 92px 'Geist', 'Plus Jakarta Sans', sans-serif";
+        ctx.fillText(scoreStr, startRatingX + starW + 14, yCursor);
+
+        // Draw Denominator "/ 10.0"
+        ctx.fillStyle = '#94A3B8';
+        ctx.font = "bold 26px 'Geist', 'Plus Jakarta Sans', sans-serif";
+        ctx.fillText('/ 10.0', startRatingX + starW + 14 + scoreW + 12, yCursor + 52);
+
+        yCursor += ratingScoreRowH;
+
+        // Draw Verdict
+        yCursor += verdictGap;
+        ctx.fillStyle = '#00F0FF';
+        ctx.font = "900 20px 'Geist', 'Plus Jakarta Sans', sans-serif";
+        ctx.textAlign = 'center';
+        ctx.fillText(`★ ${getScoreVerdict(displayScore)} ★`, width / 2, yCursor);
+        yCursor += verdictH;
+
+        // D. Reviewer Row
+        if (hasReviewer) {
+          yCursor += reviewerGap;
+          const reviewerText = `Ulasan oleh ${reviewerName || 'Cinephile'}${reviewerRole ? ` (${reviewerRole})` : ''}`;
+          ctx.font = "bold 20px 'Geist', 'Plus Jakarta Sans', sans-serif";
+          const textW = ctx.measureText(reviewerText).width;
+
+          let avatarImg: HTMLImageElement | null = null;
+          if (rawAvatar) {
+            try {
+              avatarImg = await loadCanvasImage(rawAvatar);
+            } catch {
+              // fallback gracefully
+            }
+          }
+
+          if (avatarImg) {
+            const avatarSize = 40;
+            const gap = 12;
+            const rowW = avatarSize + gap + textW;
+            const startX = (width - rowW) / 2;
+            const centerY = yCursor + avatarSize / 2;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(startX + avatarSize / 2, centerY, avatarSize / 2, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.clip();
+            ctx.drawImage(avatarImg, startX, yCursor, avatarSize, avatarSize);
+            ctx.restore();
+
+            ctx.save();
+            ctx.strokeStyle = '#FF2E7E';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(startX + avatarSize / 2, centerY, avatarSize / 2, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.fillStyle = '#E2E8F0';
+            ctx.textAlign = 'left';
+            ctx.fillText(reviewerText, startX + avatarSize + gap, yCursor + (avatarSize - 20) / 2);
+          } else {
+            ctx.fillStyle = '#E2E8F0';
+            ctx.textAlign = 'center';
+            ctx.fillText(reviewerText, width / 2, yCursor + 8);
+          }
+
+          yCursor += reviewerHeight;
+        }
+
+        // E. Headline Quote
+        if (headlineLines.length > 0) {
+          yCursor += headlineGap;
+          ctx.font = headlineFont;
+          ctx.fillStyle = '#FFFFFF';
+          ctx.textAlign = 'center';
+          for (const line of headlineLines) {
+            ctx.fillText(line, width / 2, yCursor);
+            yCursor += headlineLineH;
+          }
+        }
+
+        // F. Review Excerpt
+        if (reviewLines.length > 0) {
+          yCursor += reviewGap;
+          ctx.font = reviewFont;
+          ctx.fillStyle = '#CBD5E1';
+          ctx.textAlign = 'center';
+          for (const line of reviewLines) {
+            ctx.fillText(line, width / 2, yCursor);
+            yCursor += reviewLineH;
+          }
+        }
+
+        // 5. Proportional Bottom Footer Line (safe-zone: ~90px from bottom edge)
+        const footerY = height - 90; // 1830px
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(sidePad, footerY - 35);
+        ctx.lineTo(width - sidePad, footerY - 35);
+        ctx.stroke();
+
+        ctx.fillStyle = '#FF2E7E';
+        ctx.font = "bold 20px 'Geist', 'Plus Jakarta Sans', sans-serif";
+        ctx.textAlign = 'left';
+        ctx.fillText('★ Ulas & Nilai Film di Sotoy Film', sidePad, footerY);
+
+        ctx.fillStyle = '#00F0FF';
+        ctx.font = "bold 20px 'Geist Mono', monospace";
+        ctx.textAlign = 'right';
+        ctx.fillText('sotoyfilm.my.id', width - sidePad, footerY);
+
+        // Export Canvas to PNG Blob
+        const blob = await new Promise<Blob | null>((resolve) => {
+          canvas.toBlob((b) => resolve(b), 'image/png');
         });
 
         if (!blob) {
-          throw new Error('Gagal mengonversi kartu menjadi gambar.');
+          throw new Error('Gagal mengonversi kanvas visual menjadi gambar.');
         }
 
         const fileName = `sotoyfilm-rating-story-${Date.now()}.png`;
 
-        // Check if Web Share API with file support is available (reliable on iOS Safari & mobile devices)
+        // Native share / download fallback
         const file = new File([blob], fileName, { type: 'image/png' });
         const canShareFiles =
           typeof navigator.share === 'function' &&
@@ -1286,40 +1691,6 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         id="social-share-modal"
         className="relative w-full max-w-lg bg-[#171A1F] border border-slate-700/80 rounded-3xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
       >
-        {/* Off-screen export container for exact 1080x1920 DOM capture */}
-        {isFilmRating && (
-          <div
-            aria-hidden="true"
-            style={{
-              position: 'fixed',
-              left: '-9999px',
-              top: 0,
-              width: '1080px',
-              height: '1920px',
-              overflow: 'hidden',
-              pointerEvents: 'none',
-              zIndex: -9999,
-            }}
-          >
-            <div
-              ref={storyExportRef}
-              style={{
-                width: '1080px',
-                height: '1920px',
-              }}
-            >
-              <FilmRatingStoryCard
-                data={data}
-                displayScore={displayScore}
-                posterUrl={posterUrl}
-                reviewerAvatarUrl={data.reviewerAvatar || data.authorAvatar}
-                posterUrlForExport={exportPosterUrl || posterUrl}
-                reviewerAvatarUrlForExport={exportAvatarUrl || data.reviewerAvatar || data.authorAvatar}
-              />
-            </div>
-          </div>
-        )}
-
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">
           <div className="flex items-center gap-2.5">
