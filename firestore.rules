@@ -282,6 +282,14 @@ service cloud.firestore {
         allow read: if true;
         allow write: if isSignedIn() && (isOwner(userId) || isAdmin() || isWriter());
       }
+
+      match /watchlist/{filmId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /savedArticles/{articleId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     match /follows/{followId} {

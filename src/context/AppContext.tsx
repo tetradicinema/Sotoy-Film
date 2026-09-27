@@ -379,35 +379,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isComposeBuzzOpen, setIsComposeBuzzOpen] = useState(false);
 
   // Firestore Realtime Collections States
-  const [watchlist, setWatchlist] = useState<string[]>(() => {
-    const saved = localStorage.getItem('sotoy_watchlist');
-    if (!saved) return [];
-    try {
-      const parsed = JSON.parse(saved);
-      // Clean legacy mock defaults if user never added them explicitly
-      if (Array.isArray(parsed) && parsed.length === 2 && parsed.includes('film-1') && parsed.includes('film-3')) {
-        localStorage.setItem('sotoy_watchlist', JSON.stringify([]));
-        return [];
-      }
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  });
-  const [savedArticles, setSavedArticles] = useState<string[]>(() => {
-    const saved = localStorage.getItem('sotoy_saved_articles');
-    if (!saved) return [];
-    try {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length === 2 && parsed.includes('art-1') && parsed.includes('art-3')) {
-        localStorage.setItem('sotoy_saved_articles', JSON.stringify([]));
-        return [];
-      }
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  });
+  const [watchlist, setWatchlist] = useState<string[]>([]);
+  const [savedArticles, setSavedArticles] = useState<string[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
   const [films, setFilms] = useState<FilmItem[]>([]);
   const removedMockFilmIdsRef = React.useRef<Set<string>>(new Set());
@@ -615,14 +588,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem('sotoy_is_logged_in', String(isLoggedIn));
   }, [isLoggedIn]);
-
-  useEffect(() => {
-    localStorage.setItem('sotoy_watchlist', JSON.stringify(watchlist));
-  }, [watchlist]);
-
-  useEffect(() => {
-    localStorage.setItem('sotoy_saved_articles', JSON.stringify(savedArticles));
-  }, [savedArticles]);
 
   const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToastType(type);
@@ -1111,23 +1076,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setFollowingIds(cleanFollowing);
             setFollowersIds(cleanFollowers);
 
-            // Clean legacy mock watchlist if user hasn't modified it
-            setWatchlist(prev => {
-              if (prev.length === 2 && prev.includes('film-1') && prev.includes('film-3')) {
-                localStorage.setItem('sotoy_watchlist', JSON.stringify([]));
-                return [];
-              }
-              return prev;
-            });
-
-            setSavedArticles(prev => {
-              if (prev.length === 2 && prev.includes('art-1') && prev.includes('art-3')) {
-                localStorage.setItem('sotoy_saved_articles', JSON.stringify([]));
-                return [];
-              }
-              return prev;
-            });
-
             setCurrentUser(data);
 
             // Check and perform periodic interest profile weight reduction (halving) on login if overdue (>= 7 days)
@@ -1193,8 +1141,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setFollowersIds([]);
             setWatchlist([]);
             setSavedArticles([]);
-            localStorage.setItem('sotoy_watchlist', JSON.stringify([]));
-            localStorage.setItem('sotoy_saved_articles', JSON.stringify([]));
           }
           setIsLoggedIn(true);
         } catch (err) {
@@ -1262,6 +1208,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       unsubFollowing();
       unsubFollowers();
+    };
+  }, [isLoggedIn, currentUser?.id]);
+
+  // Real-time listener for current user's watchlist and saved articles from Firestore subcollections
+  useEffect(() => {
+    if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') {
+      setWatchlist([]);
+      setSavedArticles([]);
+      return;
+    }
+
+    const watchlistCol = collection(db, 'users', currentUser.id, 'watchlist');
+    const unsubWatchlist = onSnapshot(
+      watchlistCol,
+      (snapshot) => {
+        const ids: string[] = [];
+        snapshot.forEach((docSnap) => {
+          ids.push(docSnap.id);
+        });
+        setWatchlist(ids);
+      },
+      (err) => {
+        console.warn('[Firestore] watchlist subscription notice:', err.message);
+      }
+    );
+
+    const savedArticlesCol = collection(db, 'users', currentUser.id, 'savedArticles');
+    const unsubSavedArticles = onSnapshot(
+      savedArticlesCol,
+      (snapshot) => {
+        const ids: string[] = [];
+        snapshot.forEach((docSnap) => {
+          ids.push(docSnap.id);
+        });
+        setSavedArticles(ids);
+      },
+      (err) => {
+        console.warn('[Firestore] savedArticles subscription notice:', err.message);
+      }
+    );
+
+    return () => {
+      unsubWatchlist();
+      unsubSavedArticles();
     };
   }, [isLoggedIn, currentUser?.id]);
 
@@ -1535,28 +1525,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [isLoggedIn, currentUser?.id, currentUser?.role, currentUser?.email]);
 
-  const toggleWatchlist = (filmId: string) => {
-    if (!isLoggedIn) {
+  const toggleWatchlist = async (filmId: string) => {
+    if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') {
       setLoginModalOpen(true);
       showToast('Silakan Log In terlebih dahulu untuk menyimpan ke Daftar Tonton!');
       return;
     }
-    setWatchlist(prev => {
-      const exists = prev.includes(filmId);
-      const updated = exists ? prev.filter(id => id !== filmId) : [...prev, filmId];
-      showToast(exists ? 'Dihapus dari Daftar Tonton (Watchlist)' : 'Ditambahkan ke Daftar Tonton (Watchlist)!');
-      
-      // Track interest signal when adding film to watchlist (+3 weight)
-      if (!exists) {
+
+    const exists = watchlist.includes(filmId);
+    const itemRef = doc(db, 'users', currentUser.id, 'watchlist', filmId);
+
+    // Optimistic UI state update
+    setWatchlist(prev => (exists ? prev.filter(id => id !== filmId) : [...prev, filmId]));
+    showToast(exists ? 'Dihapus dari Daftar Tonton (Watchlist)' : 'Ditambahkan ke Daftar Tonton (Watchlist)!');
+
+    try {
+      if (exists) {
+        await deleteDoc(itemRef);
+      } else {
+        await setDoc(itemRef, {
+          filmId,
+          addedAt: new Date().toISOString(),
+        });
+        // Track interest signal when adding film to watchlist (+3 weight)
         const film = films.find(f => f.id === filmId);
         if (film) {
           const topics = [...(film.genres || []), film.type, film.title];
           recordUserInterest(topics, 3);
         }
       }
-
-      return updated;
-    });
+    } catch (err) {
+      console.error('[Watchlist] Firestore error:', err);
+      // Revert optimistic update on error
+      setWatchlist(prev => (exists ? [...prev, filmId] : prev.filter(id => id !== filmId)));
+      showToast('Gagal memperbarui Daftar Tonton.', 'error');
+    }
   };
 
   const isFilmInWatchlist = (filmId: string) => {
@@ -1597,18 +1600,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return savedBuzzIds.includes(buzzId);
   };
 
-  const toggleSaveArticle = (articleId: string) => {
-    if (!isLoggedIn) {
+  const toggleSaveArticle = async (articleId: string) => {
+    if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') {
       setLoginModalOpen(true);
       showToast('Silakan Log In terlebih dahulu untuk menyimpan artikel ke Perpustakaan!');
       return;
     }
-    setSavedArticles(prev => {
-      const exists = prev.includes(articleId);
-      const updated = exists ? prev.filter(id => id !== articleId) : [...prev, articleId];
-      showToast(exists ? 'Artikel dihapus dari Perpustakaan!' : 'Artikel berhasil disimpan ke Perpustakaan!');
-      return updated;
-    });
+
+    const exists = savedArticles.includes(articleId);
+    const itemRef = doc(db, 'users', currentUser.id, 'savedArticles', articleId);
+
+    // Optimistic UI state update
+    setSavedArticles(prev => (exists ? prev.filter(id => id !== articleId) : [...prev, articleId]));
+    showToast(exists ? 'Artikel dihapus dari Perpustakaan!' : 'Artikel berhasil disimpan ke Perpustakaan!');
+
+    try {
+      if (exists) {
+        await deleteDoc(itemRef);
+      } else {
+        await setDoc(itemRef, {
+          articleId,
+          addedAt: new Date().toISOString(),
+        });
+      }
+    } catch (err) {
+      console.error('[SavedArticles] Firestore error:', err);
+      // Revert optimistic update on error
+      setSavedArticles(prev => (exists ? [...prev, articleId] : prev.filter(id => id !== articleId)));
+      showToast('Gagal memperbarui Perpustakaan.', 'error');
+    }
   };
 
   const isArticleSaved = (articleId: string) => {
@@ -1965,8 +1985,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setFollowersIds([]);
           setWatchlist([]);
           setSavedArticles([]);
-          localStorage.setItem('sotoy_watchlist', JSON.stringify([]));
-          localStorage.setItem('sotoy_saved_articles', JSON.stringify([]));
           localStorage.setItem('sotoy_following_ids', JSON.stringify([]));
           localStorage.setItem('sotoy_followers_ids', JSON.stringify([]));
           setCurrentView('onboarding');
@@ -2004,8 +2022,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setSavedArticles([]);
       localStorage.setItem('sotoy_following_ids', JSON.stringify([]));
       localStorage.setItem('sotoy_followers_ids', JSON.stringify([]));
-      localStorage.setItem('sotoy_watchlist', JSON.stringify([]));
-      localStorage.setItem('sotoy_saved_articles', JSON.stringify([]));
       showToast('Sampai jumpa lagi, Cinephile! 👋');
       navigateTo('home');
       setLoginModalOpen(false);

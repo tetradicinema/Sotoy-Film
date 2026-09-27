@@ -223,9 +223,37 @@
         "removedAt": { "type": "string" }
       },
       "required": ["id", "removedAt"]
+    },
+    "WatchlistItem": {
+      "title": "WatchlistItem",
+      "description": "User's saved film item in their personal watchlist",
+      "type": "object",
+      "properties": {
+        "filmId": { "type": "string" },
+        "addedAt": { "type": "string" }
+      },
+      "required": ["addedAt"]
+    },
+    "SavedArticleItem": {
+      "title": "SavedArticleItem",
+      "description": "User's saved article item in their personal library",
+      "type": "object",
+      "properties": {
+        "articleId": { "type": "string" },
+        "addedAt": { "type": "string" }
+      },
+      "required": ["addedAt"]
     }
   },
   "firestore": {
+    "/users/{userId}/watchlist/{filmId}": {
+      "schema": "WatchlistItem",
+      "description": "Personal watchlist of films for a specific user"
+    },
+    "/users/{userId}/savedArticles/{articleId}": {
+      "schema": "SavedArticleItem",
+      "description": "Personal saved library of articles for a specific user"
+    },
     "/removedMockFilms/{filmId}": {
       "schema": "RemovedMockFilm",
       "description": "Markers for mock films that have been removed from the global catalog"
