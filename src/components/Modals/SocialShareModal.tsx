@@ -99,27 +99,27 @@ const urlToDataUrl = async (url: string): Promise<string> => {
   }
 };
 
-// Helper to wait until all images within a DOM container are completely loaded and decoded before capturing
+// Helper to wait until all images within a DOM container are completely loaded before capturing
 const waitForImages = async (container: HTMLElement): Promise<void> => {
-  const imgs = Array.from(container.querySelectorAll('img'));
+  let imgs = Array.from(container.querySelectorAll('img'));
+  if (imgs.length === 0) {
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    imgs = Array.from(container.querySelectorAll('img'));
+  }
+
   await Promise.all(
     imgs.map((img) => {
-      if (img.complete && img.naturalWidth > 0) {
-        return img.decode ? img.decode().catch(() => {}) : Promise.resolve();
+      if (img.complete) {
+        return Promise.resolve();
       }
       return new Promise<void>((resolve) => {
         const onDone = () => {
           img.removeEventListener('load', onDone);
           img.removeEventListener('error', onDone);
-          if (img.decode) {
-            img.decode().catch(() => {}).finally(() => resolve());
-          } else {
-            resolve();
-          }
+          resolve();
         };
         img.addEventListener('load', onDone);
         img.addEventListener('error', onDone);
-        setTimeout(onDone, 3000);
       });
     })
   );
@@ -139,6 +139,8 @@ interface FilmRatingStoryCardProps {
   displayScore: number;
   posterUrl?: string;
   reviewerAvatarUrl?: string;
+  posterUrlForExport?: string;
+  reviewerAvatarUrlForExport?: string;
 }
 
 export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
@@ -146,11 +148,18 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
   displayScore,
   posterUrl,
   reviewerAvatarUrl,
+  posterUrlForExport,
+  reviewerAvatarUrlForExport,
 }) => {
+  const effectivePoster = posterUrlForExport !== undefined ? posterUrlForExport : posterUrl;
+  const effectiveAvatar =
+    reviewerAvatarUrlForExport !== undefined
+      ? reviewerAvatarUrlForExport
+      : reviewerAvatarUrl || data.reviewerAvatar || data.authorAvatar;
+
   const genresStr = (data.filmGenres || []).slice(0, 3).join(' • ');
   const metaStr = [data.filmYear, genresStr].filter(Boolean).join(' | ');
   const reviewerName = data.reviewerName || data.authorName;
-  const reviewerAvatar = reviewerAvatarUrl || data.reviewerAvatar || data.authorAvatar;
   const reviewerRole = data.reviewerRole;
 
   return (
@@ -159,10 +168,10 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
       style={{ width: '1080px', height: '1920px' }}
     >
       {/* 1. Full-Bleed Film Poster (Top 62% of card, edge-to-edge x=0, y=0) */}
-      {posterUrl && (
+      {effectivePoster && (
         <div className="absolute inset-x-0 top-0 h-[62%] overflow-hidden pointer-events-none">
           <img
-            src={posterUrl}
+            src={effectivePoster}
             alt={data.filmTitle || data.title}
             className="w-full h-full object-cover"
             crossOrigin="anonymous"
@@ -187,7 +196,6 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
           src="/sotoy-logo-full.png"
           alt="Sotoy Film"
           className="h-[75px] w-auto object-contain drop-shadow-lg"
-          crossOrigin="anonymous"
         />
         <div className="px-5 py-2 rounded-full font-black text-xs tracking-wider text-[#FF2E7E] bg-[#0E1013]/90 border border-[#FF2E7E]/40 backdrop-blur-md shadow-lg">
           SKOR & ULASAN
@@ -223,11 +231,11 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
         </div>
 
         {/* Reviewer Row */}
-        {(reviewerName || reviewerAvatar) && (
+        {(reviewerName || effectiveAvatar) && (
           <div className="flex items-center justify-center gap-3 pt-0.5">
-            {reviewerAvatar ? (
+            {effectiveAvatar ? (
               <img
-                src={reviewerAvatar}
+                src={effectiveAvatar}
                 alt={reviewerName || 'Reviewer'}
                 className="w-10 h-10 rounded-full object-cover border-2 border-[#FF2E7E] shadow-md"
                 crossOrigin="anonymous"
@@ -483,7 +491,8 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           setExportAvatarUrl(currentExportAvatar);
         }
 
-        // Give React & the browser layout two animation frames to commit the updated export container DOM
+        // Give React and browser layout time to commit the updated export container DOM
+        await new Promise((resolve) => setTimeout(resolve, 80));
         await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
         if (!storyExportRef.current) {
@@ -1302,8 +1311,10 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
               <FilmRatingStoryCard
                 data={data}
                 displayScore={displayScore}
-                posterUrl={exportPosterUrl || posterUrl}
-                reviewerAvatarUrl={exportAvatarUrl || data.reviewerAvatar || data.authorAvatar}
+                posterUrl={posterUrl}
+                reviewerAvatarUrl={data.reviewerAvatar || data.authorAvatar}
+                posterUrlForExport={exportPosterUrl || posterUrl}
+                reviewerAvatarUrlForExport={exportAvatarUrl || data.reviewerAvatar || data.authorAvatar}
               />
             </div>
           </div>
