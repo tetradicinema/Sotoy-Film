@@ -47,6 +47,15 @@ service cloud.firestore {
       );
     }
 
+    function isVerifiedUser() {
+      return isSignedIn() && (
+        request.auth.token.email_verified == true ||
+        isAdmin() ||
+        isWriter() ||
+        isCritic()
+      );
+    }
+
     function isSuspended() {
       return isSignedIn() && 
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
@@ -261,10 +270,12 @@ service cloud.firestore {
     // Rules for each collection
     match /users/{userId} {
       allow read: if true;
-      allow create: if isSignedIn() && isOwner(userId) && !incoming().keys().hasAny(['email']) && isValidUser(incoming());
+      allow create: if isSignedIn() && isOwner(userId) && !incoming().keys().hasAny(['email']) && isValidUser(incoming()) && (incoming().role == 'warga_sotoy' || isAdmin());
       allow update: if isSignedIn() && !incoming().keys().hasAny(['email']) && (
         // Document Owner updating profile / interests / following
         (isOwner(userId) && isValidUser(incoming()) && (incoming().role == existing().role) && (
+          !incoming().diff(existing()).affectedKeys().hasAny(['followers', 'followersCount', 'following', 'followingCount']) || isVerifiedUser()
+        ) && (
           !('followersCount' in incoming().diff(existing()).affectedKeys()) || isValidFollowersCountDelta()
         ) && (
           !('followingCount' in incoming().diff(existing()).affectedKeys()) || isValidFollowingCountDelta()
@@ -274,7 +285,7 @@ service cloud.firestore {
           !('followers' in incoming().diff(existing()).affectedKeys()) || isValidFollowersArrayUpdate()
         )) ||
         // Non-Owner (e.g. User A) updating User B's followersCount or followers array
-        (!isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['followersCount', 'followers']) && (
+        (!isOwner(userId) && isVerifiedUser() && incoming().diff(existing()).affectedKeys().hasOnly(['followersCount', 'followers']) && (
           !('followersCount' in incoming().diff(existing()).affectedKeys()) || isValidFollowersCountDelta()
         ) && (
           !('followers' in incoming().diff(existing()).affectedKeys()) || isValidFollowersArrayUpdate()
@@ -303,7 +314,7 @@ service cloud.firestore {
 
     match /follows/{followId} {
       allow read: if true;
-      allow create: if isSignedIn() &&
+      allow create: if isSignedIn() && isVerifiedUser() &&
         followId == incoming().followerId + '_' + incoming().followingId &&
         incoming().followerId != incoming().followingId &&
         (incoming().followerId == request.auth.uid || isAdmin());
@@ -359,10 +370,10 @@ service cloud.firestore {
 
     match /buzz/{buzzId} {
       allow read: if true;
-      allow create: if isSignedIn() && !isSuspended() && isValidId(buzzId) && isValidBuzzPost(incoming());
+      allow create: if isSignedIn() && isVerifiedUser() && !isSuspended() && isValidId(buzzId) && isValidBuzzPost(incoming());
       allow update: if isSignedIn() && (
         (!isSuspended() && isOwner(existing().author.id) && isValidBuzzPost(incoming())) ||
-        (!isSuspended() && incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'reactions', 'reactionsByUser', 'replies', 'repliesCount', 'upvotes', 'downvotes', 'repostsCount', 'repostedByUsers']) && (
+        (!isSuspended() && isVerifiedUser() && incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'reactions', 'reactionsByUser', 'replies', 'repliesCount', 'upvotes', 'downvotes', 'repostsCount', 'repostedByUsers']) && (
           !('reactionsByUser' in incoming().diff(existing()).affectedKeys()) || isValidReactionsByUserUpdate()
         ) && (
           !('reactions' in incoming().diff(existing()).affectedKeys()) || isValidReactionsAggregateUpdate()
@@ -383,10 +394,10 @@ service cloud.firestore {
 
     match /ratings/{ratingId} {
       allow read: if true;
-      allow create: if isSignedIn() && !isSuspended() && isValidId(ratingId) && isValidUserRating(incoming());
+      allow create: if isSignedIn() && isVerifiedUser() && !isSuspended() && isValidId(ratingId) && isValidUserRating(incoming());
       allow update: if isSignedIn() && (
-        (!isSuspended() && isOwner(existing().userId) && isValidUserRating(incoming())) ||
-        (!isSuspended() && incoming().diff(existing()).affectedKeys().hasOnly(['likes']) && isValidLikesDelta()) ||
+        (!isSuspended() && isOwner(existing().userId) && isVerifiedUser() && isValidUserRating(incoming())) ||
+        (!isSuspended() && isVerifiedUser() && incoming().diff(existing()).affectedKeys().hasOnly(['likes']) && isValidLikesDelta()) ||
         (isCritic() && isOwner(existing().userId) && !isSuspended())
       );
       allow delete: if isSignedIn() && (isOwner(existing().userId) || isAdmin() || (isCritic() && isOwner(existing().userId)));
@@ -394,7 +405,7 @@ service cloud.firestore {
 
     match /criticSubmissions/{submissionId} {
       allow read: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin() || isWriter());
-      allow create: if isSignedIn() && isValidId(submissionId) && isValidCriticSubmission(incoming()) && incoming().status == 'pending';
+      allow create: if isSignedIn() && isVerifiedUser() && isValidId(submissionId) && isValidCriticSubmission(incoming()) && incoming().status == 'pending';
       allow update: if isSignedIn() && isValidId(submissionId) && (
         (isOwner(existing().userId) && isValidCriticSubmission(incoming()) && incoming().status == existing().status) ||
         isAdmin() ||
@@ -405,13 +416,13 @@ service cloud.firestore {
 
     match /reports/{reportId} {
       allow read: if isAdmin() || isWriter();
-      allow create: if isSignedIn();
+      allow create: if isSignedIn() && isVerifiedUser();
       allow update, delete: if isAdmin() || isWriter();
     }
 
     match /notifications/{notificationId} {
       allow read, list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin() || isWriter());
-      allow create: if isSignedIn() && !isSuspended() && isValidId(notificationId) && isValidNotification(incoming()) && (incoming().sender.id == request.auth.uid || isAdmin() || isWriter());
+      allow create: if isSignedIn() && isVerifiedUser() && !isSuspended() && isValidId(notificationId) && isValidNotification(incoming()) && (incoming().sender.id == request.auth.uid || isAdmin() || isWriter());
       allow update: if isSignedIn() && isValidId(notificationId) && (
         (resource.data.userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['isRead'])) ||
         isAdmin() ||

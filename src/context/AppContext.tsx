@@ -125,7 +125,8 @@ import {
   signInWithEmailAndPassword, 
   signOut,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  sendEmailVerification
 } from 'firebase/auth';
 import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { fetchTmdbDetails, mapTmdbDetailsToFilm, TmdbSearchResultItem } from '../utils/tmdbHelper';
@@ -139,6 +140,34 @@ export const WRITER_UIDS = [
   '0PCmaBvJrzeaQgpf3sSTC4mnsh02', // User ID Penulis Sotoy
 ];
 export const CRITIC_UIDS = ['Jm0raI2h47TJG9ZtZAR1HLVcjSj2'];
+
+export const EXEMPT_VERIFICATION_UIDS = [
+  'CsG2CY2TaIZmG7yuPfzAxmRYrlY2',
+  'QkNGf1ZfhsMyUEk90a6Iz8ZplZS2',
+  'I34eqzOmvsSdS2Rf7jpfxw1ZKeu1',
+  '0PCmaBvJrzeaQgpf3sSTC4mnsh02',
+  'Jm0raI2h47TJG9ZtZAR1HLVcjSj2',
+];
+
+export const computeIsEmailVerified = (user?: Partial<User> | null, fbUserParam?: any): boolean => {
+  const fbUser = fbUserParam ?? auth.currentUser;
+  if (!fbUser) return false;
+  if (fbUser.emailVerified === true) return true;
+
+  // Sign-in provider is not 'password' (e.g. Google sign-in)
+  const isPasswordProvider = fbUser.providerData?.some((p: any) => p.providerId === 'password') ?? false;
+  if (!isPasswordProvider && (fbUser.providerData?.length > 0 || fbUser.isAnonymous)) return true;
+
+  // Elevated user role
+  const role = user?.role;
+  if (role === 'admin' || role === 'penulis_sotoy' || role === 'si_paling_sotoy') return true;
+
+  // Hardcoded exempt UIDs
+  const uid = user?.id || fbUser.uid;
+  if (EXEMPT_VERIFICATION_UIDS.includes(uid)) return true;
+
+  return false;
+};
 
 export const isUserAdmin = (user?: Partial<User> | null, fbUid?: string, fbEmail?: string, emailVerified?: boolean): boolean => {
   if (user?.role === 'admin') return true;
@@ -200,6 +229,9 @@ interface AppContextType {
   isAdmin: boolean;
   isWriter: boolean;
   isCritic: boolean;
+  isEmailVerified: boolean;
+  resendVerificationEmail: () => Promise<boolean>;
+  refreshEmailVerification: () => Promise<boolean>;
   loginModalOpen: boolean;
   setLoginModalOpen: (open: boolean) => void;
   isComposeBuzzOpen: boolean;
@@ -447,6 +479,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [followingIds, setFollowingIds] = useState<string[]>([]);
   const [followersIds, setFollowersIds] = useState<string[]>([]);
+  const [isEmailVerified, setIsEmailVerified] = useState<boolean>(true);
 
   // Saved buzz bookmark state persisted in Firestore subcollection (users/{userId}/savedBuzz)
   const [savedBuzzIds, setSavedBuzzIds] = useState<string[]>([]);
@@ -1127,6 +1160,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             // Followers and Following are populated in real-time exclusively via the Firestore 'follows' listener
 
             setCurrentUser(data);
+            setIsEmailVerified(computeIsEmailVerified(data, fbUser));
 
             // Check and perform periodic interest profile weight reduction (halving) on login if overdue (>= 7 days)
             const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -1195,6 +1229,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               } catch (e) {}
             }
             setCurrentUser({ ...defaultUser, email: fbUser.email || '' });
+            setIsEmailVerified(computeIsEmailVerified(defaultUser, fbUser));
             setFollowingIds([]);
             setFollowersIds([]);
             setWatchlist([]);
@@ -1208,6 +1243,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // Visitor / Not logged in
         setIsLoggedIn(false);
         setCurrentUser(GUEST_USER);
+        setIsEmailVerified(true);
         setFollowingIds([]);
         setFollowersIds([]);
         setWatchlist([]);
@@ -2009,6 +2045,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (userCredential.user) {
         const uid = userCredential.user.uid;
         
+        // Send email verification inside try/catch without blocking account creation
+        try {
+          await sendEmailVerification(userCredential.user, {
+            url: 'https://www.sotoyfilm.my.id/',
+          });
+          showToast('Email verifikasi telah dikirim! Cek inbox atau folder spam.');
+        } catch (emailErr: any) {
+          console.error('[Auth] Failed to send verification email at sign-up:', emailErr);
+          showToast('Akun dibuat, namun gagal mengirim email verifikasi. Kamu dapat mengirim ulang nanti.');
+        }
+
         const isAdminUID = isUserAdmin(null, uid, email);
         const isWriterUID = !isAdminUID && isUserWriter(null, uid);
         const isCriticUID = !isAdminUID && !isWriterUID && isUserCritic(null, uid);
@@ -2052,6 +2099,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         } catch (e) {}
 
         setCurrentUser({ ...newUser, email: email.trim() });
+        setIsEmailVerified(computeIsEmailVerified(newUser, userCredential.user));
         setIsLoggedIn(true);
         localStorage.setItem('sotoy_is_logged_in', 'true');
         showToast('Akun berhasil dibuat! Mari lengkapi profilmu. 🎬');
@@ -2105,7 +2153,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         } else {
           // First-time signup with Google! Clean, fresh new account
-          const isAdminRole = isUserAdmin(null, uid, userCredential.user.email || undefined);
+          const isAdminRole = isUserAdmin(null, uid, userCredential.user.email || undefined, userCredential.user.emailVerified);
           const isWriterRole = !isAdminRole && isUserWriter(null, uid);
           const isCriticRole = !isAdminRole && !isWriterRole && isUserCritic(null, uid);
           
@@ -2183,6 +2231,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsLoggedIn(false);
       localStorage.setItem('sotoy_is_logged_in', 'false');
       setCurrentUser(GUEST_USER);
+      setIsEmailVerified(true);
       setFollowingIds([]);
       setFollowersIds([]);
       setWatchlist([]);
@@ -2201,12 +2250,82 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Pengaturan pengguna berhasil disimpan!');
   };
 
-  const toggleFollowUser = async (targetUserId: string) => {
-    if (!isLoggedIn) {
+  // Centralized verification check required for interactive actions
+  const requireVerified = (): boolean => {
+    if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') {
       setLoginModalOpen(true);
-      showToast('Silakan login terlebih dahulu untuk mengikuti sesama cinephile!');
-      return;
+      showToast('Silakan masuk terlebih dahulu.');
+      return false;
     }
+    if (!computeIsEmailVerified(currentUser)) {
+      showToast('Verifikasi email dulu untuk melakukan ini');
+      return false;
+    }
+    return true;
+  };
+
+  const resendVerificationEmail = async (): Promise<boolean> => {
+    try {
+      if (!auth.currentUser) {
+        showToast('Silakan masuk terlebih dahulu.');
+        return false;
+      }
+      await sendEmailVerification(auth.currentUser, {
+        url: 'https://www.sotoyfilm.my.id/',
+      });
+      showToast('Email verifikasi telah dikirim! Cek inbox atau folder spam.');
+      return true;
+    } catch (err: any) {
+      console.error('[Auth] Resend verification email error:', err);
+      if (err.code === 'auth/too-many-requests') {
+        showToast('Terlalu banyak permintaan kirim ulang. Mohon tunggu beberapa saat sebelum mencoba lagi.');
+      } else {
+        showToast('Gagal mengirim ulang email verifikasi. Coba beberapa saat lagi.');
+      }
+      return false;
+    }
+  };
+
+  const refreshEmailVerification = async (): Promise<boolean> => {
+    try {
+      if (!auth.currentUser) return false;
+      await auth.currentUser.reload();
+      await auth.currentUser.getIdToken(true);
+      const verified = computeIsEmailVerified(currentUser);
+      setIsEmailVerified(verified);
+      if (verified) {
+        showToast('Email berhasil diverifikasi! Selamat datang penuh di Sotoy Film 🎉');
+      } else {
+        showToast('Email belum terverifikasi. Silakan cek inbox email kamu dan klik link konfirmasi.');
+      }
+      return verified;
+    } catch (err: any) {
+      console.error('[Auth] Refresh email verification error:', err);
+      showToast('Gagal memeriksa status verifikasi email.');
+      return false;
+    }
+  };
+
+  // Auto-refresh verification state when user returns / tab regains focus
+  useEffect(() => {
+    const handleFocus = async () => {
+      if (isLoggedIn && auth.currentUser && !computeIsEmailVerified(currentUser)) {
+        try {
+          await auth.currentUser.reload();
+          await auth.currentUser.getIdToken(true);
+          const verified = computeIsEmailVerified(currentUser);
+          setIsEmailVerified(verified);
+        } catch (e) {
+          // ignore background reload failure
+        }
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [isLoggedIn, currentUser]);
+
+  const toggleFollowUser = async (targetUserId: string) => {
+    if (!requireVerified()) return;
 
     if (targetUserId === currentUser.id) {
       showToast('Kamu tidak bisa mengikuti akunmu sendiri.');
@@ -2664,6 +2783,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     taggedArticleId?: string,
     imageDataUrl?: string
   ) => {
+    if (!requireVerified()) return;
     if (!content.trim()) return;
 
     let taggedFilm: BuzzPost['taggedFilm'] = undefined;
@@ -2771,11 +2891,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Quick Reactions for Buzz Post in Firestore (Per-user scoped with aggregate counts)
   const reactToBuzzPost = async (buzzId: string, reaction: ReactionType) => {
-    if (!isLoggedIn) {
-      setLoginModalOpen(true);
-      showToast('Silakan masuk terlebih dahulu untuk memberikan reaksi!');
-      return;
-    }
+    if (!requireVerified()) return;
 
     const post = rawBuzzList.find(b => b.id === buzzId) || buzzList.find(b => b.id === buzzId);
     if (!post) return;
@@ -2881,11 +2997,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Toggle Repost on a Buzz Post
   const toggleRepostBuzzPost = async (buzzId: string): Promise<boolean> => {
-    if (!isLoggedIn || !currentUser.id || currentUser.id === GUEST_USER.id) {
-      setLoginModalOpen(true);
-      showToast('Silakan masuk terlebih dahulu untuk me-repost!');
-      return false;
-    }
+    if (!requireVerified()) return false;
 
     const post = rawBuzzList.find(b => b.id === buzzId) || buzzList.find(b => b.id === buzzId);
     if (!post) return false;
@@ -2968,11 +3080,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     replyToUser?: { id: string; name: string; handle: string }
   ) => {
     if (!content.trim()) return;
-    if (!isLoggedIn) {
-      setLoginModalOpen(true);
-      showToast('Silakan masuk terlebih dahulu untuk membalas diskusi buzz!');
-      return;
-    }
+    if (!requireVerified()) return;
 
     const post = rawBuzzList.find(b => b.id === buzzId) || buzzList.find(b => b.id === buzzId);
     if (!post) return;
@@ -3105,6 +3213,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Submit Rating & Review to Firestore
   const addFilmRating = async (filmId: string, score: number, headline: string, reviewText: string) => {
+    if (!requireVerified()) return;
     const ratingId = `rate-${Date.now()}`;
     const newRating: UserRating = {
       id: ratingId,
@@ -3189,6 +3298,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Submit Critic Application to Firestore
   const addCriticSubmission = async (submission: Omit<CriticSubmission, 'id' | 'status' | 'date'>): Promise<boolean> => {
+    if (!requireVerified()) return false;
     const submissionId = `sub-${Date.now()}`;
     const created: CriticSubmission = {
       ...submission,
@@ -4225,6 +4335,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isAdmin,
         isWriter,
         isCritic,
+        isEmailVerified,
+        resendVerificationEmail,
+        refreshEmailVerification,
         loginModalOpen,
         setLoginModalOpen,
         isComposeBuzzOpen,

@@ -32,6 +32,7 @@ import { LoginModal } from './components/Modals/LoginModal';
 import { SocialShareModal } from './components/Modals/SocialShareModal';
 import { ComposeBuzzModal } from './components/Modals/ComposeBuzzModal';
 import { SuspendedAccountModal } from './components/Modals/SuspendedAccountModal';
+import { EmailVerificationBanner } from './components/Common/EmailVerificationBanner';
 import { MobileBottomNav } from './components/Navigation/MobileBottomNav';
 import { Sparkles, CheckCircle, X } from 'lucide-react';
 
@@ -109,6 +110,9 @@ const AppContent: React.FC = () => {
 
       {/* Suspended Account Blocking Modal & Appeal Form */}
       <SuspendedAccountModal />
+
+      {/* Persistent Email Verification Banner for unverified email/password accounts */}
+      <EmailVerificationBanner />
 
       {/* Main Navigation Bar */}
       {!isOnboarding && <Navbar />}
