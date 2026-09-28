@@ -32,6 +32,8 @@ export interface BuzzCardDeps {
   loadImage: (src: string) => Promise<CanvasImageSource & { width: number; height: number }>;
   /** Defaults to document.createElement('canvas'). Overridable for tests. */
   createCanvas?: (w: number, h: number) => any;
+  /** Optional callback fired when attached photo (input.image) was provided but failed to load */
+  onPhotoLoadFailed?: () => void;
 }
 
 export const BUZZ_CARD_W = 1080;
@@ -186,22 +188,34 @@ export async function renderBuzzStoryCanvas(input: BuzzCardInput, deps: BuzzCard
       })();
   const ctx: CanvasRenderingContext2D = canvas.getContext('2d');
 
-  // ---- Load all images up front (each failure is silently skipped) ----
-  const safeLoad = async (src?: string) => {
+  // ---- Load all images up front (skip on failure for avatar/poster/logo, flag for attached photo) ----
+  const safeLoad = async (src?: string, isAttachedPhoto: boolean = false) => {
     if (!src) return null;
     try {
       return await deps.loadImage(src);
-    } catch {
+    } catch (err) {
+      console.warn(`[buzzStoryCard] Failed to load ${isAttachedPhoto ? 'buzz attached photo' : 'asset'}: "${src}"`, err);
       return null;
     }
   };
   const [avatarImg, photoImg, posterImg, logoImg] = await Promise.all([
-    safeLoad(input.authorAvatar),
-    safeLoad(input.image),
-    safeLoad(input.film?.poster),
-    safeLoad(encodeURI('/logo-black padding-sotoy film.PNG')),
+    safeLoad(input.authorAvatar, false),
+    safeLoad(input.image, true),
+    safeLoad(input.film?.poster, false),
+    safeLoad(encodeURI('/logo-black padding-sotoy film.PNG'), false),
   ]);
   const hasPhoto = !!photoImg;
+  const photoFailed = Boolean(input.image && !photoImg);
+  if (photoFailed && deps.onPhotoLoadFailed) {
+    try {
+      deps.onPhotoLoadFailed();
+    } catch (cbErr) {
+      console.warn('[buzzStoryCard] onPhotoLoadFailed callback error:', cbErr);
+    }
+  }
+  if (canvas) {
+    (canvas as any).photoFailed = photoFailed;
+  }
   const hasFilm = !!input.film && !!input.film.title;
 
   // ---- Layout constants ----

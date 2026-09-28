@@ -454,14 +454,20 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
 
   // Helper to load image for canvas without CORS taint issues
   const loadCanvasImage = async (src: string): Promise<HTMLImageElement> => {
-    if (!src) throw new Error('Empty image source');
+    if (!src) {
+      console.warn('[loadCanvasImage] Empty image source passed to canvas loader');
+      throw new Error('Empty image source');
+    }
 
     // 1. If it's already a data URL or blob URL, load directly
     if (src.startsWith('data:') || src.startsWith('blob:')) {
       return new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => resolve(img);
-        img.onerror = () => reject(new Error('Gagal memuat data/blob URL'));
+        img.onerror = (e) => {
+          console.warn(`[loadCanvasImage] Failed to load data/blob URL (${src.slice(0, 48)}...):`, e);
+          reject(new Error('Gagal memuat data/blob URL'));
+        };
         img.src = src;
       });
     }
@@ -472,47 +478,97 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         const img = new Image();
         img.crossOrigin = 'anonymous';
         img.onload = () => resolve(img);
-        img.onerror = () => reject(new Error(`Gagal memuat gambar lokal: ${src}`));
+        img.onerror = (e) => {
+          console.warn(`[loadCanvasImage] Failed to load local asset: "${src}"`, e);
+          reject(new Error(`Gagal memuat gambar lokal: ${src}`));
+        };
         img.src = src;
       });
     }
 
-    // 3. Try direct fetch as blob with CORS mode
+    // Determine host for remote URLs
+    let isFirebaseOrGoogleStorage = false;
     try {
-      const response = await fetch(src, { mode: 'cors' });
-      if (response.ok) {
-        const blob = await response.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        return await new Promise((resolve, reject) => {
-          const img = new Image();
-          img.onload = () => resolve(img);
-          img.onerror = () => reject(new Error('Gagal memuat blob'));
-          img.src = objectUrl;
-        });
-      }
+      const parsed = new URL(src, typeof window !== 'undefined' ? window.location.href : 'https://www.sotoyfilm.my.id');
+      const host = parsed.hostname.toLowerCase();
+      isFirebaseOrGoogleStorage = host === 'firebasestorage.googleapis.com' || host === 'storage.googleapis.com';
     } catch {
-      // Fall through to server image proxy
+      // Ignore URL parse error and proceed with standard fallbacks
     }
 
-    // 4. Try backend image-proxy endpoint (always returns Access-Control-Allow-Origin: *)
-    try {
-      const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(src)}`;
-      const response = await fetch(proxyUrl);
-      if (response.ok) {
-        const blob = await response.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        return await new Promise((resolve, reject) => {
-          const img = new Image();
-          img.onload = () => resolve(img);
-          img.onerror = () => reject(new Error('Gagal memuat proxy blob'));
-          img.src = objectUrl;
-        });
+    // 3. For Firebase Storage / Google Storage, try server image-proxy FIRST (avoids known CORS rejections)
+    if (isFirebaseOrGoogleStorage) {
+      try {
+        const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(src)}`;
+        const response = await fetch(proxyUrl);
+        if (response.ok) {
+          const blob = await response.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          return await new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = (e) => {
+              console.warn(`[loadCanvasImage] Failed to decode image from proxy blob for "${src}":`, e);
+              reject(new Error('Gagal memuat proxy blob'));
+            };
+            img.src = objectUrl;
+          });
+        } else {
+          console.warn(`[loadCanvasImage] Image proxy returned status ${response.status} for "${src}"`);
+        }
+      } catch (proxyErr) {
+        console.warn(`[loadCanvasImage] Proxy fetch failed for "${src}":`, proxyErr);
       }
-    } catch {
-      // Fall through to crossOrigin image
     }
 
-    // 5. Try fetching as Blob with cache-buster
+    // 4. Try direct fetch as blob with CORS mode (for non-Firebase hosts)
+    if (!isFirebaseOrGoogleStorage) {
+      try {
+        const response = await fetch(src, { mode: 'cors' });
+        if (response.ok) {
+          const blob = await response.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          return await new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = (e) => {
+              console.warn(`[loadCanvasImage] Failed to decode CORS blob for "${src}":`, e);
+              reject(new Error('Gagal memuat blob'));
+            };
+            img.src = objectUrl;
+          });
+        } else {
+          console.warn(`[loadCanvasImage] Direct fetch returned status ${response.status} for "${src}"`);
+        }
+      } catch (corsErr) {
+        console.warn(`[loadCanvasImage] Direct CORS fetch failed for "${src}":`, corsErr);
+      }
+
+      // 5. Try backend image-proxy endpoint as secondary fallback for non-Firebase hosts
+      try {
+        const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(src)}`;
+        const response = await fetch(proxyUrl);
+        if (response.ok) {
+          const blob = await response.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          return await new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = (e) => {
+              console.warn(`[loadCanvasImage] Failed to decode fallback proxy blob for "${src}":`, e);
+              reject(new Error('Gagal memuat proxy blob'));
+            };
+            img.src = objectUrl;
+          });
+        } else {
+          console.warn(`[loadCanvasImage] Fallback proxy returned status ${response.status} for "${src}"`);
+        }
+      } catch (proxyErr) {
+        console.warn(`[loadCanvasImage] Fallback proxy fetch failed for "${src}":`, proxyErr);
+      }
+    }
+
+    // 6. Try fetching as Blob with cache-buster
     try {
       const corsUrl = `${src}${src.includes('?') ? '&' : '?'}cors_cb=${Date.now()}`;
       const response = await fetch(corsUrl, { mode: 'cors' });
@@ -522,20 +578,26 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         return await new Promise((resolve, reject) => {
           const img = new Image();
           img.onload = () => resolve(img);
-          img.onerror = () => reject(new Error('Gagal memuat blob'));
+          img.onerror = (e) => {
+            console.warn(`[loadCanvasImage] Failed to decode cache-busted blob for "${src}":`, e);
+            reject(new Error('Gagal memuat blob'));
+          };
           img.src = objectUrl;
         });
       }
-    } catch {
-      // Fall through to Image with crossOrigin
+    } catch (cbErr) {
+      console.warn(`[loadCanvasImage] Cache-busted fetch failed for "${src}":`, cbErr);
     }
 
-    // 6. Image element with crossOrigin anonymous
+    // 7. Final fallback: Image element with crossOrigin anonymous
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error(`Gagal memuat gambar dengan CORS: ${src}`));
+      img.onerror = (e) => {
+        console.warn(`[loadCanvasImage] Image element crossOrigin failed for "${src}":`, e);
+        reject(new Error(`Gagal memuat gambar dengan CORS: ${src}`));
+      };
       img.src = src;
     });
   };
@@ -630,7 +692,12 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           replies: data.replies,
         };
 
-        const canvas = await renderBuzzStoryCanvas(buzzInput, { loadImage: loadCanvasImage });
+        const canvas = await renderBuzzStoryCanvas(buzzInput, {
+          loadImage: loadCanvasImage,
+          onPhotoLoadFailed: () => {
+            showToast('Foto gagal dimuat di story, coba lagi');
+          },
+        });
         if (!cancelled) {
           buzzCanvasRef.current = canvas;
           const dataUrl = canvas.toDataURL('image/png');
@@ -690,7 +757,12 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
             replies: data.replies,
           };
 
-          canvas = await renderBuzzStoryCanvas(buzzInput, { loadImage: loadCanvasImage });
+          canvas = await renderBuzzStoryCanvas(buzzInput, {
+            loadImage: loadCanvasImage,
+            onPhotoLoadFailed: () => {
+              showToast('Foto gagal dimuat di story, coba lagi');
+            },
+          });
           buzzCanvasRef.current = canvas;
         }
 
