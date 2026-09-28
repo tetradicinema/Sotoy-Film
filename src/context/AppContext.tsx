@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { slugify } from '../utils/slugify';
 import {
@@ -240,6 +240,8 @@ interface AppContextType {
   signInWithEmail: (email: string, password: string) => Promise<boolean>;
   signUpWithEmail: (email: string, password: string, name: string, handle: string) => Promise<boolean>;
   signInWithGoogle: () => Promise<boolean>;
+  getLastAuthErrorCode: () => string | null;
+  clearAuthError: () => void;
   articles: Article[];
   publishedArticles: Article[];
   films: FilmItem[];
@@ -1118,14 +1120,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const lastAuthErrorCodeRef = useRef<string | null>(null);
+  const isSigningUpRef = useRef<boolean>(false);
+
+  const getLastAuthErrorCode = useCallback(() => lastAuthErrorCodeRef.current, []);
+  const clearAuthError = useCallback(() => {
+    lastAuthErrorCodeRef.current = null;
+  }, []);
+
   // Initialize Firebase Auth & Real User profile sync
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, async (fbUser) => {
+      // If email sign-up is currently in flight, skip listener execution so signUpWithEmail wins
+      if (isSigningUpRef.current) {
+        return;
+      }
       if (fbUser && !fbUser.isAnonymous) {
         const uid = fbUser.uid;
         const userDocRef = doc(db, 'users', uid);
         try {
+          if (isSigningUpRef.current) {
+            return;
+          }
           const userSnap = await getDoc(userDocRef);
+          if (isSigningUpRef.current) {
+            return;
+          }
           if (userSnap.exists()) {
             const data = userSnap.data() as User;
             data.email = fbUser.email || undefined;
@@ -1184,7 +1204,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               setCurrentView('onboarding');
             }
           } else {
-            // First time user registration - start completely fresh as a clean new account
+            // First time user registration - skip if email sign-up is currently creating the profile
+            if (isSigningUpRef.current) {
+              return;
+            }
             const isAdminRole = isUserAdmin(null, uid, fbUser.email || undefined, fbUser.emailVerified);
             const isWriterRole = !isAdminRole && isUserWriter(null, uid);
             const isCriticRole = !isAdminRole && !isWriterRole && isUserCritic(null, uid);
@@ -1995,6 +2018,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const signInWithEmail = async (email: string, password: string): Promise<boolean> => {
+    lastAuthErrorCodeRef.current = null;
     try {
       showToast('Menghubungkan ke Firebase Auth...');
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -2021,12 +2045,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return false;
     } catch (err: any) {
+      lastAuthErrorCodeRef.current = err.code || 'unknown';
       console.error('[Auth] Sign-in error: ', err);
       let errMsg = 'Gagal masuk. Mohon periksa email dan password Anda.';
       if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
         errMsg = 'Email atau password salah. Pastikan Anda sudah terdaftar.';
       } else if (err.code === 'auth/invalid-email') {
         errMsg = 'Format email tidak valid.';
+      } else if (err.code === 'auth/admin-restricted-operation') {
+        errMsg = 'Pendaftaran/masuk email dibatasi oleh administrator Firebase.';
       }
       showToast(errMsg);
       return false;
@@ -2039,6 +2066,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     name: string,
     handle: string
   ): Promise<boolean> => {
+    isSigningUpRef.current = true;
+    lastAuthErrorCodeRef.current = null;
     try {
       showToast('Membuat akun di Firebase Auth...');
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -2085,6 +2114,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           totalBuzz: 0,
           followers: [],
           following: [],
+          followersCount: 0,
+          followingCount: 0,
           hasFinishedOnboarding: false,
         };
 
@@ -2109,6 +2140,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return false;
     } catch (err: any) {
+      lastAuthErrorCodeRef.current = err.code || 'unknown';
       console.error('[Auth] Sign-up error: ', err);
       let errMsg = 'Gagal mendaftar. Mohon coba lagi.';
       if (err.code === 'auth/email-already-in-use') {
@@ -2122,6 +2154,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       showToast(errMsg);
       return false;
+    } finally {
+      isSigningUpRef.current = false;
     }
   };
 
@@ -4346,6 +4380,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         signInWithEmail,
         signUpWithEmail,
         signInWithGoogle,
+        getLastAuthErrorCode,
+        clearAuthError,
         articles: resolvedArticles,
         publishedArticles,
         films,

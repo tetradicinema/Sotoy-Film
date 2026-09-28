@@ -10,7 +10,9 @@ export const LoginModal: React.FC = () => {
     signInWithEmail, 
     signUpWithEmail, 
     signInWithGoogle,
-    showToast 
+    showToast,
+    getLastAuthErrorCode,
+    clearAuthError,
   } = useApp();
 
   // Email Auth States
@@ -38,6 +40,7 @@ export const LoginModal: React.FC = () => {
 
     setLoading(true);
     setShowRestrictedWarning(false);
+    clearAuthError();
     try {
       if (isSignUp) {
         if (!name.trim()) {
@@ -54,19 +57,35 @@ export const LoginModal: React.FC = () => {
           setHandle('');
           setShowRestrictedWarning(false);
         } else {
-          setShowRestrictedWarning(true);
+          const errCode = getLastAuthErrorCode();
+          if (errCode === 'auth/admin-restricted-operation') {
+            setShowRestrictedWarning(true);
+          } else {
+            setShowRestrictedWarning(false);
+          }
         }
       } else {
         const success = await signInWithEmail(email, password);
-        if (!success) {
-          setShowRestrictedWarning(true);
-        } else {
+        if (success) {
           setShowRestrictedWarning(false);
+        } else {
+          const errCode = getLastAuthErrorCode();
+          if (errCode === 'auth/admin-restricted-operation') {
+            setShowRestrictedWarning(true);
+          } else {
+            setShowRestrictedWarning(false);
+          }
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setShowRestrictedWarning(true);
+      const errCode = err?.code || getLastAuthErrorCode();
+      if (errCode === 'auth/admin-restricted-operation') {
+        setShowRestrictedWarning(true);
+      } else {
+        setShowRestrictedWarning(false);
+        showToast(err?.message || 'Gagal masuk. Mohon coba lagi.');
+      }
     } finally {
       setLoading(false);
     }
@@ -285,6 +304,7 @@ export const LoginModal: React.FC = () => {
                 onClick={() => {
                   setIsSignUp(!isSignUp);
                   setShowRestrictedWarning(false);
+                  clearAuthError();
                 }}
                 className="text-xs text-[#FF2E7E] hover:underline cursor-pointer"
               >
