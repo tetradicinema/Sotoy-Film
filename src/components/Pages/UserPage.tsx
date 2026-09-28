@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
 import {
   User as UserIcon,
@@ -181,6 +181,61 @@ export const UserPage: React.FC = () => {
   const [followModalType, setFollowModalType] = useState<'followers' | 'following' | 'discover' | null>(null);
   const [modalSearchQuery, setModalSearchQuery] = useState('');
   const [librarySubTab, setLibrarySubTab] = useState<'films' | 'articles'>('films');
+
+  // Real-time follow lists for viewed profile (when not own profile)
+  const [viewedFollowersIds, setViewedFollowersIds] = useState<string[]>([]);
+  const [viewedFollowingIds, setViewedFollowingIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (isOwnProfile || !targetUser?.id || targetUser.id === 'guest') {
+      setViewedFollowersIds([]);
+      setViewedFollowingIds([]);
+      return;
+    }
+
+    const followersQuery = query(
+      collection(db, 'follows'),
+      where('followingId', '==', targetUser.id)
+    );
+    const unsubFollowers = onSnapshot(
+      followersQuery,
+      (snapshot) => {
+        const ids: string[] = [];
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          if (data.followerId) ids.push(data.followerId);
+        });
+        setViewedFollowersIds(ids);
+      },
+      (err) => {
+        console.error('[UserPage] Error subscribing to viewed user followers:', err);
+      }
+    );
+
+    const followingQuery = query(
+      collection(db, 'follows'),
+      where('followerId', '==', targetUser.id)
+    );
+    const unsubFollowing = onSnapshot(
+      followingQuery,
+      (snapshot) => {
+        const ids: string[] = [];
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          if (data.followingId) ids.push(data.followingId);
+        });
+        setViewedFollowingIds(ids);
+      },
+      (err) => {
+        console.error('[UserPage] Error subscribing to viewed user following:', err);
+      }
+    );
+
+    return () => {
+      unsubFollowers();
+      unsubFollowing();
+    };
+  }, [isOwnProfile, targetUser?.id]);
 
   // Overflow / 'Lainnya' tabs dropdown state
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
@@ -377,13 +432,13 @@ export const UserPage: React.FC = () => {
     ? (myReviews.reduce((acc, curr) => acc + curr.score, 0) / myReviews.length).toFixed(1)
     : '-';
 
-  // Target user follower & following counts
+  // Target user follower & following counts (derived from real Firestore follows docs)
   const targetFollowersCount = isOwnProfile
     ? followersIds.length
-    : (targetUser.followersCount ?? targetUser.followers?.length ?? 0);
+    : viewedFollowersIds.length;
   const targetFollowingCount = isOwnProfile
     ? followingIds.length
-    : (targetUser.followingCount ?? targetUser.following?.length ?? 0);
+    : viewedFollowingIds.length;
 
   const handlePostDashboardBuzz = (e: React.FormEvent) => {
     e.preventDefault();
@@ -2236,13 +2291,17 @@ export const UserPage: React.FC = () => {
               {/* Users List inside modal */}
               <div className="max-h-[340px] overflow-y-auto space-y-2.5 pr-1">
                 {(() => {
-                  let targetList = allUsers;
+                  let targetList: User[] = [];
                   if (followModalType === 'followers') {
-                    const ids = isOwnProfile ? followersIds : (targetUser.followers || []);
-                    targetList = allUsers.filter(u => ids.includes(u.id));
+                    const ids = isOwnProfile ? followersIds : viewedFollowersIds;
+                    targetList = ids
+                      .map(id => allUsers.find(u => u.id === id))
+                      .filter((u): u is User => Boolean(u));
                   } else if (followModalType === 'following') {
-                    const ids = isOwnProfile ? followingIds : (targetUser.following || []);
-                    targetList = allUsers.filter(u => ids.includes(u.id));
+                    const ids = isOwnProfile ? followingIds : viewedFollowingIds;
+                    targetList = ids
+                      .map(id => allUsers.find(u => u.id === id))
+                      .filter((u): u is User => Boolean(u));
                   } else {
                     targetList = allUsers.filter(u => u.id !== currentUser.id);
                   }

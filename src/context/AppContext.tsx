@@ -1124,11 +1124,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               } catch (e) {}
             }
 
-            // Followers and Following will be populated in real-time from the Firestore 'follows' collection
-            const cleanFollowing = Array.isArray(data.following) ? data.following.filter(id => !['u-2', 'u-4', 'u-6'].includes(id)) : [];
-            const cleanFollowers = Array.isArray(data.followers) ? data.followers.filter(id => !['u-2', 'u-3', 'u-5'].includes(id)) : [];
-            setFollowingIds(cleanFollowing);
-            setFollowersIds(cleanFollowers);
+            // Followers and Following are populated in real-time exclusively via the Firestore 'follows' listener
 
             setCurrentUser(data);
 
@@ -2102,12 +2098,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             } catch (e) {}
           }
           setCurrentUser({ ...existingData, email: userCredential.user.email || '' });
-          const cleanFollowing = Array.isArray(existingData.following) ? existingData.following.filter(id => !['u-2', 'u-4', 'u-6'].includes(id)) : [];
-          const cleanFollowers = Array.isArray(existingData.followers) ? existingData.followers.filter(id => !['u-2', 'u-3', 'u-5'].includes(id)) : [];
-          setFollowingIds(cleanFollowing);
-          setFollowersIds(cleanFollowers);
-          localStorage.setItem('sotoy_following_ids', JSON.stringify(cleanFollowing));
-          localStorage.setItem('sotoy_followers_ids', JSON.stringify(cleanFollowers));
+          // Following/followers are populated via Firestore 'follows' listener
 
           if (existingData.hasFinishedOnboarding === false) {
             setCurrentView('onboarding');
@@ -2163,8 +2154,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setFollowersIds([]);
           setWatchlist([]);
           setSavedArticles([]);
-          localStorage.setItem('sotoy_following_ids', JSON.stringify([]));
-          localStorage.setItem('sotoy_followers_ids', JSON.stringify([]));
           setCurrentView('onboarding');
         }
         setIsLoggedIn(true);
@@ -2198,8 +2187,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setFollowersIds([]);
       setWatchlist([]);
       setSavedArticles([]);
-      localStorage.setItem('sotoy_following_ids', JSON.stringify([]));
-      localStorage.setItem('sotoy_followers_ids', JSON.stringify([]));
       showToast('Sampai jumpa lagi, Cinephile! 👋');
       navigateTo('home');
       setLoginModalOpen(false);
@@ -2233,32 +2220,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (isAlreadyFollowing) {
       // Optimistic update
+      const prevFollowing = followingIds;
       setFollowingIds(prev => prev.filter(id => id !== targetUserId));
-      showToast(`Berhenti mengikuti ${targetName}`);
 
       try {
         await deleteDoc(doc(db, 'follows', followDocId));
-        try {
-          await updateDoc(doc(db, 'users', targetUserId), {
-            followersCount: increment(-1),
-          });
-        } catch (e) {
-          // fallback if user doc missing count
-        }
-        try {
-          await updateDoc(doc(db, 'users', currentUser.id), {
-            followingCount: increment(-1),
-          });
-        } catch (e) {
-          // fallback
-        }
-      } catch (err) {
-        console.warn('[Firestore] Error removing follow record:', err);
+      } catch (err: any) {
+        // Roll back optimistic state on Firestore failure
+        setFollowingIds(prevFollowing);
+        console.error('[Firestore] Error removing follow record:', err);
+        const reason = err?.code === 'permission-denied'
+          ? 'Izin ditolak (permission denied)'
+          : (err?.message?.includes('offline') || err?.code === 'unavailable'
+              ? 'Koneksi bermasalah (network/offline error)'
+              : (err?.message || 'Gagal memproses'));
+        showToast(`Gagal berhenti mengikuti ${targetName}: ${reason}`);
+        return;
+      }
+
+      showToast(`Berhenti mengikuti ${targetName}`);
+
+      // Best-effort updates on users documents (failure does not roll back the follow)
+      try {
+        await updateDoc(doc(db, 'users', targetUserId), {
+          followersCount: increment(-1),
+        });
+      } catch (e) {
+        console.error('[Firestore] Failed to decrement target followersCount:', e);
+      }
+      try {
+        await updateDoc(doc(db, 'users', currentUser.id), {
+          followingCount: increment(-1),
+        });
+      } catch (e) {
+        console.error('[Firestore] Failed to decrement current followingCount:', e);
       }
     } else {
       // Optimistic update
+      const prevFollowing = followingIds;
       setFollowingIds(prev => [...prev, targetUserId]);
-      showToast(`Sekarang kamu mengikuti ${targetName}! 🎉`);
 
       try {
         await setDoc(doc(db, 'follows', followDocId), {
@@ -2266,22 +2266,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           followingId: targetUserId,
           createdAt: new Date().toISOString(),
         });
-        try {
-          await updateDoc(doc(db, 'users', targetUserId), {
-            followersCount: increment(1),
-          });
-        } catch (e) {
-          // fallback
-        }
-        try {
-          await updateDoc(doc(db, 'users', currentUser.id), {
-            followingCount: increment(1),
-          });
-        } catch (e) {
-          // fallback
-        }
+      } catch (err: any) {
+        // Roll back optimistic state on Firestore failure
+        setFollowingIds(prevFollowing);
+        console.error('[Firestore] Error saving follow record:', err);
+        const reason = err?.code === 'permission-denied'
+          ? 'Izin ditolak (permission denied)'
+          : (err?.message?.includes('offline') || err?.code === 'unavailable'
+              ? 'Koneksi bermasalah (network/offline error)'
+              : (err?.message || 'Gagal memproses'));
+        showToast(`Gagal mengikuti ${targetName}: ${reason}`);
+        return;
+      }
 
-        // Trigger follow notification to target user
+      showToast(`Sekarang kamu mengikuti ${targetName}! 🎉`);
+
+      // Best-effort updates on users documents (failure does not roll back the follow)
+      try {
+        await updateDoc(doc(db, 'users', targetUserId), {
+          followersCount: increment(1),
+        });
+      } catch (e) {
+        console.error('[Firestore] Failed to increment target followersCount:', e);
+      }
+      try {
+        await updateDoc(doc(db, 'users', currentUser.id), {
+          followingCount: increment(1),
+        });
+      } catch (e) {
+        console.error('[Firestore] Failed to increment current followingCount:', e);
+      }
+
+      // ONLY after follows write has succeeded: send notification and record interest signal
+      try {
         await sendNotification({
           userId: targetUserId,
           type: 'follow',
@@ -2296,8 +2313,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             handle: currentUser.handle,
           },
         });
+      } catch (notifErr) {
+        console.error('[Notifications] Failed to send follow notification:', notifErr);
+      }
 
-        // Track interest signal toward top tags from followed user's posts (+1 weight)
+      // Track interest signal toward top tags from followed user's posts (+1 weight)
+      try {
         const targetPosts = rawBuzzList.filter(b => b.author.id === targetUserId);
         const tagCounts: Record<string, number> = {};
         targetPosts.forEach(post => {
@@ -2319,8 +2340,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (topFollowedTags.length > 0) {
           recordUserInterest(topFollowedTags, 1);
         }
-      } catch (err) {
-        console.warn('[Firestore] Error saving follow record:', err);
+      } catch (interestErr) {
+        console.error('[Interest] Failed to record user interest on follow:', interestErr);
       }
     }
   };
