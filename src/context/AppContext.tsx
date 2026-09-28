@@ -2891,16 +2891,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       newBuzz.skorSotoyMention = skorSotoy;
     }
 
-    // Upload image to Firebase Storage if an image data URL is provided
-    if (imageDataUrl && imageDataUrl.startsWith('data:')) {
-      try {
-        const storagePath = `buzz_media/${authorId}/${buzzId}/${Date.now()}.jpg`;
-        const storageRef = ref(storage, storagePath);
-        await uploadString(storageRef, imageDataUrl, 'data_url');
-        const downloadUrl = await getDownloadURL(storageRef);
-        newBuzz.image = downloadUrl;
-      } catch (storageErr: any) {
-        console.warn('[Storage] Firebase Storage unavailable or upload failed for buzz media:', storageErr?.message || storageErr);
+    // Set image data URL or upload to Firebase Storage if provided
+    if (imageDataUrl) {
+      newBuzz.image = imageDataUrl;
+      if (imageDataUrl.startsWith('data:')) {
+        try {
+          const storagePath = `buzz_media/${authorId}/${buzzId}/${Date.now()}.jpg`;
+          const storageRef = ref(storage, storagePath);
+          await uploadString(storageRef, imageDataUrl, 'data_url');
+          const downloadUrl = await getDownloadURL(storageRef);
+          newBuzz.image = downloadUrl;
+        } catch (storageErr: any) {
+          console.warn('[Storage] Firebase Storage unavailable or upload failed for buzz media:', storageErr?.message || storageErr);
+        }
       }
     }
 

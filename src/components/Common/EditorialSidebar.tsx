@@ -214,6 +214,8 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                   </button>
                   <button
                     onClick={() => {
+                      const postFilm = post.taggedFilm ? films.find(f => f.id === post.taggedFilm?.id) || post.taggedFilm : null;
+                      const authorHandle = post.author.handle.startsWith('@') ? post.author.handle : `@${post.author.handle}`;
                       openShareModal({
                         title: `Buzz Diskusi: ${post.author.name}`,
                         text: post.content,
@@ -223,7 +225,17 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                         imageUrl: post.author.avatar,
                         authorAvatar: post.author.avatar,
                         authorName: post.author.name,
-                        meta: post.taggedFilm ? `Membahas film ${post.taggedFilm.title}` : `@${post.author.handle} di Sotoy Film`,
+                        authorHandle: post.author.handle,
+                        authorRole: post.author.role,
+                        likes: post.likes,
+                        replies: (post.replies && post.replies.length > 0 ? post.replies.length : post.repliesCount) || 0,
+                        meta: postFilm ? `Membahas film ${postFilm.title}` : `${authorHandle} di Sotoy Film`,
+                        buzzImage: post.image,
+                        taggedFilmPoster: (postFilm as any)?.posterUrl || (postFilm as any)?.poster,
+                        taggedFilmTitle: postFilm?.title,
+                        taggedFilmYear: postFilm?.year,
+                        taggedFilmScore: (postFilm as any)?.score || (postFilm as any)?.skorSotoy,
+                        taggedFilmGenres: (postFilm as any)?.genres,
                       });
                     }}
                     className="flex items-center gap-1 hover:text-white transition-colors"

@@ -16,6 +16,33 @@ async function startServer() {
     return handleTmdbRequest(req, res);
   });
 
+  // Image Proxy route for canvas rendering without CORS tainting
+  app.get("/api/image-proxy", async (req, res) => {
+    const url = req.query.url as string;
+    if (!url || !url.startsWith("http")) {
+      return res.status(400).json({ error: "Missing or invalid url parameter" });
+    }
+    try {
+      const response = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+        },
+      });
+      if (!response.ok) {
+        return res.status(response.status).json({ error: `Failed to fetch image, status: ${response.status}` });
+      }
+      const contentType = response.headers.get("content-type") || "image/jpeg";
+      const arrayBuffer = await response.arrayBuffer();
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+      return res.send(Buffer.from(arrayBuffer));
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message || "Failed to proxy image" });
+    }
+  });
+
   // Note: /sitemap.xml is statically generated at build-time into public/sitemap.xml
   // and served directly by express.static(distPath) in production or Vite in development.
 

@@ -530,6 +530,7 @@ export const CommunityFeedPage: React.FC = () => {
   const handleShareBuzz = (post: typeof buzzList[0]) => {
     const postFilm = post.taggedFilm ? films.find(f => f.id === post.taggedFilm?.id) || post.taggedFilm : null;
     const postArticle = post.taggedArticle ? articles.find(a => a.id === post.taggedArticle?.id) || post.taggedArticle : null;
+    const authorHandle = post.author.handle.startsWith('@') ? post.author.handle : `@${post.author.handle}`;
     
     openShareModal({
       title: `Buzz Diskusi: ${post.author.name}`,
@@ -541,7 +542,17 @@ export const CommunityFeedPage: React.FC = () => {
       imageUrl: post.author.avatar,
       authorAvatar: post.author.avatar,
       authorName: post.author.name,
-      meta: postFilm ? `Membahas film ${postFilm.title}` : postArticle ? `Membahas artikel ${postArticle.title}` : `@${post.author.handle} di Sotoy Film`,
+      authorHandle: post.author.handle,
+      authorRole: post.author.role,
+      likes: post.likes,
+      replies: (post.replies && post.replies.length > 0 ? post.replies.length : post.repliesCount) || 0,
+      meta: postFilm ? `Membahas film ${postFilm.title}` : postArticle ? `Membahas artikel ${postArticle.title}` : `${authorHandle} di Sotoy Film`,
+      buzzImage: post.image,
+      taggedFilmPoster: (postFilm as any)?.posterUrl || (postFilm as any)?.poster || undefined,
+      taggedFilmTitle: postFilm?.title,
+      taggedFilmYear: postFilm?.year,
+      taggedFilmScore: (postFilm as any)?.score || (postFilm as any)?.skorSotoy || undefined,
+      taggedFilmGenres: (postFilm as any)?.genres || undefined,
     });
   };
 

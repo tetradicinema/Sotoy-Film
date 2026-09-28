@@ -163,6 +163,7 @@ export const BuzzDetailPage: React.FC = () => {
   };
 
   const handleShare = () => {
+    const authorHandle = buzz.author.handle.startsWith('@') ? buzz.author.handle : `@${buzz.author.handle}`;
     openShareModal({
       title: `Buzz Diskusi: ${buzz.author.name}`,
       text: buzz.content,
@@ -172,7 +173,17 @@ export const BuzzDetailPage: React.FC = () => {
       imageUrl: buzz.author.avatar,
       authorAvatar: buzz.author.avatar,
       authorName: buzz.author.name,
-      meta: buzz.taggedFilm ? `Membahas film ${buzz.taggedFilm.title}` : `@${buzz.author.handle} di Sotoy Film`,
+      authorHandle: buzz.author.handle,
+      authorRole: buzz.author.role,
+      likes: buzz.likes,
+      replies: (replies && replies.length > 0 ? replies.length : buzz.repliesCount) || 0,
+      meta: postFilm ? `Membahas film ${postFilm.title}` : postArticle ? `Membahas artikel ${postArticle.title}` : `${authorHandle} di Sotoy Film`,
+      buzzImage: buzz.image,
+      taggedFilmPoster: (postFilm as any)?.posterUrl || (postFilm as any)?.poster || undefined,
+      taggedFilmTitle: postFilm?.title,
+      taggedFilmYear: postFilm?.year,
+      taggedFilmScore: (postFilm as any)?.score || (postFilm as any)?.skorSotoy || undefined,
+      taggedFilmGenres: (postFilm as any)?.genres || undefined,
     });
   };
 
