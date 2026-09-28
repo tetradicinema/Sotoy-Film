@@ -3029,6 +3029,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Like/Unlike Buzz Post in Firestore
   const likeBuzzPost = async (buzzId: string) => {
+    if (!requireVerified()) return;
     await reactToBuzzPost(buzzId, 'heart');
   };
 
@@ -3216,6 +3217,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Like a Buzz Post Reply in Firestore
   const likeBuzzReply = async (buzzId: string, replyId: string) => {
+    if (!requireVerified()) return;
     const post = rawBuzzList.find(b => b.id === buzzId) || buzzList.find(b => b.id === buzzId);
     if (!post || !post.replies) return;
 
@@ -3319,6 +3321,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Like Editorial Article in Firestore
   const likeArticle = async (articleId: string) => {
+    if (!requireVerified()) return;
     const article = articles.find(a => a.id === articleId);
     if (!article) return;
     const updatedArticle = {
