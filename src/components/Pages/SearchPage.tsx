@@ -21,10 +21,13 @@ import {
   Calendar,
   ThumbsUp,
   Tag,
+  Globe,
+  Loader2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { FilmItem, Article, BuzzPost, User } from '../../types';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
+import { searchTmdbFilms, TmdbSearchResultItem } from '../../utils/tmdbHelper';
 
 type SearchTab = 'all' | 'film' | 'article' | 'buzz' | 'user';
 
@@ -56,11 +59,16 @@ export const SearchPage: React.FC = () => {
     toggleFollowUser,
     isFollowing,
     showToast,
+    importAndNavigateToTmdbFilm,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<SearchTab>('all');
   const [localQuery, setLocalQuery] = useState(searchQuery);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // TMDB Real-time Search States
+  const [tmdbSearchResults, setTmdbSearchResults] = useState<TmdbSearchResultItem[]>([]);
+  const [isSearchingTmdb, setIsSearchingTmdb] = useState<boolean>(false);
 
   // Recent searches state
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
@@ -229,8 +237,52 @@ export const SearchPage: React.FC = () => {
     };
   }, [localQuery, films, publishedArticles, buzzList, allUsers]);
 
+  // Real-time Search to TMDB API for global film dataset
+  useEffect(() => {
+    const q = localQuery.trim();
+    if (!q || q.length < 2) {
+      setTmdbSearchResults([]);
+      setIsSearchingTmdb(false);
+      return;
+    }
+
+    let isCancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        setIsSearchingTmdb(true);
+        const results = await searchTmdbFilms(q, 'all');
+        if (!isCancelled) {
+          setTmdbSearchResults(results);
+        }
+      } catch (err) {
+        console.warn('[SearchPage] TMDB API search notice:', err);
+      } finally {
+        if (!isCancelled) setIsSearchingTmdb(false);
+      }
+    }, 250);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [localQuery]);
+
+  // Filter out TMDB results that already match local database films
+  const filteredTmdbResults = useMemo(() => {
+    if (!tmdbSearchResults || tmdbSearchResults.length === 0) return [];
+    const localTmdbIds = new Set(films.map(f => f.tmdbId).filter(Boolean));
+    const localTitles = new Set(films.map(f => f.title.toLowerCase().trim()));
+
+    return tmdbSearchResults.filter(item => {
+      if (item.id && localTmdbIds.has(item.id)) return false;
+      const title = (item.title || item.name || '').toLowerCase().trim();
+      if (title && localTitles.has(title)) return false;
+      return true;
+    });
+  }, [tmdbSearchResults, films]);
+
   const totalResults =
-    matchingFilms.length + matchingArticles.length + matchingBuzz.length + matchingUsers.length;
+    matchingFilms.length + filteredTmdbResults.length + matchingArticles.length + matchingBuzz.length + matchingUsers.length;
 
   const hasQuery = localQuery.trim().length > 0;
 
@@ -344,7 +396,7 @@ export const SearchPage: React.FC = () => {
           >
             {[
               { id: 'all', label: 'Semua Hasil', count: totalResults, icon: Filter },
-              { id: 'film', label: 'Film', count: matchingFilms.length, icon: Film },
+              { id: 'film', label: 'Film', count: matchingFilms.length + filteredTmdbResults.length, icon: Film },
               { id: 'article', label: 'Artikel & Review', count: matchingArticles.length, icon: FileText },
               { id: 'buzz', label: 'Buzz Komunitas', count: matchingBuzz.length, icon: MessageSquare },
               { id: 'user', label: 'Kritikus & Profil', count: matchingUsers.length, icon: Users },
@@ -542,6 +594,88 @@ export const SearchPage: React.FC = () => {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* TMDB GLOBAL FILM RESULTS (Real-time TMDB API) */}
+                {(activeTab === 'all' || activeTab === 'film') && filteredTmdbResults.length > 0 && (
+                  <div className="space-y-4 pt-2">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                      <h2 className="text-base sm:text-lg font-bold text-cyan-400 flex items-center gap-2">
+                        <Globe className="w-5 h-5 text-cyan-400" />
+                        <span>Pencarian Film Global TMDB API ({filteredTmdbResults.length})</span>
+                      </h2>
+                      {isSearchingTmdb && (
+                        <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+                          <span>Sinkronisasi TMDB...</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {(activeTab === 'all' ? filteredTmdbResults.slice(0, 6) : filteredTmdbResults).map(tmdbItem => {
+                        const poster = tmdbItem.poster_path
+                          ? `https://image.tmdb.org/t/p/w342${tmdbItem.poster_path}`
+                          : 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=400&q=80';
+                        const title = tmdbItem.title || tmdbItem.name || 'Judul Film';
+                        const rawDate = tmdbItem.release_date || tmdbItem.first_air_date || '';
+                        const year = rawDate ? rawDate.substring(0, 4) : '';
+
+                        return (
+                          <div
+                            key={`tmdb-page-${tmdbItem.id}`}
+                            onClick={async () => {
+                              await importAndNavigateToTmdbFilm({
+                                id: tmdbItem.id,
+                                title,
+                                media_type: tmdbItem.media_type,
+                              });
+                            }}
+                            className="group bg-[#171A1F] hover:bg-slate-850 border border-cyan-900/40 hover:border-cyan-500/60 rounded-2xl p-3 sm:p-4 flex gap-3.5 cursor-pointer transition-all shadow-md hover:shadow-xl relative overflow-hidden"
+                          >
+                            <img
+                              src={poster}
+                              alt={title}
+                              className="w-20 h-28 sm:w-24 sm:h-32 rounded-xl object-cover ring-1 ring-cyan-500/30 shrink-0 group-hover:scale-105 transition-transform"
+                            />
+                            <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                              <div>
+                                <div className="flex items-center justify-between gap-1 mb-1">
+                                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800">
+                                    TMDB GLOBAL
+                                  </span>
+                                  {year && <span className="text-[11px] font-bold text-slate-400">{year}</span>}
+                                </div>
+
+                                <h3 className="font-bold text-sm sm:text-base text-white group-hover:text-cyan-300 transition-colors line-clamp-2">
+                                  {title}
+                                </h3>
+
+                                <p className="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                                  {tmdbItem.overview || (tmdbItem.media_type === 'tv' ? 'Series TV dari TMDB Database' : 'Film layar lebar dari TMDB Database')}
+                                </p>
+                              </div>
+
+                              <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800/80">
+                                {tmdbItem.vote_average ? (
+                                  <div className="flex items-center gap-1 text-[#FF2E7E] font-mono text-xs font-bold">
+                                    <Star className="w-3.5 h-3.5 fill-current text-amber-400" />
+                                    <span>{tmdbItem.vote_average.toFixed(1)}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-[10px] text-slate-500">Katalog TMDB</span>
+                                )}
+                                <span className="text-[10px] font-bold text-cyan-400 group-hover:underline flex items-center gap-0.5">
+                                  <span>Lihat Detail</span>
+                                  <ChevronRight className="w-3 h-3" />
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

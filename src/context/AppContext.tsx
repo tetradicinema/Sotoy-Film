@@ -116,6 +116,7 @@ import {
   query,
   where,
   increment,
+  writeBatch,
 } from 'firebase/firestore';
 import { 
   onAuthStateChanged, 
@@ -126,6 +127,7 @@ import {
   signInWithPopup
 } from 'firebase/auth';
 import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
+import { fetchTmdbDetails, mapTmdbDetailsToFilm, TmdbSearchResultItem } from '../utils/tmdbHelper';
 
 export const ADMIN_UIDS = [
   'QkNGf1ZfhsMyUEk90a6Iz8ZplZS2', // User ID Admin 1
@@ -215,9 +217,11 @@ interface AppContextType {
   updateCriticSubmissionStatus: (id: string, status: 'approved' | 'rejected') => Promise<void>;
   watchlist: string[];
   toggleWatchlist: (filmId: string) => void;
+  removeBulkFromWatchlist: (filmIds: string[]) => Promise<void>;
   isFilmInWatchlist: (filmId: string) => boolean;
   savedArticles: string[];
   toggleSaveArticle: (articleId: string) => void;
+  removeBulkFromSavedArticles: (articleIds: string[]) => Promise<void>;
   isArticleSaved: (articleId: string) => boolean;
   savedBuzzIds: string[];
   toggleSaveBuzz: (buzzId: string) => void;
@@ -331,6 +335,7 @@ interface AppContextType {
   bulkReassignAuthor: (articleIds: string[], targetAuthor: { id: string; name: string; avatar: string; role: UserRole }) => Promise<boolean>;
   migrateAllOldArticlesToTargetAuthor: (customAuthorId?: string) => Promise<{ success: boolean; count: number }>;
   addFilm: (film: Omit<FilmItem, 'id'>) => Promise<boolean>;
+  importAndNavigateToTmdbFilm: (tmdbItem: { id: number; title?: string; name?: string; media_type?: 'movie' | 'tv' }) => Promise<FilmItem | null>;
   updateFilm: (id: string, updates: Partial<FilmItem>) => Promise<boolean>;
   deleteFilm: (id: string) => Promise<boolean>;
   bulkDeleteFilms: (filmIds: string[]) => Promise<boolean>;
@@ -1562,6 +1567,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const removeBulkFromWatchlist = async (filmIds: string[]) => {
+    if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest' || !filmIds || filmIds.length === 0) {
+      return;
+    }
+
+    const prevWatchlist = [...watchlist];
+    // Optimistic UI state update
+    setWatchlist(prev => prev.filter(id => !filmIds.includes(id)));
+    showToast(`${filmIds.length} film dihapus dari Daftar Tonton.`);
+
+    try {
+      const batch = writeBatch(db);
+      filmIds.forEach(filmId => {
+        const itemRef = doc(db, 'users', currentUser.id, 'watchlist', filmId);
+        batch.delete(itemRef);
+      });
+      await batch.commit();
+    } catch (err) {
+      console.error('[Watchlist] Bulk delete error:', err);
+      // Revert optimistic update on error
+      setWatchlist(prevWatchlist);
+      showToast('Gagal menghapus film terpilih dari Daftar Tonton.', 'error');
+    }
+  };
+
   const isFilmInWatchlist = (filmId: string) => {
     return watchlist.includes(filmId);
   };
@@ -1628,6 +1658,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Revert optimistic update on error
       setSavedArticles(prev => (exists ? [...prev, articleId] : prev.filter(id => id !== articleId)));
       showToast('Gagal memperbarui Perpustakaan.', 'error');
+    }
+  };
+
+  const removeBulkFromSavedArticles = async (articleIds: string[]) => {
+    if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest' || !articleIds || articleIds.length === 0) {
+      return;
+    }
+
+    const prevSavedArticles = [...savedArticles];
+    // Optimistic UI state update
+    setSavedArticles(prev => prev.filter(id => !articleIds.includes(id)));
+    showToast(`${articleIds.length} artikel dihapus dari Perpustakaan.`);
+
+    try {
+      const batch = writeBatch(db);
+      articleIds.forEach(articleId => {
+        const itemRef = doc(db, 'users', currentUser.id, 'savedArticles', articleId);
+        batch.delete(itemRef);
+      });
+      await batch.commit();
+    } catch (err) {
+      console.error('[SavedArticles] Bulk delete error:', err);
+      // Revert optimistic update on error
+      setSavedArticles(prevSavedArticles);
+      showToast('Gagal menghapus artikel terpilih dari Perpustakaan.', 'error');
     }
   };
 
@@ -3691,6 +3746,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const importAndNavigateToTmdbFilm = async (tmdbItem: { id: number; title?: string; name?: string; media_type?: 'movie' | 'tv' }): Promise<FilmItem | null> => {
+    const mediaType = tmdbItem.media_type === 'tv' ? 'tv' : 'movie';
+    const tmdbIdNum = Number(tmdbItem.id);
+
+    // Check if film already exists in `films` state
+    const existing = films.find(f => f.tmdbId === tmdbIdNum || f.id === `tmdb-${tmdbIdNum}`);
+    if (existing) {
+      navigateTo('film-detail', { filmId: existing.id });
+      return existing;
+    }
+
+    showToast('Mengambil data film dari TMDB...', 'info');
+    try {
+      const details = await fetchTmdbDetails(tmdbIdNum, mediaType);
+      const mapped = mapTmdbDetailsToFilm(details, mediaType);
+
+      const newFilm: FilmItem = {
+        ...mapped,
+        id: `tmdb-${tmdbIdNum}`,
+        cast: mapped.cast ? mapped.cast.split(', ').filter(Boolean) : [],
+        genres: mapped.genres ? mapped.genres.split(', ').filter(Boolean) : [],
+        totalVotes: details.vote_count || 1,
+        criticsSkorSotoy: mapped.skorSotoy,
+        whereToWatch: [
+          { platform: 'TMDB Global', type: 'stream', badgeColor: 'bg-cyan-500' }
+        ]
+      };
+
+      setFilms(prev => {
+        if (prev.some(f => f.id === newFilm.id)) return prev;
+        return [newFilm, ...prev];
+      });
+
+      // Persist to Firestore so it stays in global database
+      try {
+        const sanitized = JSON.parse(JSON.stringify(newFilm));
+        await setDoc(doc(db, 'films', newFilm.id), sanitized);
+      } catch (e) {
+        console.warn('[AppContext] Could not persist TMDB film to Firestore:', e);
+      }
+
+      showToast(`Berhasil memuat "${newFilm.title}" dari TMDB!`, 'success');
+      navigateTo('film-detail', { filmId: newFilm.id });
+      return newFilm;
+    } catch (err) {
+      console.error('[AppContext] Failed to import TMDB film:', err);
+      showToast('Gagal memuat detail film dari TMDB.', 'error');
+      return null;
+    }
+  };
+
   const addFilm = async (filmData: Omit<FilmItem, 'id'>): Promise<boolean> => {
     console.log('[AppContext] === [addFilm INVOKED] ===', {
       title: filmData.title,
@@ -4002,9 +4108,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateCriticSubmissionStatus,
         watchlist,
         toggleWatchlist,
+        removeBulkFromWatchlist,
         isFilmInWatchlist,
         savedArticles,
         toggleSaveArticle,
+        removeBulkFromSavedArticles,
         isArticleSaved,
         savedBuzzIds,
         toggleSaveBuzz,
@@ -4092,6 +4200,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         bulkReassignAuthor,
         migrateAllOldArticlesToTargetAuthor,
         addFilm,
+        importAndNavigateToTmdbFilm,
         updateFilm,
         deleteFilm,
         bulkDeleteFilms,

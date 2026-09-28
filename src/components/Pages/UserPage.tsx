@@ -50,6 +50,9 @@ import {
   Repeat2,
   CornerDownRight,
   MoreHorizontal,
+  Square,
+  CheckSquare,
+  CheckCheck,
 } from 'lucide-react';
 import { useApp, GUEST_USER } from '../../context/AppContext';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
@@ -79,8 +82,10 @@ export const UserPage: React.FC = () => {
     articles,
     watchlist,
     toggleWatchlist,
+    removeBulkFromWatchlist,
     savedArticles,
     toggleSaveArticle,
+    removeBulkFromSavedArticles,
     activeUserTab,
     setActiveUserTab,
     userSettings,
@@ -290,6 +295,77 @@ export const UserPage: React.FC = () => {
 
   const myWatchlistFilms = films.filter(f => targetWatchlistIds.includes(f.id));
   const mySavedArticles = articles.filter(a => targetSavedArticleIds.includes(a.id));
+
+  // Bulk Selection States for Watchlist & Saved Articles
+  const [selectedFilmIds, setSelectedFilmIds] = useState<string[]>([]);
+  const [selectedArticleIds, setSelectedArticleIds] = useState<string[]>([]);
+  const [isFilmSelectMode, setIsFilmSelectMode] = useState(false);
+  const [isArticleSelectMode, setIsArticleSelectMode] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
+  // Clear selections when switching library subtab, active tab, or user
+  useEffect(() => {
+    setSelectedFilmIds([]);
+    setSelectedArticleIds([]);
+    setIsFilmSelectMode(false);
+    setIsArticleSelectMode(false);
+  }, [librarySubTab, activeUserTab, effectiveUserId]);
+
+  const handleToggleFilmSelection = (filmId: string) => {
+    setSelectedFilmIds(prev =>
+      prev.includes(filmId) ? prev.filter(id => id !== filmId) : [...prev, filmId]
+    );
+  };
+
+  const handleToggleSelectAllFilms = () => {
+    if (selectedFilmIds.length === myWatchlistFilms.length) {
+      setSelectedFilmIds([]);
+    } else {
+      setSelectedFilmIds(myWatchlistFilms.map(f => f.id));
+    }
+  };
+
+  const handleExecuteBulkDeleteFilms = async () => {
+    if (selectedFilmIds.length === 0 || isBulkDeleting) return;
+    setIsBulkDeleting(true);
+    try {
+      await removeBulkFromWatchlist(selectedFilmIds);
+      setSelectedFilmIds([]);
+      setIsFilmSelectMode(false);
+    } catch (err) {
+      console.error('Error bulk deleting films:', err);
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleToggleArticleSelection = (articleId: string) => {
+    setSelectedArticleIds(prev =>
+      prev.includes(articleId) ? prev.filter(id => id !== articleId) : [...prev, articleId]
+    );
+  };
+
+  const handleToggleSelectAllArticles = () => {
+    if (selectedArticleIds.length === mySavedArticles.length) {
+      setSelectedArticleIds([]);
+    } else {
+      setSelectedArticleIds(mySavedArticles.map(a => a.id));
+    }
+  };
+
+  const handleExecuteBulkDeleteArticles = async () => {
+    if (selectedArticleIds.length === 0 || isBulkDeleting) return;
+    setIsBulkDeleting(true);
+    try {
+      await removeBulkFromSavedArticles(selectedArticleIds);
+      setSelectedArticleIds([]);
+      setIsArticleSelectMode(false);
+    } catch (err) {
+      console.error('Error bulk deleting articles:', err);
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
 
   // Determine visibility for secondary tabs in overflow menu
   const showArticlesTab = Boolean(targetUser.role === 'penulis_sotoy' || targetUser.role === 'admin' || isWriter || isAdmin || myArticles.length > 0);
@@ -1326,32 +1402,72 @@ export const UserPage: React.FC = () => {
                 </p>
               </div>
 
-              {/* Sub-tab switcher */}
-              <div className="flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-2xl border border-slate-800 self-start sm:self-auto">
-                <button
-                  id="library-subtab-films"
-                  onClick={() => setLibrarySubTab('films')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
-                    librarySubTab === 'films'
-                      ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <Film className="w-3.5 h-3.5" />
-                  <span>Film Tersimpan ({myWatchlistFilms.length})</span>
-                </button>
-                <button
-                  id="library-subtab-articles"
-                  onClick={() => setLibrarySubTab('articles')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
-                    librarySubTab === 'articles'
-                      ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-[#FF2E7E] border border-cyan-500/40 shadow-sm'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>Artikel Tersimpan ({mySavedArticles.length})</span>
-                </button>
+              {/* Sub-tab switcher & Manage button */}
+              <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                <div className="flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-2xl border border-slate-800">
+                  <button
+                    id="library-subtab-films"
+                    onClick={() => setLibrarySubTab('films')}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                      librarySubTab === 'films'
+                        ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Film className="w-3.5 h-3.5" />
+                    <span>Film Tersimpan ({myWatchlistFilms.length})</span>
+                  </button>
+                  <button
+                    id="library-subtab-articles"
+                    onClick={() => setLibrarySubTab('articles')}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                      librarySubTab === 'articles'
+                        ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-[#FF2E7E] border border-cyan-500/40 shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Artikel Tersimpan ({mySavedArticles.length})</span>
+                  </button>
+                </div>
+
+                {isOwnProfile && librarySubTab === 'films' && myWatchlistFilms.length > 0 && (
+                  <button
+                    id="toggle-manage-watchlist-btn"
+                    onClick={() => {
+                      setIsFilmSelectMode(prev => !prev);
+                      if (isFilmSelectMode) setSelectedFilmIds([]);
+                    }}
+                    className={`px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all border shadow-sm ${
+                      isFilmSelectMode || selectedFilmIds.length > 0
+                        ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-emerald-500/20 font-black'
+                        : 'bg-slate-900/90 text-slate-300 hover:text-white border-slate-800 hover:border-slate-700'
+                    }`}
+                    title={isFilmSelectMode ? 'Matikan Mode Kelola' : 'Aktifkan Mode Kelola Pilihan'}
+                  >
+                    <CheckSquare className="w-3.5 h-3.5" />
+                    <span>{isFilmSelectMode || selectedFilmIds.length > 0 ? 'Mode Kelola Aktif' : 'Pilih Banyak'}</span>
+                  </button>
+                )}
+
+                {isOwnProfile && librarySubTab === 'articles' && mySavedArticles.length > 0 && (
+                  <button
+                    id="toggle-manage-saved-articles-btn"
+                    onClick={() => {
+                      setIsArticleSelectMode(prev => !prev);
+                      if (isArticleSelectMode) setSelectedArticleIds([]);
+                    }}
+                    className={`px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all border shadow-sm ${
+                      isArticleSelectMode || selectedArticleIds.length > 0
+                        ? 'bg-[#FF2E7E] text-slate-950 border-pink-400 shadow-[#FF2E7E]/20 font-black'
+                        : 'bg-slate-900/90 text-slate-300 hover:text-white border-slate-800 hover:border-slate-700'
+                    }`}
+                    title={isArticleSelectMode ? 'Matikan Mode Kelola' : 'Aktifkan Mode Kelola Pilihan'}
+                  >
+                    <CheckSquare className="w-3.5 h-3.5" />
+                    <span>{isArticleSelectMode || selectedArticleIds.length > 0 ? 'Mode Kelola Aktif' : 'Pilih Banyak'}</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1380,81 +1496,202 @@ export const UserPage: React.FC = () => {
                   )}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-                  {myWatchlistFilms.map(film => (
-                    <div
-                      key={film.id}
-                      id={`watchlist-card-${film.id}`}
-                      className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden hover:border-emerald-500/50 transition-all flex flex-col group shadow-lg"
-                    >
-                      <div className="aspect-video w-full overflow-hidden relative bg-slate-800">
-                        <img
-                          src={film.backdrop || film.poster}
-                          alt={film.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                        <div className="absolute top-2 left-2 bg-black/80 px-2 py-0.5 rounded text-[11px] font-bold text-[#FF2E7E] border border-[#FF2E7E]/40 flex items-center gap-1">
-                          <Star className="w-3 h-3 fill-current" />
-                          <span>{film.skorSotoy.toFixed(1)}</span>
+                <div className="space-y-4">
+                  {/* Film Bulk Action Toolbar */}
+                  {isOwnProfile && (isFilmSelectMode || selectedFilmIds.length > 0) && (
+                    <div className="bg-slate-900/95 border border-emerald-500/40 rounded-2xl p-3.5 sm:p-4 shadow-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={handleToggleSelectAllFilms}
+                          className="flex items-center gap-2 text-xs font-bold text-slate-200 hover:text-white px-3 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700 hover:bg-slate-700 transition-all"
+                        >
+                          {selectedFilmIds.length === myWatchlistFilms.length && myWatchlistFilms.length > 0 ? (
+                            <>
+                              <CheckSquare className="w-4 h-4 text-emerald-400" />
+                              <span>Batal Pilih Semua</span>
+                            </>
+                          ) : (
+                            <>
+                              <Square className="w-4 h-4 text-slate-400" />
+                              <span>Pilih Semua ({myWatchlistFilms.length})</span>
+                            </>
+                          )}
+                        </button>
+                        <div className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold text-xs border border-emerald-500/40">
+                            {selectedFilmIds.length}
+                          </span>
+                          <span>dari {myWatchlistFilms.length} film dipilih</span>
                         </div>
-                        {isOwnProfile ? (
-                          <button
-                            onClick={e => {
-                              e.stopPropagation();
-                              toggleWatchlist(film.id);
-                            }}
-                            className="absolute top-2 right-2 p-1.5 rounded-lg bg-red-500/80 hover:bg-red-500 text-white shadow"
-                            title="Hapus dari Library"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={e => {
-                              e.stopPropagation();
-                              toggleWatchlist(film.id);
-                            }}
-                            className={`absolute top-2 right-2 p-1.5 rounded-lg shadow transition-colors ${
-                              watchlist.includes(film.id)
-                                ? 'bg-emerald-500 text-white'
-                                : 'bg-black/70 hover:bg-emerald-600 text-white'
-                            }`}
-                            title={watchlist.includes(film.id) ? 'Tersimpan di Watchlist Saya' : 'Simpan ke Watchlist Saya'}
-                          >
-                            <Bookmark className={`w-3.5 h-3.5 ${watchlist.includes(film.id) ? 'fill-current' : ''}`} />
-                          </button>
-                        )}
                       </div>
 
-                      <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
-                        <div>
-                          <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">
-                            {film.year} • {film.duration || 'Standar Bioskop'}
-                          </div>
-                          <h4 className="font-display font-black text-sm text-white group-hover:text-emerald-300 transition-colors">
-                            {film.title}
-                          </h4>
-                          <p className="text-slate-400 text-xs line-clamp-2 mt-1">
-                            {film.synopsis}
-                          </p>
-                        </div>
-
-                        <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
-                          <div className="flex items-center gap-1 text-[10px] text-slate-400">
-                            <Tv className="w-3 h-3 text-[#FF2E7E]" />
-                            <span>{film.whereToWatch[0]?.platform || 'Bioskop'}</span>
-                          </div>
-                          <button
-                            onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                            className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
-                          >
-                            <span>Buka Detail Film</span>
-                            <ChevronRight className="w-3 h-3" />
-                          </button>
-                        </div>
+                      <div className="flex items-center gap-2 justify-end">
+                        <button
+                          disabled={selectedFilmIds.length === 0 || isBulkDeleting}
+                          onClick={handleExecuteBulkDeleteFilms}
+                          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg transition-all ${
+                            selectedFilmIds.length === 0 || isBulkDeleting
+                              ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50'
+                              : 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white shadow-red-600/25 active:scale-95'
+                          }`}
+                        >
+                          {isBulkDeleting ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <span>Menghapus...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Hapus Terpilih ({selectedFilmIds.length})</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsFilmSelectMode(false);
+                            setSelectedFilmIds([]);
+                          }}
+                          className="px-3 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 transition-all flex items-center gap-1"
+                          title="Tutup Mode Kelola"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">Selesai</span>
+                        </button>
                       </div>
                     </div>
-                  ))}
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+                    {myWatchlistFilms.map(film => {
+                      const isSelected = selectedFilmIds.includes(film.id);
+                      return (
+                        <div
+                          key={film.id}
+                          id={`watchlist-card-${film.id}`}
+                          onClick={isFilmSelectMode ? () => handleToggleFilmSelection(film.id) : undefined}
+                          className={`bg-slate-900/90 border rounded-2xl overflow-hidden transition-all flex flex-col group shadow-lg ${
+                            isSelected
+                              ? 'border-emerald-500 ring-2 ring-emerald-500/40 bg-slate-900 shadow-emerald-500/10 cursor-pointer'
+                              : isFilmSelectMode
+                              ? 'border-slate-800 hover:border-slate-700 cursor-pointer'
+                              : 'border-slate-800 hover:border-emerald-500/50'
+                          }`}
+                        >
+                          <div className="aspect-video w-full overflow-hidden relative bg-slate-800">
+                            <img
+                              src={film.backdrop || film.poster}
+                              alt={film.title}
+                              className={`w-full h-full object-cover transition-transform duration-500 ${
+                                isSelected ? 'scale-105 brightness-95' : 'group-hover:scale-105'
+                              }`}
+                            />
+
+                            {/* Checkbox for selection */}
+                            {isOwnProfile && (
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  if (!isFilmSelectMode) setIsFilmSelectMode(true);
+                                  handleToggleFilmSelection(film.id);
+                                }}
+                                className={`absolute top-2 left-2 z-20 p-1.5 rounded-lg backdrop-blur-md transition-all ${
+                                  isSelected
+                                    ? 'bg-emerald-500 text-slate-950 shadow-lg scale-105'
+                                    : isFilmSelectMode
+                                    ? 'bg-black/80 hover:bg-black text-slate-300 border border-slate-700'
+                                    : 'bg-black/60 hover:bg-black/90 text-slate-400 hover:text-white border border-white/20 opacity-0 group-hover:opacity-100'
+                                }`}
+                                title={isSelected ? 'Batalkan Pilihan' : 'Pilih Film'}
+                              >
+                                {isSelected ? (
+                                  <CheckSquare className="w-4 h-4 text-slate-950 stroke-[3]" />
+                                ) : (
+                                  <Square className="w-4 h-4" />
+                                )}
+                              </button>
+                            )}
+
+                            <div
+                              className={`absolute top-2 bg-black/80 px-2 py-0.5 rounded text-[11px] font-bold text-[#FF2E7E] border border-[#FF2E7E]/40 flex items-center gap-1 transition-all z-10 ${
+                                isOwnProfile && (isFilmSelectMode || isSelected)
+                                  ? 'left-11'
+                                  : isOwnProfile
+                                  ? 'left-2 group-hover:left-11'
+                                  : 'left-2'
+                              }`}
+                            >
+                              <Star className="w-3 h-3 fill-current" />
+                              <span>{film.skorSotoy.toFixed(1)}</span>
+                            </div>
+
+                            {isOwnProfile ? (
+                              !isFilmSelectMode && (
+                                <button
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    toggleWatchlist(film.id);
+                                  }}
+                                  className="absolute top-2 right-2 p-1.5 rounded-lg bg-red-500/80 hover:bg-red-500 text-white shadow transition-all"
+                                  title="Hapus dari Library"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )
+                            ) : (
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  toggleWatchlist(film.id);
+                                }}
+                                className={`absolute top-2 right-2 p-1.5 rounded-lg shadow transition-colors ${
+                                  watchlist.includes(film.id)
+                                    ? 'bg-emerald-500 text-white'
+                                    : 'bg-black/70 hover:bg-emerald-600 text-white'
+                                }`}
+                                title={watchlist.includes(film.id) ? 'Tersimpan di Watchlist Saya' : 'Simpan ke Watchlist Saya'}
+                              >
+                                <Bookmark className={`w-3.5 h-3.5 ${watchlist.includes(film.id) ? 'fill-current' : ''}`} />
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                            <div>
+                              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">
+                                {film.year} • {film.duration || 'Standar Bioskop'}
+                              </div>
+                              <h4 className="font-display font-black text-sm text-white group-hover:text-emerald-300 transition-colors">
+                                {film.title}
+                              </h4>
+                              <p className="text-slate-400 text-xs line-clamp-2 mt-1">
+                                {film.synopsis}
+                              </p>
+                            </div>
+
+                            <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
+                              <div className="flex items-center gap-1 text-[10px] text-slate-400">
+                                <Tv className="w-3 h-3 text-[#FF2E7E]" />
+                                <span>{film.whereToWatch[0]?.platform || 'Bioskop'}</span>
+                              </div>
+                              <button
+                                onClick={e => {
+                                  if (isFilmSelectMode) {
+                                    e.stopPropagation();
+                                  }
+                                  navigateTo('film-detail', { filmId: film.id });
+                                }}
+                                className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                              >
+                                <span>Buka Detail Film</span>
+                                <ChevronRight className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )
             )}
@@ -1484,79 +1721,200 @@ export const UserPage: React.FC = () => {
                   )}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-                  {mySavedArticles.map(article => (
-                    <div
-                      key={article.id}
-                      id={`saved-article-card-${article.id}`}
-                      className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden hover:border-cyan-500/50 transition-all flex flex-col group shadow-lg"
-                    >
-                      <div className="aspect-video w-full overflow-hidden relative bg-slate-800">
-                        <img
-                          src={article.coverImage}
-                          alt={article.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                        <div className="absolute top-2 left-2 bg-black/80 px-2.5 py-1 rounded text-[10px] font-bold text-[#FF2E7E] uppercase border border-[#FF2E7E]/30">
-                          {article.category}
+                <div className="space-y-4">
+                  {/* Article Bulk Action Toolbar */}
+                  {isOwnProfile && (isArticleSelectMode || selectedArticleIds.length > 0) && (
+                    <div className="bg-slate-900/95 border border-[#FF2E7E]/40 rounded-2xl p-3.5 sm:p-4 shadow-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={handleToggleSelectAllArticles}
+                          className="flex items-center gap-2 text-xs font-bold text-slate-200 hover:text-white px-3 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700 hover:bg-slate-700 transition-all"
+                        >
+                          {selectedArticleIds.length === mySavedArticles.length && mySavedArticles.length > 0 ? (
+                            <>
+                              <CheckSquare className="w-4 h-4 text-[#FF2E7E]" />
+                              <span>Batal Pilih Semua</span>
+                            </>
+                          ) : (
+                            <>
+                              <Square className="w-4 h-4 text-slate-400" />
+                              <span>Pilih Semua ({mySavedArticles.length})</span>
+                            </>
+                          )}
+                        </button>
+                        <div className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                          <span className="px-2.5 py-0.5 rounded-full bg-[#FF2E7E]/20 text-[#FF2E7E] font-mono font-bold text-xs border border-[#FF2E7E]/40">
+                            {selectedArticleIds.length}
+                          </span>
+                          <span>dari {mySavedArticles.length} artikel dipilih</span>
                         </div>
-                        {isOwnProfile ? (
-                          <button
-                            onClick={e => {
-                              e.stopPropagation();
-                              toggleSaveArticle(article.id);
-                            }}
-                            className="absolute top-2 right-2 p-1.5 rounded-lg bg-red-500/80 hover:bg-red-500 text-white shadow"
-                            title="Hapus dari Library"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={e => {
-                              e.stopPropagation();
-                              toggleSaveArticle(article.id);
-                            }}
-                            className={`absolute top-2 right-2 p-1.5 rounded-lg shadow transition-colors ${
-                              savedArticles.includes(article.id)
-                                ? 'bg-[#FF2E7E] text-slate-950'
-                                : 'bg-black/70 hover:bg-[#FF2E7E] hover:text-slate-950 text-white'
-                            }`}
-                            title={savedArticles.includes(article.id) ? 'Tersimpan di Baca Nanti' : 'Simpan ke Baca Nanti'}
-                          >
-                            <Bookmark className={`w-3.5 h-3.5 ${savedArticles.includes(article.id) ? 'fill-current' : ''}`} />
-                          </button>
-                        )}
                       </div>
 
-                      <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
-                        <div>
-                          <div className="flex items-center gap-2 text-[10px] text-slate-400 mb-1.5">
-                            <span className="text-[#FF2E7E] font-bold">{article.author.name}</span>
-                            <span>•</span>
-                            <span>{article.readTime}</span>
-                          </div>
-                          <h4 className="font-display font-black text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-2 leading-snug">
-                            {article.title}
-                          </h4>
-                          <p className="text-slate-400 text-xs line-clamp-2 mt-1.5">
-                            {article.excerpt}
-                          </p>
-                        </div>
-
-                        <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
-                          <span className="text-[10px] text-slate-500">{article.publishedAt}</span>
-                          <button
-                            onClick={() => navigateTo('article-detail', { articleId: article.id })}
-                            className="text-xs font-bold text-[#FF2E7E] hover:underline flex items-center gap-1"
-                          >
-                            <span>Baca Artikel</span>
-                            <ChevronRight className="w-3 h-3" />
-                          </button>
-                        </div>
+                      <div className="flex items-center gap-2 justify-end">
+                        <button
+                          disabled={selectedArticleIds.length === 0 || isBulkDeleting}
+                          onClick={handleExecuteBulkDeleteArticles}
+                          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg transition-all ${
+                            selectedArticleIds.length === 0 || isBulkDeleting
+                              ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50'
+                              : 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white shadow-red-600/25 active:scale-95'
+                          }`}
+                        >
+                          {isBulkDeleting ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <span>Menghapus...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Hapus Terpilih ({selectedArticleIds.length})</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsArticleSelectMode(false);
+                            setSelectedArticleIds([]);
+                          }}
+                          className="px-3 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 transition-all flex items-center gap-1"
+                          title="Tutup Mode Kelola"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">Selesai</span>
+                        </button>
                       </div>
                     </div>
-                  ))}
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+                    {mySavedArticles.map(article => {
+                      const isSelected = selectedArticleIds.includes(article.id);
+                      return (
+                        <div
+                          key={article.id}
+                          id={`saved-article-card-${article.id}`}
+                          onClick={isArticleSelectMode ? () => handleToggleArticleSelection(article.id) : undefined}
+                          className={`bg-slate-900/90 border rounded-2xl overflow-hidden transition-all flex flex-col group shadow-lg ${
+                            isSelected
+                              ? 'border-[#FF2E7E] ring-2 ring-[#FF2E7E]/40 bg-slate-900 shadow-[#FF2E7E]/10 cursor-pointer'
+                              : isArticleSelectMode
+                              ? 'border-slate-800 hover:border-slate-700 cursor-pointer'
+                              : 'border-slate-800 hover:border-cyan-500/50'
+                          }`}
+                        >
+                          <div className="aspect-video w-full overflow-hidden relative bg-slate-800">
+                            <img
+                              src={article.coverImage}
+                              alt={article.title}
+                              className={`w-full h-full object-cover transition-transform duration-500 ${
+                                isSelected ? 'scale-105 brightness-95' : 'group-hover:scale-105'
+                              }`}
+                            />
+
+                            {/* Checkbox for selection */}
+                            {isOwnProfile && (
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  if (!isArticleSelectMode) setIsArticleSelectMode(true);
+                                  handleToggleArticleSelection(article.id);
+                                }}
+                                className={`absolute top-2 left-2 z-20 p-1.5 rounded-lg backdrop-blur-md transition-all ${
+                                  isSelected
+                                    ? 'bg-[#FF2E7E] text-slate-950 shadow-lg scale-105'
+                                    : isArticleSelectMode
+                                    ? 'bg-black/80 hover:bg-black text-slate-300 border border-slate-700'
+                                    : 'bg-black/60 hover:bg-black/90 text-slate-400 hover:text-white border border-white/20 opacity-0 group-hover:opacity-100'
+                                }`}
+                                title={isSelected ? 'Batalkan Pilihan' : 'Pilih Artikel'}
+                              >
+                                {isSelected ? (
+                                  <CheckSquare className="w-4 h-4 text-slate-950 stroke-[3]" />
+                                ) : (
+                                  <Square className="w-4 h-4" />
+                                )}
+                              </button>
+                            )}
+
+                            <div
+                              className={`absolute top-2 bg-black/80 px-2.5 py-1 rounded text-[10px] font-bold text-[#FF2E7E] uppercase border border-[#FF2E7E]/30 transition-all z-10 ${
+                                isOwnProfile && (isArticleSelectMode || isSelected)
+                                  ? 'left-11'
+                                  : isOwnProfile
+                                  ? 'left-2 group-hover:left-11'
+                                  : 'left-2'
+                              }`}
+                            >
+                              {article.category}
+                            </div>
+
+                            {isOwnProfile ? (
+                              !isArticleSelectMode && (
+                                <button
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    toggleSaveArticle(article.id);
+                                  }}
+                                  className="absolute top-2 right-2 p-1.5 rounded-lg bg-red-500/80 hover:bg-red-500 text-white shadow transition-all"
+                                  title="Hapus dari Library"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )
+                            ) : (
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  toggleSaveArticle(article.id);
+                                }}
+                                className={`absolute top-2 right-2 p-1.5 rounded-lg shadow transition-colors ${
+                                  savedArticles.includes(article.id)
+                                    ? 'bg-[#FF2E7E] text-slate-950'
+                                    : 'bg-black/70 hover:bg-[#FF2E7E] hover:text-slate-950 text-white'
+                                }`}
+                                title={savedArticles.includes(article.id) ? 'Tersimpan di Baca Nanti' : 'Simpan ke Baca Nanti'}
+                              >
+                                <Bookmark className={`w-3.5 h-3.5 ${savedArticles.includes(article.id) ? 'fill-current' : ''}`} />
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                            <div>
+                              <div className="flex items-center gap-2 text-[10px] text-slate-400 mb-1.5">
+                                <span className="text-[#FF2E7E] font-bold">{article.author.name}</span>
+                                <span>•</span>
+                                <span>{article.readTime}</span>
+                              </div>
+                              <h4 className="font-display font-black text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-2 leading-snug">
+                                {article.title}
+                              </h4>
+                              <p className="text-slate-400 text-xs line-clamp-2 mt-1.5">
+                                {article.excerpt}
+                              </p>
+                            </div>
+
+                            <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
+                              <span className="text-[10px] text-slate-500">{article.publishedAt}</span>
+                              <button
+                                onClick={e => {
+                                  if (isArticleSelectMode) {
+                                    e.stopPropagation();
+                                  }
+                                  navigateTo('article-detail', { articleId: article.id });
+                                }}
+                                className="text-xs font-bold text-[#FF2E7E] hover:underline flex items-center gap-1"
+                              >
+                                <span>Baca Artikel</span>
+                                <ChevronRight className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )
             )}

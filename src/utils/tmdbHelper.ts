@@ -24,6 +24,67 @@ export interface MappedTmdbFilm {
   tmdbId: number;
 }
 
+export interface TmdbSearchResultItem {
+  id: number;
+  title: string;
+  name?: string;
+  original_title?: string;
+  original_name?: string;
+  release_date?: string;
+  first_air_date?: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  overview: string;
+  vote_average: number;
+  media_type: 'movie' | 'tv';
+}
+
+/**
+ * Searches TMDB for movies or TV series matching queryText
+ */
+export const searchTmdbFilms = async (
+  queryText: string,
+  type: 'movie' | 'tv' | 'all' = 'movie'
+): Promise<TmdbSearchResultItem[]> => {
+  if (!queryText || !queryText.trim()) return [];
+  const clean = queryText.trim();
+  try {
+    if (type === 'all') {
+      const [moviesRes, tvRes] = await Promise.allSettled([
+        fetch(`/api/tmdb?action=search&query=${encodeURIComponent(clean)}&type=movie`),
+        fetch(`/api/tmdb?action=search&query=${encodeURIComponent(clean)}&type=tv`),
+      ]);
+
+      const results: TmdbSearchResultItem[] = [];
+      if (moviesRes.status === 'fulfilled' && moviesRes.value.ok) {
+        const movieData = await moviesRes.value.json();
+        if (Array.isArray(movieData)) {
+          results.push(...movieData.map((m: any) => ({ ...m, media_type: 'movie' as const })));
+        }
+      }
+      if (tvRes.status === 'fulfilled' && tvRes.value.ok) {
+        const tvData = await tvRes.value.json();
+        if (Array.isArray(tvData)) {
+          results.push(...tvData.map((t: any) => ({ ...t, media_type: 'tv' as const })));
+        }
+      }
+      return results;
+    } else {
+      const res = await fetch(`/api/tmdb?action=search&query=${encodeURIComponent(clean)}&type=${type}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      if (!Array.isArray(data)) return [];
+      return data.map((item: any) => ({
+        ...item,
+        media_type: item.media_type || (type === 'tv' ? 'tv' : 'movie'),
+      }));
+    }
+  } catch (err) {
+    console.warn('[tmdbHelper] Search TMDB error:', err);
+    return [];
+  }
+};
+
 // Helper to format minutes as "Xh Ym"
 export const formatDuration = (minutes?: number): string => {
   if (!minutes || minutes <= 0) return '';

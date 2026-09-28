@@ -18,6 +18,7 @@ import {
   Trash2,
   Check,
   Award,
+  Globe,
 } from 'lucide-react';
 import { collection, getDocs, query, limit } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
@@ -25,6 +26,7 @@ import { useApp } from '../../context/AppContext';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
 import { RoleBadge } from '../Common/RoleBadge';
 import { FilmItem, Article, BuzzPost, User } from '../../types';
+import { searchTmdbFilms, TmdbSearchResultItem } from '../../utils/tmdbHelper';
 
 interface GlobalSearchBarProps {
   isMobile?: boolean;
@@ -112,11 +114,15 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
   className = '',
   placeholder = 'Cari film, artikel, buzz, atau kritikus...',
 }) => {
-  const { films, articles, buzzList, allUsers, navigateTo, searchQuery, setSearchQuery } = useApp();
+  const { films, articles, buzzList, allUsers, navigateTo, searchQuery, setSearchQuery, importAndNavigateToTmdbFilm } = useApp();
 
   const [isOpen, setIsOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<SearchCategory>('all');
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
+
+  // TMDB Real-Time Search States
+  const [tmdbSearchResults, setTmdbSearchResults] = useState<TmdbSearchResultItem[]>([]);
+  const [isSearchingTmdb, setIsSearchingTmdb] = useState<boolean>(false);
 
   // Firestore Real-time Autocomplete States
   const [firestoreSuggestions, setFirestoreSuggestions] = useState<FirestoreAutocompleteSuggestion[]>([]);
@@ -314,6 +320,50 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
     };
   }, [searchQuery, films, articles]);
 
+  // Real-time Search to TMDB API for global film dataset
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q || q.length < 2) {
+      setTmdbSearchResults([]);
+      setIsSearchingTmdb(false);
+      return;
+    }
+
+    let isCancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        setIsSearchingTmdb(true);
+        const results = await searchTmdbFilms(q, 'all');
+        if (!isCancelled) {
+          setTmdbSearchResults(results);
+        }
+      } catch (err) {
+        console.warn('[GlobalSearchBar] TMDB API search error:', err);
+      } finally {
+        if (!isCancelled) setIsSearchingTmdb(false);
+      }
+    }, 250);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [searchQuery]);
+
+  // Filter out TMDB results that already match local database films
+  const filteredTmdbResults = useMemo(() => {
+    if (!tmdbSearchResults || tmdbSearchResults.length === 0) return [];
+    const localTmdbIds = new Set(films.map(f => f.tmdbId).filter(Boolean));
+    const localTitles = new Set(films.map(f => f.title.toLowerCase().trim()));
+
+    return tmdbSearchResults.filter(item => {
+      if (item.id && localTmdbIds.has(item.id)) return false;
+      const title = (item.title || item.name || '').toLowerCase().trim();
+      if (title && localTitles.has(title)) return false;
+      return true;
+    });
+  }, [tmdbSearchResults, films]);
+
   // Real-time filtering logic across all categories
   const { matchingFilms, matchingArticles, matchingBuzz, matchingUsers } = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -427,7 +477,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
   }, [searchQuery, films, articles, buzzList, allUsers]);
 
   const totalResultsCount =
-    matchingFilms.length + matchingArticles.length + matchingBuzz.length + matchingUsers.length;
+    matchingFilms.length + filteredTmdbResults.length + matchingArticles.length + matchingBuzz.length + matchingUsers.length;
 
   // Flatten currently visible results based on activeCategory for keyboard arrow navigation
   const visibleFlattenedList: SearchResultItem[] = useMemo(() => {
@@ -654,7 +704,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                   <span>Film</span>
                   {hasQuery && (
                     <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/20 text-slate-950 font-black">
-                      {matchingFilms.length}
+                      {matchingFilms.length + filteredTmdbResults.length}
                     </span>
                   )}
                 </button>
@@ -1010,6 +1060,84 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                             </div>
 
                             <ChevronRight className="w-4 h-4 text-slate-500 shrink-0" />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* TMDB GLOBAL FILM RESULTS (Real-time TMDB API) */}
+                {(activeCategory === 'all' || activeCategory === 'film') && filteredTmdbResults.length > 0 && (
+                  <div className="space-y-2 pt-1 border-t border-slate-800/60">
+                    <div className="flex items-center justify-between pb-1 border-b border-slate-800/80">
+                      <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-cyan-400">
+                        <Globe className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>Katalog Global TMDB ({filteredTmdbResults.length})</span>
+                      </div>
+                      {isSearchingTmdb && (
+                        <span className="text-[10px] text-slate-400 animate-pulse">Memuat TMDB...</span>
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      {(activeCategory === 'all' ? filteredTmdbResults.slice(0, 3) : filteredTmdbResults).map(tmdbItem => {
+                        const poster = tmdbItem.poster_path
+                          ? `https://image.tmdb.org/t/p/w185${tmdbItem.poster_path}`
+                          : 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80';
+                        const title = tmdbItem.title || tmdbItem.name || 'Judul Film';
+                        const rawDate = tmdbItem.release_date || tmdbItem.first_air_date || '';
+                        const year = rawDate ? rawDate.substring(0, 4) : '';
+
+                        return (
+                          <div
+                            key={`tmdb-${tmdbItem.id}`}
+                            id={`search-result-tmdb-${tmdbItem.id}`}
+                            onClick={async () => {
+                              addToRecentSearches(title);
+                              setIsOpen(false);
+                              onItemSelect?.();
+                              await importAndNavigateToTmdbFilm({
+                                id: tmdbItem.id,
+                                title,
+                                media_type: tmdbItem.media_type,
+                              });
+                            }}
+                            className="p-2 rounded-xl flex items-center gap-3 cursor-pointer bg-slate-900/80 hover:bg-slate-800 border border-cyan-900/40 hover:border-cyan-500/60 transition-all group"
+                          >
+                            <div className="w-10 h-14 rounded-lg overflow-hidden bg-slate-800 shrink-0 relative border border-cyan-500/30">
+                              <img
+                                src={poster}
+                                alt={title}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                              />
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <h5 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-cyan-300 truncate">
+                                  <HighlightText text={title} query={searchQuery} />
+                                </h5>
+                                <span className="text-[8px] uppercase font-black px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 shrink-0">
+                                  TMDB GLOBAL
+                                </span>
+                              </div>
+
+                              <div className="text-[11px] text-slate-400 truncate mt-0.5">
+                                {year ? `${year} • ` : ''}{tmdbItem.media_type === 'tv' ? 'Series TV' : 'Film'}
+                              </div>
+
+                              {tmdbItem.vote_average ? (
+                                <div className="flex items-center gap-1 mt-1 text-[10px] text-amber-400 font-bold">
+                                  <Star className="w-3 h-3 fill-current text-amber-400" />
+                                  <span>{tmdbItem.vote_average.toFixed(1)}</span>
+                                  <span className="text-[9px] text-slate-400 font-normal">(TMDB)</span>
+                                </div>
+                              ) : null}
+                            </div>
+
+                            <ChevronRight className="w-4 h-4 text-cyan-400 shrink-0" />
                           </div>
                         );
                       })}
