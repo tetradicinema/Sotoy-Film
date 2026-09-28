@@ -42,6 +42,8 @@ export interface ShareData {
   likes?: number;
   replies?: number;
   category?: string;
+  readTime?: string;
+  publishedAt?: string;
   skorSotoy?: number;
   // Specific for film rating & review card
   rating?: number;
@@ -218,12 +220,40 @@ export const waitForImages = async (container: HTMLElement): Promise<void> => {
   );
 };
 
+export const cleanTrailingPunctuation = (str: string): string => {
+  return str.replace(/[.,:;…!?-]+$/g, '').trimEnd();
+};
+
+export const getArticleStoryByline = (data: ShareData): string => {
+  const parts: string[] = [];
+  const author = data.authorName?.trim();
+  if (author && author !== 'undefined' && author !== 'null') {
+    parts.push(`Oleh ${author}`);
+  }
+
+  let readTime = '';
+  if (data.readTime && data.readTime.trim() && data.readTime !== 'undefined' && data.readTime !== 'null') {
+    readTime = data.readTime.trim();
+  } else if (data.meta && typeof data.meta === 'string') {
+    const match = data.meta.match(/\(?\d+\s*(?:mnt|menit)\s*baca\)?/i);
+    if (match) {
+      readTime = match[0].replace(/[()]/g, '').trim();
+    }
+  }
+
+  if (readTime) {
+    parts.push(readTime);
+  }
+
+  return parts.join(' • ');
+};
+
 // =============================================================================
 // SINGLE SOURCE OF TRUTH: Film Rating Instagram Story Card (1080x1920)
 // Designed edge-to-edge for Instagram Stories with proportional safe-zone spacing:
 // - Top watermark padding: ~5-6% (110px on 1920px height)
 // - Bottom footer padding: ~4-5% (90px on 1920px height)
-// - Horizontal safe padding: ~4-5% (50px on 1080px width)
+// - Horizontal safe padding: ~5-6% (60px on 1080px width)
 // Both the modal preview (scaled via CSS scale 0.25) and DOM-to-image PNG export
 // render from this exact component, guaranteeing 100% visual parity with zero drift.
 // =============================================================================
@@ -272,7 +302,7 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
             className="w-full h-full object-cover"
           />
           {/* Subtle top vignette for watermark contrast on bright posters */}
-          <div className="absolute inset-x-0 top-0 h-[280px] bg-gradient-to-b from-[#0E1013]/90 via-[#0E1013]/40 to-transparent pointer-events-none" />
+          <div className="absolute inset-x-0 top-0 h-[320px] bg-gradient-to-b from-[#0E1013]/95 via-[#0E1013]/50 to-transparent pointer-events-none" />
         </div>
       )}
 
@@ -285,14 +315,14 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
         }}
       />
 
-      {/* Top Watermark Overlay (Proportional safe-zone: ~5-6% = 110px top padding, 4-5% = 50px horizontal padding) */}
-      <div className="relative z-10 pt-[110px] px-[50px] flex items-center justify-between">
+      {/* Top Watermark Overlay (Proportional safe-zone: ~5-6% = 110px top padding, 60px horizontal padding) */}
+      <div className="relative z-10 pt-[110px] px-[60px] flex items-center justify-between">
         <img
           src={effectiveLogo}
           alt="Sotoy Film"
-          className="h-[75px] w-auto object-contain drop-shadow-lg"
+          className="w-[380px] h-auto object-contain drop-shadow-lg"
         />
-        <div className="px-5 py-2 rounded-full font-black text-xs tracking-wider text-[#FF2E7E] bg-[#0E1013]/90 border border-[#FF2E7E]/40 backdrop-blur-md shadow-lg whitespace-nowrap">
+        <div className="px-7 py-3.5 rounded-full font-black text-[28px] tracking-wider text-[#FF2E7E] bg-[#0E1013]/90 border-2 border-[#FF2E7E]/40 backdrop-blur-md shadow-lg whitespace-nowrap uppercase">
           SKOR & ULASAN
         </div>
       </div>
@@ -831,7 +861,380 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         return;
       }
 
-      // 2. Film Rating Story (9:16) - Direct high-resolution Canvas 2D rendering
+      // 2. Article Instagram Story (9:16) - Full-bleed, edge-to-edge cinematic Canvas 2D rendering
+      if (isArticle && format === 'story') {
+        if (typeof document !== 'undefined' && document.fonts?.ready) {
+          await document.fonts.ready;
+        }
+
+        const width = 1080;
+        const height = 1920;
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+          showToast('Gagal menginisialisasi perender visual.');
+          setIsGeneratingImage(false);
+          return;
+        }
+
+        // Base solid background (#0E1013)
+        ctx.fillStyle = '#0E1013';
+        ctx.fillRect(0, 0, width, height);
+
+        // 1. Background + Cover: Draw article cover over roughly top 60% (1150px) using cover-fit
+        const coverUrl = data.image || data.imageUrl;
+        const coverH = 1150;
+        let coverLoaded = false;
+
+        if (coverUrl) {
+          try {
+            const coverImg = await loadCanvasImage(coverUrl);
+            coverLoaded = true;
+
+            const imgAspect = coverImg.width / coverImg.height;
+            const targetAspect = width / coverH; // 1080 / 1150
+
+            let sx = 0,
+              sy = 0,
+              sWidth = coverImg.width,
+              sHeight = coverImg.height;
+            if (imgAspect > targetAspect) {
+              sWidth = coverImg.height * targetAspect;
+              sx = (coverImg.width - sWidth) / 2;
+            } else {
+              sHeight = coverImg.width / targetAspect;
+              sy = (coverImg.height - sHeight) / 2;
+            }
+
+            ctx.drawImage(coverImg, sx, sy, sWidth, sHeight, 0, 0, width, coverH);
+          } catch (coverErr) {
+            console.warn('[SocialShareModal] Article cover load failed for canvas, using fallback gradient:', coverErr);
+          }
+        }
+
+        if (!coverLoaded) {
+          const fallbackGrad = ctx.createLinearGradient(0, 0, 0, coverH);
+          fallbackGrad.addColorStop(0, '#171A21');
+          fallbackGrad.addColorStop(0.5, '#0E1013');
+          fallbackGrad.addColorStop(1, '#08090C');
+          ctx.fillStyle = fallbackGrad;
+          ctx.fillRect(0, 0, width, coverH);
+
+          const glow = ctx.createRadialGradient(width / 2, 450, 40, width / 2, 450, 500);
+          glow.addColorStop(0, 'rgba(255, 46, 126, 0.25)');
+          glow.addColorStop(1, 'rgba(14, 16, 19, 0)');
+          ctx.fillStyle = glow;
+          ctx.fillRect(0, 0, width, coverH);
+        }
+
+        // 2. Single Continuous Gradient: No seam, reaches opaque #0E1013 at bottom edge of cover (~58-60%)
+        const scrim = ctx.createLinearGradient(0, 0, 0, height);
+        scrim.addColorStop(0, 'rgba(14, 16, 19, 0.90)');
+        scrim.addColorStop(0.10, 'rgba(14, 16, 19, 0.50)');
+        scrim.addColorStop(0.22, 'rgba(14, 16, 19, 0.25)');
+        scrim.addColorStop(0.35, 'rgba(14, 16, 19, 0.55)');
+        scrim.addColorStop(0.48, 'rgba(14, 16, 19, 0.85)');
+        scrim.addColorStop(0.58, '#0E1013');
+        scrim.addColorStop(1, '#0E1013');
+        ctx.fillStyle = scrim;
+        ctx.fillRect(0, 0, width, height);
+
+        // 3. Top Row: Sotoy Film Logo (top-left) & Category Pill (top-right)
+        const topPad = 110;
+        const sidePad = 60;
+        const logoTargetW = 380;
+        let logoTargetH = 95;
+
+        // Draw Sotoy Film Logo (natural aspect ratio, 380px wide)
+        try {
+          const logoImg = await loadCanvasImage('/sotoy-logo-full.png');
+          logoTargetH = logoImg.height * (logoTargetW / logoImg.width);
+          ctx.drawImage(logoImg, sidePad, topPad, logoTargetW, logoTargetH);
+        } catch (logoErr) {
+          console.warn('[SocialShareModal] Could not load /sotoy-logo-full.png for canvas:', logoErr);
+          ctx.fillStyle = '#FF2E7E';
+          ctx.font = "900 48px 'Geist', 'Plus Jakarta Sans', sans-serif";
+          ctx.textAlign = 'left';
+          ctx.fillText('SOTOY FILM', sidePad, topPad + 58);
+          logoTargetH = 80;
+        }
+
+        // Draw Category Pill (Scaled ~1.25x: font 28px, height 60px, vertically centered with logo)
+        const categoryText = (data.category || 'ARTIKEL').toUpperCase();
+        const maxPillW = width - sidePad * 2 - logoTargetW - 40;
+        const pillPadX = 26;
+        let pillFontSize = 28;
+        let pillText = categoryText;
+        let catTextW = 0;
+
+        ctx.save();
+        while (pillFontSize >= 16) {
+          ctx.font = `900 ${pillFontSize}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
+          catTextW = ctx.measureText(pillText).width;
+          if (catTextW + pillPadX * 2 <= maxPillW) {
+            break;
+          }
+          pillFontSize -= 2;
+        }
+
+        if (catTextW + pillPadX * 2 > maxPillW) {
+          ctx.font = `900 16px 'Geist', 'Plus Jakarta Sans', sans-serif`;
+          let truncated = pillText;
+          while (
+            truncated.length > 0 &&
+            ctx.measureText(`${cleanTrailingPunctuation(truncated)}...`).width + pillPadX * 2 > maxPillW
+          ) {
+            truncated = truncated.slice(0, -1);
+          }
+          pillText = `${cleanTrailingPunctuation(truncated)}...`;
+          catTextW = ctx.measureText(pillText).width;
+        }
+        ctx.restore();
+
+        const pillH = 60;
+        const pillW = catTextW + pillPadX * 2;
+        const pillX = width - sidePad - pillW;
+        const logoCenterY = topPad + logoTargetH / 2;
+        const pillY = logoCenterY - pillH / 2;
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(14, 16, 19, 0.90)';
+        ctx.strokeStyle = 'rgba(255, 46, 126, 0.45)';
+        ctx.lineWidth = 2.5;
+        drawRoundRectPath(ctx, pillX, pillY, pillW, pillH, pillH / 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#FF2E7E';
+        ctx.font = `900 ${pillFontSize}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(pillText, pillX + pillW / 2, pillY + pillH / 2);
+        ctx.restore();
+
+        // 4. Text Block (Sequential y-cursor on gradient, bottom-anchored)
+        const maxTextW = width - sidePad * 2; // 960px
+
+        const getWrappedLines = (
+          text: string,
+          maxWidth: number,
+          font: string,
+          maxLines: number = 4
+        ): string[] => {
+          if (!text) return [];
+          ctx.save();
+          ctx.font = font;
+          const words = text.split(/\s+/).filter(Boolean);
+          const lines: string[] = [];
+          let currentLine = '';
+
+          for (let i = 0; i < words.length; i++) {
+            const testLine = currentLine ? `${currentLine} ${words[i]}` : words[i];
+            const metrics = ctx.measureText(testLine);
+            if (metrics.width > maxWidth && currentLine) {
+              lines.push(currentLine);
+              currentLine = words[i];
+              if (lines.length === maxLines - 1) {
+                // Last line: append remainder with ellipsis if necessary, stripping trailing punctuation
+                const remainingWords = words.slice(i).join(' ');
+                let lastLine = remainingWords;
+                while (
+                  ctx.measureText(`${cleanTrailingPunctuation(lastLine)}...`).width > maxWidth &&
+                  lastLine.includes(' ')
+                ) {
+                  lastLine = lastLine.substring(0, lastLine.lastIndexOf(' '));
+                }
+                lines.push(`${cleanTrailingPunctuation(lastLine)}...`);
+                currentLine = '';
+                break;
+              }
+            } else {
+              currentLine = testLine;
+            }
+          }
+          if (currentLine) {
+            lines.push(currentLine);
+          }
+          ctx.restore();
+          return lines.slice(0, maxLines);
+        };
+
+        const titleFont = "900 80px 'Geist', 'Plus Jakarta Sans', sans-serif";
+        const titleLineH = 92; // ~1.15
+        const titleLines = getWrappedLines(data.title || '', maxTextW, titleFont, 4);
+        const titleHeight = titleLines.length * titleLineH;
+
+        const excerptFont = "34px 'Plus Jakarta Sans', sans-serif";
+        const excerptLineH = 46;
+        const excerptLines = data.text ? getWrappedLines(data.text, maxTextW, excerptFont, 3) : [];
+        const excerptGap = excerptLines.length > 0 ? 24 : 0;
+        const excerptHeight = excerptLines.length * excerptLineH;
+
+        // Byline data check (built from separate fields only, without duplicate author or raw meta dump)
+        const bylineStr = getArticleStoryByline(data);
+
+        let authorAvatarImg: HTMLImageElement | null = null;
+        if (data.authorAvatar) {
+          try {
+            authorAvatarImg = await loadCanvasImage(data.authorAvatar);
+          } catch {
+            // graceful fallback
+          }
+        }
+
+        const hasByline = Boolean(bylineStr || authorAvatarImg);
+        const bylineGap = hasByline ? 24 : 0;
+        const bylineHeight = hasByline ? 48 : 0;
+
+        const totalContentH = titleHeight + excerptGap + excerptHeight + bylineGap + bylineHeight;
+        const targetBottom = 1720;
+        let yCursor = Math.max(920, targetBottom - totalContentH);
+
+        ctx.textBaseline = 'top';
+
+        // Title
+        ctx.font = titleFont;
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'left';
+        for (const line of titleLines) {
+          ctx.fillText(line, sidePad, yCursor);
+          yCursor += titleLineH;
+        }
+
+        // Excerpt
+        if (excerptLines.length > 0) {
+          yCursor += excerptGap;
+          ctx.font = excerptFont;
+          ctx.fillStyle = '#CBD5E1';
+          ctx.textAlign = 'left';
+          for (const line of excerptLines) {
+            ctx.fillText(line, sidePad, yCursor);
+            yCursor += excerptLineH;
+          }
+        }
+
+        // Byline
+        if (hasByline) {
+          yCursor += bylineGap;
+          let bylineX = sidePad;
+          const avatarSize = 44;
+
+          if (authorAvatarImg) {
+            const avatarCenterY = yCursor + avatarSize / 2;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(bylineX + avatarSize / 2, avatarCenterY, avatarSize / 2, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.clip();
+            ctx.drawImage(authorAvatarImg, bylineX, yCursor, avatarSize, avatarSize);
+            ctx.restore();
+
+            ctx.save();
+            ctx.strokeStyle = '#FF2E7E';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(bylineX + avatarSize / 2, avatarCenterY, avatarSize / 2, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+
+            bylineX += avatarSize + 16;
+          }
+
+          if (bylineStr) {
+            ctx.fillStyle = '#E2E8F0';
+            ctx.font = "bold 24px 'Geist', 'Plus Jakarta Sans', sans-serif";
+            ctx.textAlign = 'left';
+            const textOffsetY = authorAvatarImg ? yCursor + (avatarSize - 24) / 2 : yCursor + 10;
+            ctx.fillText(bylineStr, bylineX, textOffsetY);
+          }
+
+          yCursor += bylineHeight;
+        }
+
+        // 5. Single Footer (thin divider + left accent text + right cyan domain)
+        const footerDividerY = height - 135; // 1785px
+        const footerTextY = height - 90; // 1830px
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(sidePad, footerDividerY);
+        ctx.lineTo(width - sidePad, footerDividerY);
+        ctx.stroke();
+
+        ctx.fillStyle = '#FF2E7E';
+        ctx.font = "bold 22px 'Geist', 'Plus Jakarta Sans', sans-serif";
+        ctx.textAlign = 'left';
+        ctx.fillText('★ Baca selengkapnya di Sotoy Film', sidePad, footerTextY);
+
+        ctx.fillStyle = '#00F0FF';
+        ctx.font = "bold 22px 'Geist Mono', monospace";
+        ctx.textAlign = 'right';
+        ctx.fillText('sotoyfilm.my.id', width - sidePad, footerTextY);
+
+        // Export Canvas to PNG Blob
+        const blob = await new Promise<Blob | null>((resolve) => {
+          canvas.toBlob((b) => resolve(b), 'image/png');
+        });
+
+        if (!blob) {
+          throw new Error('Gagal mengonversi kanvas artikel menjadi gambar.');
+        }
+
+        const fileName = `sotoyfilm-article-story-${Date.now()}.png`;
+        const file = new File([blob], fileName, { type: 'image/png' });
+        const isMobileDevice =
+          typeof navigator !== 'undefined' &&
+          navigator.maxTouchPoints > 0 &&
+          typeof window !== 'undefined' &&
+          window.matchMedia('(pointer: coarse)').matches;
+        const canShareFiles =
+          isMobileDevice &&
+          typeof navigator.share === 'function' &&
+          typeof navigator.canShare === 'function' &&
+          navigator.canShare({ files: [file] });
+
+        let sharedViaSheet = false;
+        if (canShareFiles) {
+          try {
+            const shareTitle = `Sotoy Film - ${data.title || 'Artikel'}`;
+            await navigator.share({
+              files: [file],
+              title: shareTitle,
+            });
+            sharedViaSheet = true;
+            showToast('Gambar Story (.PNG) siap disimpan ke galeri foto!');
+          } catch (shareErr: any) {
+            if (
+              shareErr?.name === 'AbortError' ||
+              shareErr?.message?.toLowerCase().includes('abort') ||
+              shareErr?.message?.toLowerCase().includes('cancel')
+            ) {
+              return;
+            }
+            console.warn('[SocialShareModal] Native share failed, falling back to direct download:', shareErr);
+          }
+        }
+
+        if (!sharedViaSheet) {
+          const blobUrl = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.download = fileName;
+          link.href = blobUrl;
+          link.click();
+          setTimeout(() => {
+            URL.revokeObjectURL(blobUrl);
+          }, 1000);
+
+          showToast('Gambar Story (.PNG) berhasil diunduh! Siap diunggah ke Instagram Stories.');
+        }
+        return;
+      }
+
+      // 3. Film Rating Story (9:16) - Direct high-resolution Canvas 2D rendering
       if (isFilmRating && format === 'story') {
         if (typeof document !== 'undefined' && document.fonts?.ready) {
           await document.fonts.ready;
@@ -890,13 +1293,13 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         }
 
         // 2. Single Continuous Dark Scrim Gradient covering full height (no separate localized overlay)
-        // Top vignette for logo & badge legibility on bright posters (h: 280px)
-        const topVignette = ctx.createLinearGradient(0, 0, 0, 280);
-        topVignette.addColorStop(0, 'rgba(14, 16, 19, 0.85)');
-        topVignette.addColorStop(0.5, 'rgba(14, 16, 19, 0.35)');
+        // Top vignette for logo & badge legibility on bright posters (h: 320px)
+        const topVignette = ctx.createLinearGradient(0, 0, 0, 320);
+        topVignette.addColorStop(0, 'rgba(14, 16, 19, 0.90)');
+        topVignette.addColorStop(0.5, 'rgba(14, 16, 19, 0.45)');
         topVignette.addColorStop(1, 'rgba(14, 16, 19, 0)');
         ctx.fillStyle = topVignette;
-        ctx.fillRect(0, 0, width, 280);
+        ctx.fillRect(0, 0, width, 320);
 
         // Lower scrim fading poster smoothly into solid dark #0E1013 background (no hard seam)
         const mainScrim = ctx.createLinearGradient(0, 0, 0, height);
@@ -914,47 +1317,79 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
 
         // 3. Proportional Top Watermark: Sotoy Film Logo + "SKOR & ULASAN" Badge
         const topPad = 110;
-        const sidePad = 50;
-        const logoTargetH = 75;
+        const sidePad = 60;
+        const logoTargetW = 380;
+        let logoTargetH = 95;
 
-        // Draw Sotoy Film Logo
+        // Draw Sotoy Film Logo (natural aspect ratio, 380px wide)
         try {
           const logoImg = await loadCanvasImage('/sotoy-logo-full.png');
-          const logoW = logoImg.width * (logoTargetH / logoImg.height);
-          ctx.drawImage(logoImg, sidePad, topPad, logoW, logoTargetH);
+          logoTargetH = logoImg.height * (logoTargetW / logoImg.width);
+          ctx.drawImage(logoImg, sidePad, topPad, logoTargetW, logoTargetH);
         } catch (logoErr) {
           console.warn('[SocialShareModal] Could not load /sotoy-logo-full.png for canvas:', logoErr);
           ctx.fillStyle = '#FF2E7E';
-          ctx.font = "900 36px 'Geist', 'Plus Jakarta Sans', sans-serif";
+          ctx.font = "900 48px 'Geist', 'Plus Jakarta Sans', sans-serif";
           ctx.textAlign = 'left';
-          ctx.fillText('SOTOY FILM', sidePad, topPad + 48);
+          ctx.fillText('SOTOY FILM', sidePad, topPad + 58);
+          logoTargetH = 80;
         }
 
         // Draw "SKOR & ULASAN" Badge (pill badge with #FF2E7E border & text)
         const badgeText = 'SKOR & ULASAN';
-        ctx.font = "900 20px 'Geist', 'Plus Jakarta Sans', sans-serif";
-        const badgeTextW = ctx.measureText(badgeText).width;
-        const badgeH = 44;
-        const badgeW = badgeTextW + 40; // 20px padding on each side
+        const maxBadgeW = width - sidePad * 2 - logoTargetW - 40;
+        const badgePadX = 26;
+        let badgeFontSize = 28;
+        let badgeRenderText = badgeText;
+        let badgeTextW = 0;
+
+        ctx.save();
+        while (badgeFontSize >= 16) {
+          ctx.font = `900 ${badgeFontSize}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
+          badgeTextW = ctx.measureText(badgeRenderText).width;
+          if (badgeTextW + badgePadX * 2 <= maxBadgeW) {
+            break;
+          }
+          badgeFontSize -= 2;
+        }
+
+        if (badgeTextW + badgePadX * 2 > maxBadgeW) {
+          ctx.font = `900 16px 'Geist', 'Plus Jakarta Sans', sans-serif`;
+          let truncated = badgeRenderText;
+          while (
+            truncated.length > 0 &&
+            ctx.measureText(`${cleanTrailingPunctuation(truncated)}...`).width + badgePadX * 2 > maxBadgeW
+          ) {
+            truncated = truncated.slice(0, -1);
+          }
+          badgeRenderText = `${cleanTrailingPunctuation(truncated)}...`;
+          badgeTextW = ctx.measureText(badgeRenderText).width;
+        }
+        ctx.restore();
+
+        const badgeH = 60;
+        const badgeW = badgeTextW + badgePadX * 2;
         const badgeX = width - sidePad - badgeW;
-        const badgeY = topPad + (logoTargetH - badgeH) / 2;
+        const logoCenterY = topPad + logoTargetH / 2;
+        const badgeY = logoCenterY - badgeH / 2;
 
         ctx.save();
         ctx.fillStyle = 'rgba(14, 16, 19, 0.90)';
-        ctx.strokeStyle = 'rgba(255, 46, 126, 0.40)';
-        ctx.lineWidth = 2;
-        drawRoundRectPath(ctx, badgeX, badgeY, badgeW, badgeH, 22);
+        ctx.strokeStyle = 'rgba(255, 46, 126, 0.45)';
+        ctx.lineWidth = 2.5;
+        drawRoundRectPath(ctx, badgeX, badgeY, badgeW, badgeH, badgeH / 2);
         ctx.fill();
         ctx.stroke();
 
         ctx.fillStyle = '#FF2E7E';
+        ctx.font = `900 ${badgeFontSize}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(badgeText, badgeX + badgeW / 2, badgeY + badgeH / 2);
+        ctx.fillText(badgeRenderText, badgeX + badgeW / 2, badgeY + badgeH / 2);
         ctx.restore();
 
         // 4. Sequential Y-Cursor Text Layout (Matching JSX Reference Exactly)
-        const maxTextW = width - (sidePad * 2) - 20; // 960px
+        const maxTextW = width - (sidePad * 2) - 20; // 940px
         const filmTitle = data.filmTitle || data.title || '';
         const genresStr = (data.filmGenres || []).slice(0, 3).join(' • ');
         const metaStr = [data.filmYear, genresStr].filter(Boolean).join(' | ');
@@ -968,7 +1403,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           if (!text) return [];
           ctx.save();
           ctx.font = font;
-          const words = text.split(' ');
+          const words = text.split(/\s+/).filter(Boolean);
           const lines: string[] = [];
           let currentLine = '';
 
@@ -979,13 +1414,16 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
               lines.push(currentLine);
               currentLine = words[i];
               if (lines.length === maxLines - 1) {
-                // Last line: append remainder with ellipsis if necessary
+                // Last line: append remainder with ellipsis if necessary, stripping trailing punctuation
                 const remainingWords = words.slice(i).join(' ');
                 let lastLine = remainingWords;
-                while (ctx.measureText(`${lastLine}...`).width > maxWidth && lastLine.includes(' ')) {
+                while (
+                  ctx.measureText(`${cleanTrailingPunctuation(lastLine)}...`).width > maxWidth &&
+                  lastLine.includes(' ')
+                ) {
                   lastLine = lastLine.substring(0, lastLine.lastIndexOf(' '));
                 }
-                lines.push(`${lastLine}...`);
+                lines.push(`${cleanTrailingPunctuation(lastLine)}...`);
                 currentLine = '';
                 break;
               }
@@ -2006,6 +2444,88 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                   />
                 )}
               </div>
+            ) : isArticle ? (
+              <div className="relative mx-auto w-[240px] aspect-[9/16] rounded-2xl overflow-hidden bg-[#0E1013] shadow-2xl flex flex-col justify-between text-left select-none">
+                {/* 1. Full-bleed Article Cover in top ~60% */}
+                <div className="absolute top-0 left-0 right-0 h-[60%] overflow-hidden pointer-events-none">
+                  {data.image || data.imageUrl ? (
+                    <img
+                      src={data.image || data.imageUrl}
+                      alt={data.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-b from-[#171A21] via-[#0E1013] to-[#08090C]" />
+                  )}
+                </div>
+
+                {/* 2. Single Continuous Gradient Overlay (Seamless to solid #0E1013 at ~60%) */}
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    background:
+                      'linear-gradient(to bottom, rgba(14, 16, 19, 0.75) 0%, rgba(14, 16, 19, 0.35) 10%, rgba(14, 16, 19, 0.15) 22%, rgba(14, 16, 19, 0.35) 35%, rgba(14, 16, 19, 0.65) 45%, rgba(14, 16, 19, 0.90) 54%, #0E1013 60%, #0E1013 100%)',
+                  }}
+                />
+
+                {/* 3. Top Watermark: Logo & Category Pill */}
+                <div className="relative z-10 pt-[24px] px-[13px] flex items-center justify-between">
+                  <img
+                    src="/sotoy-logo-full.png"
+                    alt="Sotoy Film"
+                    className="w-[84px] h-auto object-contain drop-shadow"
+                  />
+                  <div className="px-2.5 py-0.5 rounded-full font-black text-[7.5px] tracking-wider text-[#FF2E7E] bg-[#0E1013]/90 border border-[#FF2E7E]/40 backdrop-blur-md shadow whitespace-nowrap uppercase">
+                    {data.category || 'ARTIKEL'}
+                  </div>
+                </div>
+
+                {/* 4. Text Block (Left-aligned, sits on gradient) */}
+                <div className="relative z-10 px-[13px] flex-1 flex flex-col justify-end pb-3 space-y-1.5">
+                  <h1 className="font-display font-black text-[17px] text-white leading-[1.18] line-clamp-4 drop-shadow-sm">
+                    {data.title}
+                  </h1>
+
+                  {data.text && (
+                    <p className="text-[7.5px] text-slate-300 line-clamp-3 leading-[1.3]">
+                      {data.text}
+                    </p>
+                  )}
+
+                  {(() => {
+                    const bylineStr = getArticleStoryByline(data);
+                    if (!data.authorAvatar && !bylineStr) return null;
+                    return (
+                      <div className="flex items-center gap-1.5 pt-0.5">
+                        {data.authorAvatar ? (
+                          <img
+                            src={data.authorAvatar}
+                            alt={data.authorName || 'Penulis'}
+                            className="w-3.5 h-3.5 rounded-full object-cover border border-[#FF2E7E]"
+                          />
+                        ) : null}
+                        {bylineStr && (
+                          <span className="text-[7.5px] text-slate-300 font-bold truncate">
+                            {bylineStr}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* 5. Footer */}
+                <div className="relative z-10 px-[13px] pb-[20px]">
+                  <div className="pt-2 border-t border-white/15 flex items-center justify-between">
+                    <span className="text-[6.5px] font-bold text-[#FF2E7E] truncate">
+                      ★ Baca selengkapnya di Sotoy Film
+                    </span>
+                    <span className="text-[6.5px] text-[#00F0FF] font-mono font-bold shrink-0">
+                      sotoyfilm.my.id
+                    </span>
+                  </div>
+                </div>
+              </div>
             ) : (
               <div
                 className="relative mx-auto w-[240px] aspect-[9/16] rounded-2xl overflow-hidden bg-gradient-to-b from-[#15162b] via-[#10111e] to-[#090a10] border border-[#FF2E7E]/40 shadow-2xl p-4 flex flex-col justify-between text-left"
@@ -2016,50 +2536,20 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                     Sotoy Film
                   </span>
                   <span className="text-[8px] px-1.5 py-0.5 rounded font-bold text-slate-300 bg-white/10">
-                    {isArticle ? 'ARTIKEL STORY' : 'STORIES'}
+                    STORIES
                   </span>
                 </div>
 
-                {/* Center Content: Article */}
+                {/* Center Content */}
                 <div className="relative z-10 py-1 space-y-2 overflow-hidden flex-1 flex flex-col justify-center">
-                  <div className="space-y-2">
-                    {(data.image || data.imageUrl) && (
-                      <div className="relative w-full aspect-[16/10] rounded-xl overflow-hidden border border-white/10 shadow-lg">
-                        <img
-                          src={data.image || data.imageUrl}
-                          alt={data.title}
-                          className="w-full h-full object-cover"
-                        />
-                        {data.category && (
-                          <span className="absolute top-1.5 left-1.5 bg-[#FF2E7E] text-white text-[8px] font-black uppercase px-2 py-0.5 rounded shadow">
-                            {data.category}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    <h4 className="font-display font-black text-xs text-white leading-tight line-clamp-3">
-                      {data.title}
-                    </h4>
-                    {data.text && (
-                      <p className="text-[9px] text-slate-300 line-clamp-2 leading-snug">
-                        {data.text}
-                      </p>
-                    )}
-                    {data.authorName && (
-                      <div className="flex items-center gap-1.5 pt-0.5">
-                        {data.authorAvatar && (
-                          <img
-                            src={data.authorAvatar}
-                            alt={data.authorName}
-                            className="w-4 h-4 rounded-full object-cover border border-white/20"
-                          />
-                        )}
-                        <span className="text-[9px] text-[#FF2E7E] font-bold truncate">
-                          ★ Oleh: {data.authorName}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                  <h4 className="font-display font-black text-xs text-white leading-tight line-clamp-3">
+                    {data.title}
+                  </h4>
+                  {data.text && (
+                    <p className="text-[9px] text-slate-300 line-clamp-2 leading-snug">
+                      {data.text}
+                    </p>
+                  )}
                 </div>
 
                 {/* Bottom footer */}
