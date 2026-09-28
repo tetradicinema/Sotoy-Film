@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { db, auth } from '../../lib/firebase';
 import {
   User as UserIcon,
   Star,
@@ -369,7 +369,7 @@ export const UserPage: React.FC = () => {
 
   // Determine visibility for secondary tabs in overflow menu
   const showArticlesTab = Boolean(targetUser.role === 'penulis_sotoy' || targetUser.role === 'admin' || isWriter || isAdmin || myArticles.length > 0);
-  const showAdminTab = isOwnProfile && Boolean(currentUser.role === 'admin' || currentUser.id === 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' || currentUser.email === 'eksposurmedia@gmail.com' || isAdmin);
+  const showAdminTab = isOwnProfile && Boolean(currentUser.role === 'admin' || currentUser.id === 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' || (currentUser.email === 'eksposurmedia@gmail.com' && auth.currentUser?.emailVerified) || isAdmin);
   const isSecondaryActive = activeUserTab === 'reposts' || activeUserTab === 'articles' || activeUserTab === 'admin';
 
   // Compute stats for the target user
@@ -548,7 +548,7 @@ export const UserPage: React.FC = () => {
               {/* Own Profile Actions */}
               {isOwnProfile && (
                 <>
-                  {(currentUser.role === 'admin' || currentUser.id === 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' || currentUser.email === 'eksposurmedia@gmail.com') && (
+                  {(currentUser.role === 'admin' || currentUser.id === 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' || (currentUser.email === 'eksposurmedia@gmail.com' && auth.currentUser?.emailVerified) || isAdmin) && (
                     <button
                       id="user-header-admin-btn"
                       onClick={() => setActiveUserTab('admin')}
@@ -2170,7 +2170,7 @@ export const UserPage: React.FC = () => {
         {/* ========================================================================= */}
         {/* ADMIN DASHBOARD (KHUSUS ADMIN USER VIEW) */}
         {/* ========================================================================= */}
-        {activeUserTab === 'admin' && (isOwnProfile && (currentUser.role === 'admin' || currentUser.id === 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' || currentUser.email === 'eksposurmedia@gmail.com')) && (
+        {activeUserTab === 'admin' && (isOwnProfile && (currentUser.role === 'admin' || currentUser.id === 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' || (currentUser.email === 'eksposurmedia@gmail.com' && auth.currentUser?.emailVerified) || isAdmin)) && (
           <div className="pt-2">
             <React.Suspense fallback={
               <div className="py-12 flex flex-col items-center justify-center gap-3">

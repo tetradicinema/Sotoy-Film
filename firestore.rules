@@ -25,7 +25,7 @@ service cloud.firestore {
         request.auth.uid == 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' ||
         request.auth.uid == 'QkNGf1ZfhsMyUEk90a6Iz8ZplZS2' ||
         request.auth.uid == 'I34eqzOmvsSdS2Rf7jpfxw1ZKeu1' ||
-        (request.auth.token.email in ['eksposurmedia@gmail.com', 'admin1@sotoyfilm.id', 'admin2@sotoyfilm.id']) ||
+        (request.auth.token.email == 'eksposurmedia@gmail.com' && request.auth.token.email_verified == true) ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'admin')
       );
     }
@@ -35,7 +35,6 @@ service cloud.firestore {
         request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' ||
         request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' ||
         isAdmin() ||
-        (request.auth.token.email in ['eksposurmedia@gmail.com', 'admin1@sotoyfilm.id', 'admin2@sotoyfilm.id']) ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role in ['penulis_sotoy', 'admin'])
       );
     }
@@ -122,7 +121,7 @@ service cloud.firestore {
       return data.keys().hasAll(['id', 'filmId', 'userId', 'score', 'createdAt']) &&
         data.id is string && data.id.size() <= 128 &&
         data.filmId is string && data.filmId.size() <= 128 &&
-        data.userId is string && (data.userId == request.auth.uid || isAdmin() || isWriter() || isSignedIn()) &&
+        data.userId is string && data.userId == request.auth.uid &&
         data.score is number && data.score >= 0.5 && data.score <= 5.0;
     }
 
@@ -252,13 +251,20 @@ service cloud.firestore {
              incoming().likes == nextUp.size() - nextDown.size();
     }
 
+    // Collection userPrivate
+    match /userPrivate/{userId} {
+      allow read: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow create, update: if isSignedIn() && isOwner(userId) && incoming().keys().hasOnly(['email', 'updatedAt']) && incoming().email is string && incoming().email.size() <= 320;
+      allow delete: if isAdmin();
+    }
+
     // Rules for each collection
     match /users/{userId} {
       allow read: if true;
-      allow create: if isSignedIn() && isOwner(userId) && isValidUser(incoming());
-      allow update: if isSignedIn() && (
+      allow create: if isSignedIn() && isOwner(userId) && !incoming().keys().hasAny(['email']) && isValidUser(incoming());
+      allow update: if isSignedIn() && !incoming().keys().hasAny(['email']) && (
         // Document Owner updating profile / interests / following
-        (isOwner(userId) && isValidUser(incoming()) && (incoming().role == existing().role || userId == '0PCmaBvJrzeaQgpf3sSTC4mnsh02') && (
+        (isOwner(userId) && isValidUser(incoming()) && (incoming().role == existing().role) && (
           !('followersCount' in incoming().diff(existing()).affectedKeys()) || isValidFollowersCountDelta()
         ) && (
           !('followingCount' in incoming().diff(existing()).affectedKeys()) || isValidFollowingCountDelta()
@@ -273,14 +279,13 @@ service cloud.firestore {
         ) && (
           !('followers' in incoming().diff(existing()).affectedKeys()) || isValidFollowersArrayUpdate()
         )) ||
-        isAdmin() ||
-        isWriter()
+        isAdmin()
       );
       allow delete: if isAdmin();
 
       match /meta/{docId} {
         allow read: if true;
-        allow write: if isSignedIn() && (isOwner(userId) || isAdmin() || isWriter());
+        allow write: if isSignedIn() && (isOwner(userId) || isAdmin());
       }
 
       match /watchlist/{filmId} {
@@ -290,12 +295,19 @@ service cloud.firestore {
       match /savedArticles/{articleId} {
         allow read, write: if isOwner(userId);
       }
+
+      match /savedBuzz/{buzzId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     match /follows/{followId} {
       allow read: if true;
-      allow create: if isSignedIn() && (incoming().followerId == request.auth.uid || isAdmin() || isWriter());
-      allow delete: if isSignedIn() && (resource.data.followerId == request.auth.uid || isAdmin() || isWriter());
+      allow create: if isSignedIn() &&
+        followId == incoming().followerId + '_' + incoming().followingId &&
+        incoming().followerId != incoming().followingId &&
+        (incoming().followerId == request.auth.uid || isAdmin());
+      allow delete: if isSignedIn() && (resource.data.followerId == request.auth.uid || isAdmin());
     }
 
     match /article_presence/{presenceId} {
@@ -377,7 +389,7 @@ service cloud.firestore {
         (!isSuspended() && incoming().diff(existing()).affectedKeys().hasOnly(['likes']) && isValidLikesDelta()) ||
         (isCritic() && isOwner(existing().userId) && !isSuspended())
       );
-      allow delete: if isSignedIn() && (isOwner(existing().userId) || isAdmin() || isWriter() || (isCritic() && isOwner(existing().userId)));
+      allow delete: if isSignedIn() && (isOwner(existing().userId) || isAdmin() || (isCritic() && isOwner(existing().userId)));
     }
 
     match /criticSubmissions/{submissionId} {

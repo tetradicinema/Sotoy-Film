@@ -15,6 +15,7 @@ import {
   ShieldAlert
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { auth } from '../../lib/firebase';
 import { CMSArticleWorkspace } from './CMSArticleWorkspace';
 import { SEOHead } from '../SEO/SEOHead';
 import { RoleBadge } from '../Common/RoleBadge';
@@ -27,7 +28,7 @@ export const CMSPage: React.FC = () => {
     navigateTo 
   } = useApp();
 
-  const isUserAdmin = isAppAdmin || currentUser.role === 'admin' || currentUser.email === 'eksposurmedia@gmail.com';
+  const isUserAdmin = isAppAdmin || currentUser.role === 'admin' || (currentUser.email === 'eksposurmedia@gmail.com' && auth.currentUser?.emailVerified === true);
   const isUserWriter = isWriter || currentUser.role === 'penulis_sotoy' || currentUser.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02';
   const isAuthorized = isUserAdmin || isUserWriter;
 

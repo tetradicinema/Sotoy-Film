@@ -12,7 +12,7 @@ export interface User {
   customBadge?: string; // e.g. "Verified Critic", "Top Writer", "Redaktur Khusus"
   roleBadge?: string;
   bio: string;
-  email?: string;
+  email?: string; // Transient / In-memory or joined from Auth / userPrivate for admins
   createdAt?: string;
   totalReviews: number;
   totalBuzz: number;
@@ -27,6 +27,11 @@ export interface User {
   lastInterestDecay?: string;
   isSuspended?: boolean;
   suspendedAt?: string;
+}
+
+export interface UserPrivate {
+  email: string;
+  updatedAt: string;
 }
 
 export interface ModerationReport {

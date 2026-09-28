@@ -15,6 +15,7 @@ import {
   Award
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { auth } from '../../lib/firebase';
 import { AdminStatsOverview } from './AdminStatsOverview';
 import { AdminUserManagement } from './AdminUserManagement';
 import { AdminModeration } from './AdminModeration';
@@ -56,7 +57,7 @@ export const AdminDashboard: React.FC = () => {
   const pendingReportsCount = moderationReports.filter(r => r.status === 'pending').length;
   const pendingAppealsCount = appeals.filter(a => a.status === 'pending').length;
 
-  const isUserAdminAuthorized = isAdmin || currentUser.role === 'admin' || currentUser.email === 'eksposurmedia@gmail.com';
+  const isUserAdminAuthorized = isAdmin || currentUser.role === 'admin' || (currentUser.email === 'eksposurmedia@gmail.com' && auth.currentUser?.emailVerified === true);
 
   if (!isUserAdminAuthorized) {
     return (

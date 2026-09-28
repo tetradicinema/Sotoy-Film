@@ -458,65 +458,31 @@ export const AdminCatalogManager: React.FC = () => {
       e.preventDefault();
     }
 
-    console.log('[AdminCatalogManager] === [EVENT CAPTURED] handleSaveFilm triggered ===', {
-      eventType: e?.type,
-      editingFilmId,
-      isSubmitting,
-      timestamp: new Date().toISOString(),
-    });
-
-    console.log('[AdminCatalogManager] Raw formData state before validation:', {
-      title: formData.title,
-      type: formData.type,
-      year: formData.year,
-      duration: formData.duration,
-      genres: formData.genres,
-      cast: formData.cast,
-      poster: formData.poster,
-      backdrop: formData.backdrop,
-      director: formData.director,
-      tags: formData.tags,
-      skorSotoy: formData.skorSotoy,
-    });
-
     // Guard: Prevent double-submission
     if (isSubmitting) {
-      console.warn('[AdminCatalogManager] Submission BLOCKED: isSubmitting is currently true');
       return;
     }
 
     // Step 1: Validate Title
-    console.log('[AdminCatalogManager] [Validation Step 1] Checking title:', {
-      value: formData.title,
-      trimmed: formData.title?.trim(),
-      isEmpty: !formData.title || !formData.title.trim(),
-    });
-
     if (!formData.title || !formData.title.trim()) {
-      console.warn('[AdminCatalogManager] Validation BLOCKED: Judul film is empty or contains only whitespace!');
       showToast('Judul film wajib diisi!');
       return;
     }
-    console.log('[AdminCatalogManager] Title validated successfully:', formData.title.trim());
 
     // Step 2: Validate & Parse Year
     const parsedYear = Number(formData.year) || 2024;
-    console.log('[AdminCatalogManager] [Validation Step 2] Parsed year:', { raw: formData.year, parsed: parsedYear });
 
     // Step 3: Validate & Parse Genres
     const genresArray = formData.genres
       ? formData.genres.split(',').map(g => g.trim()).filter(Boolean)
       : [];
-    console.log('[AdminCatalogManager] [Validation Step 3] Parsed genres:', genresArray);
 
     // Step 4: Validate & Parse Cast
     const castArray = formData.cast
       ? formData.cast.split(',').map(c => c.trim()).filter(Boolean)
       : [];
-    console.log('[AdminCatalogManager] [Validation Step 4] Parsed cast array (count):', castArray.length);
 
     setIsSubmitting(true);
-    console.log('[AdminCatalogManager] isSubmitting state set to true, proceeding with payload construction...');
 
     try {
       // Clean & ensure valid image and trailer URLs
@@ -575,21 +541,14 @@ export const AdminCatalogManager: React.FC = () => {
         featuredRecommendation: formData.featuredRecommendation,
       };
 
-      console.log('[AdminCatalogManager] Validation ALL PASSED! Prepared filmPayload:', filmPayload);
-
       let success = false;
       if (editingFilmId) {
-        console.log('[AdminCatalogManager] Invoking updateFilm for film ID:', editingFilmId);
         success = await updateFilm(editingFilmId, filmPayload);
       } else {
-        console.log('[AdminCatalogManager] Invoking addFilm with new film payload...');
         success = await addFilm(filmPayload);
       }
 
-      console.log('[AdminCatalogManager] Result from AppContext (addFilm/updateFilm):', { success });
-
       if (success !== false) {
-        console.log('[AdminCatalogManager] Operation reported success, closing modal.');
         setIsModalOpen(false);
       } else {
         console.warn('[AdminCatalogManager] Operation returned false from Firestore, but local catalog was updated. Closing modal.');
@@ -599,29 +558,19 @@ export const AdminCatalogManager: React.FC = () => {
       console.error('[AdminCatalogManager] [CRITICAL ERROR] in handleSaveFilm:', err);
       showToast('Gagal memproses film: ' + (err?.message || 'Terjadi kesalahan sistem'));
     } finally {
-      console.log('[AdminCatalogManager] Resetting isSubmitting to false');
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = (film: FilmItem) => {
-    console.log('[AdminCatalogManager] Initiating in-app delete modal for film:', {
-      id: film.id,
-      title: film.title,
-    });
     setFilmToDelete(film);
   };
 
   const confirmDelete = async () => {
     if (!filmToDelete) return;
-    console.log('[AdminCatalogManager] Confirming deletion for film:', {
-      id: filmToDelete.id,
-      title: filmToDelete.title,
-    });
     setIsDeletingFilm(true);
     try {
-      const res = await deleteFilm(filmToDelete.id);
-      console.log('[AdminCatalogManager] deleteFilm returned:', res);
+      await deleteFilm(filmToDelete.id);
       setFilmToDelete(null);
     } catch (err: any) {
       console.error('[AdminCatalogManager] Error deleting film:', err);

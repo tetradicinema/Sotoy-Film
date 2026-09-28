@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { slugify } from '../utils/slugify';
 import {
   User,
+  UserPrivate,
   UserRole,
   Article,
   FilmItem,
@@ -133,18 +134,22 @@ export const ADMIN_UIDS = [
   'QkNGf1ZfhsMyUEk90a6Iz8ZplZS2', // User ID Admin 1
   'CsG2CY2TaIZmG7yuPfzAxmRYrlY2', // User ID Admin 2
 ];
-export const ADMIN_EMAILS = ['eksposurmedia@gmail.com', 'admin1@sotoyfilm.id', 'admin2@sotoyfilm.id'];
+export const ADMIN_EMAILS = ['eksposurmedia@gmail.com'];
 export const WRITER_UIDS = [
   '0PCmaBvJrzeaQgpf3sSTC4mnsh02', // User ID Penulis Sotoy
 ];
 export const CRITIC_UIDS = ['Jm0raI2h47TJG9ZtZAR1HLVcjSj2'];
 
-export const isUserAdmin = (user?: Partial<User> | null, fbUid?: string, fbEmail?: string): boolean => {
+export const isUserAdmin = (user?: Partial<User> | null, fbUid?: string, fbEmail?: string, emailVerified?: boolean): boolean => {
   if (user?.role === 'admin') return true;
   if (user?.id && ADMIN_UIDS.includes(user.id)) return true;
   if (fbUid && ADMIN_UIDS.includes(fbUid)) return true;
-  if (user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())) return true;
-  if (fbEmail && ADMIN_EMAILS.includes(fbEmail.toLowerCase())) return true;
+  
+  const isVerified = emailVerified ?? auth.currentUser?.emailVerified ?? false;
+  if (isVerified) {
+    if (user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())) return true;
+    if (fbEmail && ADMIN_EMAILS.includes(fbEmail.toLowerCase())) return true;
+  }
   return false;
 };
 
@@ -443,15 +448,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [followingIds, setFollowingIds] = useState<string[]>([]);
   const [followersIds, setFollowersIds] = useState<string[]>([]);
 
-  // Saved buzz bookmark state persisted in localStorage
-  const [savedBuzzIds, setSavedBuzzIds] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('sotoy_saved_buzz_ids');
-      return saved ? JSON.parse(saved) : ['buzz-1', 'buzz-3'];
-    } catch {
-      return ['buzz-1', 'buzz-3'];
-    }
-  });
+  // Saved buzz bookmark state persisted in Firestore subcollection (users/{userId}/savedBuzz)
+  const [savedBuzzIds, setSavedBuzzIds] = useState<string[]>([]);
 
   // User Interest Profile state (tracks tags, genres, categories, and creators)
   const [interestProfile, setInterestProfile] = useState<InterestProfile>(() => {
@@ -510,7 +508,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // User Profile Visiting state
   const [viewedUserId, setViewedUserId] = useState<string | null>(null);
-  const viewedUser = (viewedUserId ? allUsers.find(u => u.id === viewedUserId) : null) || currentUser;
 
   // Synchronize browser URL location to currentView and relevant entity IDs on page load / route change
   useEffect(() => {
@@ -895,10 +892,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const isWriter = isLoggedIn && (isUserWriter(currentUser) || currentUser.role === 'penulis_sotoy' || isAdmin || currentUser.role === 'admin');
   const isCritic = isLoggedIn && (isUserCritic(currentUser) || currentUser.role === 'si_paling_sotoy' || isAdmin);
 
+  // Admin-only realtime subscription to userPrivate collection to join emails in memory
+  const [adminUserEmails, setAdminUserEmails] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!isAdmin) {
+      setAdminUserEmails({});
+      return;
+    }
+    const unsub = onSnapshot(
+      collection(db, 'userPrivate'),
+      (snapshot) => {
+        const map: Record<string, string> = {};
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data() as UserPrivate;
+          if (data?.email) {
+            map[docSnap.id] = data.email;
+          }
+        });
+        setAdminUserEmails(map);
+      },
+      (err) => {
+        console.warn('[Firestore] userPrivate admin subscription notice:', err.message);
+      }
+    );
+    return () => unsub();
+  }, [isAdmin]);
+
+  // Merge private emails onto users for admin viewer, and currentUser's auth email for currentUser
+  const resolvedAllUsers = useMemo(() => {
+    return allUsers.map(user => {
+      const privateEmail = adminUserEmails[user.id];
+      const email = (currentUser?.id === user.id ? currentUser.email : null) || privateEmail || user.email || '';
+      return {
+        ...user,
+        email: email || undefined,
+      };
+    });
+  }, [allUsers, adminUserEmails, currentUser?.id, currentUser?.email]);
+
+  const viewedUser = (viewedUserId ? resolvedAllUsers.find(u => u.id === viewedUserId) : null) || currentUser;
+
   // Dynamically resolve article author profiles directly from Firestore users collection
   const resolvedArticles = useMemo(() => {
     return articles.map(article => {
-      const user = allUsers.find(u => u.id === article.authorId || u.id === article.author?.id);
+      const user = resolvedAllUsers.find(u => u.id === article.authorId || u.id === article.author?.id);
       if (user) {
         return {
           ...article,
@@ -1057,22 +1095,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const userSnap = await getDoc(userDocRef);
           if (userSnap.exists()) {
             const data = userSnap.data() as User;
-            const isAdminRole = isUserAdmin(data, uid, fbUser.email || undefined);
+            data.email = fbUser.email || undefined;
+            const isAdminRole = isUserAdmin(data, uid, fbUser.email || undefined, fbUser.emailVerified);
             const isWriterRole = !isAdminRole && isUserWriter(data, uid);
             const isCriticRole = !isAdminRole && !isWriterRole && isUserCritic(data, uid);
             
             if (isAdminRole) {
               data.role = 'admin';
               data.roleTitle = 'Head Admin & Lead Editor';
-              try { await updateDoc(userDocRef, { role: 'admin', roleTitle: 'Head Admin & Lead Editor' }); } catch (e) {}
+              if (userSnap.data()?.role !== 'admin') {
+                try { await updateDoc(userDocRef, { role: 'admin', roleTitle: 'Head Admin & Lead Editor' }); } catch (e) {}
+              }
             } else if (isWriterRole || uid === '0PCmaBvJrzeaQgpf3sSTC4mnsh02') {
               data.role = 'penulis_sotoy';
               data.roleTitle = 'Penulis Sotoy (Jurnalis Film & Pop-Culture)';
-              try { await updateDoc(userDocRef, { role: 'penulis_sotoy', roleTitle: 'Penulis Sotoy (Jurnalis Film & Pop-Culture)' }); } catch (e) {}
             } else if (isCriticRole) {
               data.role = 'si_paling_sotoy';
               data.roleTitle = 'Si Paling Sotoy (Kritikus Film)';
-              try { await updateDoc(userDocRef, { role: 'si_paling_sotoy', roleTitle: 'Si Paling Sotoy (Kritikus Film)' }); } catch (e) {}
+            }
+
+            // Sync private email if present in Firebase Auth
+            if (fbUser.email) {
+              try {
+                await setDoc(doc(db, 'userPrivate', uid), {
+                  email: fbUser.email,
+                  updatedAt: new Date().toISOString(),
+                }, { merge: true });
+              } catch (e) {}
             }
 
             // Followers and Following will be populated in real-time from the Firestore 'follows' collection
@@ -1106,7 +1155,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             }
           } else {
             // First time user registration - start completely fresh as a clean new account
-            const isAdminRole = isUserAdmin(null, uid, fbUser.email || undefined);
+            const isAdminRole = isUserAdmin(null, uid, fbUser.email || undefined, fbUser.emailVerified);
             const isWriterRole = !isAdminRole && isUserWriter(null, uid);
             const isCriticRole = !isAdminRole && !isWriterRole && isUserCritic(null, uid);
             
@@ -1130,7 +1179,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               role,
               roleTitle,
               bio,
-              email: fbUser.email || `user_${uid.slice(0, 4)}@sotoyfilm.id`,
               createdAt: new Date().toISOString(),
               totalReviews: 0,
               totalBuzz: 0,
@@ -1140,8 +1188,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               followingCount: 0,
               hasFinishedOnboarding: true,
             };
-            try { await setDoc(userDocRef, defaultUser); } catch (e) { /* ignore write permission */ }
-            setCurrentUser(defaultUser);
+            const { email: _unused, ...publicUserPayload } = defaultUser;
+            try { await setDoc(userDocRef, publicUserPayload); } catch (e) { /* ignore write permission */ }
+            if (fbUser.email) {
+              try {
+                await setDoc(doc(db, 'userPrivate', uid), {
+                  email: fbUser.email,
+                  updatedAt: new Date().toISOString(),
+                }, { merge: true });
+              } catch (e) {}
+            }
+            setCurrentUser({ ...defaultUser, email: fbUser.email || '' });
             setFollowingIds([]);
             setFollowersIds([]);
             setWatchlist([]);
@@ -1216,11 +1273,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [isLoggedIn, currentUser?.id]);
 
-  // Real-time listener for current user's watchlist and saved articles from Firestore subcollections
+  // Real-time listener for current user's watchlist, saved articles, and saved buzz from Firestore subcollections
   useEffect(() => {
     if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') {
       setWatchlist([]);
       setSavedArticles([]);
+      setSavedBuzzIds([]);
       return;
     }
 
@@ -1254,9 +1312,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     );
 
+    const savedBuzzCol = collection(db, 'users', currentUser.id, 'savedBuzz');
+    const unsubSavedBuzz = onSnapshot(
+      savedBuzzCol,
+      (snapshot) => {
+        const ids: string[] = [];
+        snapshot.forEach((docSnap) => {
+          ids.push(docSnap.id);
+        });
+        setSavedBuzzIds(ids);
+      },
+      (err) => {
+        console.warn('[Firestore] savedBuzz subscription notice:', err.message);
+      }
+    );
+
     return () => {
       unsubWatchlist();
       unsubSavedArticles();
+      unsubSavedBuzz();
     };
   }, [isLoggedIn, currentUser?.id]);
 
@@ -1596,19 +1670,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return watchlist.includes(filmId);
   };
 
-  const toggleSaveBuzz = (buzzId: string) => {
-    setSavedBuzzIds(prev => {
-      const exists = prev.includes(buzzId);
-      const updated = exists ? prev.filter(id => id !== buzzId) : [...prev, buzzId];
-      try {
-        localStorage.setItem('sotoy_saved_buzz_ids', JSON.stringify(updated));
-      } catch (err) {
-        console.warn('localStorage save failed:', err);
-      }
-      showToast(exists ? 'Buzz dihapus dari Tersimpan' : 'Buzz disimpan ke Tersimpan! 📌');
+  const toggleSaveBuzz = async (buzzId: string) => {
+    if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') {
+      setLoginModalOpen(true);
+      showToast('Silakan Log In terlebih dahulu untuk menyimpan Buzz!');
+      return;
+    }
 
-      // Track interest signal when bookmarking a buzz (+3 weight)
-      if (!exists) {
+    const exists = savedBuzzIds.includes(buzzId);
+    const itemRef = doc(db, 'users', currentUser.id, 'savedBuzz', buzzId);
+
+    // Optimistic UI state update
+    setSavedBuzzIds(prev => (exists ? prev.filter(id => id !== buzzId) : [...prev, buzzId]));
+    showToast(exists ? 'Buzz dihapus dari Tersimpan' : 'Buzz disimpan ke Tersimpan! 📌');
+
+    try {
+      if (exists) {
+        await deleteDoc(itemRef);
+      } else {
+        await setDoc(itemRef, {
+          buzzId,
+          addedAt: new Date().toISOString(),
+        });
+
+        // Track interest signal when bookmarking a buzz (+3 weight)
         const post = rawBuzzList.find(b => b.id === buzzId) || buzzList.find(b => b.id === buzzId);
         if (post) {
           const topics: string[] = [...(post.tags || [])];
@@ -1621,9 +1706,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           recordUserInterest(topics, 3);
         }
       }
-
-      return updated;
-    });
+    } catch (err) {
+      console.error('[SavedBuzz] Firestore error:', err);
+      // Revert optimistic update on error
+      setSavedBuzzIds(prev => (exists ? [...prev, buzzId] : prev.filter(id => id !== buzzId)));
+      showToast('Gagal memperbarui Buzz tersimpan.', 'error');
+    }
   };
 
   const isBuzzSaved = (buzzId: string) => {
@@ -1701,8 +1789,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateUserBio = async (newBio: string) => {
     if (!auth.currentUser) return;
     const updated = { ...currentUser, bio: newBio };
+    const { email: _unused, ...userDocPayload } = updated;
     try {
-      await setDoc(doc(db, 'users', auth.currentUser.uid), updated);
+      await setDoc(doc(db, 'users', auth.currentUser.uid), userDocPayload, { merge: true });
       setCurrentUser(updated);
       showToast('Bio profil kamu berhasil diperbarui!');
     } catch (err) {
@@ -1719,8 +1808,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       avatar: updates.avatar?.trim() ? updates.avatar.trim() : currentUser.avatar,
       bio: updates.bio !== undefined ? updates.bio : currentUser.bio,
     };
+    const { email: _unused, ...userDocPayload } = updated;
     try {
-      await setDoc(doc(db, 'users', auth.currentUser.uid), updated);
+      await setDoc(doc(db, 'users', auth.currentUser.uid), userDocPayload, { merge: true });
       setCurrentUser(updated);
       showToast('Profil pengguna berhasil disimpan!');
     } catch (err) {
@@ -1756,8 +1846,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (auth.currentUser) {
       const uid = auth.currentUser.uid;
       const userDocRef = doc(db, 'users', uid);
+      const { email: _unused, ...userDocPayload } = updatedUser;
       try {
-        await setDoc(userDocRef, updatedUser, { merge: true });
+        await setDoc(userDocRef, userDocPayload, { merge: true });
       } catch (err) {
         console.warn('[Onboarding] Error saving to Firestore, continuing with local state:', err);
       }
@@ -1860,7 +1951,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Update user in Firestore and client state
       const updated = { ...currentUser, avatar: finalAvatarUrl };
-      await setDoc(doc(db, 'users', auth.currentUser.uid), updated, { merge: true });
+      const { email: _unused, ...userDocPayload } = updated;
+      await setDoc(doc(db, 'users', auth.currentUser.uid), userDocPayload, { merge: true });
       setCurrentUser(updated);
       localStorage.setItem('sotoy_current_user', JSON.stringify(updated));
       showToast('Foto profil berhasil diperbarui! 🎉');
@@ -1879,7 +1971,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const userDocRef = doc(db, 'users', userCredential.user.uid);
         const userSnap = await getDoc(userDocRef);
         if (userSnap.exists()) {
-          setCurrentUser(userSnap.data() as User);
+          setCurrentUser({ ...(userSnap.data() as User), email: userCredential.user.email || email.trim() });
+        }
+        if (userCredential.user.email) {
+          try {
+            await setDoc(doc(db, 'userPrivate', userCredential.user.uid), {
+              email: userCredential.user.email,
+              updatedAt: new Date().toISOString(),
+            }, { merge: true });
+          } catch (e) {}
         }
         setIsLoggedIn(true);
         localStorage.setItem('sotoy_is_logged_in', 'true');
@@ -1937,7 +2037,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           role,
           roleTitle,
           bio,
-          email: email.trim(),
           createdAt: new Date().toISOString(),
           totalReviews: 0,
           totalBuzz: 0,
@@ -1947,8 +2046,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
 
         const userDocRef = doc(db, 'users', uid);
-        await setDoc(userDocRef, newUser);
-        setCurrentUser(newUser);
+        const { email: _unused, ...publicUserDoc } = newUser;
+        await setDoc(userDocRef, publicUserDoc);
+        try {
+          await setDoc(doc(db, 'userPrivate', uid), {
+            email: email.trim(),
+            updatedAt: new Date().toISOString(),
+          }, { merge: true });
+        } catch (e) {}
+
+        setCurrentUser({ ...newUser, email: email.trim() });
         setIsLoggedIn(true);
         localStorage.setItem('sotoy_is_logged_in', 'true');
         showToast('Akun berhasil dibuat! Mari lengkapi profilmu. 🎬');
@@ -1986,7 +2093,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         
         if (userSnap.exists()) {
           const existingData = userSnap.data() as User;
-          setCurrentUser(existingData);
+          if (userCredential.user.email) {
+            try {
+              await setDoc(doc(db, 'userPrivate', uid), {
+                email: userCredential.user.email,
+                updatedAt: new Date().toISOString(),
+              }, { merge: true });
+            } catch (e) {}
+          }
+          setCurrentUser({ ...existingData, email: userCredential.user.email || '' });
           const cleanFollowing = Array.isArray(existingData.following) ? existingData.following.filter(id => !['u-2', 'u-4', 'u-6'].includes(id)) : [];
           const cleanFollowers = Array.isArray(existingData.followers) ? existingData.followers.filter(id => !['u-2', 'u-3', 'u-5'].includes(id)) : [];
           setFollowingIds(cleanFollowing);
@@ -2020,7 +2135,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               : (isWriterRole 
                 ? 'Menulis kabar terbaru, ulasan mendalam, dan kurasi film di Sotoy Film.' 
                 : (isCriticRole ? 'Kritikus film kawakan yang hobinya menilai setiap pixel di layar.' : 'Cinephile baru mendarat di Sotoy Film!')),
-            email: userCredential.user.email || '',
             createdAt: new Date().toISOString(),
             totalReviews: 0,
             totalBuzz: 0,
@@ -2030,12 +2144,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             followingCount: 0,
             hasFinishedOnboarding: false,
           };
+          const { email: _unused, ...publicUserPayload } = newUser;
           try {
-            await setDoc(userDocRef, newUser);
+            await setDoc(userDocRef, publicUserPayload);
           } catch (e) {
             console.warn('[Auth] Firestore setDoc fallback:', e);
           }
-          setCurrentUser(newUser);
+          if (userCredential.user.email) {
+            try {
+              await setDoc(doc(db, 'userPrivate', uid), {
+                email: userCredential.user.email,
+                updatedAt: new Date().toISOString(),
+              }, { merge: true });
+            } catch (e) {}
+          }
+          setCurrentUser({ ...newUser, email: userCredential.user.email || '' });
           setFollowingIds([]);
           setFollowersIds([]);
           setWatchlist([]);
@@ -2207,7 +2330,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const getUserById = (userId: string) => {
-    return allUsers.find(u => u.id === userId);
+    return resolvedAllUsers.find(u => u.id === userId);
   };
 
   const changeEmail = (newEmail: string): boolean => {
@@ -2215,6 +2338,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!trimmed || !trimmed.includes('@')) {
       showToast('Format email tidak valid.');
       return false;
+    }
+    if (auth.currentUser) {
+      setDoc(doc(db, 'userPrivate', auth.currentUser.uid), {
+        email: trimmed,
+        updatedAt: new Date().toISOString(),
+      }, { merge: true }).catch(() => {});
     }
     setCurrentUser(prev => ({ ...prev, email: trimmed }));
     showToast(`Email akun berhasil diubah menjadi ${trimmed}!`);
@@ -3831,9 +3960,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       // Remove any undefined properties which crash Firestore setDoc
       const sanitizedFilm = JSON.parse(JSON.stringify(newFilm));
-      console.log('[AppContext] Attempting Firestore setDoc on path "films/' + filmId + '" with payload:', sanitizedFilm);
       await setDoc(doc(db, 'films', filmId), sanitizedFilm);
-      console.log('[AppContext] Firestore setDoc SUCCESS for filmId:', filmId);
       setFilms(prev => {
         if (prev.some(f => f.id === newFilm.id)) {
           return prev.map(f => f.id === newFilm.id ? newFilm : f);
@@ -3868,12 +3995,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateFilm = async (id: string, updates: Partial<FilmItem>): Promise<boolean> => {
-    console.log('[AppContext] === [updateFilm INVOKED] for ID:', id, updates);
     try {
       const sanitizedUpdates = JSON.parse(JSON.stringify(updates));
-      console.log('[AppContext] Attempting Firestore updateDoc on path "films/' + id + '" with payload:', sanitizedUpdates);
       await updateDoc(doc(db, 'films', id), sanitizedUpdates);
-      console.log('[AppContext] Firestore updateDoc SUCCESS for filmId:', id);
       setFilms(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
       showToast('Metadata film berhasil diperbarui.');
       return true;
@@ -3887,7 +4011,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteFilm = async (id: string): Promise<boolean> => {
-    console.log('[AppContext] === [deleteFilm INVOKED] ===', { id });
     // Immediately remove from in-memory state
     setFilms(prev => prev.filter(f => f.id !== id));
 
@@ -3895,7 +4018,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const isMockFilm = INITIAL_FILMS.some(m => m.id === id);
     if (isMockFilm) {
       try {
-        console.log('[AppContext] Writing marker to Firestore removedMockFilms/' + id);
         await setDoc(doc(db, 'removedMockFilms', id), {
           id,
           removedAt: new Date().toISOString(),
@@ -3907,9 +4029,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     try {
-      console.log('[AppContext] Calling Firestore deleteDoc on path: films/' + id);
       await deleteDoc(doc(db, 'films', id));
-      console.log('[AppContext] Firestore deleteDoc SUCCESS for: films/' + id);
       showToast('Film berhasil dihapus dari katalog.');
       return true;
     } catch (error: any) {
@@ -3921,7 +4041,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const bulkDeleteFilms = async (filmIds: string[]): Promise<boolean> => {
-    console.log('[AppContext] === [bulkDeleteFilms INVOKED] ===', { filmIds });
     setFilms(prev => prev.filter(f => !filmIds.includes(f.id)));
 
     // Mark any INITIAL_FILMS mock entries in removedMockFilms in Firestore
@@ -3957,7 +4076,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const bulkUpdateFilms = async (filmIds: string[], updates: Partial<FilmItem>): Promise<boolean> => {
-    console.log('[AppContext] === [bulkUpdateFilms INVOKED] ===', { count: filmIds.length, updates });
     try {
       const sanitizedUpdates = JSON.parse(JSON.stringify(updates));
       await Promise.all(
@@ -4148,7 +4266,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         goBack,
         followingIds,
         followersIds,
-        allUsers,
+        allUsers: resolvedAllUsers,
         toggleFollowUser,
         isFollowing,
         getUserById,

@@ -12,7 +12,6 @@
         "role": { "type": "string", "enum": ["warga_sotoy", "si_paling_sotoy", "penulis_sotoy", "admin"] },
         "roleTitle": { "type": "string" },
         "bio": { "type": "string" },
-        "email": { "type": "string" },
         "isSuspended": { "type": "boolean" },
         "suspendedAt": { "type": "string" },
         "totalReviews": { "type": "integer" },
@@ -23,6 +22,16 @@
         "lastInterestDecay": { "type": "string" }
       },
       "required": ["id", "name", "handle", "role"]
+    },
+    "UserPrivate": {
+      "title": "UserPrivate",
+      "description": "Private user information such as email address",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["email", "updatedAt"]
     },
     "Article": {
       "title": "Article",
@@ -243,6 +252,16 @@
         "addedAt": { "type": "string" }
       },
       "required": ["addedAt"]
+    },
+    "SavedBuzzItem": {
+      "title": "SavedBuzzItem",
+      "description": "User's saved community buzz post in their personal bookmarks",
+      "type": "object",
+      "properties": {
+        "buzzId": { "type": "string" },
+        "addedAt": { "type": "string" }
+      },
+      "required": ["addedAt"]
     }
   },
   "firestore": {
@@ -253,6 +272,10 @@
     "/users/{userId}/savedArticles/{articleId}": {
       "schema": "SavedArticleItem",
       "description": "Personal saved library of articles for a specific user"
+    },
+    "/users/{userId}/savedBuzz/{buzzId}": {
+      "schema": "SavedBuzzItem",
+      "description": "Personal bookmarked buzz posts for a specific user"
     },
     "/removedMockFilms/{filmId}": {
       "schema": "RemovedMockFilm",
@@ -269,6 +292,10 @@
     "/users/{userId}": {
       "schema": "User",
       "description": "Profiles of the users"
+    },
+    "/userPrivate/{userId}": {
+      "schema": "UserPrivate",
+      "description": "Private user information accessible only to the user and admins"
     },
     "/files/{fileId}": {
       "schema": "UploadedFile",
