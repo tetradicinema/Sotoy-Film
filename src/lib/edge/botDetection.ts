@@ -24,6 +24,15 @@ export const BOT_PATTERNS: readonly string[] = [
   'outbrain',
   'vkshare',
   'w3c_validator',
+  'meta-externalagent',
+  'meta-externalfetcher',
+  'facebot',
+  'skypeuripreview',
+  'redditbot',
+  'mastodon',
+  'iframely',
+  'signal',
+  'line-poker',
 ];
 
 /**

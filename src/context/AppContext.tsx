@@ -2735,9 +2735,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Publish or Save Draft Article directly to Firestore
   const addArticle = async (newArticle: Omit<Article, 'id' | 'publishedAt' | 'views' | 'likes' | 'commentsCount'>): Promise<boolean> => {
+    if (!requireVerified()) return false;
     const isPermitted = currentUser.role === 'penulis_sotoy' || currentUser.role === 'admin' || isUserWriter(currentUser) || isUserAdmin(currentUser);
     if (!isPermitted) {
-      showToast('Akses ditolak: Hanya Penulis Sotoy & Admin yang dapat mempublikasikan artikel!');
+      showToast('Akses ditolak: Hanya Penulis Sotoy & Admin yang dapat mempublikasikan artikel!', 'error');
       return false;
     }
 
@@ -2760,21 +2761,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         : status === 'scheduled' 
         ? 'Artikel berhasil dijadwalkan untuk terbit!' 
         : 'Artikel berhasil dipublikasikan!';
-      showToast(toastMsg);
+      showToast(toastMsg, 'success');
       return true;
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, `articles/${articleId}`);
+    } catch (error: any) {
+      console.error('[Article] Error adding article:', error);
+      const reason = error?.code === 'permission-denied'
+        ? 'Akses ditolak: Anda tidak memiliki izin.'
+        : 'Gagal mempublikasikan artikel.';
+      showToast(reason, 'error');
       return false;
     }
   };
 
   // Update Article in Firestore
   const updateArticle = async (id: string, updatedFields: Partial<Article>): Promise<boolean> => {
+    if (!requireVerified()) return false;
     const targetArticle = articles.find(a => a.id === id);
     const isAuthor = targetArticle?.author?.id === currentUser.id;
     const isPermitted = isAuthor || currentUser.role === 'admin' || isUserAdmin(currentUser) || isUserWriter(currentUser);
     if (!isPermitted) {
-      showToast('Hanya Penulis pemilik artikel atau Admin yang dapat menyunting artikel.');
+      showToast('Hanya Penulis pemilik artikel atau Admin yang dapat menyunting artikel.', 'error');
       return false;
     }
     try {
@@ -2784,28 +2790,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         : updatedFields.status === 'scheduled'
         ? 'Jadwal terbit artikel berhasil diperbarui!'
         : 'Artikel berhasil diperbarui!';
-      showToast(toastMsg);
+      showToast(toastMsg, 'success');
       return true;
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `articles/${id}`);
+    } catch (error: any) {
+      console.error('[Article] Error updating article:', error);
+      const reason = error?.code === 'permission-denied'
+        ? 'Akses ditolak: Anda tidak memiliki izin.'
+        : 'Gagal memperbarui artikel.';
+      showToast(reason, 'error');
       return false;
     }
   };
 
   // Delete Article from Firestore
   const deleteArticle = async (id: string) => {
+    if (!requireVerified()) return;
     const targetArticle = articles.find(a => a.id === id);
     const isAuthor = targetArticle?.author?.id === currentUser.id;
     const isPermitted = isAuthor || currentUser.role === 'admin' || isUserAdmin(currentUser) || isUserWriter(currentUser);
     if (!isPermitted) {
-      showToast('Hanya Penulis pemilik artikel atau Admin yang dapat menghapus artikel.');
+      showToast('Hanya Penulis pemilik artikel atau Admin yang dapat menghapus artikel.', 'error');
       return;
     }
     try {
       await deleteDoc(doc(db, 'articles', id));
-      showToast('Artikel berhasil dihapus.');
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `articles/${id}`);
+      showToast('Artikel berhasil dihapus.', 'success');
+    } catch (error: any) {
+      console.error('[Article] Error deleting article:', error);
+      const reason = error?.code === 'permission-denied'
+        ? 'Akses ditolak: Anda tidak memiliki izin.'
+        : 'Gagal menghapus artikel.';
+      showToast(reason, 'error');
     }
   };
 
@@ -2908,8 +2923,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     // 1. Optimistic UI update so user immediately sees their post at top of feed & profile
+    const previousRawBuzzList = [...rawBuzzList];
     setRawBuzzList(prev => [newBuzz, ...prev.filter(b => b.id !== buzzId)]);
-    showToast('Buzz kamu berhasil diposting!');
+    showToast('Buzz kamu berhasil diposting!', 'success');
 
     // Check for user mentions in the buzz content
     checkAndSendMentions(content, 'Sebutan Baru di Buzz', 'buzz-detail', buzzId);
@@ -2920,9 +2936,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       delete sanitizedPayload.myReaction;
       delete sanitizedPayload.likedByMe;
       await setDoc(doc(db, 'buzz', buzzId), sanitizedPayload);
-    } catch (error) {
-      console.error('[Firestore] Error saving buzz post:', error);
-      handleFirestoreError(error, OperationType.CREATE, `buzz/${buzzId}`);
+    } catch (error: any) {
+      setRawBuzzList(previousRawBuzzList);
+      console.error('[BuzzPost] Error adding buzz post:', error);
+      const reason = error?.code === 'permission-denied'
+        ? 'Izin ditolak (permission denied).'
+        : 'Gagal memposting Buzz baru.';
+      showToast(reason, 'error');
     }
   };
 
@@ -2963,9 +2983,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatedReactionsByUser[currentUser.id] = reaction;
     }
 
-    // Compute total likes/reactions
-    const totalReactions = Object.values(updatedReactions).reduce((acc, count) => acc + (count || 0), 0);
-
     const updatedPost: BuzzPost = {
       ...post,
       reactions: updatedReactions,
@@ -2974,6 +2991,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     // Optimistic UI update
+    const previousRawBuzzList = [...rawBuzzList];
     setRawBuzzList(prev => prev.map(b => b.id === buzzId ? updatedPost : b));
 
     // Track interest signal when adding reaction (+2 weight)
@@ -2996,7 +3014,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast(
       newReaction
         ? `Reaksi ${emojiMap[reaction]} dikirim!`
-        : 'Reaksi dihapus.'
+        : 'Reaksi dihapus.',
+      'success'
     );
 
     try {
@@ -3022,8 +3041,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           },
         });
       }
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `buzz/${buzzId}`);
+    } catch (error: any) {
+      setRawBuzzList(previousRawBuzzList);
+      console.error('[BuzzReaction] Error reacting to buzz post:', error);
+      const reason = error?.code === 'permission-denied'
+        ? 'Izin ditolak (permission denied).'
+        : 'Gagal mengirim reaksi.';
+      showToast(reason, 'error');
     }
   };
 
@@ -3071,12 +3095,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     // Optimistic UI update
+    const previousRawBuzzList = [...rawBuzzList];
     setRawBuzzList(prev => prev.map(b => b.id === buzzId ? updatedPost : b));
 
     showToast(
       !isAlreadyReposted
         ? 'Postingan berhasil di-repost ke profilmu!'
-        : 'Repost dibatalkan.'
+        : 'Repost dibatalkan.',
+      'success'
     );
 
     try {
@@ -3104,8 +3130,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
       }
       return true;
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `buzz/${buzzId}`);
+    } catch (error: any) {
+      setRawBuzzList(previousRawBuzzList);
+      console.error('[BuzzRepost] Error reposting buzz:', error);
+      const reason = error?.code === 'permission-denied'
+        ? 'Izin ditolak (permission denied).'
+        : 'Gagal melakukan repost.';
+      showToast(reason, 'error');
       return false;
     }
   };
@@ -3151,8 +3182,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     // Optimistic UI update
+    const previousRawBuzzList = [...rawBuzzList];
     setRawBuzzList(prev => prev.map(b => b.id === buzzId ? updatedPost : b));
-    showToast('Balasan kamu berhasil diposting!');
+    showToast('Balasan kamu berhasil diposting!', 'success');
 
     // Track interest signal when replying to a buzz (+3 weight)
     const replyTopics: string[] = [...(post.tags || [])];
@@ -3210,8 +3242,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // 3. Send notifications for any tagged mentions in reply
       checkAndSendMentions(content, 'Sebutan Baru di Balasan Buzz', 'buzz-detail', buzzId);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `buzz/${buzzId}`);
+    } catch (error: any) {
+      setRawBuzzList(previousRawBuzzList);
+      console.error('[BuzzReply] Error adding buzz reply:', error);
+      const reason = error?.code === 'permission-denied'
+        ? 'Izin ditolak (permission denied).'
+        : 'Gagal memposting balasan komentar.';
+      showToast(reason, 'error');
     }
   };
 
@@ -3238,6 +3275,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       replies: updatedReplies,
     };
 
+    // Optimistic UI update
+    const previousRawBuzzList = [...rawBuzzList];
     setRawBuzzList(prev => prev.map(b => b.id === buzzId ? updatedPost : b));
 
     try {
@@ -3245,8 +3284,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       delete sanitizedPayload.myReaction;
       delete sanitizedPayload.likedByMe;
       await setDoc(doc(db, 'buzz', buzzId), sanitizedPayload);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `buzz/${buzzId}`);
+    } catch (error: any) {
+      setRawBuzzList(previousRawBuzzList);
+      console.error('[BuzzReply] Error liking buzz reply:', error);
+      const reason = error?.code === 'permission-denied'
+        ? 'Izin ditolak (permission denied).'
+        : 'Gagal menyukai balasan ini.';
+      showToast(reason, 'error');
     }
   };
 
@@ -3271,6 +3315,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       featured: false,
     };
 
+    const previousRatings = [...ratings];
+    const previousFilms = [...films];
+
+    // Optimistically update local ratings state
+    setRatings(prev => [newRating, ...prev.filter(r => r.id !== ratingId)]);
+
     try {
       await setDoc(doc(db, 'ratings', ratingId), newRating);
 
@@ -3292,30 +3342,70 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         recordUserInterest(rateTopics, 3);
       }
 
-      showToast(`Skor Sotoy ${score.toFixed(1)}/10.0 dan ulasan kamu berhasil dikirim!`);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, `ratings/${ratingId}`);
+      showToast(`Skor Sotoy ${score.toFixed(1)}/10.0 dan ulasan kamu berhasil dikirim!`, 'success');
+    } catch (error: any) {
+      setRatings(previousRatings);
+      setFilms(previousFilms);
+      console.error('[FilmRating] Error adding rating:', error);
+      const reason = error?.code === 'permission-denied'
+        ? 'Izin ditolak (permission denied).'
+        : 'Gagal mengirim ulasan film.';
+      showToast(reason, 'error');
     }
   };
 
   const updateFilmRating = async (ratingId: string, updates: Partial<UserRating>) => {
+    if (!requireVerified()) return;
     const rating = ratings.find(r => r.id === ratingId);
     if (!rating) return;
+
+    if (rating.userId !== currentUser.id && !isAdmin) {
+      showToast('Akses ditolak: Hanya pemilik ulasan yang dapat menyunting.', 'error');
+      return;
+    }
+
+    const previousRatings = [...ratings];
     const updated = { ...rating, ...updates };
+
+    // Optimistically update local ratings state
+    setRatings(prev => prev.map(r => r.id === ratingId ? updated : r));
+
     try {
       await setDoc(doc(db, 'ratings', ratingId), updated);
-      showToast('Ulasan film kamu berhasil diperbarui!');
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `ratings/${ratingId}`);
+      showToast('Ulasan film kamu berhasil diperbarui!', 'success');
+    } catch (error: any) {
+      setRatings(previousRatings);
+      console.error('[FilmRating] Error updating rating:', error);
+      const reason = error?.code === 'permission-denied'
+        ? 'Izin ditolak (permission denied).'
+        : 'Gagal memperbarui ulasan film.';
+      showToast(reason, 'error');
     }
   };
 
   const deleteFilmRating = async (ratingId: string) => {
+    if (!requireVerified()) return;
+    const rating = ratings.find(r => r.id === ratingId);
+    if (!rating) return;
+
+    if (rating.userId !== currentUser.id && !isAdmin) {
+      showToast('Akses ditolak: Hanya pemilik ulasan atau Admin yang dapat menghapus.', 'error');
+      return;
+    }
+
+    const previousRatings = [...ratings];
+    setRatings(prev => prev.filter(r => r.id !== ratingId));
+
     try {
       await deleteDoc(doc(db, 'ratings', ratingId));
-      showToast('Ulasan film kamu telah dihapus.');
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `ratings/${ratingId}`);
+      showToast('Ulasan film kamu telah dihapus.', 'success');
+    } catch (error: any) {
+      setRatings(previousRatings);
+      console.error('[FilmRating] Error deleting rating:', error);
+      const reason = error?.code === 'permission-denied'
+        ? 'Izin ditolak (permission denied).'
+        : 'Gagal menghapus ulasan film.';
+      showToast(reason, 'error');
     }
   };
 
@@ -3324,15 +3414,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!requireVerified()) return;
     const article = articles.find(a => a.id === articleId);
     if (!article) return;
+
+    const previousArticles = [...articles];
     const updatedArticle = {
       ...article,
       likes: article.likes + 1,
     };
+
+    setArticles(prev => prev.map(a => a.id === articleId ? updatedArticle : a));
+    showToast('Kamu menyukai artikel ini!', 'success');
+
     try {
       await setDoc(doc(db, 'articles', articleId), updatedArticle);
-      showToast('Kamu menyukai artikel ini!');
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `articles/${articleId}`);
+    } catch (error: any) {
+      setArticles(previousArticles);
+      console.error('[Article] Error liking article:', error);
+      const reason = error?.code === 'permission-denied'
+        ? 'Izin ditolak (permission denied).'
+        : 'Gagal menyukai artikel ini.';
+      showToast(reason, 'error');
     }
   };
 
@@ -4265,9 +4365,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteBuzzPost = async (buzzId: string): Promise<boolean> => {
-    // 1. Cleanup image attachment from Firebase Storage if present
+    if (!requireVerified()) return false;
     const postToDelete = rawBuzzList.find(b => b.id === buzzId) || buzzList.find(b => b.id === buzzId);
-    if (postToDelete?.image) {
+    if (!postToDelete) return false;
+
+    // Ownership check (only author or admin can delete)
+    if (postToDelete.author?.id !== currentUser.id && !isAdmin) {
+      showToast('Akses ditolak: Hanya pemilik postingan atau Admin yang dapat menghapus.', 'error');
+      return false;
+    }
+
+    // 1. Cleanup image attachment from Firebase Storage if present
+    if (postToDelete.image) {
       try {
         const imageRef = ref(storage, postToDelete.image);
         await deleteObject(imageRef);
@@ -4276,20 +4385,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
 
+    const previousRawBuzzList = [...rawBuzzList];
     try {
       await deleteDoc(doc(db, 'buzz', buzzId));
       setRawBuzzList(prev => prev.filter(b => b.id !== buzzId));
-      showToast('Post obrolan warga berhasil dihapus.');
+      showToast('Post obrolan warga berhasil dihapus.', 'success');
       return true;
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `buzz/${buzzId}`);
+    } catch (error: any) {
+      setRawBuzzList(previousRawBuzzList);
+      console.error('[BuzzPost] Error deleting buzz post:', error);
+      const reason = error?.code === 'permission-denied'
+        ? 'Izin ditolak (permission denied).'
+        : 'Gagal menghapus postingan obrolan.';
+      showToast(reason, 'error');
       return false;
     }
   };
 
   const deleteBuzzReply = async (buzzId: string, replyId: string): Promise<boolean> => {
+    if (!requireVerified()) return false;
     const post = rawBuzzList.find(b => b.id === buzzId) || buzzList.find(b => b.id === buzzId);
     if (!post) return false;
+
+    const replyToDelete = (post.replies || []).find(r => r.id === replyId);
+    if (!replyToDelete) return false;
+
+    // Ownership check (only reply author, post author, or admin can delete)
+    if (replyToDelete.author?.id !== currentUser.id && post.author?.id !== currentUser.id && !isAdmin) {
+      showToast('Akses ditolak: Hanya pemilik balasan komentar atau Admin yang dapat menghapus.', 'error');
+      return false;
+    }
+
+    const previousRawBuzzList = [...rawBuzzList];
     const filteredReplies = (post.replies || []).filter(r => r.id !== replyId);
     try {
       await updateDoc(doc(db, 'buzz', buzzId), {
@@ -4297,15 +4424,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         repliesCount: Math.max(0, (post.repliesCount || 1) - 1),
       });
       setRawBuzzList(prev => prev.map(b => b.id === buzzId ? { ...b, replies: filteredReplies, repliesCount: Math.max(0, (b.repliesCount || 1) - 1) } : b));
-      showToast('Balasan komentar berhasil dihapus.');
+      showToast('Balasan komentar berhasil dihapus.', 'success');
       return true;
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `buzz/${buzzId}`);
+    } catch (error: any) {
+      setRawBuzzList(previousRawBuzzList);
+      console.error('[BuzzReply] Error deleting buzz reply:', error);
+      const reason = error?.code === 'permission-denied'
+        ? 'Izin ditolak (permission denied).'
+        : 'Gagal menghapus balasan komentar.';
+      showToast(reason, 'error');
       return false;
     }
   };
 
   const reportContent = async (report: Omit<ModerationReport, 'id' | 'createdAt' | 'status'>): Promise<boolean> => {
+    if (!requireVerified()) return false;
     const reportId = `rep-${Date.now()}`;
     const newReport: ModerationReport = {
       ...report,
@@ -4316,12 +4449,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       await setDoc(doc(db, 'reports', reportId), newReport);
       setModerationReports(prev => [newReport, ...prev]);
-      showToast('Laporan berhasil dikirim ke tim admin.');
+      showToast('Laporan berhasil dikirim ke tim admin.', 'success');
       return true;
-    } catch (e) {
-      setModerationReports(prev => [newReport, ...prev]);
-      showToast('Laporan berhasil dikirim ke tim admin.');
-      return true;
+    } catch (error: any) {
+      console.error('[Report] Error submitting moderation report:', error);
+      const reason = error?.code === 'permission-denied'
+        ? 'Izin ditolak (permission denied).'
+        : 'Gagal mengirimkan laporan.';
+      showToast(reason, 'error');
+      return false;
     }
   };
 

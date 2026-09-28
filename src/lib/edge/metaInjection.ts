@@ -9,6 +9,9 @@ export interface MetaTagsPayload {
   image: string;
   url: string;
   type: string;
+  imageAlt?: string;
+  locale?: string;
+  publishedTime?: string;
 }
 
 /**
@@ -32,6 +35,8 @@ export function injectMetaTags(html: string, meta: MetaTagsPayload): string {
   const safeDesc = escapeHtml(meta.description);
   const safeImage = escapeHtml(meta.image);
   const safeUrl = escapeHtml(meta.url);
+  const safeImageAlt = escapeHtml(meta.imageAlt || meta.title);
+  const safeLocale = escapeHtml(meta.locale || 'id_ID');
 
   // Replace <title>
   let modified = html;
@@ -47,6 +52,11 @@ export function injectMetaTags(html: string, meta: MetaTagsPayload): string {
   modified = modified.replace(/<meta\s+name=["']twitter:[^"']*["'][^>]*>/gi, '');
   modified = modified.replace(/<link\s+rel=["']canonical["'][^>]*>/gi, '');
 
+  let articlePublishedTag = '';
+  if (meta.type === 'article' && meta.publishedTime) {
+    articlePublishedTag = `\n    <meta property="article:published_time" content="${escapeHtml(meta.publishedTime)}" />`;
+  }
+
   const tags = `
     <meta name="description" content="${safeDesc}" />
     <link rel="canonical" href="${safeUrl}" />
@@ -54,12 +64,15 @@ export function injectMetaTags(html: string, meta: MetaTagsPayload): string {
     <meta property="og:title" content="${safeTitle}" />
     <meta property="og:description" content="${safeDesc}" />
     <meta property="og:image" content="${safeImage}" />
+    <meta property="og:image:alt" content="${safeImageAlt}" />
+    <meta property="og:locale" content="${safeLocale}" />
     <meta property="og:url" content="${safeUrl}" />
     <meta property="og:site_name" content="Sotoy Film" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="${safeTitle}" />
     <meta name="twitter:description" content="${safeDesc}" />
     <meta name="twitter:image" content="${safeImage}" />
+    <meta name="twitter:image:alt" content="${safeImageAlt}" />${articlePublishedTag}
   `;
 
   return modified.replace('</head>', `${tags}\n  </head>`);

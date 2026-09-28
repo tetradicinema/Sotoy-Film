@@ -26,6 +26,19 @@ function safeNext(): Response {
 }
 
 /**
+ * Truncates text to about maxLength characters at a word boundary.
+ */
+function truncateDescription(desc: string, maxLength = 200): string {
+  if (!desc || desc.length <= maxLength) return desc;
+  const truncated = desc.slice(0, maxLength);
+  const lastSpace = truncated.lastIndexOf(' ');
+  if (lastSpace > maxLength - 40 && lastSpace > 0) {
+    return truncated.slice(0, lastSpace) + '...';
+  }
+  return truncated + '...';
+}
+
+/**
  * Vercel Routing Middleware entrypoint (Node.js runtime).
  * Intercepts incoming requests from search engine bots and social media crawlers
  * to serve dynamically injected OpenGraph, Twitter, and Search Engine meta tags.
@@ -73,19 +86,43 @@ export default async function middleware(request: Request): Promise<Response> {
     const canonicalUrl = `${baseUrl}/${collection === 'films' ? 'film' : 'artikel'}/${encodeURIComponent(slug)}`;
 
     let title = 'Sotoy Film';
-    let description = 'Platform komunitas & media pop-culture film, series, anime, dan ulasan Skor Sotoy.';
-    let image = `${baseUrl}/sotoy-logo-full.png`;
+    let rawDescription = 'Platform komunitas & media pop-culture film, series, anime, dan ulasan Skor Sotoy.';
+    let rawImage = '';
     const type = collection === 'films' ? 'video.movie' : 'article';
 
     if (collection === 'films') {
       title = `${data.title || 'Film'}${data.year ? ` (${data.year})` : ''} — Skor Sotoy & Review Film`;
-      description = data.synopsis || data.curatorNote || `Lihat ulasan sinema, rating Skor Sotoy, dan tempat nonton film ${data.title}.`;
-      image = data.poster || data.backdrop || image;
+      rawDescription = data.synopsis || data.curatorNote || `Lihat ulasan sinema, rating Skor Sotoy, dan tempat nonton film ${data.title}.`;
+      rawImage = data.poster || data.backdrop || '';
     } else {
       title = `${data.seoTitle || data.title || 'Artikel'} — Sotoy Film`;
-      description = data.metaDescription || data.excerpt || (typeof data.content === 'string' ? data.content.slice(0, 160) : description);
-      image = data.ogImage || data.coverImage || image;
+      rawDescription = data.metaDescription || data.excerpt || (typeof data.content === 'string' ? data.content.slice(0, 160) : rawDescription);
+      rawImage = data.ogImage || data.coverImage || '';
     }
+
+    // Robust image handling:
+    // If it starts with "//" prefix https:, if it starts with "/" prefix https://www.sotoyfilm.my.id.
+    // If it is a data: URI, empty, or not http(s), fall back to og-default.png
+    let image = '';
+    if (rawImage) {
+      let trimmed = rawImage.trim();
+      if (trimmed.startsWith('//')) {
+        image = `https:${trimmed}`;
+      } else if (trimmed.startsWith('/')) {
+        image = `https://www.sotoyfilm.my.id${trimmed}`;
+      } else if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+        image = trimmed;
+      }
+    }
+
+    if (!image || image.startsWith('data:') || (!image.startsWith('http://') && !image.startsWith('https://'))) {
+      image = 'https://www.sotoyfilm.my.id/og-default.png';
+    }
+
+    // Truncate description to about 200 characters at word boundary
+    const description = truncateDescription(rawDescription, 200);
+
+    const publishedTime = collection === 'articles' ? data.publishedAt : undefined;
 
     // 4. Fetch the base index.html from origin
     let baseHtml = '';
@@ -114,6 +151,9 @@ export default async function middleware(request: Request): Promise<Response> {
       image,
       url: canonicalUrl,
       type,
+      imageAlt: data.title || title,
+      locale: 'id_ID',
+      publishedTime,
     });
 
     return new Response(modifiedHtml, {
