@@ -648,6 +648,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } else if (path === '/profil' || path === '/profile') {
       setCurrentView('user-profile');
       setViewedUserId(currentUser.id);
+    } else if (path.startsWith('/koleksi/')) {
+      setCurrentView('collection-detail');
     } else if (path === '/settings') {
       setCurrentView('settings');
     } else if (path === '/search') {
@@ -3042,6 +3044,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       case 'user-profile': {
         const uid = options?.userId || viewedUserId || currentUser.id;
         targetPath = `/user/${encodeURIComponent(uid)}`;
+        break;
+      }
+      case 'collection-detail': {
+        const uid = options?.userId || viewedUserId || currentUser.id;
+        const colId = options?.collectionId || '';
+        targetPath = colId ? `/koleksi/${encodeURIComponent(uid)}/${encodeURIComponent(colId)}` : '/';
         break;
       }
       case 'settings':

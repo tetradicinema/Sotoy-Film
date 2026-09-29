@@ -34,6 +34,7 @@ import { getRoleBadgeStyle } from '../../utils/roleStyles';
 import { RoleBadge } from '../Common/RoleBadge';
 import { FilmItem, UserRating, UserRole } from '../../types';
 import { StarRating } from '../Common/StarRating';
+import { CollectionPickerPopover } from '../Common/CollectionPickerPopover';
 import { RateFilmModal } from '../Modals/RateFilmModal';
 import { AddToCollectionModal } from '../Modals/AddToCollectionModal';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
@@ -1286,32 +1287,19 @@ export const FilmDatabasePage: React.FC = () => {
                           <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
                         </div>
 
-                        {/* Watchlist toggle */}
-                        <button
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            if (!isLoggedIn) {
-                              setLoginModalOpen(true);
-                              showToast('Silakan Log In terlebih dahulu untuk menyimpan ke Daftar Tonton!');
-                              return;
-                            }
-                            const defaultCol = await getOrCreateDefaultCollection();
-                            if (!defaultCol) return;
-                            const isInDefault = defaultCol.items.some((i: any) => i.itemId === film.id && i.itemType === 'film');
-                            if (isInDefault) {
-                              await removeItemFromCollection(defaultCol.id, film.id);
-                            } else {
-                              await addItemToCollection(defaultCol.id, film.id, 'film');
-                            }
-                          }}
-                          className={`absolute top-2 right-2 w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
-                            inWatchlist
-                              ? 'bg-[#FF2E7E] text-white shadow-[#FF2E7E]/30 shadow-md'
-                              : 'bg-black/70 text-white hover:bg-[#FF2E7E]'
-                          }`}
+                        {/* Watchlist / Collection Picker Popover */}
+                        <div
+                          onClick={(e) => e.stopPropagation()}
+                          className="absolute top-2 right-2 z-10"
                         >
-                          {inWatchlist ? <Check className="w-3.5 h-3.5" /> : <Bookmark className="w-3.5 h-3.5" />}
-                        </button>
+                          <CollectionPickerPopover
+                            itemId={film.id}
+                            itemType="film"
+                            itemName={film.title}
+                            variant="compact"
+                            align="right"
+                          />
+                        </div>
 
                         <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[10px] font-bold text-slate-300">
                           <span className="bg-slate-900/90 px-1.5 py-0.5 rounded uppercase">

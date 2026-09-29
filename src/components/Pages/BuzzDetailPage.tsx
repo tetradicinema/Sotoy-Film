@@ -528,9 +528,6 @@ export const BuzzDetailPage: React.FC = () => {
 
                   <div className="min-w-0 space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="bg-[#FF2E7E] text-white font-black text-[9px] uppercase px-2 py-0.5 rounded">
-                        KOLEKSI SNAPSHOT
-                      </span>
                       <span className="text-slate-400 text-xs font-semibold">
                         {buzz.sharedCollection.itemCount} item
                       </span>
