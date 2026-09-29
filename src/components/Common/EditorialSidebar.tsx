@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Sparkles,
   MessageSquare,
@@ -11,6 +11,8 @@ import {
   Share2,
   User as UserIcon,
   Star,
+  Trophy,
+  Info,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
@@ -18,6 +20,7 @@ import { RoleBadge } from './RoleBadge';
 import { AdBannerSlot } from './AdBannerSlot';
 import { QuickReactionBar } from './QuickReactionBar';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
+import { getRoleLeaderboard } from '../../utils/leaderboard';
 
 interface EditorialSidebarProps {
   currentArticleId?: string;
@@ -28,6 +31,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
     articles,
     films,
     buzzList,
+    ratings,
     currentUser,
     isLoggedIn,
     setLoginModalOpen,
@@ -44,32 +48,20 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
   const [quickSkor, setQuickSkor] = useState<number | undefined>(undefined);
   const [newsletterEmail, setNewsletterEmail] = useState('');
 
-  // Dynamic leaderboard calculation from actual community contributors
-  const leaderboardData = React.useMemo(() => {
-    return (allUsers || []).map(user => {
-      // Find all buzz posts by this user to count engagement received
-      const userBuzz = buzzList.filter(b => b.author.id === user.id);
-      const likesReceived = userBuzz.reduce((acc, b) => acc + (b.likes || 0), 0);
-      const repliesReceived = userBuzz.reduce((acc, b) => acc + (b.repliesCount || 0), 0);
-      
-      // Compute contributor score: (Reviews * 25) + (Buzz * 15) + (Likes + Replies * 5)
-      const reviewsScore = (user.totalReviews || 0) * 25;
-      const buzzScore = (user.totalBuzz || 0) * 15;
-      const reactionScore = (likesReceived + repliesReceived) * 5;
-      const totalSotoyScore = reviewsScore + buzzScore + reactionScore;
+  // Combined top 5 leaderboard entries derived strictly from canonical getRoleLeaderboard util
+  const leaderboardData = useMemo(() => {
+    const criticList = getRoleLeaderboard('si_paling_sotoy', allUsers, ratings);
+    const wargaList = getRoleLeaderboard('warga_sotoy', allUsers, ratings);
 
-      // Engagement Frequency
-      const engagementCount = (user.totalBuzz || 0) + (user.totalReviews || 0) + likesReceived + repliesReceived;
-
-      return {
-        user,
-        score: totalSotoyScore,
-        engagement: engagementCount,
-        postsCount: user.totalBuzz || 0,
-        reviewsCount: user.totalReviews || 0,
-      };
-    }).sort((a, b) => b.score - a.score || b.engagement - a.engagement);
-  }, [allUsers, buzzList]);
+    return [...criticList, ...wargaList]
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        if (b.totalReviews !== a.totalReviews) return b.totalReviews - a.totalReviews;
+        if (b.helpfulVotes !== a.helpfulVotes) return b.helpfulVotes - a.helpfulVotes;
+        return (a.user.name || '').localeCompare(b.user.name || '');
+      })
+      .slice(0, 5);
+  }, [allUsers, ratings]);
 
   // Recommended articles for sidebar (excluding currently opened article if provided)
   const recommendedArticles = articles
@@ -283,16 +275,17 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
       <div id="sidebar-sotoy-leaderboard" className="bg-[#171A1F] border border-white/[0.08] rounded-3xl p-5 shadow-xl space-y-3">
         <div className="flex items-center justify-between pb-3 mb-1 border-b border-white/[0.08]">
           <div className="flex items-center gap-2">
-            <Star className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0" />
+            <Trophy className="w-4 h-4 text-[#FF2E7E] shrink-0" />
             <h3 className="font-display font-bold text-sm text-white">
               Sotoy Leaderboard
             </h3>
           </div>
           <button
-            onClick={() => navigateTo('community-feed')}
-            className="text-[10px] font-bold text-[#FF2E7E] bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 px-2 py-0.5 rounded-full hover:bg-[#FF2E7E]/20 transition-all shrink-0"
+            onClick={() => navigateTo('panduan-leaderboard')}
+            className="text-[10px] font-bold text-[#FF2E7E] bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 px-2.5 py-0.5 rounded-full hover:bg-[#FF2E7E]/20 transition-all shrink-0 flex items-center gap-1"
           >
-            Semua →
+            <Info className="w-3 h-3" />
+            <span>Panduan →</span>
           </button>
         </div>
 
@@ -312,8 +305,8 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
               >
                 <div className="flex items-center gap-2 min-w-0">
                   {/* Rank Badge */}
-                  <div className="flex items-center justify-center w-5 shrink-0 font-mono text-[11px] font-black">
-                    {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`}
+                  <div className="flex items-center justify-center w-5 shrink-0 font-mono text-[11px] font-black text-[#FF2E7E]">
+                    #{rank}
                   </div>
 
                   {/* Avatar & User Details */}
@@ -336,7 +329,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                         {item.user.name}
                       </p>
                       <p className="text-[9px] text-slate-400 truncate">
-                        @{item.user.handle} • {item.postsCount + item.reviewsCount} Karya
+                        @{item.user.handle} • {item.totalReviews} ulasan
                       </p>
                     </div>
                   </div>
@@ -344,12 +337,12 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
 
                 {/* Score */}
                 <div className="text-right shrink-0">
-                  <span className="text-xs font-black text-amber-400 flex items-center justify-end gap-0.5 leading-none">
-                    <Flame className="w-3 h-3 text-orange-500 fill-orange-500 shrink-0" />
-                    <span>{item.score.toLocaleString()}</span>
+                  <span className="text-xs font-black text-[#FF2E7E] flex items-center justify-end gap-0.5 leading-none">
+                    <Flame className="w-3 h-3 text-[#FF2E7E] fill-[#FF2E7E] shrink-0" />
+                    <span>{item.score.toLocaleString()} pts</span>
                   </span>
                   <span className="text-[8px] text-slate-500 block mt-0.5">
-                    {item.engagement} aksi
+                    {item.helpfulVotes} suka
                   </span>
                 </div>
               </div>

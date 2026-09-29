@@ -34,6 +34,8 @@ import {
   Image as ImageIcon,
   Loader2,
   Repeat2,
+  Trophy,
+  Info,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
@@ -43,6 +45,7 @@ import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { QuickReactionBar } from '../Common/QuickReactionBar';
 import { BuzzFeedSidebar, BuzzFeedTab } from '../Navigation/BuzzFeedSidebar';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
+import { getRoleLeaderboard } from '../../utils/leaderboard';
 import { MentionText } from '../Common/MentionText';
 import { MentionInput } from '../Common/MentionInput';
 import { isAllowedImageType, compressBuzzImage } from '../../utils/imageCompression';
@@ -169,6 +172,7 @@ export const CommunityFeedPage: React.FC = () => {
     isFollowing,
     followingIds,
     allUsers,
+    ratings,
     buzzFeedTab,
     setBuzzFeedTab,
     setIsComposeBuzzOpen,
@@ -200,32 +204,20 @@ export const CommunityFeedPage: React.FC = () => {
   const [openMenuPostId, setOpenMenuPostId] = useState<string | null>(null);
   const [isMobileLeaderboardOpen, setIsMobileLeaderboardOpen] = useState(false);
 
-  // Dynamic leaderboard calculation from actual community contributors
+  // Combined top 5 leaderboard entries derived strictly from canonical getRoleLeaderboard util
   const leaderboardData = useMemo(() => {
-    return allUsers.map(user => {
-      // Find all buzz posts by this user to count engagement received
-      const userBuzz = buzzList.filter(b => b.author.id === user.id);
-      const likesReceived = userBuzz.reduce((acc, b) => acc + (b.likes || 0), 0);
-      const repliesReceived = userBuzz.reduce((acc, b) => acc + (b.repliesCount || 0), 0);
-      
-      // Compute contributor score: (Reviews * 25) + (Buzz * 15) + (Likes + Replies * 5)
-      const reviewsScore = (user.totalReviews || 0) * 25;
-      const buzzScore = (user.totalBuzz || 0) * 15;
-      const reactionScore = (likesReceived + repliesReceived) * 5;
-      const totalSotoyScore = reviewsScore + buzzScore + reactionScore;
+    const criticList = getRoleLeaderboard('si_paling_sotoy', allUsers, ratings);
+    const wargaList = getRoleLeaderboard('warga_sotoy', allUsers, ratings);
 
-      // Engagement Frequency
-      const engagementCount = (user.totalBuzz || 0) + (user.totalReviews || 0) + likesReceived + repliesReceived;
-
-      return {
-        user,
-        score: totalSotoyScore,
-        engagement: engagementCount,
-        postsCount: user.totalBuzz || 0,
-        reviewsCount: user.totalReviews || 0,
-      };
-    }).sort((a, b) => b.score - a.score || b.engagement - a.engagement);
-  }, [allUsers, buzzList]);
+    return [...criticList, ...wargaList]
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        if (b.totalReviews !== a.totalReviews) return b.totalReviews - a.totalReviews;
+        if (b.helpfulVotes !== a.helpfulVotes) return b.helpfulVotes - a.helpfulVotes;
+        return (a.user.name || '').localeCompare(b.user.name || '');
+      })
+      .slice(0, 5);
+  }, [allUsers, ratings]);
 
   // Close overflow menu on outside click or escape
   useEffect(() => {
@@ -791,28 +783,26 @@ export const CommunityFeedPage: React.FC = () => {
                             <img
                               src={item.user.avatar}
                               alt={item.user.name}
-                              className={`w-7 h-7 rounded-full object-cover shrink-0 ${
-                                rank === 1 ? 'ring-2 ring-amber-400' : 'ring-1 ring-white/10'
-                              }`}
+                              className="w-7 h-7 rounded-full object-cover shrink-0 ring-1 ring-white/10"
                             />
                             <div className="min-w-0">
                               <p className="text-xs font-bold text-white truncate flex items-center gap-1">
                                 <span>{item.user.name}</span>
                               </p>
                               <p className="text-[9px] text-slate-400 truncate">
-                                @{item.user.handle} • {item.postsCount + item.reviewsCount} Karya
+                                @{item.user.handle} • {item.totalReviews} ulasan
                               </p>
                             </div>
                           </div>
                         </div>
 
                         <div className="text-right shrink-0">
-                          <span className="text-xs font-black text-amber-400 flex items-center justify-end gap-0.5">
-                            <Flame className="w-3 h-3 text-orange-500 fill-orange-500 shrink-0" />
-                            <span>{item.score.toLocaleString()}</span>
+                          <span className="text-xs font-black text-[#FF2E7E] flex items-center justify-end gap-0.5">
+                            <Flame className="w-3 h-3 text-[#FF2E7E] fill-[#FF2E7E] shrink-0" />
+                            <span>{item.score.toLocaleString()} pts</span>
                           </span>
                           <span className="text-[8px] text-slate-500 block">
-                            {item.engagement} aksi
+                            {item.helpfulVotes} suka
                           </span>
                         </div>
                       </div>
@@ -1689,12 +1679,15 @@ export const CommunityFeedPage: React.FC = () => {
         <div className="bg-[#171A1F]/90 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 shadow-xl space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-slate-800/60">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-              <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+              <Trophy className="w-3.5 h-3.5 text-[#FF2E7E]" />
               <span>Sotoy Leaderboard</span>
             </h3>
-            <span className="text-[10px] text-slate-400 bg-slate-900 px-2 py-0.5 rounded-full border border-slate-800">
-              Top 5 Kontributor
-            </span>
+            <button
+              onClick={() => navigateTo('panduan-leaderboard')}
+              className="text-[10px] font-bold text-[#FF2E7E] bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 px-2 py-0.5 rounded-full hover:bg-[#FF2E7E]/20 transition-all shrink-0"
+            >
+              Panduan →
+            </button>
           </div>
 
           <div className="space-y-2.5">
@@ -1713,16 +1706,8 @@ export const CommunityFeedPage: React.FC = () => {
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     {/* Rank Badge */}
-                    <div className="flex items-center justify-center w-5 shrink-0 font-mono text-xs font-black">
-                      {rank === 1 ? (
-                        <span className="text-base">🥇</span>
-                      ) : rank === 2 ? (
-                        <span className="text-base">🥈</span>
-                      ) : rank === 3 ? (
-                        <span className="text-base">🥉</span>
-                      ) : (
-                        <span className="text-slate-500">#{rank}</span>
-                      )}
+                    <div className="flex items-center justify-center w-5 shrink-0 font-mono text-xs font-black text-[#FF2E7E]">
+                      #{rank}
                     </div>
 
                     {/* Avatar & User Details */}
@@ -1734,11 +1719,7 @@ export const CommunityFeedPage: React.FC = () => {
                         <img
                           src={item.user.avatar}
                           alt={item.user.name}
-                          className={`w-8 h-8 rounded-full object-cover transition-all ${
-                            rank === 1 
-                              ? 'ring-2 ring-amber-400 ring-offset-1 ring-offset-[#171A1F]' 
-                              : 'ring-1 ring-white/10'
-                          }`}
+                          className="w-8 h-8 rounded-full object-cover ring-1 ring-white/10 group-hover:ring-[#FF2E7E] transition-all"
                         />
                         {isMe && (
                           <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-[#171A1F]" />
@@ -1754,7 +1735,7 @@ export const CommunityFeedPage: React.FC = () => {
                           )}
                         </p>
                         <p className="text-[10px] text-slate-400 truncate">
-                          @{item.user.handle} • {item.postsCount + item.reviewsCount} Karya
+                          @{item.user.handle} • {item.totalReviews} ulasan
                         </p>
                       </div>
                     </div>
@@ -1762,12 +1743,12 @@ export const CommunityFeedPage: React.FC = () => {
 
                   {/* Score displaying contribution points */}
                   <div className="text-right shrink-0">
-                    <span className="text-xs font-black text-amber-400 flex items-center justify-end gap-0.5">
-                      <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500 shrink-0" />
-                      <span>{item.score.toLocaleString()}</span>
+                    <span className="text-xs font-black text-[#FF2E7E] flex items-center justify-end gap-0.5">
+                      <Flame className="w-3.5 h-3.5 text-[#FF2E7E] fill-[#FF2E7E] shrink-0" />
+                      <span>{item.score.toLocaleString()} pts</span>
                     </span>
                     <span className="text-[8px] text-slate-500 font-medium block">
-                      {item.engagement} aksi
+                      {item.helpfulVotes} suka
                     </span>
                   </div>
                 </div>
