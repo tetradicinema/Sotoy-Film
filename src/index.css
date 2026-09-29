@@ -156,3 +156,23 @@
   -webkit-overflow-scrolling: touch !important;
   scroll-behavior: smooth;
 }
+
+/* Custom styled thin scrollbar for admin navigation bar */
+.admin-navigation-list::-webkit-scrollbar {
+  height: 4px !important;
+  display: block !important;
+}
+.admin-navigation-list::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+.admin-navigation-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-radius: 4px !important;
+}
+.admin-navigation-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35) !important;
+}
+.admin-navigation-list {
+  scrollbar-width: thin !important;
+  -ms-overflow-style: auto !important;
+}

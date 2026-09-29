@@ -206,10 +206,9 @@ export const AdminDashboard: React.FC = () => {
         {/* Navigation Tabs Bar pointing to Standalone URLs */}
         <div className="relative">
           <nav 
-            className="admin-navigation-list flex items-center gap-2 overflow-x-auto pb-3 border-b border-white/10 flex-nowrap scrollbar-none scroll-smooth touch-pan-x"
+            className="admin-navigation-list flex items-center gap-2 overflow-x-auto pb-3 border-b border-white/10 flex-nowrap scroll-smooth touch-pan-x"
             aria-label="Admin Navigation List"
             style={{
-              scrollbarWidth: 'none',
               WebkitOverflowScrolling: 'touch',
             }}
           >
