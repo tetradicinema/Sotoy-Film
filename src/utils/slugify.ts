@@ -5,6 +5,8 @@ export function slugify(text: string): string {
   if (!text) return '';
   return text
     .toString()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // strip diacritics (e.g. ō -> o)
     .toLowerCase()
     .trim()
     .replace(/[^\w\s-]/g, '') // remove non-word characters except spaces and hyphens

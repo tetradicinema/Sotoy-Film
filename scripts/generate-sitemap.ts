@@ -13,6 +13,8 @@ function slugify(text: string): string {
   if (!text) return '';
   return text
     .toString()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // strip diacritics (e.g. ō -> o)
     .toLowerCase()
     .trim()
     .replace(/[^\w\s-]/g, '')
@@ -98,6 +100,7 @@ async function run() {
 
   const seenArticleSlugs = new Set<string>();
   const seenFilmSlugs = new Set<string>();
+  const removedMockFilmIds = new Set<string>();
   let articlesCount = 0;
   let filmsCount = 0;
 
@@ -143,14 +146,39 @@ async function run() {
 
     console.log(`[Sitemap Builder] Indexed ${articlesCount} published articles.`);
 
-    // 4. Fetch Films Catalog from Firestore
+    // 4. Fetch Removed Mock Films markers from Firestore
+    console.log('[Sitemap Builder] Querying removedMockFilms markers from Firestore...');
+    const removedMockFilmsCol = collection(db, 'removedMockFilms');
+    const removedMockFilmsSnap = await getDocs(removedMockFilmsCol);
+
+    removedMockFilmsSnap.forEach(docSnap => {
+      removedMockFilmIds.add(docSnap.id);
+      const data = docSnap.data();
+      if (data?.id) removedMockFilmIds.add(String(data.id));
+      if (data?.slug) removedMockFilmIds.add(String(data.slug));
+    });
+    console.log(`[Sitemap Builder] Found ${removedMockFilmIds.size} removed mock film markers.`);
+
+    // 5. Fetch Films Catalog from Firestore
     console.log('[Sitemap Builder] Querying films catalog from Firestore...');
     const filmsCol = collection(db, 'films');
     const filmsSnap = await getDocs(filmsCol);
 
     filmsSnap.forEach(docSnap => {
       const film = docSnap.data();
-      const slug = film.slug || slugify(film.title) || docSnap.id;
+      const docId = docSnap.id;
+      const filmId = film.id || docId;
+      const slug = film.slug || slugify(film.title) || docId;
+
+      // Skip if marked as removed mock film
+      if (
+        removedMockFilmIds.has(docId) ||
+        (filmId && removedMockFilmIds.has(filmId)) ||
+        (slug && removedMockFilmIds.has(slug))
+      ) {
+        return;
+      }
+
       if (!slug || seenFilmSlugs.has(slug)) return;
 
       seenFilmSlugs.add(slug);
@@ -164,9 +192,19 @@ async function run() {
       filmsCount++;
     });
 
-    // Fallback/merge with INITIAL_FILMS
+    // Fallback/merge with INITIAL_FILMS, excluding any mock films in removedMockFilms
     for (const film of INITIAL_FILMS) {
       const slug = film.slug || slugify(film.title) || film.id;
+
+      if (
+        removedMockFilmIds.has(film.id) ||
+        (film.slug && removedMockFilmIds.has(film.slug)) ||
+        (slug && removedMockFilmIds.has(slug)) ||
+        (film.title && removedMockFilmIds.has(slugify(film.title)))
+      ) {
+        continue;
+      }
+
       if (!slug || seenFilmSlugs.has(slug)) continue;
 
       seenFilmSlugs.add(slug);
@@ -199,6 +237,14 @@ async function run() {
     }
     for (const film of INITIAL_FILMS) {
       const slug = film.slug || slugify(film.title) || film.id;
+      if (
+        removedMockFilmIds.has(film.id) ||
+        (film.slug && removedMockFilmIds.has(film.slug)) ||
+        (slug && removedMockFilmIds.has(slug)) ||
+        (film.title && removedMockFilmIds.has(slugify(film.title)))
+      ) {
+        continue;
+      }
       if (!slug || seenFilmSlugs.has(slug)) continue;
       seenFilmSlugs.add(slug);
       entries.push({
