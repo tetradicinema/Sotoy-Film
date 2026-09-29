@@ -1707,6 +1707,7 @@ export const CommunityFeedPage: React.FC = () => {
             entries={desktopLeaderboardData}
             compact={true}
             limit={5}
+            flat={true}
           />
         </div>
 

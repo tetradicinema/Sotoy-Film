@@ -50,6 +50,7 @@ export interface LeaderboardCardProps {
   entries: LeaderboardEntry[];
   limit?: number;
   compact?: boolean;
+  flat?: boolean;
   title?: string;
   subtitle?: string;
   hideGuideButton?: boolean;
@@ -61,6 +62,7 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({
   entries,
   limit = 5,
   compact = false,
+  flat = false,
   title = 'Review Leaderboards',
   subtitle,
   hideGuideButton = false,
@@ -72,7 +74,11 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({
 
   return (
     <div
-      className={`bg-[#171A1F] border border-slate-800/80 rounded-3xl p-4 sm:p-5 shadow-xl flex flex-col justify-start space-y-4 ${className}`}
+      className={
+        flat
+          ? `flex flex-col justify-start space-y-4 ${className}`
+          : `bg-[#171A1F] border border-slate-800/80 rounded-3xl p-4 sm:p-5 shadow-xl flex flex-col justify-start space-y-4 ${className}`
+      }
     >
       {/* Card Header */}
       <div className="flex items-center justify-between gap-1.5 sm:gap-2 pb-3 border-b border-slate-800/80 min-w-0">
@@ -112,7 +118,7 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({
           {emptyText}
         </div>
       ) : (
-        <div className="divide-y divide-slate-800/60">
+        <div className={flat ? 'space-y-3' : 'divide-y divide-slate-800/60'}>
           {displayedEntries.map(entry => {
             const userInitial = entry.user.name
               ? entry.user.name.charAt(0).toUpperCase()
@@ -122,7 +128,7 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({
               <div
                 key={entry.user.id}
                 className={`flex items-center justify-between gap-2 sm:gap-3 ${
-                  compact ? 'py-2' : 'py-2.5 sm:py-3'
+                  flat ? 'py-1' : compact ? 'py-2' : 'py-2.5 sm:py-3'
                 } group`}
               >
                 {/* Left: Rank & User Info */}
