@@ -5,6 +5,7 @@ export interface MappedTmdbFilm {
   originalTitle: string;
   type: 'movie' | 'series' | 'anime';
   year: number;
+  releaseDate?: string;
   duration: string;
   poster: string;
   backdrop: string;
@@ -427,6 +428,7 @@ export const mapTmdbDetailsToFilm = (details: any, type: 'movie' | 'tv'): Mapped
     originalTitle: mappedOriginalTitle,
     type: isMovie ? 'movie' : 'series',
     year: mappedYear,
+    releaseDate: rawDate || undefined,
     duration: mappedDuration,
     poster: mappedPoster,
     backdrop: mappedBackdrop,

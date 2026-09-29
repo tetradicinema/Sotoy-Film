@@ -46,6 +46,7 @@ interface FilmFormData {
   originalTitle: string;
   type: 'movie' | 'series' | 'anime';
   year: number;
+  releaseDate: string; // ISO date string e.g. "2024-07-12"
   duration: string;
   poster: string;
   backdrop: string;
@@ -68,6 +69,7 @@ const DEFAULT_FORM: FilmFormData = {
   originalTitle: '',
   type: 'movie',
   year: new Date().getFullYear(),
+  releaseDate: '',
   duration: '2h 10m',
   poster: '',
   backdrop: '',
@@ -188,6 +190,7 @@ export const AdminCatalogManager: React.FC = () => {
         originalTitle: mapped.originalTitle,
         type: mapped.type,
         year: mapped.year,
+        releaseDate: mapped.releaseDate || prev.releaseDate || '',
         poster: mapped.poster || prev.poster,
         backdrop: mapped.backdrop || prev.backdrop,
         synopsis: mapped.synopsis || prev.synopsis,
@@ -422,6 +425,7 @@ export const AdminCatalogManager: React.FC = () => {
       originalTitle: film.originalTitle || '',
       type: film.type || 'movie',
       year: film.year || 2024,
+      releaseDate: film.releaseDate || '',
       duration: film.duration || '',
       poster: film.poster || '',
       backdrop: film.backdrop || '',
@@ -520,6 +524,7 @@ export const AdminCatalogManager: React.FC = () => {
         originalTitle: formData.originalTitle.trim() || undefined,
         type: formData.type,
         year: parsedYear,
+        releaseDate: formData.releaseDate ? formData.releaseDate.trim() : undefined,
         duration: formData.duration.trim() || undefined,
         poster: posterUrl,
         backdrop: backdropUrl,
@@ -1225,6 +1230,22 @@ export const AdminCatalogManager: React.FC = () => {
                     type="number"
                     value={formData.year}
                     onChange={e => setFormData({ ...formData, year: Number(e.target.value) })}
+                    className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00F0FF]"
+                  />
+                </div>
+
+                {/* Release Date (optional) */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                    <span>Tanggal Rilis (opsional)</span>
+                    {formData.releaseDate && (
+                      <span className="text-[10px] text-cyan-400 font-normal">✓ {formData.releaseDate}</span>
+                    )}
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.releaseDate}
+                    onChange={e => setFormData({ ...formData, releaseDate: e.target.value })}
                     className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00F0FF]"
                   />
                 </div>

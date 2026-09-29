@@ -66,6 +66,7 @@ import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
 import { BuzzImageAttachment } from '../Buzz/BuzzImageAttachment';
 import { getUserRankInRole } from '../../utils/leaderboard';
+import { SotoyScoreSparkline } from '../Common/SotoyScoreSparkline';
 
 const AdminDashboard = React.lazy(() =>
   import('../Admin/AdminDashboard').then(m => ({ default: m.AdminDashboard }))
@@ -826,6 +827,9 @@ export const UserPage: React.FC = () => {
                 </button>
               </div>
             )}
+
+            {/* Monthly Progression Sotoy Score Sparkline Chart */}
+            <SotoyScoreSparkline user={targetUser} ratings={ratings} className="mt-4" />
           </div>
         </div>
 

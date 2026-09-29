@@ -151,6 +151,7 @@ export interface FilmItem {
   originalTitle?: string;
   type: 'movie' | 'series' | 'anime';
   year: number;
+  releaseDate?: string; // ISO date string, e.g. "2024-07-12"
   poster: string;
   backdrop: string;
   synopsis: string;

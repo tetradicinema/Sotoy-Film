@@ -174,6 +174,7 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
           originalTitle: mapped.originalTitle || undefined,
           type: mapped.type,
           year: mapped.year,
+          releaseDate: mapped.releaseDate || undefined,
           duration: mapped.duration || undefined,
           poster: posterUrl,
           backdrop: backdropUrl,

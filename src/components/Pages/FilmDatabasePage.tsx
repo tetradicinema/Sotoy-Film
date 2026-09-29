@@ -36,7 +36,7 @@ import { FilmItem, UserRating, UserRole } from '../../types';
 import { StarRating } from '../Common/StarRating';
 import { RateFilmModal } from '../Modals/RateFilmModal';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
-import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
+import { formatRelativeTime, formatFullDateTime, formatReleaseDate } from '../../utils/formatRelativeTime';
 import { FilmCardSkeleton, FilmDatabaseSkeleton } from '../Skeletons';
 import { getRoleLeaderboard } from '../../utils/leaderboard';
 
@@ -168,7 +168,24 @@ export const FilmDatabasePage: React.FC = () => {
   };
 
   // Film sections data (respects selectedGenre if set)
-  const recentReleased = films.filter(f => f.isRecentRelease || f.year >= 2024);
+  const recentReleased = [...films]
+    .filter(f => f.isRecentRelease || f.year >= 2024)
+    .sort((a, b) => {
+      const aDate = a.releaseDate ? new Date(a.releaseDate).getTime() : null;
+      const bDate = b.releaseDate ? new Date(b.releaseDate).getTime() : null;
+
+      // Both have valid dates -> newest date first
+      if (aDate !== null && bDate !== null && !isNaN(aDate) && !isNaN(bDate)) {
+        if (aDate !== bDate) return bDate - aDate;
+      }
+
+      // Dated films always outrank undated films
+      if (aDate !== null && !isNaN(aDate) && (bDate === null || isNaN(bDate))) return -1;
+      if ((aDate === null || isNaN(aDate)) && bDate !== null && !isNaN(bDate)) return 1;
+
+      // Fallback: year descending for equal or undated
+      return b.year - a.year;
+    });
   const popularReleased = films.filter(f => f.isPopularRelease || f.totalVotes > 600);
   const popularThisWeek = films.filter(f => f.isPopularThisWeek || f.skorSotoy >= 4.8);
 
@@ -473,8 +490,8 @@ export const FilmDatabasePage: React.FC = () => {
                       NEW
                     </span>
 
-                    <div className="absolute bottom-2 left-2 right-2 text-[10px] text-slate-300 font-bold">
-                      {film.duration} • {film.year}
+                    <div className="absolute bottom-2 left-2 right-2 text-[10px] text-slate-300 font-bold truncate" title={film.releaseDate ? `Rilis: ${formatReleaseDate(film.releaseDate)}` : `Tahun: ${film.year}`}>
+                      {film.releaseDate ? formatReleaseDate(film.releaseDate) : `${film.duration ? `${film.duration} • ` : ''}${film.year}`}
                     </div>
                   </div>
 

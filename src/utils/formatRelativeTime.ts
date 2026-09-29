@@ -102,3 +102,18 @@ export function formatFullDateTime(dateInput: string | number | Date | null | un
 
   return `${day} ${month} ${year}, ${hours}:${minutes} WIB`;
 }
+
+/**
+ * Formats ISO releaseDate string into short localized date string (e.g. "12 Jul 2024").
+ */
+export function formatReleaseDate(dateInput: string | null | undefined): string {
+  if (!dateInput) return '';
+  const date = parseDateSafely(dateInput);
+  if (!date) return dateInput;
+
+  const day = date.getDate();
+  const month = ID_MONTHS_SHORT[date.getMonth()] || '';
+  const year = date.getFullYear();
+
+  return `${day} ${month} ${year}`;
+}
