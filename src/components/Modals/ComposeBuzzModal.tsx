@@ -15,12 +15,24 @@ export const ComposeBuzzModal: React.FC = () => {
     articles,
     addBuzzPost,
     showToast,
+    buzzPrefill,
+    setBuzzPrefill,
   } = useApp();
 
   const [postContent, setPostContent] = useState('');
   const [selectedFilmId, setSelectedFilmId] = useState<string | null>(null);
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [skorMention, setSkorMention] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (isComposeBuzzOpen && buzzPrefill) {
+      setPostContent(buzzPrefill.content || '');
+    } else if (!isComposeBuzzOpen) {
+      setPostContent('');
+      setSelectedFilmId(null);
+      setSelectedArticleId(null);
+    }
+  }, [isComposeBuzzOpen, buzzPrefill]);
 
   // Photo Attachment state
   const [attachedImageDataUrl, setAttachedImageDataUrl] = useState<string | null>(null);
@@ -100,7 +112,8 @@ export const ComposeBuzzModal: React.FC = () => {
         selectedFilmId || undefined,
         skorMention,
         selectedArticleId || undefined,
-        attachedImageDataUrl || undefined
+        attachedImageDataUrl || undefined,
+        buzzPrefill?.sharedCollection || undefined
       );
 
       setPostContent('');
@@ -111,6 +124,7 @@ export const ComposeBuzzModal: React.FC = () => {
       setAttachedImagePreview(null);
       setDropdownOpen(false);
       setSearchQuery('');
+      setBuzzPrefill(null);
       setIsComposeBuzzOpen(false);
       showToast('Buzz kamu berhasil terbit! 🚀');
     } finally {
@@ -122,6 +136,7 @@ export const ComposeBuzzModal: React.FC = () => {
     setAttachedImageDataUrl(null);
     setAttachedImagePreview(null);
     setIsComposeBuzzOpen(false);
+    setBuzzPrefill(null);
   };
 
   return (

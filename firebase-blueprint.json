@@ -233,6 +233,21 @@
       },
       "required": ["id", "removedAt"]
     },
+    "UserCollection": {
+      "title": "UserCollection",
+      "description": "User created collection playlist of mixed films and articles",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "isDefault": { "type": "boolean" },
+        "items": { "type": "array" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name", "isDefault", "items", "createdAt", "updatedAt"]
+    },
     "WatchlistItem": {
       "title": "WatchlistItem",
       "description": "User's saved film item in their personal watchlist",
@@ -265,6 +280,10 @@
     }
   },
   "firestore": {
+    "/users/{userId}/collections/{collectionId}": {
+      "schema": "UserCollection",
+      "description": "Personal collections playlists of mixed films and articles for a specific user"
+    },
     "/users/{userId}/watchlist/{filmId}": {
       "schema": "WatchlistItem",
       "description": "Personal watchlist of films for a specific user"

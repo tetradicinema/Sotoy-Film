@@ -162,6 +162,14 @@ service cloud.firestore {
         data.removedAt is string && data.removedAt.size() <= 128;
     }
 
+    function isValidCollection(data) {
+      return data.keys().hasAll(['id', 'name', 'isDefault', 'items']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.name is string && data.name.size() <= 100 &&
+        data.isDefault is bool &&
+        data.items is list;
+    }
+
     // Granular delta & diff validation helpers
     function isValidFollowersCountDelta() {
       let prev = ('followersCount' in existing()) ? existing().followersCount : 0;
@@ -309,6 +317,12 @@ service cloud.firestore {
 
       match /savedBuzz/{buzzId} {
         allow read, write: if isOwner(userId);
+      }
+
+      match /collections/{collectionId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidCollection(incoming()) && isValidId(collectionId);
+        allow delete: if isOwner(userId);
       }
     }
 

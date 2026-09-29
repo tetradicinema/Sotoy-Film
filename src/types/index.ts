@@ -298,6 +298,31 @@ export interface BuzzPost {
   tags: string[];
   recommendationSignal?: RecommendationSignal;
   feedScore?: number;
+  sharedCollection?: {
+    collectionId: string;
+    ownerId: string;
+    name: string;
+    description?: string;
+    itemCount: number;
+    previewImages: string[];
+    items: { itemId: string; itemType: 'film' | 'article' }[];
+  };
+}
+
+export interface CollectionItem {
+  itemId: string;
+  itemType: 'film' | 'article';
+  addedAt: string;
+}
+
+export interface UserCollection {
+  id: string;
+  name: string;
+  description?: string;
+  isDefault: boolean;
+  items: CollectionItem[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AdBanner {

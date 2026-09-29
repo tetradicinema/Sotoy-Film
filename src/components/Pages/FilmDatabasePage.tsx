@@ -35,6 +35,7 @@ import { RoleBadge } from '../Common/RoleBadge';
 import { FilmItem, UserRating, UserRole } from '../../types';
 import { StarRating } from '../Common/StarRating';
 import { RateFilmModal } from '../Modals/RateFilmModal';
+import { AddToCollectionModal } from '../Modals/AddToCollectionModal';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { formatRelativeTime, formatFullDateTime, formatReleaseDate } from '../../utils/formatRelativeTime';
 import { FilmCardSkeleton, FilmDatabaseSkeleton } from '../Skeletons';
@@ -119,6 +120,9 @@ export const FilmDatabasePage: React.FC = () => {
     toggleWatchlist,
     isFilmInWatchlist,
     allUsers,
+    collections,
+    isItemInAnyCollection,
+    showToast,
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -127,6 +131,7 @@ export const FilmDatabasePage: React.FC = () => {
   const [ratingFilter, setRatingFilter] = useState<number>(0);
   const [sortBy, setSortBy] = useState<'rating' | 'votes' | 'year' | 'title'>('rating');
   const [ratingModalFilm, setRatingModalFilm] = useState<FilmItem | null>(null);
+  const [collectionModalFilm, setCollectionModalFilm] = useState<FilmItem | null>(null);
 
   // Review Filter Role State
   const [reviewsFilterRole, setReviewsFilterRole] = useState<'all' | 'critic' | 'warga'>('all');
@@ -1254,7 +1259,7 @@ export const FilmDatabasePage: React.FC = () => {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 {sortedSearchResults.map(film => {
-                  const inWatchlist = isFilmInWatchlist(film.id);
+                  const inWatchlist = isItemInAnyCollection(film.id, 'film');
 
                   return (
                     <div
@@ -1284,11 +1289,20 @@ export const FilmDatabasePage: React.FC = () => {
                         <button
                           onClick={e => {
                             e.stopPropagation();
-                            toggleWatchlist(film.id);
+                            if (!isLoggedIn) {
+                              setLoginModalOpen(true);
+                              showToast('Silakan Log In terlebih dahulu untuk menyimpan ke Daftar Tonton!');
+                              return;
+                            }
+                            if (collections.length > 1) {
+                              setCollectionModalFilm(film);
+                            } else {
+                              toggleWatchlist(film.id);
+                            }
                           }}
                           className={`absolute top-2 right-2 w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
                             inWatchlist
-                              ? 'bg-emerald-500 text-white'
+                              ? 'bg-[#FF2E7E] text-white shadow-[#FF2E7E]/30 shadow-md'
                               : 'bg-black/70 text-white hover:bg-[#FF2E7E]'
                           }`}
                         >
@@ -1374,6 +1388,16 @@ export const FilmDatabasePage: React.FC = () => {
             film={ratingModalFilm}
             isOpen={!!ratingModalFilm}
             onClose={() => setRatingModalFilm(null)}
+          />
+        )}
+
+        {collectionModalFilm && (
+          <AddToCollectionModal
+            isOpen={!!collectionModalFilm}
+            onClose={() => setCollectionModalFilm(null)}
+            itemId={collectionModalFilm.id}
+            itemType="film"
+            itemName={collectionModalFilm.title}
           />
         )}
       </div>

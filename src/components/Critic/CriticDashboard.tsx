@@ -605,3 +605,5 @@ export const CriticDashboard: React.FC = () => {
     </div>
   );
 };
+
+export default CriticDashboard;

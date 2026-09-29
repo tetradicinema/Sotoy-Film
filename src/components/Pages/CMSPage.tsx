@@ -248,3 +248,5 @@ export const CMSPage: React.FC = () => {
     </div>
   );
 };
+
+export default CMSPage;

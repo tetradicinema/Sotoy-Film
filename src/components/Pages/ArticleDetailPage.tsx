@@ -28,6 +28,7 @@ import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
 import { SEOHead } from '../SEO/SEOHead';
 import { generateArticleSchema, generateBreadcrumbSchema } from '../../utils/schemaHelpers';
 import { StarRating } from '../Common/StarRating';
+import { AddToCollectionModal } from '../Modals/AddToCollectionModal';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { BreadcrumbNavigation } from '../Navigation/BreadcrumbNavigation';
 import { EditorialSidebar } from '../Common/EditorialSidebar';
@@ -54,6 +55,8 @@ export const ArticleDetailPage: React.FC = () => {
     openShareModal,
     toggleFollowUser,
     isFollowing,
+    collections,
+    isItemInAnyCollection,
   } = useApp();
 
   const { slug } = useParams<{ slug?: string }>();
@@ -64,6 +67,8 @@ export const ArticleDetailPage: React.FC = () => {
   const author = useDynamicArticleAuthor(article?.authorId || article?.author?.id, article?.author);
   const [commentText, setCommentText] = useState('');
   const [rateModalOpen, setRateModalOpen] = useState(false);
+  const [collectionModalArticle, setCollectionModalArticle] = useState<any | null>(null);
+  const [collectionModalFilm, setCollectionModalFilm] = useState<any | null>(null);
   const [comments, setComments] = useState<{ name: string; avatar: string; text: string; time: string }[]>([
     {
       name: 'Penggemar Sinema',
@@ -346,17 +351,28 @@ export const ArticleDetailPage: React.FC = () => {
 
               <button
                 id="article-save-library-btn"
-                onClick={() => toggleSaveArticle(article.id)}
+                onClick={() => {
+                  if (!isLoggedIn) {
+                    setLoginModalOpen(true);
+                    showToast('Silakan Log In terlebih dahulu untuk menyimpan artikel ke Perpustakaan!');
+                    return;
+                  }
+                  if (collections.length > 1) {
+                    setCollectionModalArticle(article);
+                  } else {
+                    toggleSaveArticle(article.id);
+                  }
+                }}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-bold transition-all border ${
-                  isArticleSaved(article.id)
-                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
+                  isItemInAnyCollection(article.id, 'article')
+                    ? 'bg-[#FF2E7E]/20 text-[#FF2E7E] border-[#FF2E7E]/40 hover:bg-[#FF2E7E]/30'
                     : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-800'
                 }`}
-                title={isArticleSaved(article.id) ? 'Hapus dari Perpustakaan' : 'Simpan ke Perpustakaan'}
+                title={isItemInAnyCollection(article.id, 'article') ? 'Hapus dari Perpustakaan' : 'Simpan ke Perpustakaan'}
               >
-                {isArticleSaved(article.id) ? (
+                {isItemInAnyCollection(article.id, 'article') ? (
                   <>
-                    <BookmarkCheck className="w-4 h-4 text-emerald-400" />
+                    <BookmarkCheck className="w-4 h-4 text-[#FF2E7E]" />
                     <span>Tersimpan di Library</span>
                   </>
                 ) : (
@@ -576,16 +592,27 @@ export const ArticleDetailPage: React.FC = () => {
 
                   <button
                     id="watchlist-discussed-film-btn"
-                    onClick={() => toggleWatchlist(discussedFilm.id)}
+                    onClick={() => {
+                      if (!isLoggedIn) {
+                        setLoginModalOpen(true);
+                        showToast('Silakan Log In terlebih dahulu untuk menyimpan ke Daftar Tonton!');
+                        return;
+                      }
+                      if (collections.length > 1) {
+                        setCollectionModalFilm(discussedFilm);
+                      } else {
+                        toggleWatchlist(discussedFilm.id);
+                      }
+                    }}
                     className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 border transition-all ${
-                      isFilmInWatchlist(discussedFilm.id)
-                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                      isItemInAnyCollection(discussedFilm.id, 'film')
+                        ? 'bg-[#FF2E7E]/20 text-[#FF2E7E] border-[#FF2E7E]/40'
                         : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
                     }`}
                   >
-                    {isFilmInWatchlist(discussedFilm.id) ? (
+                    {isItemInAnyCollection(discussedFilm.id, 'film') ? (
                       <>
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <Check className="w-3.5 h-3.5 text-[#FF2E7E]" />
                         <span>Di Watchlist Kamu</span>
                       </>
                     ) : (
@@ -716,6 +743,26 @@ export const ArticleDetailPage: React.FC = () => {
             film={discussedFilm}
             isOpen={rateModalOpen}
             onClose={() => setRateModalOpen(false)}
+          />
+        )}
+
+        {collectionModalArticle && (
+          <AddToCollectionModal
+            isOpen={!!collectionModalArticle}
+            onClose={() => setCollectionModalArticle(null)}
+            itemId={collectionModalArticle.id}
+            itemType="article"
+            itemName={collectionModalArticle.title}
+          />
+        )}
+
+        {collectionModalFilm && (
+          <AddToCollectionModal
+            isOpen={!!collectionModalFilm}
+            onClose={() => setCollectionModalFilm(null)}
+            itemId={collectionModalFilm.id}
+            itemType="film"
+            itemName={collectionModalFilm.title}
           />
         )}
       </div>

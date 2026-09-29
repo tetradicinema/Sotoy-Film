@@ -40,6 +40,7 @@ import { getRoleBadgeStyle } from '../../utils/roleStyles';
 import { RoleBadge } from '../Common/RoleBadge';
 import { FilmItem, CastMember, CrewMember } from '../../types';
 import { RateFilmModal } from '../Modals/RateFilmModal';
+import { AddToCollectionModal } from '../Modals/AddToCollectionModal';
 import { FullCastCrewModal } from '../Modals/FullCastCrewModal';
 import { PersonAvatar } from '../Common/PersonAvatar';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
@@ -106,6 +107,8 @@ export const FilmDetailPage: React.FC = () => {
     setLoginModalOpen,
     showToast,
     openShareModal,
+    collections,
+    isItemInAnyCollection,
   } = useApp();
 
   const [ratingModalOpen, setRatingModalOpen] = useState(false);
@@ -113,6 +116,7 @@ export const FilmDetailPage: React.FC = () => {
   const [selectedStill, setSelectedStill] = useState<string | null>(null);
   const [isPlayingTrailer, setIsPlayingTrailer] = useState(false);
   const [reviewFilter, setReviewFilter] = useState<'all' | 'critics' | 'community'>('all');
+  const [collectionModalOpen, setCollectionModalOpen] = useState(false);
 
   const { slug } = useParams<{ slug?: string }>();
   const film: FilmItem = (slug ? (films.find(f => (f.slug && f.slug === slug) || slugify(f.title) === slug || f.id === slug) || INITIAL_FILMS.find(f => (f.slug && f.slug === slug) || slugify(f.title) === slug || f.id === slug)) : null)
@@ -200,7 +204,7 @@ export const FilmDetailPage: React.FC = () => {
       ? communityReviews
       : filmReviews;
 
-  const isInWatchlist = isFilmInWatchlist(film.id);
+  const isInWatchlist = isItemInAnyCollection(film.id, 'film');
 
   // Cast with photos fallback
   const allCastList: CastMember[] = liveCredits.cast && liveCredits.cast.length > 0
@@ -577,10 +581,21 @@ export const FilmDetailPage: React.FC = () => {
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5 pt-1">
                 <button
                   id="detail-toggle-watchlist-btn"
-                  onClick={() => toggleWatchlist(film.id)}
+                  onClick={() => {
+                    if (!isLoggedIn) {
+                      setLoginModalOpen(true);
+                      showToast('Silakan Log In terlebih dahulu untuk menyimpan ke Daftar Tonton!');
+                      return;
+                    }
+                    if (collections.length > 1) {
+                      setCollectionModalOpen(true);
+                    } else {
+                      toggleWatchlist(film.id);
+                    }
+                  }}
                   className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all min-h-[40px] ${
                     isInWatchlist
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'
+                      ? 'bg-[#FF2E7E]/20 text-[#FF2E7E] border border-[#FF2E7E]/40 hover:bg-[#FF2E7E]/30'
                       : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
                   }`}
                   title={isInWatchlist ? 'Hapus dari Perpustakaan & Watchlist' : 'Simpan ke Perpustakaan & Watchlist'}
@@ -1299,6 +1314,16 @@ export const FilmDetailPage: React.FC = () => {
           crewList={allCrewList}
           isLoading={isLoadingCredits}
         />
+
+        {collectionModalOpen && (
+          <AddToCollectionModal
+            isOpen={collectionModalOpen}
+            onClose={() => setCollectionModalOpen(false)}
+            itemId={film.id}
+            itemType="film"
+            itemName={film.title}
+          />
+        )}
       </div>
     </div>
   );

@@ -18,6 +18,7 @@ import { BuzzDetailPage } from './components/Pages/BuzzDetailPage';
 import { ArticleDetailPage } from './components/Pages/ArticleDetailPage';
 import { WriteArticlePage } from './components/Pages/WriteArticlePage';
 import { UserPage } from './components/Pages/UserPage';
+import { CollectionDetailPage } from './components/Pages/CollectionDetailPage';
 import { SettingsPage } from './components/Pages/SettingsPage';
 import { SearchPage } from './components/Pages/SearchPage';
 import { AboutUsPage } from './components/Pages/AboutUsPage';
@@ -159,6 +160,7 @@ const AppContent: React.FC = () => {
           <Route path="/user/:id" element={<UserPage />} />
           <Route path="/profil" element={<UserPage />} />
           <Route path="/profile" element={<UserPage />} />
+          <Route path="/koleksi/:userId/:collectionId" element={<CollectionDetailPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/search" element={<SearchPage />} />
 

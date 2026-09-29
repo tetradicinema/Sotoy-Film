@@ -263,6 +263,14 @@ interface AppContextType {
   toggleSaveArticle: (articleId: string) => void;
   removeBulkFromSavedArticles: (articleIds: string[]) => Promise<void>;
   isArticleSaved: (articleId: string) => boolean;
+  collections: UserCollection[];
+  createCollection: (name: string, description?: string) => Promise<string | null>;
+  renameCollection: (collectionId: string, newName: string) => Promise<boolean>;
+  deleteCollection: (collectionId: string) => Promise<boolean>;
+  addItemToCollection: (collectionId: string, itemId: string, itemType: 'film' | 'article') => Promise<boolean>;
+  removeItemFromCollection: (collectionId: string, itemId: string) => Promise<boolean>;
+  isItemInAnyCollection: (itemId: string, itemType: 'film' | 'article') => boolean;
+  getCollectionsContainingItem: (itemId: string, itemType: 'film' | 'article') => UserCollection[];
   savedBuzzIds: string[];
   toggleSaveBuzz: (buzzId: string) => void;
   isBuzzSaved: (buzzId: string) => boolean;
@@ -335,8 +343,42 @@ interface AppContextType {
     taggedFilmId?: string,
     skorSotoy?: number,
     taggedArticleId?: string,
-    imageDataUrl?: string
+    imageDataUrl?: string,
+    sharedCollection?: {
+      collectionId: string;
+      ownerId: string;
+      name: string;
+      description?: string;
+      itemCount: number;
+      previewImages: string[];
+      items: { itemId: string; itemType: 'film' | 'article' }[];
+    }
   ) => Promise<void>;
+  buzzPrefill: {
+    content?: string;
+    sharedCollection?: {
+      collectionId: string;
+      ownerId: string;
+      name: string;
+      description?: string;
+      itemCount: number;
+      previewImages: string[];
+      items: { itemId: string; itemType: 'film' | 'article' }[];
+    };
+  } | null;
+  setBuzzPrefill: (prefill: {
+    content?: string;
+    sharedCollection?: {
+      collectionId: string;
+      ownerId: string;
+      name: string;
+      description?: string;
+      itemCount: number;
+      previewImages: string[];
+      items: { itemId: string; itemType: 'film' | 'article' }[];
+    };
+  } | null) => void;
+  shareCollectionToBuzz: (collectionId: string) => void;
   likeBuzzPost: (buzzId: string) => Promise<void>;
   reactToBuzzPost: (buzzId: string, reaction: ReactionType) => Promise<void>;
   toggleRepostBuzzPost: (buzzId: string) => Promise<boolean>;
@@ -422,10 +464,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [isComposeBuzzOpen, setIsComposeBuzzOpen] = useState(false);
+  const [buzzPrefill, setBuzzPrefill] = useState<{
+    content?: string;
+    sharedCollection?: {
+      collectionId: string;
+      ownerId: string;
+      name: string;
+      itemCount: number;
+      previewImages: string[];
+    };
+  } | null>(null);
 
   // Firestore Realtime Collections States
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [savedArticles, setSavedArticles] = useState<string[]>([]);
+  const [collections, setCollections] = useState<UserCollection[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
   const [films, setFilms] = useState<FilmItem[]>([]);
   const removedMockFilmIdsRef = React.useRef<Set<string>>(new Set());
@@ -1335,6 +1388,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setWatchlist([]);
       setSavedArticles([]);
       setSavedBuzzIds([]);
+      setCollections([]);
       return;
     }
 
@@ -1383,11 +1437,82 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     );
 
+    const collectionsCol = collection(db, 'users', currentUser.id, 'collections');
+    const unsubCollections = onSnapshot(
+      collectionsCol,
+      (snapshot) => {
+        const items: UserCollection[] = [];
+        snapshot.forEach((docSnap) => {
+          items.push(docSnap.data() as UserCollection);
+        });
+        setCollections(items);
+      },
+      (err) => {
+        console.warn('[Firestore] collections subscription notice:', err.message);
+      }
+    );
+
     return () => {
       unsubWatchlist();
       unsubSavedArticles();
       unsubSavedBuzz();
+      unsubCollections();
     };
+  }, [isLoggedIn, currentUser?.id]);
+
+  // Synchronize/Migrate old watchlist & savedArticles to Collections
+  useEffect(() => {
+    if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') return;
+
+    const runMigration = async () => {
+      const defaultColRef = doc(db, 'users', currentUser.id, 'collections', 'default');
+      try {
+        const defaultSnap = await getDoc(defaultColRef);
+        if (!defaultSnap.exists()) {
+          const collectionsColRef = collection(db, 'users', currentUser.id, 'collections');
+          const collectionsSnap = await getDocs(collectionsColRef);
+          
+          if (collectionsSnap.empty) {
+            const mergedItems: CollectionItem[] = [];
+            
+            const watchSnap = await getDocs(collection(db, 'users', currentUser.id, 'watchlist'));
+            const articleSnap = await getDocs(collection(db, 'users', currentUser.id, 'savedArticles'));
+            
+            watchSnap.forEach(docSnap => {
+              mergedItems.push({
+                itemId: docSnap.id,
+                itemType: 'film',
+                addedAt: docSnap.data().addedAt || new Date().toISOString()
+              });
+            });
+            
+            articleSnap.forEach(docSnap => {
+              mergedItems.push({
+                itemId: docSnap.id,
+                itemType: 'article',
+                addedAt: docSnap.data().addedAt || new Date().toISOString()
+              });
+            });
+
+            const defaultCol: UserCollection = {
+              id: 'default',
+              name: 'Watchlist Utama',
+              isDefault: true,
+              items: mergedItems,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+
+            await setDoc(defaultColRef, defaultCol);
+            console.log('[Migration] Successfully created default collection "Watchlist Utama" with merged items:', mergedItems);
+          }
+        }
+      } catch (err) {
+        console.warn('[Migration] Error checking or running collection migration:', err);
+      }
+    };
+
+    runMigration();
   }, [isLoggedIn, currentUser?.id]);
 
   // Real-time listener for current user's interest profile from Firestore
@@ -1689,6 +1814,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           recordUserInterest(topics, 3);
         }
       }
+
+      // Mirror to default collection
+      try {
+        const defaultColRef = doc(db, 'users', currentUser.id, 'collections', 'default');
+        const defaultSnap = await getDoc(defaultColRef);
+        if (defaultSnap.exists()) {
+          const defaultData = defaultSnap.data() as UserCollection;
+          const newItems = [...defaultData.items];
+          const itemIdx = newItems.findIndex(item => item.itemId === filmId && item.itemType === 'film');
+          if (exists) {
+            if (itemIdx > -1) newItems.splice(itemIdx, 1);
+          } else {
+            if (itemIdx === -1) {
+              newItems.push({
+                itemId: filmId,
+                itemType: 'film',
+                addedAt: new Date().toISOString()
+              });
+            }
+          }
+          await updateDoc(defaultColRef, {
+            items: newItems,
+            updatedAt: new Date().toISOString()
+          });
+        }
+      } catch (colErr) {
+        console.warn('[Watchlist Mirror] Error updating default collection:', colErr);
+      }
     } catch (err) {
       console.error('[Watchlist] Firestore error:', err);
       // Revert optimistic update on error
@@ -1797,6 +1950,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           addedAt: new Date().toISOString(),
         });
       }
+
+      // Mirror to default collection
+      try {
+        const defaultColRef = doc(db, 'users', currentUser.id, 'collections', 'default');
+        const defaultSnap = await getDoc(defaultColRef);
+        if (defaultSnap.exists()) {
+          const defaultData = defaultSnap.data() as UserCollection;
+          const newItems = [...defaultData.items];
+          const itemIdx = newItems.findIndex(item => item.itemId === articleId && item.itemType === 'article');
+          if (exists) {
+            if (itemIdx > -1) newItems.splice(itemIdx, 1);
+          } else {
+            if (itemIdx === -1) {
+              newItems.push({
+                itemId: articleId,
+                itemType: 'article',
+                addedAt: new Date().toISOString()
+              });
+            }
+          }
+          await updateDoc(defaultColRef, {
+            items: newItems,
+            updatedAt: new Date().toISOString()
+          });
+        }
+      } catch (colErr) {
+        console.warn('[Article Save Mirror] Error updating default collection:', colErr);
+      }
     } catch (err) {
       console.error('[SavedArticles] Firestore error:', err);
       // Revert optimistic update on error
@@ -1841,6 +2022,231 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const isFilmSaved = (filmId: string) => {
     return isFilmInWatchlist(filmId);
   };
+
+  const createCollection = async (name: string, description?: string): Promise<string | null> => {
+    if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') {
+      setLoginModalOpen(true);
+      showToast('Silakan Log In terlebih dahulu untuk membuat koleksi!');
+      return null;
+    }
+
+    const collectionId = `col-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const newCollection: UserCollection = {
+      id: collectionId,
+      name: name.trim(),
+      description: description?.trim() || '',
+      isDefault: false,
+      items: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Optimistic state update
+    setCollections(prev => [...prev, newCollection]);
+    showToast(`Koleksi "${name}" berhasil dibuat!`, 'success');
+
+    try {
+      await setDoc(doc(db, 'users', currentUser.id, 'collections', collectionId), newCollection);
+      return collectionId;
+    } catch (err) {
+      console.error('[Collections] Error creating collection:', err);
+      setCollections(prev => prev.filter(c => c.id !== collectionId));
+      showToast('Gagal membuat koleksi.', 'error');
+      return null;
+    }
+  };
+
+  const renameCollection = async (collectionId: string, newName: string): Promise<boolean> => {
+    if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') return false;
+
+    const collectionRef = doc(db, 'users', currentUser.id, 'collections', collectionId);
+    const target = collections.find(c => c.id === collectionId);
+    if (!target) return false;
+
+    const originalName = target.name;
+    const originalUpdatedAt = target.updatedAt;
+
+    // Optimistic update
+    setCollections(prev => prev.map(c => c.id === collectionId ? { ...c, name: newName.trim(), updatedAt: new Date().toISOString() } : c));
+    showToast('Koleksi berhasil diganti nama!');
+
+    try {
+      await updateDoc(collectionRef, {
+        name: newName.trim(),
+        updatedAt: new Date().toISOString()
+      });
+      return true;
+    } catch (err) {
+      console.error('[Collections] Error renaming collection:', err);
+      setCollections(prev => prev.map(c => c.id === collectionId ? { ...c, name: originalName, updatedAt: originalUpdatedAt } : c));
+      showToast('Gagal mengganti nama koleksi.', 'error');
+      return false;
+    }
+  };
+
+  const deleteCollection = async (collectionId: string): Promise<boolean> => {
+    if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') return false;
+
+    const target = collections.find(c => c.id === collectionId);
+    if (target?.isDefault) {
+      showToast('Tidak dapat menghapus koleksi bawaan (default).', 'error');
+      return false;
+    }
+
+    const collectionRef = doc(db, 'users', currentUser.id, 'collections', collectionId);
+
+    // Optimistic update
+    setCollections(prev => prev.filter(c => c.id !== collectionId));
+    showToast('Koleksi berhasil dihapus.');
+
+    try {
+      await deleteDoc(collectionRef);
+      return true;
+    } catch (err) {
+      console.error('[Collections] Error deleting collection:', err);
+      if (target) {
+        setCollections(prev => [...prev, target]);
+      }
+      showToast('Gagal menghapus koleksi.', 'error');
+      return false;
+    }
+  };
+
+  const addItemToCollection = async (collectionId: string, itemId: string, itemType: 'film' | 'article'): Promise<boolean> => {
+    if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') return false;
+
+    const collectionRef = doc(db, 'users', currentUser.id, 'collections', collectionId);
+    const target = collections.find(c => c.id === collectionId);
+    if (!target) return false;
+
+    const alreadyExists = target.items.some(item => item.itemId === itemId && item.itemType === itemType);
+    if (alreadyExists) return true;
+
+    const newItem: CollectionItem = {
+      itemId,
+      itemType,
+      addedAt: new Date().toISOString()
+    };
+
+    const updatedItems = [...target.items, newItem];
+
+    setCollections(prev => prev.map(c => c.id === collectionId ? { ...c, items: updatedItems, updatedAt: new Date().toISOString() } : c));
+    showToast(`Ditambahkan ke "${target.name}"!`);
+
+    try {
+      await updateDoc(collectionRef, {
+        items: updatedItems,
+        updatedAt: new Date().toISOString()
+      });
+
+      if (target.isDefault) {
+        if (itemType === 'film') {
+          const itemRef = doc(db, 'users', currentUser.id, 'watchlist', itemId);
+          await setDoc(itemRef, { filmId: itemId, addedAt: new Date().toISOString() });
+          setWatchlist(prev => [...prev, itemId]);
+        } else {
+          const itemRef = doc(db, 'users', currentUser.id, 'savedArticles', itemId);
+          await setDoc(itemRef, { articleId: itemId, addedAt: new Date().toISOString() });
+          setSavedArticles(prev => [...prev, itemId]);
+        }
+      }
+
+      return true;
+    } catch (err) {
+      console.error('[Collections] Error adding item to collection:', err);
+      setCollections(prev => prev.map(c => c.id === collectionId ? target : c));
+      showToast('Gagal menambahkan ke koleksi.', 'error');
+      return false;
+    }
+  };
+
+  const removeItemFromCollection = async (collectionId: string, itemId: string): Promise<boolean> => {
+    if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') return false;
+
+    const collectionRef = doc(db, 'users', currentUser.id, 'collections', collectionId);
+    const target = collections.find(c => c.id === collectionId);
+    if (!target) return false;
+
+    const item = target.items.find(i => i.itemId === itemId);
+    if (!item) return true;
+
+    const updatedItems = target.items.filter(i => i.itemId !== itemId);
+
+    setCollections(prev => prev.map(c => c.id === collectionId ? { ...c, items: updatedItems, updatedAt: new Date().toISOString() } : c));
+    showToast(`Dihapus dari "${target.name}".`);
+
+    try {
+      await updateDoc(collectionRef, {
+        items: updatedItems,
+        updatedAt: new Date().toISOString()
+      });
+
+      if (target.isDefault) {
+        if (item.itemType === 'film') {
+          const itemRef = doc(db, 'users', currentUser.id, 'watchlist', itemId);
+          await deleteDoc(itemRef);
+          setWatchlist(prev => prev.filter(id => id !== itemId));
+        } else {
+          const itemRef = doc(db, 'users', currentUser.id, 'savedArticles', itemId);
+          await deleteDoc(itemRef);
+          setSavedArticles(prev => prev.filter(id => id !== itemId));
+        }
+      }
+
+      return true;
+    } catch (err) {
+      console.error('[Collections] Error removing item from collection:', err);
+      setCollections(prev => prev.map(c => c.id === collectionId ? target : c));
+      showToast('Gagal menghapus dari koleksi.', 'error');
+      return false;
+    }
+  };
+
+  const isItemInAnyCollection = useCallback((itemId: string, itemType: 'film' | 'article') => {
+    return collections.some(col => col.items.some(item => item.itemId === itemId && item.itemType === itemType));
+  }, [collections]);
+
+  const getCollectionsContainingItem = useCallback((itemId: string, itemType: 'film' | 'article') => {
+    return collections.filter(col => col.items.some(item => item.itemId === itemId && item.itemType === itemType));
+  }, [collections]);
+
+  const shareCollectionToBuzz = useCallback((collectionId: string) => {
+    if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') {
+      setLoginModalOpen(true);
+      showToast('Silakan Log In terlebih dahulu untuk membagikan koleksi!');
+      return;
+    }
+
+    const col = collections.find(c => c.id === collectionId);
+    if (!col) return;
+
+    // Get up to 4 preview covers
+    const previewImages: string[] = [];
+    col.items.slice(0, 4).forEach((item) => {
+      if (item.itemType === 'film') {
+        const f = films.find((film) => film.id === item.itemId) || INITIAL_FILMS.find((film) => film.id === item.itemId);
+        if (f?.poster) previewImages.push(f.poster);
+      } else if (item.itemType === 'article') {
+        const a = articles.find((art) => art.id === item.itemId) || INITIAL_ARTICLES.find((art) => art.id === item.itemId);
+        if (a?.coverImage) previewImages.push(a.coverImage);
+      }
+    });
+
+    setBuzzPrefill({
+      content: `Cek koleksi ku: ${col.name}`,
+      sharedCollection: {
+        collectionId: col.id,
+        ownerId: currentUser.id,
+        name: col.name,
+        description: col.description || '',
+        itemCount: col.items.length,
+        previewImages,
+        items: col.items.map(i => ({ itemId: i.itemId, itemType: i.itemType })),
+      }
+    });
+
+    setIsComposeBuzzOpen(true);
+  }, [isLoggedIn, currentUser?.id, collections, films, articles]);
 
   const updateUserBio = async (newBio: string) => {
     if (!auth.currentUser) return;
@@ -2834,7 +3240,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     taggedFilmId?: string,
     skorSotoy?: number,
     taggedArticleId?: string,
-    imageDataUrl?: string
+    imageDataUrl?: string,
+    sharedCollection?: {
+      collectionId: string;
+      ownerId: string;
+      name: string;
+      description?: string;
+      itemCount: number;
+      previewImages: string[];
+      items: { itemId: string; itemType: 'film' | 'article' }[];
+    }
   ) => {
     if (!requireVerified()) return;
     if (!content.trim()) return;
@@ -2908,6 +3323,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     if (skorSotoy !== undefined && !isNaN(skorSotoy)) {
       newBuzz.skorSotoyMention = skorSotoy;
+    }
+    if (sharedCollection) {
+      newBuzz.sharedCollection = sharedCollection;
     }
 
     // Set image data URL or upload to Firebase Storage if provided
@@ -4522,6 +4940,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setLoginModalOpen,
         isComposeBuzzOpen,
         setIsComposeBuzzOpen,
+        buzzPrefill,
+        setBuzzPrefill,
+        shareCollectionToBuzz,
         logout,
         signInWithEmail,
         signUpWithEmail,
@@ -4548,6 +4969,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleSaveArticle,
         removeBulkFromSavedArticles,
         isArticleSaved,
+        collections,
+        createCollection,
+        renameCollection,
+        deleteCollection,
+        addItemToCollection,
+        removeItemFromCollection,
+        isItemInAnyCollection,
+        getCollectionsContainingItem,
         savedBuzzIds,
         toggleSaveBuzz,
         isBuzzSaved,

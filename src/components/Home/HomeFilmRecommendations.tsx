@@ -8,6 +8,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { FilmItem } from '../../types';
 import { RateFilmModal } from '../Modals/RateFilmModal';
+import { AddToCollectionModal } from '../Modals/AddToCollectionModal';
 
 export const HomeFilmRecommendations: React.FC = () => {
   const {
@@ -17,10 +18,14 @@ export const HomeFilmRecommendations: React.FC = () => {
     isFilmInWatchlist,
     isLoggedIn,
     setLoginModalOpen,
+    collections,
+    isItemInAnyCollection,
+    showToast,
   } = useApp();
 
   const [filterType, setFilterType] = useState<'all' | 'recent' | 'popular'>('all');
   const [activeFilmToRate, setActiveFilmToRate] = useState<FilmItem | null>(null);
+  const [collectionModalFilm, setCollectionModalFilm] = useState<FilmItem | null>(null);
 
   const filteredFilms = films.filter(f => {
     if (filterType === 'recent') return f.isRecentRelease || f.year >= 2024;
@@ -98,7 +103,7 @@ export const HomeFilmRecommendations: React.FC = () => {
         {/* Film Posters Cards Grid (2 to 6 columns) */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {filteredFilms.slice(0, 6).map(film => {
-            const inWatchlist = isFilmInWatchlist(film.id);
+            const inWatchlist = isItemInAnyCollection(film.id, 'film');
 
             return (
               <div
@@ -109,7 +114,7 @@ export const HomeFilmRecommendations: React.FC = () => {
                 {/* Movie Poster with Hover Zoom */}
                 <div
                   onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                  className="relative aspect-[2/3] w-full overflow-hidden cursor-pointer bg-slate-900"
+                  className="relative aspect-[2/3] w-full overflow-hidden cursor-pointer bg-slate-950"
                 >
                   <img
                     src={film.poster}
@@ -129,7 +134,16 @@ export const HomeFilmRecommendations: React.FC = () => {
                     id={`rec-watchlist-btn-${film.id}`}
                     onClick={e => {
                       e.stopPropagation();
-                      toggleWatchlist(film.id);
+                      if (!isLoggedIn) {
+                        setLoginModalOpen(true);
+                        showToast('Silakan Log In terlebih dahulu untuk menyimpan ke Daftar Tonton!');
+                        return;
+                      }
+                      if (collections.length > 1) {
+                        setCollectionModalFilm(film);
+                      } else {
+                        toggleWatchlist(film.id);
+                      }
                     }}
                     title={inWatchlist ? 'Hapus dari Watchlist' : 'Tambah ke Watchlist'}
                     className={`absolute top-2 right-2 w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
@@ -198,6 +212,16 @@ export const HomeFilmRecommendations: React.FC = () => {
             film={activeFilmToRate}
             isOpen={!!activeFilmToRate}
             onClose={() => setActiveFilmToRate(null)}
+          />
+        )}
+
+        {collectionModalFilm && (
+          <AddToCollectionModal
+            isOpen={!!collectionModalFilm}
+            onClose={() => setCollectionModalFilm(null)}
+            itemId={collectionModalFilm.id}
+            itemType="film"
+            itemName={collectionModalFilm.title}
           />
         )}
       </div>

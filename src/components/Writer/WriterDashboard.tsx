@@ -427,3 +427,5 @@ export const WriterDashboard: React.FC = () => {
     </div>
   );
 };
+
+export default WriterDashboard;

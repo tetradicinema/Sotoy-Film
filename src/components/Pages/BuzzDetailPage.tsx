@@ -492,6 +492,64 @@ export const BuzzDetailPage: React.FC = () => {
               </div>
             )}
 
+            {/* =================================================================== */}
+            {/* SHARED COLLECTION CARD */}
+            {/* =================================================================== */}
+            {buzz.sharedCollection && (
+              <div
+                id={`buzz-shared-collection-${buzz.sharedCollection.collectionId}`}
+                onClick={() => navigateTo('collection-detail', { userId: buzz.sharedCollection.ownerId, collectionId: buzz.sharedCollection.collectionId })}
+                className="p-4 rounded-2xl bg-[#0E1013] border border-white/10 hover:border-[#FF2E7E]/50 transition-all cursor-pointer group flex items-center justify-between gap-4 shadow-lg text-left"
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  {/* Collage Preview */}
+                  <div className="w-14 sm:w-16 h-14 sm:h-16 rounded-xl bg-slate-900 border border-white/10 overflow-hidden grid grid-cols-2 grid-rows-2 gap-0.5 shrink-0 shadow-lg relative group-hover:scale-105 transition-transform">
+                    {buzz.sharedCollection.previewImages && buzz.sharedCollection.previewImages.length > 0 ? (
+                      buzz.sharedCollection.previewImages.slice(0, 4).map((imgUrl, idx) => (
+                        <img key={idx} src={imgUrl} alt="" className="w-full h-full object-cover" />
+                      ))
+                    ) : (
+                      <div className="col-span-2 row-span-2 flex items-center justify-center bg-slate-950">
+                        <Layers className="w-5 h-5 text-slate-700" />
+                      </div>
+                    )}
+                    {/* Fallback overlay if preview count is small */}
+                    {(!buzz.sharedCollection.previewImages || buzz.sharedCollection.previewImages.length < 4) && (
+                      <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                        <Layers className="w-4 h-4 text-white/65" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="bg-[#FF2E7E] text-white font-black text-[9px] uppercase px-2 py-0.5 rounded">
+                        KOLEKSI SNAPSHOT
+                      </span>
+                      <span className="text-slate-400 text-xs font-semibold">
+                        {buzz.sharedCollection.itemCount} item
+                      </span>
+                    </div>
+
+                    <h4 className="font-display font-black text-sm sm:text-base text-white group-hover:text-[#FF2E7E] transition-colors truncate">
+                      {buzz.sharedCollection.name}
+                    </h4>
+
+                    {buzz.sharedCollection.description && (
+                      <p className="text-xs text-slate-400 truncate max-w-sm sm:max-w-md">
+                        {buzz.sharedCollection.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="shrink-0 flex items-center gap-1 text-xs font-bold text-[#FF2E7E] group-hover:translate-x-1 transition-transform">
+                  <span className="hidden sm:inline">Buka Koleksi</span>
+                  <ChevronRight className="w-4 h-4" />
+                </div>
+              </div>
+            )}
+
             {/* Interaction Action Bar with Quick Reactions */}
             <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-4 text-xs text-slate-400 select-none">
               <div className="flex items-center gap-4 sm:gap-6">
