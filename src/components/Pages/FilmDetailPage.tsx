@@ -110,6 +110,10 @@ export const FilmDetailPage: React.FC = () => {
     openShareModal,
     collections,
     isItemInAnyCollection,
+    likedReviewIds,
+    toggleLikeReview,
+    syncLikedReviews,
+    currentUser,
   } = useApp();
 
   const [ratingModalOpen, setRatingModalOpen] = useState(false);
@@ -204,6 +208,15 @@ export const FilmDetailPage: React.FC = () => {
       : reviewFilter === 'community'
       ? communityReviews
       : filmReviews;
+
+  const reviewIdsKey = displayedReviews.map(r => r.id).join(',');
+
+  useEffect(() => {
+    if (displayedReviews.length > 0 && currentUser?.id) {
+      const ids = displayedReviews.map(r => r.id);
+      syncLikedReviews(ids);
+    }
+  }, [reviewIdsKey, currentUser?.id, syncLikedReviews]);
 
   const isInWatchlist = isItemInAnyCollection(film.id, 'film');
 
@@ -1075,10 +1088,26 @@ export const FilmDetailPage: React.FC = () => {
                       </p>
 
                       <div className="flex items-center justify-between pt-2.5 border-t border-slate-800 text-xs text-slate-400 flex-wrap gap-2">
-                        <span className="flex items-center gap-1 text-[#FF2E7E]">
-                          <Heart className="w-3.5 h-3.5 fill-current" />
-                          {rev.likes} suka ulasan ini
-                        </span>
+                        {(() => {
+                          const isLiked = likedReviewIds?.includes(rev.id);
+                          const isOwnReview = Boolean(currentUser?.id && rev.userId === currentUser.id);
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => !isOwnReview && toggleLikeReview(rev.id)}
+                              disabled={isOwnReview}
+                              title={isOwnReview ? 'Ulasan milik kamu sendiri' : isLiked ? 'Batal suka ulasan' : 'Sukai ulasan ini'}
+                              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                                isLiked
+                                  ? 'bg-[#FF2E7E]/20 text-[#FF2E7E] border border-[#FF2E7E]/40'
+                                  : 'text-slate-400 hover:text-[#FF2E7E] hover:bg-slate-800/60 border border-transparent'
+                              } ${isOwnReview ? 'cursor-default opacity-80' : 'cursor-pointer'}`}
+                            >
+                              <Heart className={`w-3.5 h-3.5 ${isLiked ? 'fill-current text-[#FF2E7E]' : ''}`} />
+                              <span>{(rev.likes || 0).toLocaleString('id-ID')} suka ulasan ini</span>
+                            </button>
+                          );
+                        })()}
 
                         <button
                           id={`detail-share-review-${rev.id}-btn`}

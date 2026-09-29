@@ -46,7 +46,8 @@ import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { QuickReactionBar } from '../Common/QuickReactionBar';
 import { BuzzFeedSidebar, BuzzFeedTab } from '../Navigation/BuzzFeedSidebar';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
-import { getRoleLeaderboard } from '../../utils/leaderboard';
+import { getCombinedLeaderboard, LeaderboardPeriod } from '../../utils/leaderboard';
+import { LeaderboardCard, LeaderboardPeriodTabs } from '../Common/LeaderboardCard';
 import { MentionText } from '../Common/MentionText';
 import { MentionInput } from '../Common/MentionInput';
 import { isAllowedImageType, compressBuzzImage } from '../../utils/imageCompression';
@@ -204,21 +205,16 @@ export const CommunityFeedPage: React.FC = () => {
   // Overflow menu state for post cards
   const [openMenuPostId, setOpenMenuPostId] = useState<string | null>(null);
   const [isMobileLeaderboardOpen, setIsMobileLeaderboardOpen] = useState(false);
+  const [mobileLeaderboardPeriod, setMobileLeaderboardPeriod] = useState<LeaderboardPeriod>('all');
+  const [desktopLeaderboardPeriod, setDesktopLeaderboardPeriod] = useState<LeaderboardPeriod>('all');
 
-  // Combined top 5 leaderboard entries derived strictly from canonical getRoleLeaderboard util
-  const leaderboardData = useMemo(() => {
-    const criticList = getRoleLeaderboard('si_paling_sotoy', allUsers, ratings);
-    const wargaList = getRoleLeaderboard('warga_sotoy', allUsers, ratings);
+  const mobileLeaderboardData = useMemo(() => {
+    return getCombinedLeaderboard(allUsers, ratings, mobileLeaderboardPeriod);
+  }, [allUsers, ratings, mobileLeaderboardPeriod]);
 
-    return [...criticList, ...wargaList]
-      .sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        if (b.totalReviews !== a.totalReviews) return b.totalReviews - a.totalReviews;
-        if (b.helpfulVotes !== a.helpfulVotes) return b.helpfulVotes - a.helpfulVotes;
-        return (a.user.name || '').localeCompare(b.user.name || '');
-      })
-      .slice(0, 5);
-  }, [allUsers, ratings]);
+  const desktopLeaderboardData = useMemo(() => {
+    return getCombinedLeaderboard(allUsers, ratings, desktopLeaderboardPeriod);
+  }, [allUsers, ratings, desktopLeaderboardPeriod]);
 
   // Close overflow menu on outside click or escape
   useEffect(() => {
@@ -737,14 +733,14 @@ export const CommunityFeedPage: React.FC = () => {
           <div className="xl:hidden bg-[#171A1F] border border-slate-800/80 rounded-2xl p-4 shadow-xl space-y-3">
             <div className="flex items-center justify-between pb-1.5 border-b border-slate-800/60">
               <div className="flex items-center gap-1.5">
-                <Star className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0" />
+                <Trophy className="w-4 h-4 text-[#FF2E7E] shrink-0" />
                 <h3 className="text-xs font-black uppercase tracking-wider text-slate-200">
                   Sotoy Leaderboard
                 </h3>
               </div>
               <button
                 onClick={() => setIsMobileLeaderboardOpen(!isMobileLeaderboardOpen)}
-                className="text-[11px] font-bold text-[#FF2E7E] bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 px-2.5 py-1 rounded-lg hover:bg-[#FF2E7E]/20 transition-all flex items-center gap-1 shrink-0"
+                className="text-[11px] font-bold text-[#FF2E7E] bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 px-2.5 py-1 rounded-lg hover:bg-[#FF2E7E]/20 transition-all flex items-center gap-1 shrink-0 cursor-pointer"
               >
                 <span>{isMobileLeaderboardOpen ? 'Sembunyikan' : 'Lihat Peringkat'}</span>
                 <ChevronRight className={`w-3.5 h-3.5 transition-transform ${isMobileLeaderboardOpen ? 'rotate-90' : ''}`} />
@@ -758,64 +754,27 @@ export const CommunityFeedPage: React.FC = () => {
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.2 }}
-                  className="overflow-hidden space-y-2.5 pt-1.5"
+                  className="overflow-hidden space-y-3 pt-1.5"
                 >
-                  {leaderboardData.slice(0, 5).map((item, idx) => {
-                    const rank = idx + 1;
-                    const isMe = item.user.id === currentUser?.id;
-                    return (
-                      <div
-                        key={item.user.id}
-                        className={`flex items-center justify-between gap-2 p-2 rounded-xl transition-all ${
-                          isMe
-                            ? 'bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 shadow-sm'
-                            : 'bg-[#0E1013]/40 border border-slate-900'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className="flex items-center justify-center w-5 shrink-0 font-mono text-xs font-black">
-                            {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`}
-                          </div>
-
-                          <div
-                            onClick={() => navigateTo('user-profile', { userId: item.user.id })}
-                            className="flex items-center gap-2 min-w-0 cursor-pointer"
-                          >
-                            <img
-                              src={item.user.avatar}
-                              alt={item.user.name}
-                              className="w-7 h-7 rounded-full object-cover shrink-0 ring-1 ring-white/10"
-                            />
-                            <div className="min-w-0">
-                              <p className="text-xs font-bold text-white truncate flex items-center gap-1">
-                                <span>{item.user.name}</span>
-                              </p>
-                              <p className="text-[9px] text-slate-400 truncate">
-                                @{item.user.handle} • {item.totalReviews} ulasan
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="text-right shrink-0">
-                          <span className="text-xs font-black text-[#FF2E7E] flex items-center justify-end gap-0.5">
-                            <Flame className="w-3 h-3 text-[#FF2E7E] fill-[#FF2E7E] shrink-0" />
-                            <span>{item.score.toLocaleString()} pts</span>
-                          </span>
-                          <span className="text-[8px] text-slate-500 block">
-                            {item.helpfulVotes} suka
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  <div className="flex items-center justify-start">
+                    <LeaderboardPeriodTabs
+                      activePeriod={mobileLeaderboardPeriod}
+                      onChangePeriod={setMobileLeaderboardPeriod}
+                    />
+                  </div>
+                  <LeaderboardCard
+                    title="Sotoy Leaderboard"
+                    entries={mobileLeaderboardData}
+                    compact={true}
+                    limit={5}
+                  />
                 </motion.div>
               )}
             </AnimatePresence>
 
             {!isMobileLeaderboardOpen && (
               <p className="text-[11px] text-slate-400 text-center italic">
-                Warga teraktif: 🥇 {leaderboardData[0]?.user.name || 'Admin'} ({leaderboardData[0]?.score.toLocaleString()} pts)
+                Warga teraktif: {mobileLeaderboardData[0]?.user.name || 'Belum ada'} ({mobileLeaderboardData[0]?.score.toLocaleString('id-ID') || 0} pts)
               </p>
             )}
           </div>
@@ -1737,84 +1696,18 @@ export const CommunityFeedPage: React.FC = () => {
       <div className="hidden xl:flex flex-col gap-4 w-72 shrink-0 sticky top-20 select-none">
         {/* Sotoy Leaderboard (DESKTOP) */}
         <div className="bg-[#171A1F]/90 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 shadow-xl space-y-3">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-800/60">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-              <Trophy className="w-3.5 h-3.5 text-[#FF2E7E]" />
-              <span>Sotoy Leaderboard</span>
-            </h3>
-            <button
-              onClick={() => navigateTo('panduan-leaderboard')}
-              className="text-[10px] font-bold text-[#FF2E7E] bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 px-2 py-0.5 rounded-full hover:bg-[#FF2E7E]/20 transition-all shrink-0"
-            >
-              Panduan →
-            </button>
+          <div className="flex items-center justify-start">
+            <LeaderboardPeriodTabs
+              activePeriod={desktopLeaderboardPeriod}
+              onChangePeriod={setDesktopLeaderboardPeriod}
+            />
           </div>
-
-          <div className="space-y-2.5">
-            {leaderboardData.slice(0, 5).map((item, idx) => {
-              const rank = idx + 1;
-              const isMe = item.user.id === currentUser?.id;
-              
-              return (
-                <div 
-                  key={item.user.id} 
-                  className={`flex items-center justify-between gap-2 p-2 rounded-xl transition-all ${
-                    isMe 
-                      ? 'bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 shadow-sm' 
-                      : 'hover:bg-slate-900/50'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    {/* Rank Badge */}
-                    <div className="flex items-center justify-center w-5 shrink-0 font-mono text-xs font-black text-[#FF2E7E]">
-                      #{rank}
-                    </div>
-
-                    {/* Avatar & User Details */}
-                    <div 
-                      onClick={() => navigateTo('user-profile', { userId: item.user.id })}
-                      className="flex items-center gap-2 min-w-0 cursor-pointer group"
-                    >
-                      <div className="relative shrink-0">
-                        <img
-                          src={item.user.avatar}
-                          alt={item.user.name}
-                          className="w-8 h-8 rounded-full object-cover ring-1 ring-white/10 group-hover:ring-[#FF2E7E] transition-all"
-                        />
-                        {isMe && (
-                          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-[#171A1F]" />
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-white truncate group-hover:text-[#FF2E7E] transition-colors flex items-center gap-1">
-                          <span>{item.user.name}</span>
-                          {item.user.role === 'admin' && (
-                            <span className="text-[8px] bg-[#FF2E7E]/20 text-[#FF2E7E] px-1 rounded font-black uppercase font-mono">
-                              Admin
-                            </span>
-                          )}
-                        </p>
-                        <p className="text-[10px] text-slate-400 truncate">
-                          @{item.user.handle} • {item.totalReviews} ulasan
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Score displaying contribution points */}
-                  <div className="text-right shrink-0">
-                    <span className="text-xs font-black text-[#FF2E7E] flex items-center justify-end gap-0.5">
-                      <Flame className="w-3.5 h-3.5 text-[#FF2E7E] fill-[#FF2E7E] shrink-0" />
-                      <span>{item.score.toLocaleString()} pts</span>
-                    </span>
-                    <span className="text-[8px] text-slate-500 font-medium block">
-                      {item.helpfulVotes} suka
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <LeaderboardCard
+            title="Sotoy Leaderboard"
+            entries={desktopLeaderboardData}
+            compact={true}
+            limit={5}
+          />
         </div>
 
         {/* Trending Tags & Topics */}

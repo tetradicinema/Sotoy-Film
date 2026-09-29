@@ -40,7 +40,8 @@ import { AddToCollectionModal } from '../Modals/AddToCollectionModal';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { formatRelativeTime, formatFullDateTime, formatReleaseDate } from '../../utils/formatRelativeTime';
 import { FilmCardSkeleton, FilmDatabaseSkeleton } from '../Skeletons';
-import { getRoleLeaderboard } from '../../utils/leaderboard';
+import { getRoleLeaderboard, LeaderboardPeriod } from '../../utils/leaderboard';
+import { LeaderboardCard, LeaderboardPeriodTabs } from '../Common/LeaderboardCard';
 
 export interface GenreCategory {
   id: string;
@@ -137,6 +138,9 @@ export const FilmDatabasePage: React.FC = () => {
 
   // Review Filter Role State
   const [reviewsFilterRole, setReviewsFilterRole] = useState<'all' | 'critic' | 'warga'>('all');
+
+  // Shared Leaderboard Period State
+  const [leaderboardPeriod, setLeaderboardPeriod] = useState<LeaderboardPeriod>('all');
 
   // Helper function to match genres
   const matchesGenre = (film: FilmItem, targetGenre: string): boolean => {
@@ -251,12 +255,12 @@ export const FilmDatabasePage: React.FC = () => {
 
   // Leaderboards split by role
   const criticLeaderboard = useMemo(() => {
-    return getRoleLeaderboard('si_paling_sotoy', allUsers, ratings).slice(0, 5);
-  }, [allUsers, ratings]);
+    return getRoleLeaderboard('si_paling_sotoy', allUsers, ratings, leaderboardPeriod);
+  }, [allUsers, ratings, leaderboardPeriod]);
 
   const wargaLeaderboard = useMemo(() => {
-    return getRoleLeaderboard('warga_sotoy', allUsers, ratings).slice(0, 5);
-  }, [allUsers, ratings]);
+    return getRoleLeaderboard('warga_sotoy', allUsers, ratings, leaderboardPeriod);
+  }, [allUsers, ratings, leaderboardPeriod]);
 
   const scrollToDatabase = () => {
     const el = document.getElementById('database-lengkap');
@@ -765,7 +769,7 @@ export const FilmDatabasePage: React.FC = () => {
                   Sotoy Leaderboard
                 </h2>
                 <p className="text-slate-400 text-xs">
-                  Peringkat teratas kontributor ulasan sinema berdasarkan jumlah ulasan dan reaksi apresiasi
+                  Peringkat teratas kontributor ulasan sinema berdasarkan ulasan, suka, dan rating
                 </p>
               </div>
             </div>
@@ -779,141 +783,31 @@ export const FilmDatabasePage: React.FC = () => {
             </button>
           </div>
 
+          {/* ONE Shared Period Tab Bar Above Both Panels */}
+          <div className="flex items-center justify-start">
+            <LeaderboardPeriodTabs
+              activePeriod={leaderboardPeriod}
+              onChangePeriod={setLeaderboardPeriod}
+            />
+          </div>
+
           {/* Two Side-by-side Panels on Desktop */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            {/* Panel 1: Leaderboard Kritikus */}
-            <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#FF2E7E]" />
-                  <h3 className="font-display font-black text-base text-white">
-                    Leaderboard Kritikus
-                  </h3>
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-[#FF2E7E]/20 text-[#FF2E7E] border border-[#FF2E7E]/30">
-                  Si Paling Sotoy
-                </span>
-              </div>
+            <LeaderboardCard
+              title="Leaderboard Kritikus"
+              subtitle="Si Paling Sotoy"
+              entries={criticLeaderboard}
+              hideGuideButton={true}
+              limit={5}
+            />
 
-              {criticLeaderboard.length === 0 ? (
-                <div className="text-center py-8 bg-slate-900/40 rounded-2xl border border-slate-800/80">
-                  <p className="text-slate-400 text-xs">Belum ada Kritikus Terverifikasi di leaderboard.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {criticLeaderboard.map(entry => (
-                    <div
-                      key={entry.user.id}
-                      onClick={() => navigateTo('user-profile', { userId: entry.user.id })}
-                      className="flex items-center justify-between p-3 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-[#FF2E7E]/50 transition-all cursor-pointer group"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        {/* Rank Badge - Pink emphasis */}
-                        <div className="w-7 h-7 rounded-xl bg-[#FF2E7E] text-slate-950 font-black text-xs flex items-center justify-center shrink-0 shadow-md">
-                          #{entry.rank}
-                        </div>
-
-                        <img
-                          src={entry.user.avatar}
-                          alt={entry.user.name}
-                          className="w-10 h-10 rounded-xl object-cover ring-1 ring-white/10 group-hover:ring-[#FF2E7E] transition-all shrink-0"
-                        />
-
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-bold text-xs text-white group-hover:text-[#FF2E7E] transition-colors truncate">
-                              {entry.user.name}
-                            </span>
-                            <RoleBadge role={entry.user.role} size="xs" />
-                          </div>
-                          <div className="text-[10px] text-slate-400 truncate">
-                            {entry.user.handle} • {entry.totalReviews} ulasan
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <div className="text-xs font-black text-[#FF2E7E] flex items-center justify-end gap-1">
-                          <Flame className="w-3.5 h-3.5 fill-current" />
-                          <span>{entry.score} pts</span>
-                        </div>
-                        <div className="text-[10px] text-slate-400">
-                          {entry.helpfulVotes} suka ulasan
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Panel 2: Leaderboard Warga */}
-            <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-cyan-400" />
-                  <h3 className="font-display font-black text-base text-white">
-                    Leaderboard Warga
-                  </h3>
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-                  Warga Sotoy
-                </span>
-              </div>
-
-              {wargaLeaderboard.length === 0 ? (
-                <div className="text-center py-8 bg-slate-900/40 rounded-2xl border border-slate-800/80">
-                  <p className="text-slate-400 text-xs">Belum ada Warga Sotoy di leaderboard.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {wargaLeaderboard.map(entry => (
-                    <div
-                      key={entry.user.id}
-                      onClick={() => navigateTo('user-profile', { userId: entry.user.id })}
-                      className="flex items-center justify-between p-3 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-cyan-400/50 transition-all cursor-pointer group"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        {/* Rank Badge - Pink emphasis */}
-                        <div className="w-7 h-7 rounded-xl bg-[#FF2E7E] text-slate-950 font-black text-xs flex items-center justify-center shrink-0 shadow-md">
-                          #{entry.rank}
-                        </div>
-
-                        <img
-                          src={entry.user.avatar}
-                          alt={entry.user.name}
-                          className="w-10 h-10 rounded-xl object-cover ring-1 ring-white/10 group-hover:ring-cyan-400 transition-all shrink-0"
-                        />
-
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-bold text-xs text-white group-hover:text-cyan-400 transition-colors truncate">
-                              {entry.user.name}
-                            </span>
-                            <RoleBadge role={entry.user.role} size="xs" />
-                          </div>
-                          <div className="text-[10px] text-slate-400 truncate">
-                            {entry.user.handle} • {entry.totalReviews} ulasan
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <div className="text-xs font-black text-[#FF2E7E] flex items-center justify-end gap-1">
-                          <Flame className="w-3.5 h-3.5 fill-current" />
-                          <span>{entry.score} pts</span>
-                        </div>
-                        <div className="text-[10px] text-slate-400">
-                          {entry.helpfulVotes} suka ulasan
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
+            <LeaderboardCard
+              title="Leaderboard Warga"
+              subtitle="Warga Sotoy"
+              entries={wargaLeaderboard}
+              hideGuideButton={true}
+              limit={5}
+            />
           </div>
         </section>
 

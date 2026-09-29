@@ -182,6 +182,7 @@ export interface FilmItem {
   isPopularRelease?: boolean;
   isPopularThisWeek?: boolean;
   curatorNote?: string;
+  scoreScale?: number;
 }
 
 export interface UserRating {
@@ -192,6 +193,7 @@ export interface UserRating {
   userAvatar: string;
   userRole: UserRole;
   score: number; // 1.0 - 10.0
+  scoreScale?: number;
   headline: string;
   reviewText: string;
   createdAt: string;

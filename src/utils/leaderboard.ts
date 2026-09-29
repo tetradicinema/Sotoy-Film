@@ -1,28 +1,130 @@
 import { User, UserRating } from '../types';
 
+export const REVIEW_WEIGHT = 10;
+export const LIKE_WEIGHT = 3;
+export const RATING_ONLY_WEIGHT = 1;
+
+export type LeaderboardPeriod = 'week' | 'month' | 'all';
+
 export interface LeaderboardEntry {
   user: User;
   rank: number;
-  totalReviews: number;
-  helpfulVotes: number;
+  ratings: number;
+  reviews: number;
+  likes: number;
   score: number;
+  totalReviews: number; // alias for reviews
+  helpfulVotes: number; // alias for likes
 }
 
 /**
- * Computes individual user leaderboard score.
- * Formula: (totalReviews * 10) + helpfulVotes (sum of likes received on reviews)
+ * WIB Time helper (Asia/Jakarta, UTC+7).
+ * Returns starting UTC Date object for the current week's Monday 00:00:00 WIB.
+ */
+export function getWibStartOfWeek(): Date {
+  const now = new Date();
+  const wibOffsetMs = 7 * 3600 * 1000;
+  const wibMs = now.getTime() + wibOffsetMs;
+  const wibDate = new Date(wibMs);
+  
+  const day = wibDate.getUTCDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+  const diffToMonday = (day + 6) % 7;
+  
+  const mondayWibMs = wibMs - diffToMonday * 86400 * 1000;
+  const mondayWib = new Date(mondayWibMs);
+  mondayWib.setUTCHours(0, 0, 0, 0);
+  
+  return new Date(mondayWib.getTime() - wibOffsetMs);
+}
+
+/**
+ * WIB Time helper (Asia/Jakarta, UTC+7).
+ * Returns starting UTC Date object for the 1st of the current month 00:00:00 WIB.
+ */
+export function getWibStartOfMonth(): Date {
+  const now = new Date();
+  const wibOffsetMs = 7 * 3600 * 1000;
+  const wibMs = now.getTime() + wibOffsetMs;
+  const wibDate = new Date(wibMs);
+  
+  const firstWib = new Date(Date.UTC(wibDate.getUTCFullYear(), wibDate.getUTCMonth(), 1, 0, 0, 0, 0));
+  return new Date(firstWib.getTime() - wibOffsetMs);
+}
+
+/**
+ * Helper to compute user stats for a given period.
+ */
+function computeStatsForUser(
+  user: User,
+  userRatings: UserRating[],
+  period: LeaderboardPeriod
+): {
+  ratings: number;
+  reviews: number;
+  likes: number;
+  score: number;
+  hasActivity: boolean;
+} {
+  const startOfWeek = getWibStartOfWeek().getTime();
+  const startOfMonth = getWibStartOfMonth().getTime();
+
+  const filteredRatings = userRatings.filter(r => {
+    if (period === 'all') return true;
+    if (!r.createdAt) return false; // missing/invalid createdAt counts only for 'all'
+    const t = new Date(r.createdAt).getTime();
+    if (isNaN(t)) return false;
+    if (period === 'week') return t >= startOfWeek;
+    if (period === 'month') return t >= startOfMonth;
+    return true;
+  });
+
+  const ratingsCount = filteredRatings.length;
+  const reviewsList = filteredRatings.filter(r => (r.reviewText || '').trim().length > 0);
+  const reviewsCount = reviewsList.length;
+  const ratingsWithoutReview = ratingsCount - reviewsCount;
+
+  // Likes do not have individual timestamps in UserRating, so for period filtering
+  // we count likes accumulated on reviews that were CREATED within the target period.
+  const likesCount = reviewsList.reduce((sum, r) => sum + (r.likes || 0), 0);
+
+  const score =
+    reviewsCount * REVIEW_WEIGHT +
+    likesCount * LIKE_WEIGHT +
+    ratingsWithoutReview * RATING_ONLY_WEIGHT;
+
+  return {
+    ratings: ratingsCount,
+    reviews: reviewsCount,
+    likes: likesCount,
+    score,
+    hasActivity: ratingsCount > 0,
+  };
+}
+
+/**
+ * Computes individual user leaderboard score (for backward compatibility and single-user lookups).
  */
 export const computeUserLeaderboardScore = (
   user: User,
   ratings: UserRating[] = []
-): { score: number; totalReviews: number; helpfulVotes: number } => {
+): {
+  score: number;
+  totalReviews: number;
+  helpfulVotes: number;
+  ratings: number;
+  reviews: number;
+  likes: number;
+} => {
   const userRatings = (ratings || []).filter(r => r.userId === user.id);
-  const helpfulVotes = userRatings.reduce((acc, r) => acc + (r.likes || 0), 0);
-  const totalReviews = (user.totalReviews !== undefined && user.totalReviews > 0)
-    ? user.totalReviews
-    : userRatings.length;
-  const score = totalReviews * 10 + helpfulVotes;
-  return { score, totalReviews, helpfulVotes };
+  const stats = computeStatsForUser(user, userRatings, 'all');
+  return {
+    score: stats.score,
+    totalReviews: stats.reviews,
+    helpfulVotes: stats.likes,
+    ratings: stats.ratings,
+    reviews: stats.reviews,
+    likes: stats.likes,
+  };
 };
 
 /**
@@ -31,34 +133,97 @@ export const computeUserLeaderboardScore = (
 export const getRoleLeaderboard = (
   role: 'si_paling_sotoy' | 'warga_sotoy',
   allUsers: User[] = [],
-  ratings: UserRating[] = []
+  ratings: UserRating[] = [],
+  period: LeaderboardPeriod = 'all'
 ): LeaderboardEntry[] => {
   const filteredUsers = (allUsers || []).filter(u => u.role === role);
 
-  const entries: { user: User; totalReviews: number; helpfulVotes: number; score: number }[] = filteredUsers.map(u => {
-    const stats = computeUserLeaderboardScore(u, ratings);
-    return {
-      user: u,
-      ...stats,
-    };
-  });
+  const rawEntries: { user: User; ratings: number; reviews: number; likes: number; score: number }[] = [];
 
-  entries.sort((a, b) => {
+  for (const u of filteredUsers) {
+    const userRatings = (ratings || []).filter(r => r.userId === u.id);
+    const stats = computeStatsForUser(u, userRatings, period);
+
+    // For week/month, exclude users with 0 ratings in that period
+    if (period !== 'all' && !stats.hasActivity) {
+      continue;
+    }
+
+    rawEntries.push({
+      user: u,
+      ratings: stats.ratings,
+      reviews: stats.reviews,
+      likes: stats.likes,
+      score: stats.score,
+    });
+  }
+
+  // Tie-breakers: score desc, reviews desc, likes desc, ratings desc, name A-Z
+  rawEntries.sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score;
-    if (b.totalReviews !== a.totalReviews) return b.totalReviews - a.totalReviews;
-    if (b.helpfulVotes !== a.helpfulVotes) return b.helpfulVotes - a.helpfulVotes;
+    if (b.reviews !== a.reviews) return b.reviews - a.reviews;
+    if (b.likes !== a.likes) return b.likes - a.likes;
+    if (b.ratings !== a.ratings) return b.ratings - a.ratings;
     return (a.user.name || '').localeCompare(b.user.name || '');
   });
 
-  return entries.map((entry, idx) => ({
+  return rawEntries.map((entry, idx) => ({
     ...entry,
     rank: idx + 1,
+    totalReviews: entry.reviews,
+    helpfulVotes: entry.likes,
   }));
 };
 
 /**
- * Returns rank information for a specific user within their role.
- * Returns null if user's role is not part of the leaderboard (e.g. admin or penulis_sotoy).
+ * Ranks critics ('si_paling_sotoy') and warga ('warga_sotoy') together in one list.
+ */
+export const getCombinedLeaderboard = (
+  allUsers: User[] = [],
+  ratings: UserRating[] = [],
+  period: LeaderboardPeriod = 'all'
+): LeaderboardEntry[] => {
+  const targetUsers = (allUsers || []).filter(
+    u => u.role === 'si_paling_sotoy' || u.role === 'warga_sotoy'
+  );
+
+  const rawEntries: { user: User; ratings: number; reviews: number; likes: number; score: number }[] = [];
+
+  for (const u of targetUsers) {
+    const userRatings = (ratings || []).filter(r => r.userId === u.id);
+    const stats = computeStatsForUser(u, userRatings, period);
+
+    if (period !== 'all' && !stats.hasActivity) {
+      continue;
+    }
+
+    rawEntries.push({
+      user: u,
+      ratings: stats.ratings,
+      reviews: stats.reviews,
+      likes: stats.likes,
+      score: stats.score,
+    });
+  }
+
+  rawEntries.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (b.reviews !== a.reviews) return b.reviews - a.reviews;
+    if (b.likes !== a.likes) return b.likes - a.likes;
+    if (b.ratings !== a.ratings) return b.ratings - a.ratings;
+    return (a.user.name || '').localeCompare(b.user.name || '');
+  });
+
+  return rawEntries.map((entry, idx) => ({
+    ...entry,
+    rank: idx + 1,
+    totalReviews: entry.reviews,
+    helpfulVotes: entry.likes,
+  }));
+};
+
+/**
+ * Returns rank information for a specific user within their role on 'all' period.
  */
 export const getUserRankInRole = (
   user: User,
@@ -69,19 +234,20 @@ export const getUserRankInRole = (
     return null;
   }
 
-  // Ensure target user is included in calculation pool
   const userList = allUsers.some(u => u.id === user.id)
     ? allUsers
     : [...allUsers, user];
 
-  const board = getRoleLeaderboard(user.role, userList, ratings);
+  const board = getRoleLeaderboard(user.role, userList, ratings, 'all');
   const userEntry = board.find(e => e.user.id === user.id);
   if (!userEntry) {
     const fallbackStats = computeUserLeaderboardScore(user, ratings);
     return {
       rank: board.length + 1,
       totalInRole: board.length + 1,
-      ...fallbackStats,
+      score: fallbackStats.score,
+      totalReviews: fallbackStats.reviews,
+      helpfulVotes: fallbackStats.likes,
     };
   }
 
@@ -89,7 +255,7 @@ export const getUserRankInRole = (
     rank: userEntry.rank,
     totalInRole: board.length,
     score: userEntry.score,
-    totalReviews: userEntry.totalReviews,
-    helpfulVotes: userEntry.helpfulVotes,
+    totalReviews: userEntry.reviews,
+    helpfulVotes: userEntry.likes,
   };
 };

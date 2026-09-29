@@ -131,7 +131,7 @@ service cloud.firestore {
         data.id is string && data.id.size() <= 128 &&
         data.filmId is string && data.filmId.size() <= 128 &&
         data.userId is string && data.userId == request.auth.uid &&
-        data.score is number && data.score >= 0.5 && data.score <= 5.0;
+        data.score is number && data.score >= 1.0 && data.score <= 10.0;
     }
 
     function isValidCriticSubmission(data) {
@@ -248,6 +248,15 @@ service cloud.firestore {
       let prev = ('likes' in existing()) ? existing().likes : 0;
       let next = incoming().likes;
       return next == prev + 1 || next == prev - 1 || next == prev;
+    }
+
+    function isValidFilmAggregateDelta() {
+      let prevVotes = ('totalVotes' in existing()) ? existing().totalVotes : 0;
+      return incoming().diff(existing()).affectedKeys().hasOnly(['skorSotoy', 'totalVotes', 'scoreScale']) &&
+             incoming().totalVotes == prevVotes + 1 &&
+             (incoming().skorSotoy is number || incoming().skorSotoy is int) &&
+             incoming().skorSotoy >= 0 && incoming().skorSotoy <= 10 &&
+             incoming().scoreScale == 10;
     }
 
     function isValidVotesUpdate() {
@@ -373,7 +382,9 @@ service cloud.firestore {
 
     match /films/{filmId} {
       allow read: if true;
-      allow create, update: if (isAdmin() || isWriter()) && isValidId(filmId) && isValidFilmItem(incoming());
+      allow create: if (isAdmin() || isWriter()) && isValidId(filmId) && isValidFilmItem(incoming());
+      allow update: if ((isAdmin() || isWriter()) && isValidId(filmId) && isValidFilmItem(incoming())) ||
+                       (isSignedIn() && isVerifiedUser() && !isSuspended() && isValidFilmAggregateDelta());
       allow delete: if (isAdmin() || isWriter()) && isValidId(filmId);
     }
 
@@ -416,6 +427,12 @@ service cloud.firestore {
         (isCritic() && isOwner(existing().userId) && !isSuspended())
       );
       allow delete: if isSignedIn() && (isOwner(existing().userId) || isAdmin() || (isCritic() && isOwner(existing().userId)));
+
+      match /likedBy/{userId} {
+        allow read: if true;
+        allow create: if isSignedIn() && isVerifiedUser() && !isSuspended() && request.auth.uid == userId && get(/databases/$(database)/documents/ratings/$(ratingId)).data.userId != request.auth.uid;
+        allow delete: if isSignedIn() && request.auth.uid == userId;
+      }
     }
 
     match /criticSubmissions/{submissionId} {

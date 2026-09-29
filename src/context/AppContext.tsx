@@ -120,6 +120,7 @@ import {
   where,
   increment,
   writeBatch,
+  runTransaction,
 } from 'firebase/firestore';
 import { 
   onAuthStateChanged, 
@@ -268,6 +269,7 @@ interface AppContextType {
   isArticleSaved: (articleId: string) => boolean;
   collections: UserCollection[];
   createCollection: (name: string, description?: string, isPublic?: boolean) => Promise<string | null>;
+  updateCollectionDetails: (collectionId: string, updates: { name?: string; description?: string }) => Promise<boolean>;
   renameCollection: (collectionId: string, newName: string) => Promise<boolean>;
   deleteCollection: (collectionId: string) => Promise<boolean>;
   addItemToCollection: (collectionId: string, itemId: string, itemType: 'film' | 'article') => Promise<boolean>;
@@ -276,6 +278,9 @@ interface AppContextType {
   getCollectionsContainingItem: (itemId: string, itemType: 'film' | 'article') => UserCollection[];
   getOrCreateDefaultCollection: () => Promise<UserCollection | null>;
   toggleItemInDefaultCollection: (itemId: string, itemType: 'film' | 'article') => Promise<void>;
+  likedReviewIds: string[];
+  syncLikedReviews: (ratingIds: string[]) => Promise<void>;
+  toggleLikeReview: (ratingId: string) => Promise<boolean>;
   savedBuzzIds: string[];
   toggleSaveBuzz: (buzzId: string) => void;
   isBuzzSaved: (buzzId: string) => boolean;
@@ -776,11 +781,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const data = docSnap.data() as FilmItem;
           const id = data.id || docSnap.id;
           if (id) {
-            // Normalize legacy 5-point scale to 10-point scale if needed
-            const normalizedSkor = data.skorSotoy && data.skorSotoy <= 5.0 && data.skorSotoy > 0
+            // Normalize legacy 5-point scale to 10-point scale only if scoreScale is missing (undefined)
+            const isLegacy = data.scoreScale === undefined;
+            const normalizedSkor = isLegacy && data.skorSotoy && data.skorSotoy <= 5.0 && data.skorSotoy > 0
               ? Number((data.skorSotoy * 2).toFixed(1))
               : data.skorSotoy;
-            const normalizedCriticsSkor = data.criticsSkorSotoy && data.criticsSkorSotoy <= 5.0 && data.criticsSkorSotoy > 0
+            const normalizedCriticsSkor = isLegacy && data.criticsSkorSotoy && data.criticsSkorSotoy <= 5.0 && data.criticsSkorSotoy > 0
               ? Number((data.criticsSkorSotoy * 2).toFixed(1))
               : data.criticsSkorSotoy;
             filmMap.set(id, {
@@ -2048,7 +2054,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const renameCollection = async (collectionId: string, newName: string): Promise<boolean> => {
+  const updateCollectionDetails = async (
+    collectionId: string,
+    updates: { name?: string; description?: string }
+  ): Promise<boolean> => {
     if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') return false;
 
     const collectionRef = doc(db, 'users', currentUser.id, 'collections', collectionId);
@@ -2056,22 +2065,222 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!target) return false;
 
     const originalName = target.name;
+    const originalDesc = target.description || '';
     const originalUpdatedAt = target.updatedAt;
 
-    // Optimistic update
-    setCollections(prev => prev.map(c => c.id === collectionId ? { ...c, name: newName.trim(), updatedAt: new Date().toISOString() } : c));
-    showToast('Koleksi berhasil diganti nama!');
+    let newName = updates.name !== undefined ? updates.name.trim() : originalName;
+    let newDesc = updates.description !== undefined ? updates.description.trim() : originalDesc;
+
+    if (updates.name !== undefined && !newName) {
+      showToast('Nama koleksi tidak boleh kosong.', 'error');
+      return false;
+    }
+    if (newName.length > 40) newName = newName.substring(0, 40);
+    if (newDesc.length > 300) newDesc = newDesc.substring(0, 300);
+
+    const nowIso = new Date().toISOString();
+
+    setCollections(prev =>
+      prev.map(c =>
+        c.id === collectionId
+          ? { ...c, name: newName, description: newDesc, updatedAt: nowIso }
+          : c
+      )
+    );
+    showToast('Koleksi berhasil diperbarui!');
 
     try {
       await updateDoc(collectionRef, {
-        name: newName.trim(),
-        updatedAt: new Date().toISOString()
+        name: newName,
+        description: newDesc,
+        updatedAt: nowIso,
       });
+
+      try {
+        const q = query(
+          collection(db, 'buzz'),
+          where('sharedCollection.collectionId', '==', collectionId)
+        );
+        const snap = await getDocs(q);
+        snap.forEach(async (buzzDocSnap) => {
+          const buzzData = buzzDocSnap.data();
+          if (buzzData.author?.id === currentUser.id) {
+            try {
+              await updateDoc(doc(db, 'buzz', buzzDocSnap.id), {
+                'sharedCollection.name': newName,
+                'sharedCollection.description': newDesc,
+              });
+            } catch (err) {
+              console.warn('[Collections] Notice syncing buzz snapshot:', err);
+            }
+          }
+        });
+      } catch (err) {
+        console.warn('[Collections] Query notice for buzz sync:', err);
+      }
+
       return true;
     } catch (err) {
-      console.error('[Collections] Error renaming collection:', err);
-      setCollections(prev => prev.map(c => c.id === collectionId ? { ...c, name: originalName, updatedAt: originalUpdatedAt } : c));
-      showToast('Gagal mengganti nama koleksi.', 'error');
+      console.error('[Collections] Error updating collection details:', err);
+      setCollections(prev =>
+        prev.map(c =>
+          c.id === collectionId
+            ? { ...c, name: originalName, description: originalDesc, updatedAt: originalUpdatedAt }
+            : c
+        )
+      );
+      showToast('Gagal memperbarui koleksi.', 'error');
+      return false;
+    }
+  };
+
+  const renameCollection = async (collectionId: string, newName: string): Promise<boolean> => {
+    return updateCollectionDetails(collectionId, { name: newName });
+  };
+
+  const [likedReviewIds, setLikedReviewIds] = useState<string[]>([]);
+  const checkedLikeIdsRef = useRef<Set<string>>(new Set());
+
+  // Clear likedReviewIds and checkedLikeIdsRef when user changes or logs out
+  useEffect(() => {
+    setLikedReviewIds([]);
+    checkedLikeIdsRef.current.clear();
+  }, [currentUser?.id, isLoggedIn]);
+
+  const syncLikedReviews = async (ratingIds: string[]): Promise<void> => {
+    if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') return;
+
+    const userRatingsMap = new Map((ratings || []).map(r => [r.id, r.userId]));
+
+    const idsToSync = (ratingIds || []).filter(id => {
+      if (!id) return false;
+      if (checkedLikeIdsRef.current.has(id)) return false;
+      const authorId = userRatingsMap.get(id);
+      if (authorId && authorId === currentUser.id) {
+        checkedLikeIdsRef.current.add(id);
+        return false;
+      }
+      return true;
+    });
+
+    if (idsToSync.length === 0) return;
+
+    const cappedIds = idsToSync.slice(0, 60);
+
+    try {
+      const newLikedIds: string[] = [];
+
+      for (let i = 0; i < cappedIds.length; i += 20) {
+        const chunk = cappedIds.slice(i, i + 20);
+        const promises = chunk.map(async id => {
+          checkedLikeIdsRef.current.add(id);
+          try {
+            const likedByRef = doc(db, 'ratings', id, 'likedBy', currentUser.id);
+            const snap = await getDoc(likedByRef);
+            if (snap.exists()) {
+              return id;
+            }
+          } catch (err) {
+            console.warn('[SyncLikedReviews] Read error for id:', id, err);
+          }
+          return null;
+        });
+
+        const results = await Promise.all(promises);
+        results.forEach(res => {
+          if (res) newLikedIds.push(res);
+        });
+      }
+
+      if (newLikedIds.length > 0) {
+        setLikedReviewIds(prev => Array.from(new Set([...prev, ...newLikedIds])));
+      }
+    } catch (err) {
+      console.warn('[SyncLikedReviews] Error syncing liked reviews:', err);
+    }
+  };
+
+  const toggleLikeReview = async (ratingId: string): Promise<boolean> => {
+    if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') {
+      setLoginModalOpen(true);
+      showToast('Silakan masuk terlebih dahulu untuk menyukai ulasan.');
+      return false;
+    }
+    if (!isEmailVerified) {
+      showToast('Silakan verifikasi email kamu untuk berinteraksi.', 'error');
+      return false;
+    }
+    if (currentUser.isSuspended) {
+      showToast('Akun kamu sedang ditangguhkan.', 'error');
+      return false;
+    }
+
+    const targetRating = ratings.find(r => r.id === ratingId);
+    if (!targetRating) return false;
+
+    if (targetRating.userId === currentUser.id) {
+      showToast('Kamu tidak dapat menyukai ulasanmu sendiri.', 'error');
+      return false;
+    }
+
+    const isLiked = likedReviewIds.includes(ratingId);
+    const delta = isLiked ? -1 : 1;
+    const nextLikes = Math.max(0, (targetRating.likes || 0) + delta);
+
+    // Optimistic UI
+    setLikedReviewIds(prev => isLiked ? prev.filter(id => id !== ratingId) : [...prev, ratingId]);
+    setRatings(prev => prev.map(r => r.id === ratingId ? { ...r, likes: nextLikes } : r));
+
+    try {
+      const batch = writeBatch(db);
+      const ratingRef = doc(db, 'ratings', ratingId);
+      const likedByRef = doc(db, 'ratings', ratingId, 'likedBy', currentUser.id);
+
+      if (isLiked) {
+        batch.delete(likedByRef);
+        batch.update(ratingRef, { likes: increment(-1) });
+      } else {
+        batch.set(likedByRef, {
+          userId: currentUser.id,
+          createdAt: new Date().toISOString(),
+        });
+        batch.update(ratingRef, { likes: increment(1) });
+      }
+
+      await batch.commit();
+      return true;
+    } catch (err: any) {
+      console.error('[ToggleLikeReview] Error toggling like:', err);
+
+      const isPermissionOrExists =
+        err?.code === 'permission-denied' ||
+        err?.code === 'already-exists' ||
+        (err?.message && (err.message.includes('permission') || err.message.includes('already exists')));
+
+      if (!isLiked && isPermissionOrExists) {
+        // Self-healing check
+        try {
+          const likedByRef = doc(db, 'ratings', ratingId, 'likedBy', currentUser.id);
+          const snap = await getDoc(likedByRef);
+          if (snap.exists()) {
+            setLikedReviewIds(prev => Array.from(new Set([...prev, ratingId])));
+            checkedLikeIdsRef.current.add(ratingId);
+            setRatings(prev =>
+              prev.map(r => (r.id === ratingId ? { ...r, likes: Math.max(0, (r.likes || 0) - 1) } : r))
+            );
+            return true;
+          }
+        } catch (checkErr) {
+          console.warn('[ToggleLikeReview] Self-healing check failed:', checkErr);
+        }
+      }
+
+      // Normal rollback
+      setLikedReviewIds(prev => isLiked ? [...prev, ratingId] : prev.filter(id => id !== ratingId));
+      setRatings(prev =>
+        prev.map(r => (r.id === ratingId ? { ...r, likes: Math.max(0, (r.likes || 0) - delta) } : r))
+      );
+      showToast('Gagal mengubah suka ulasan.', 'error');
       return false;
     }
   };
@@ -5061,6 +5270,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         clearAuditLogs,
         userProfilesCache,
         cacheUserProfile,
+        updateCollectionDetails,
+        likedReviewIds,
+        syncLikedReviews,
+        toggleLikeReview,
       }}
     >
       {children}

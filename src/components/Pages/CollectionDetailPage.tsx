@@ -31,6 +31,7 @@ export const CollectionDetailPage: React.FC = () => {
     films,
     articles,
     renameCollection,
+    updateCollectionDetails,
     removeItemFromCollection,
     shareCollectionToBuzz,
     navigateTo,
@@ -43,9 +44,10 @@ export const CollectionDetailPage: React.FC = () => {
   const [sharedSnapshot, setSharedSnapshot] = useState<any | null>(null);
   const [loadingShared, setLoadingShared] = useState<boolean>(!isOwner);
 
-  // Rename state
-  const [isEditingName, setIsEditingName] = useState<boolean>(false);
+  // Edit details state (name + description)
+  const [isEditingDetails, setIsEditingDetails] = useState<boolean>(false);
   const [editNameValue, setEditNameValue] = useState<string>('');
+  const [editDescValue, setEditDescValue] = useState<string>('');
 
   // Fetch shared snapshot if not owner
   useEffect(() => {
@@ -90,23 +92,35 @@ export const CollectionDetailPage: React.FC = () => {
   const isDefault = isOwner ? myCollection?.isDefault : false;
   const itemsList = isOwner ? myCollection?.items || [] : sharedSnapshot?.items || [];
 
-  // Sync edit name state
+  // Sync edit state
   useEffect(() => {
     if (collectionName) {
       setEditNameValue(collectionName);
     }
-  }, [collectionName]);
+    if (collectionDesc !== undefined) {
+      setEditDescValue(collectionDesc || '');
+    }
+  }, [collectionName, collectionDesc]);
 
-  const handleRename = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveDetails = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!collectionId || !editNameValue.trim()) {
       showToast('Nama koleksi tidak boleh kosong.', 'error');
       return;
     }
-    const success = await renameCollection(collectionId, editNameValue.trim());
+    const success = await updateCollectionDetails(collectionId, {
+      name: editNameValue.trim(),
+      description: editDescValue.trim(),
+    });
     if (success) {
-      setIsEditingName(false);
+      setIsEditingDetails(false);
     }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingDetails(false);
+    setEditNameValue(collectionName || '');
+    setEditDescValue(collectionDesc || '');
   };
 
   const handleRemoveItem = async (itemId: string, itemName: string) => {
@@ -180,57 +194,92 @@ export const CollectionDetailPage: React.FC = () => {
               )}
             </div>
 
-            {isEditingName ? (
-              <form onSubmit={handleRename} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 max-w-lg mt-1">
-                <input
-                  type="text"
-                  value={editNameValue}
-                  onChange={(e) => setEditNameValue(e.target.value)}
-                  maxLength={40}
-                  className="px-3.5 py-1.5 text-sm bg-slate-850 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-[#FF2E7E] font-bold flex-1"
-                  autoFocus
-                />
-                <div className="flex gap-2">
+            {isEditingDetails ? (
+              <form onSubmit={handleSaveDetails} className="space-y-3 max-w-xl mt-2 text-left">
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                    Nama Koleksi
+                  </label>
+                  <input
+                    type="text"
+                    value={editNameValue}
+                    onChange={(e) => setEditNameValue(e.target.value)}
+                    maxLength={40}
+                    className="w-full px-3.5 py-2 text-sm bg-slate-850 border border-slate-700 focus:border-[#FF2E7E] rounded-xl text-white font-bold focus:outline-none"
+                    placeholder="Nama koleksi..."
+                    autoFocus
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                      Deskripsi Koleksi
+                    </label>
+                    <span className="text-[10px] tabular-nums text-slate-500 font-medium">
+                      {editDescValue.length}/300
+                    </span>
+                  </div>
+                  <textarea
+                    value={editDescValue}
+                    onChange={(e) => setEditDescValue(e.target.value)}
+                    maxLength={300}
+                    rows={3}
+                    className="w-full px-3.5 py-2 text-xs sm:text-sm bg-slate-850 border border-slate-700 focus:border-[#FF2E7E] rounded-xl text-white focus:outline-none resize-none leading-relaxed"
+                    placeholder="Ceritakan tentang daftar tontonan ini..."
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
                   <button
                     type="submit"
-                    className="p-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white transition-colors flex items-center justify-center"
-                    title="Simpan nama"
+                    className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+                    title="Simpan perubahan"
                   >
                     <Check className="w-4 h-4" />
+                    <span>Simpan</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      setIsEditingName(false);
-                      setEditNameValue(collectionName || '');
-                    }}
-                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-white transition-colors flex items-center justify-center"
+                    onClick={handleCancelEdit}
+                    className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
                     <X className="w-4 h-4" />
+                    <span>Batal</span>
                   </button>
                 </div>
               </form>
             ) : (
-              <div className="flex items-center justify-center sm:justify-start gap-2.5">
-                <h1 className="font-display font-black text-xl sm:text-2xl text-white tracking-tight">
-                  {collectionName}
-                </h1>
-                {isOwner && (
-                  <button
-                    onClick={() => setIsEditingName(true)}
-                    className="text-slate-500 hover:text-[#FF2E7E] transition-colors p-1"
-                    title="Ganti nama koleksi"
-                  >
-                    <Edit3 className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            )}
+              <>
+                <div className="flex items-center justify-center sm:justify-start gap-2.5">
+                  <h1 className="font-display font-black text-xl sm:text-2xl text-white tracking-tight">
+                    {collectionName}
+                  </h1>
+                  {isOwner && (
+                    <button
+                      onClick={() => setIsEditingDetails(true)}
+                      className="text-slate-500 hover:text-[#FF2E7E] transition-colors p-1 cursor-pointer"
+                      title="Edit nama dan deskripsi koleksi"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
 
-            {collectionDesc && (
-              <p className="text-slate-400 text-xs sm:text-sm max-w-2xl leading-relaxed">
-                {collectionDesc}
-              </p>
+                {collectionDesc ? (
+                  <p className="text-slate-400 text-xs sm:text-sm max-w-2xl leading-relaxed whitespace-pre-line text-center sm:text-left">
+                    {collectionDesc}
+                  </p>
+                ) : isOwner ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingDetails(true)}
+                    className="text-slate-500 hover:text-[#FF2E7E] text-xs sm:text-sm italic cursor-pointer transition-colors block text-left"
+                  >
+                    Tambahkan deskripsi koleksi…
+                  </button>
+                ) : null}
+              </>
             )}
           </div>
         </div>
