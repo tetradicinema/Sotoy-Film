@@ -174,3 +174,14 @@
   scrollbar-width: thin !important;
   -ms-overflow-style: auto !important;
 }
+
+/* Tablet bottom navigation specific styling */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .tabletbottomnav {
+    border-top: 1px solid rgba(255, 46, 126, 0.15) !important;
+    background: rgba(14, 16, 19, 0.92) !important;
+    backdrop-filter: blur(24px) saturate(180%) !important;
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+  }
+}

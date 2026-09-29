@@ -190,14 +190,7 @@ export const Footer: React.FC = () => {
               </li>
             </ul>
 
-            <div className="pt-3 border-t border-white/[0.08]">
-              <div className="text-[11px] font-semibold text-slate-400 mb-1">Peran Akun:</div>
-              <div className="text-[11px] space-y-0.5 text-slate-400">
-                <div>• <span className="text-white font-medium">Warga</span>: Penonton</div>
-                <div>• <span className="text-white font-medium">Si Paling Sotoy</span>: Kritikus</div>
-                <div>• <span className="text-[#FF2E7E] font-medium">Penulis</span>: Jurnalis</div>
-              </div>
-            </div>
+
           </div>
         </div>
 
