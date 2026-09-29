@@ -884,8 +884,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const data = docSnap.data() as UserRating;
           const id = data.id || docSnap.id;
           if (id) {
-            // Normalize legacy 5-point rating to 10-point scale if needed
-            const normalizedScore = data.score && data.score <= 5.0 && data.score > 0
+            // Normalize legacy 5-point rating to 10-point scale only if scoreScale is missing (undefined)
+            const isLegacy = data.scoreScale === undefined;
+            const normalizedScore = isLegacy && data.score && data.score <= 5.0 && data.score > 0
               ? Number((data.score * 2).toFixed(1))
               : data.score;
             ratingMap.set(id, { ...data, id, score: normalizedScore });
@@ -3909,14 +3910,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addFilmRating = async (filmId: string, score: number, headline: string, reviewText: string) => {
     if (!requireVerified()) return;
     const ratingId = `rate-${Date.now()}`;
+    const clampedScore = Math.min(10, Math.max(1.0, Number(score.toFixed(1))));
+    const activeUserId = auth.currentUser?.uid || currentUser.id;
     const newRating: UserRating = {
       id: ratingId,
       filmId,
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userAvatar: currentUser.avatar,
+      userId: activeUserId,
+      userName: currentUser.name || auth.currentUser?.displayName || 'Warga Sotoy',
+      userAvatar: currentUser.avatar || auth.currentUser?.photoURL || '',
       userRole: currentUser.role,
-      score: Math.min(10, Math.max(1.0, Number(score.toFixed(1)))),
+      score: clampedScore,
+      scoreScale: 10,
       headline,
       reviewText,
       createdAt: new Date().toISOString(),
@@ -3927,42 +3931,76 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const previousRatings = [...ratings];
-    const previousFilms = [...films];
 
     // Optimistically update local ratings state
     setRatings(prev => [newRating, ...prev.filter(r => r.id !== ratingId)]);
 
     try {
       await setDoc(doc(db, 'ratings', ratingId), newRating);
-
-      // Update average film score in Firestore
-      const film = films.find(f => f.id === filmId);
-      if (film) {
-        const currentTotal = film.skorSotoy * film.totalVotes;
-        const newVotes = film.totalVotes + 1;
-        const newAverage = Number(((currentTotal + score) / newVotes).toFixed(1));
-        const updatedFilm = {
-          ...film,
-          skorSotoy: newAverage,
-          totalVotes: newVotes,
-        };
-        await setDoc(doc(db, 'films', filmId), updatedFilm);
-
-        // Track interest signal when rating film (+3 weight)
-        const rateTopics = [...(film.genres || []), film.type, film.title];
-        recordUserInterest(rateTopics, 3);
-      }
-
-      showToast(`Skor Sotoy ${score.toFixed(1)}/10.0 dan ulasan kamu berhasil dikirim!`, 'success');
     } catch (error: any) {
       setRatings(previousRatings);
-      setFilms(previousFilms);
-      console.error('[FilmRating] Error adding rating:', error);
+      console.error('[FilmRating] Error adding rating:', error?.code, error?.message, error);
       const reason = error?.code === 'permission-denied'
         ? 'Izin ditolak (permission denied).'
         : 'Gagal mengirim ulasan film.';
       showToast(reason, 'error');
+      return;
     }
+
+    // Update average film score in Firestore using transaction sending ONLY skorSotoy, totalVotes, scoreScale
+    try {
+      let updatedSkor = 0;
+      let updatedVotes = 0;
+      let transactionSuccess = false;
+
+      await runTransaction(db, async (transaction) => {
+        const filmRef = doc(db, 'films', filmId);
+        const filmSnap = await transaction.get(filmRef);
+        if (!filmSnap.exists()) return;
+
+        const data = filmSnap.data();
+        const prevVotes = data.totalVotes ?? 0;
+        let prevAvg = data.skorSotoy ?? 0;
+
+        if (data.scoreScale === undefined && prevAvg > 0 && prevAvg <= 5) {
+          prevAvg = prevAvg * 2;
+        }
+
+        const newVotes = prevVotes + 1;
+        let newAvg = Number(((prevAvg * prevVotes + clampedScore) / newVotes).toFixed(1));
+        newAvg = Math.min(10, Math.max(0, newAvg));
+
+        transaction.update(filmRef, {
+          skorSotoy: newAvg,
+          totalVotes: newVotes,
+          scoreScale: 10,
+        });
+
+        updatedSkor = newAvg;
+        updatedVotes = newVotes;
+        transactionSuccess = true;
+      });
+
+      if (transactionSuccess) {
+        setFilms(prev => prev.map(f => f.id === filmId ? {
+          ...f,
+          skorSotoy: updatedSkor,
+          totalVotes: updatedVotes,
+          scoreScale: 10,
+        } : f));
+      }
+    } catch (filmErr: any) {
+      console.warn('[FilmRating] Failed to update film aggregate:', filmErr?.code, filmErr?.message, filmErr);
+    }
+
+    // Track interest signal when rating film (+3 weight)
+    const film = films.find(f => f.id === filmId);
+    if (film) {
+      const rateTopics = [...(film.genres || []), film.type, film.title];
+      recordUserInterest(rateTopics, 3);
+    }
+
+    showToast(`Skor Sotoy ${clampedScore.toFixed(1)}/10.0 dan ulasan kamu berhasil dikirim!`, 'success');
   };
 
   const updateFilmRating = async (ratingId: string, updates: Partial<UserRating>) => {
@@ -3976,7 +4014,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const previousRatings = [...ratings];
-    const updated = { ...rating, ...updates };
+    const scoreScaleToUse = updates.scoreScale ?? rating.scoreScale ?? (((updates.score ?? rating.score) > 5) ? 10 : undefined);
+    const updated: UserRating = {
+      ...rating,
+      ...updates,
+      ...(scoreScaleToUse !== undefined ? { scoreScale: scoreScaleToUse } : {}),
+    };
 
     // Optimistically update local ratings state
     setRatings(prev => prev.map(r => r.id === ratingId ? updated : r));
@@ -3986,7 +4029,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       showToast('Ulasan film kamu berhasil diperbarui!', 'success');
     } catch (error: any) {
       setRatings(previousRatings);
-      console.error('[FilmRating] Error updating rating:', error);
+      console.error('[FilmRating] Error updating rating:', error?.code, error?.message, error);
       const reason = error?.code === 'permission-denied'
         ? 'Izin ditolak (permission denied).'
         : 'Gagal memperbarui ulasan film.';

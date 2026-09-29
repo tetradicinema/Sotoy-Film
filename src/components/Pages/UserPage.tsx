@@ -2252,7 +2252,7 @@ export const UserPage: React.FC = () => {
                         <div className="bg-black/60 border border-[#FF2E7E]/40 px-3 py-1.5 rounded-xl text-[#FF2E7E] font-black text-sm flex items-center gap-1.5 self-start sm:self-auto">
                           <Star className="w-4 h-4 fill-current" />
                           <span>{rev.score.toFixed(1)}</span>
-                          <span className="text-slate-500 text-xs">/ 5.0</span>
+                          <span className="text-slate-500 text-xs">/ 10.0</span>
                         </div>
                       </div>
 
@@ -2276,7 +2276,7 @@ export const UserPage: React.FC = () => {
                             id={`user-share-review-${rev.id}-btn`}
                             onClick={() => {
                               openShareModal({
-                                title: `Rating ${targetFilm?.title || 'Film'} - ${rev.score.toFixed(1)}/5.0 oleh ${targetUser.name}`,
+                                title: `Rating ${targetFilm?.title || 'Film'} - ${rev.score.toFixed(1)}/10.0 oleh ${targetUser.name}`,
                                 text: rev.reviewText,
                                 headline: rev.headline,
                                 url: window.location.href,
@@ -2291,7 +2291,7 @@ export const UserPage: React.FC = () => {
                                 reviewerName: targetUser.name,
                                 reviewerAvatar: targetUser.avatar,
                                 reviewerRole: targetUser.roleTitle,
-                                meta: targetFilm ? `${targetFilm.title} (${targetFilm.year}) • Skor: ${rev.score.toFixed(1)}/5.0` : `Skor: ${rev.score.toFixed(1)}/5.0`,
+                                meta: targetFilm ? `${targetFilm.title} (${targetFilm.year}) • Skor: ${rev.score.toFixed(1)}/10.0` : `Skor: ${rev.score.toFixed(1)}/10.0`,
                               });
                             }}
                             className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-[#FF2E7E]/20 text-slate-300 hover:text-white border border-slate-700 hover:border-[#FF2E7E]/40 font-bold text-xs flex items-center gap-1.5 transition-colors"

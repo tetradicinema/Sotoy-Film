@@ -1075,7 +1075,7 @@ export const FilmDetailPage: React.FC = () => {
                         <div className="bg-black/60 border border-[#FF2E7E]/40 px-3 py-1 rounded-xl text-[#FF2E7E] font-black text-sm flex items-center gap-1">
                           <Star className="w-4 h-4 fill-current" />
                           <span>{rev.score.toFixed(1)}</span>
-                          <span className="text-slate-500 text-xs">/ 5.0</span>
+                          <span className="text-slate-500 text-xs">/ 10.0</span>
                         </div>
                       </div>
 
@@ -1113,7 +1113,7 @@ export const FilmDetailPage: React.FC = () => {
                           id={`detail-share-review-${rev.id}-btn`}
                           onClick={() => {
                             openShareModal({
-                              title: `Rating ${film.title} - ${rev.score.toFixed(1)}/5.0 oleh ${rev.userName}`,
+                              title: `Rating ${film.title} - ${rev.score.toFixed(1)}/10.0 oleh ${rev.userName}`,
                               text: rev.reviewText,
                               headline: rev.headline,
                               url: window.location.href,
@@ -1128,7 +1128,7 @@ export const FilmDetailPage: React.FC = () => {
                               reviewerName: rev.userName,
                               reviewerAvatar: rev.userAvatar,
                               reviewerRole: rev.userRole ? getRoleBadgeStyle(rev.userRole).fullTitle : 'Warga Sotoy (Penonton Santai)',
-                              meta: `${film.title} (${film.year}) • Skor: ${rev.score.toFixed(1)}/5.0`,
+                              meta: `${film.title} (${film.year}) • Skor: ${rev.score.toFixed(1)}/10.0`,
                             });
                           }}
                           className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-[#FF2E7E]/20 text-slate-300 hover:text-white border border-slate-700 hover:border-[#FF2E7E]/50 font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm"

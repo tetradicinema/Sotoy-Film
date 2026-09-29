@@ -2337,7 +2337,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                   <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                     <span className="bg-[#FF2E7E]/20 text-[#FF2E7E] border border-[#FF2E7E]/40 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
                       <Star className="w-3 h-3 fill-current" />
-                      <span>{displayScore.toFixed(1)} / 5.0</span>
+                      <span>{displayScore.toFixed(1)} / 10.0</span>
                     </span>
                     <span className="text-[10px] font-bold text-cyan-400">
                       {getScoreVerdict(displayScore)}

@@ -140,7 +140,7 @@ export const FilmRecommendationsPage: React.FC = () => {
                     </span>
                     <span className="text-[#FF2E7E] font-black text-xs flex items-center gap-1">
                       <Star className="w-3.5 h-3.5 fill-current" />
-                      {film.skorSotoy.toFixed(1)} / 5.0
+                      {film.skorSotoy.toFixed(1)} / 10.0
                     </span>
                   </div>
 

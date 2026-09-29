@@ -751,7 +751,7 @@ export const WriteArticlePage: React.FC = () => {
                     <div className="text-xs text-slate-400 mt-0.5">Sutradara: {selectedFilm.director}</div>
                     <div className="flex items-center gap-1.5 mt-1 text-xs text-amber-400 font-bold">
                       <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                      <span>Skor Sotoy: {selectedFilm.skorSotoy} / 5.0</span>
+                      <span>Skor Sotoy: {selectedFilm.skorSotoy} / 10.0</span>
                     </div>
                   </div>
                 </div>
