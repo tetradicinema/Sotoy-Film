@@ -27,6 +27,7 @@ import { BusinessInquiriesPage } from './components/Pages/BusinessInquiriesPage'
 import { CriticSubmissionPage } from './components/Pages/CriticSubmissionPage';
 import { CriticCriteriaPage } from './components/Pages/CriticCriteriaPage';
 import { AdminCriticSubmissionsPage } from './components/Pages/AdminCriticSubmissionsPage';
+import { LeaderboardGuidePage } from './components/Pages/LeaderboardGuidePage';
 import { OnboardingPage } from './components/Pages/OnboardingPage';
 import { LoginModal } from './components/Modals/LoginModal';
 import { SocialShareModal } from './components/Modals/SocialShareModal';
@@ -171,11 +172,12 @@ const AppContent: React.FC = () => {
           <Route path="/kontak-bisnis" element={<BusinessInquiriesPage />} />
           <Route path="/business-inquiries" element={<BusinessInquiriesPage />} />
 
-          {/* Critic Program Routes */}
+          {/* Critic Program & Leaderboard Routes */}
           <Route path="/gabung-kritikus" element={<CriticSubmissionPage />} />
           <Route path="/critic-submission" element={<CriticSubmissionPage />} />
           <Route path="/kriteria-kritikus" element={<CriticCriteriaPage />} />
           <Route path="/critic-criteria" element={<CriticCriteriaPage />} />
+          <Route path="/panduan-leaderboard" element={<LeaderboardGuidePage />} />
           <Route path="/admin/submissions" element={<AdminCriticSubmissionsPage />} />
 
           {/* Admin Control Center Standalone URLs */}

@@ -38,6 +38,7 @@ import { RateFilmModal } from '../Modals/RateFilmModal';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
 import { FilmCardSkeleton, FilmDatabaseSkeleton } from '../Skeletons';
+import { getRoleLeaderboard } from '../../utils/leaderboard';
 
 export interface GenreCategory {
   id: string;
@@ -98,84 +99,26 @@ export const GENRE_CATEGORIES: GenreCategory[] = [
   {
     id: 'Action',
     name: 'Action',
-    icon: Flame,
+    icon: Zap,
     badgeClass: 'text-orange-400 border-orange-900/50 bg-orange-950/30 hover:border-orange-600/60',
-    activeClass: 'bg-gradient-to-r from-orange-500 to-amber-600 text-slate-950 border-orange-400 shadow-lg shadow-orange-500/30 ring-2 ring-orange-300/40 font-black',
-    description: 'Aksi laga memacu adrenalin, koreografi pertempuran intens, spionase, dan petualangan tanpa henti.',
-    themeColor: '#f97316',
-  },
-  {
-    id: 'Mystery',
-    name: 'Mystery & Thriller',
-    icon: Eye,
-    badgeClass: 'text-purple-400 border-purple-900/50 bg-purple-950/30 hover:border-purple-600/60',
-    activeClass: 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-400 shadow-lg shadow-purple-500/30 ring-2 ring-purple-300/40 font-black',
-    description: 'Plot twist tak terduga, teka-teki kriminal misterius, investigasi pembunuhan, dan tensi tegang.',
-    themeColor: '#a855f7',
+    activeClass: 'bg-gradient-to-r from-orange-500 to-red-500 text-white border-orange-400 shadow-lg shadow-orange-500/30 ring-2 ring-orange-300/40 font-black',
+    description: 'Koreografi pertarungan memukau, kejar-kejaran tinggi adrenalin, dan ledakan aksi tanpa henti.',
+    themeColor: '#FF2E7E',
   },
 ];
-
-export const matchesGenre = (film: FilmItem, genreId: string): boolean => {
-  if (!genreId || genreId === 'all') return true;
-  const target = genreId.toLowerCase();
-
-  if (target === 'anime') {
-    return (
-      film.type === 'anime' ||
-      film.genres.some(g => {
-        const gl = g.toLowerCase();
-        return gl === 'anime' || gl === 'animation' || gl.includes('anime');
-      })
-    );
-  }
-
-  if (target === 'sci-fi' || target === 'scifi') {
-    return film.genres.some(g => {
-      const gl = g.toLowerCase();
-      return gl === 'sci-fi' || gl === 'scifi' || gl.includes('sci-fi') || gl.includes('science fiction');
-    });
-  }
-
-  if (target === 'horror') {
-    return film.genres.some(g => {
-      const gl = g.toLowerCase();
-      return gl.includes('horror') || gl.includes('horor');
-    });
-  }
-
-  if (target === 'drama') {
-    return film.genres.some(g => g.toLowerCase().includes('drama'));
-  }
-
-  if (target === 'action') {
-    return film.genres.some(g => {
-      const gl = g.toLowerCase();
-      return gl.includes('action') || gl.includes('aksi');
-    });
-  }
-
-  if (target === 'mystery' || target === 'thriller') {
-    return film.genres.some(g => {
-      const gl = g.toLowerCase();
-      return gl.includes('mystery') || gl.includes('misteri') || gl.includes('thriller');
-    });
-  }
-
-  return film.genres.some(g => g.toLowerCase() === target || g.toLowerCase().includes(target));
-};
 
 export const FilmDatabasePage: React.FC = () => {
   const {
     films,
     isLoadingFilms,
     ratings,
-    navigateTo,
-    currentUser,
-    allUsers,
     isLoggedIn,
     setLoginModalOpen,
+    navigateTo,
+    watchlist,
     toggleWatchlist,
     isFilmInWatchlist,
+    allUsers,
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -184,15 +127,34 @@ export const FilmDatabasePage: React.FC = () => {
   const [ratingFilter, setRatingFilter] = useState<number>(0);
   const [sortBy, setSortBy] = useState<'rating' | 'votes' | 'year' | 'title'>('rating');
   const [ratingModalFilm, setRatingModalFilm] = useState<FilmItem | null>(null);
+
+  // Review Filter Role State
   const [reviewsFilterRole, setReviewsFilterRole] = useState<'all' | 'critic' | 'warga'>('all');
 
-  // Dynamic helper to count films per genre
-  const getGenreCount = (genreId: string) => {
+  // Helper function to match genres
+  const matchesGenre = (film: FilmItem, targetGenre: string): boolean => {
+    if (!targetGenre || targetGenre === 'all') return true;
+    const lowerTarget = targetGenre.toLowerCase();
+
+    return film.genres.some(g => {
+      const lowerG = g.toLowerCase();
+      if (lowerG === lowerTarget) return true;
+      if (lowerTarget === 'horror' && (lowerG.includes('horr') || lowerG.includes('misteri') || lowerG.includes('thriller'))) return true;
+      if (lowerTarget === 'sci-fi' && (lowerG.includes('sci') || lowerG.includes('fiksi') || lowerG.includes('futur') || lowerG.includes('space'))) return true;
+      if (lowerTarget === 'anime' && (lowerG.includes('anime') || lowerG.includes('animasi') || film.type === 'anime')) return true;
+      if (lowerTarget === 'drama' && (lowerG.includes('dram') || lowerG.includes('romance') || lowerG.includes('kehidupan'))) return true;
+      if (lowerTarget === 'action' && (lowerG.includes('aksi') || lowerG.includes('act') || lowerG.includes('petualangan'))) return true;
+      return false;
+    });
+  };
+
+  // Helper count for genre pills
+  const getGenreCount = (genreId: string): number => {
     if (genreId === 'all') return films.length;
     return films.filter(f => matchesGenre(f, genreId)).length;
   };
 
-  // Currently selected category configuration for spotlight banner
+  // Find current active category config
   const activeCategoryConfig = GENRE_CATEGORIES.find(
     c => c.id.toLowerCase() === selectedGenre.toLowerCase()
   ) || {
@@ -263,55 +225,19 @@ export const FilmDatabasePage: React.FC = () => {
     return true;
   });
 
-  // Dynamic Top Reviewers Leaderboard data from Firestore allUsers
-  const topReviewers = useMemo(() => {
-    if (allUsers.length > 0) {
-      return allUsers.slice(0, 5).map((u, idx) => ({
-        id: u.id,
-        rank: idx + 1,
-        name: u.name || 'Penonton Sotoy',
-        handle: u.handle || `@user_${u.id.slice(0, 5)}`,
-        avatar: u.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-        role: u.role || 'warga_sotoy',
-        roleTitle: u.roleTitle || 'Penulis / Kritikus',
-        totalReviews: u.totalReviews || 12,
-        helpfulVotes: 250,
-        avgScoreGiven: 8.4,
-        bio: u.bio || 'Penggemar sinema aktif di komunitas Sotoy Film.',
-        badges: u.role === 'admin' ? ['Head Admin'] : ['Aktif Reviewer'],
-      }));
-    }
-    return [
-      {
-        id: 'rev-1',
-        rank: 1,
-        name: 'Kritikus Sinema',
-        handle: '@kritikus',
-        avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=200&q=80',
-        role: 'si_paling_sotoy',
-        roleTitle: 'Verified Critic',
-        totalReviews: 84,
-        helpfulVotes: 1420,
-        avgScoreGiven: 8.4,
-        bio: 'Menilai film dari ketelitian framing dan narasi audio visual.',
-        badges: ['Critic of the Month', 'Master Reviewer'],
-      },
-      {
-        id: 'rev-2',
-        rank: 2,
-        name: 'Jurnalis Film',
-        handle: '@jurnalis',
-        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
-        role: 'penulis_sotoy',
-        roleTitle: 'Lead Writer',
-        totalReviews: 67,
-        helpfulVotes: 980,
-        avgScoreGiven: 9.0,
-        bio: 'Penulis esai film & kurator festival.',
-        badges: ['Festival Insider', 'Story Analyst'],
-      },
-    ];
-  }, [allUsers]);
+  // Leaderboards split by role
+  const criticLeaderboard = useMemo(() => {
+    return getRoleLeaderboard('si_paling_sotoy', allUsers, ratings).slice(0, 5);
+  }, [allUsers, ratings]);
+
+  const wargaLeaderboard = useMemo(() => {
+    return getRoleLeaderboard('warga_sotoy', allUsers, ratings).slice(0, 5);
+  }, [allUsers, ratings]);
+
+  const scrollToDatabase = () => {
+    const el = document.getElementById('database-lengkap');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  };
 
   return (
     <div className="min-h-screen py-8">
@@ -468,17 +394,664 @@ export const FilmDatabasePage: React.FC = () => {
           )}
         </section>
 
+        {/* Global Page Ad Banner */}
+        <AdBannerSlot variant="leaderboard" />
+
         {/* ========================================================================= */}
-        {/* SEARCH SECTION WITH POSTERS & RATINGS */}
+        {/* SECTION 1: RECENT RELEASED (Capped to 8 items) */}
         {/* ========================================================================= */}
-        <section id="film-search-section" className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 shadow-xl space-y-5">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <section id="recent-released-section" className="space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800 flex-wrap gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-cyan-500/20 text-[#FF2E7E] flex items-center justify-center">
+                <Clock className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="font-display font-black text-xl text-white">Recent Released</h2>
+                <p className="text-slate-400 text-xs">Film bioskop dan tayangan serial yang baru saja dirilis resmi</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-slate-400">
+                {filteredRecentReleased.length} Judul
+              </span>
+              <button
+                onClick={() => {
+                  setSortBy('year');
+                  scrollToDatabase();
+                }}
+                className="text-xs font-bold text-slate-300 hover:text-white bg-slate-900 border border-slate-700 hover:border-[#FF2E7E] px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 shrink-0"
+              >
+                <span>Lihat Semua</span>
+                <ChevronRight className="w-3.5 h-3.5 text-[#FF2E7E]" />
+              </button>
+            </div>
+          </div>
+
+          {isLoadingFilms && films.length === 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <FilmCardSkeleton key={`recent-film-skeleton-${i}`} />
+              ))}
+            </div>
+          ) : filteredRecentReleased.length === 0 ? (
+            <div className="text-center py-8 bg-slate-900/30 rounded-2xl border border-slate-800/80">
+              <p className="text-slate-400 text-xs">
+                Tidak ada film rilis baru untuk genre <strong className="text-white">{activeCategoryConfig.name}</strong>.
+              </p>
+              <button
+                onClick={() => setSelectedGenre('all')}
+                className="mt-2 text-xs font-bold text-[#FF2E7E] hover:underline"
+              >
+                Lihat semua rilis baru
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-4">
+              {filteredRecentReleased.slice(0, 8).map(film => (
+                <div
+                  key={film.id}
+                  id={`recent-film-card-${film.id}`}
+                  onClick={() => navigateTo('film-detail', { filmId: film.id })}
+                  className="bg-[#171A1F] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FF2E7E]/70 hover:shadow-[0_0_24px_rgba(255,46,126,0.18)] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
+                >
+                  <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
+                    <img
+                      src={film.poster}
+                      alt={film.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent opacity-80" />
+
+                    <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/30 text-[#FFD000] text-[11px] font-black flex items-center gap-1">
+                      <Star className="w-3 h-3 fill-current text-[#FFD000]" />
+                      <span>{film.skorSotoy.toFixed(1)}</span>
+                    </div>
+
+                    <span className="absolute top-2 right-2 bg-cyan-500 text-slate-950 text-[9px] font-black uppercase px-2 py-0.5 rounded shadow">
+                      NEW
+                    </span>
+
+                    <div className="absolute bottom-2 left-2 right-2 text-[10px] text-slate-300 font-bold">
+                      {film.duration} • {film.year}
+                    </div>
+                  </div>
+
+                  <div className="p-3">
+                    <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-1 mb-1">
+                      {film.title}
+                    </h3>
+                    <div className="flex flex-wrap gap-1">
+                      {film.genres.slice(0, 2).map(g => (
+                        <span
+                          key={g}
+                          onClick={e => {
+                            e.stopPropagation();
+                            setSelectedGenre(g);
+                          }}
+                          className={`text-[9px] font-medium px-1.5 py-0.2 rounded ${
+                            selectedGenre.toLowerCase() === g.toLowerCase()
+                              ? 'bg-cyan-500 text-slate-950 font-bold'
+                              : 'text-slate-400 bg-slate-800/80 hover:text-white'
+                          }`}
+                        >
+                          {g}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ========================================================================= */}
+        {/* SECTION 2: POPULAR RELEASED (Capped to 8 items) */}
+        {/* ========================================================================= */}
+        <section id="popular-released-section" className="space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800 flex-wrap gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-pink-500/20 text-[#FF2E7E] flex items-center justify-center">
+                <Flame className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="font-display font-black text-xl text-white">Popular Released</h2>
+                <p className="text-slate-400 text-xs">Film dengan jumlah vote ulasan tertinggi dan antusiasme penonton terbesar</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-slate-400">
+                {filteredPopularReleased.length} Judul
+              </span>
+              <button
+                onClick={() => {
+                  setSortBy('votes');
+                  scrollToDatabase();
+                }}
+                className="text-xs font-bold text-slate-300 hover:text-white bg-slate-900 border border-slate-700 hover:border-[#FF2E7E] px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 shrink-0"
+              >
+                <span>Lihat Semua</span>
+                <ChevronRight className="w-3.5 h-3.5 text-[#FF2E7E]" />
+              </button>
+            </div>
+          </div>
+
+          {isLoadingFilms && films.length === 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <FilmCardSkeleton key={`popular-film-skeleton-${i}`} />
+              ))}
+            </div>
+          ) : filteredPopularReleased.length === 0 ? (
+            <div className="text-center py-8 bg-slate-900/30 rounded-2xl border border-slate-800/80">
+              <p className="text-slate-400 text-xs">
+                Belum ada film populer dalam kurasi untuk genre <strong className="text-white">{activeCategoryConfig.name}</strong>.
+              </p>
+              <button
+                onClick={() => setSelectedGenre('all')}
+                className="mt-2 text-xs font-bold text-[#FF2E7E] hover:underline"
+              >
+                Lihat semua film populer
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-4">
+              {filteredPopularReleased.slice(0, 8).map(film => (
+                <div
+                  key={film.id}
+                  id={`popular-film-card-${film.id}`}
+                  onClick={() => navigateTo('film-detail', { filmId: film.id })}
+                  className="bg-[#171A1F] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FF2E7E]/70 hover:shadow-[0_0_24px_rgba(255,46,126,0.18)] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
+                >
+                  <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
+                    <img
+                      src={film.poster}
+                      alt={film.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent opacity-80" />
+
+                    <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/30 text-[#FFD000] text-[11px] font-black flex items-center gap-1">
+                      <Star className="w-3 h-3 fill-current text-[#FFD000]" />
+                      <span>{film.skorSotoy.toFixed(1)}</span>
+                    </div>
+
+                    <span className="absolute top-2 right-2 bg-[#FF2E7E] text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow">
+                      HOT
+                    </span>
+
+                    <div className="absolute bottom-2 left-2 right-2 text-[10px] text-slate-300 font-bold">
+                      {film.totalVotes} votes
+                    </div>
+                  </div>
+
+                  <div className="p-3">
+                    <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-1 mb-1">
+                      {film.title}
+                    </h3>
+                    <div className="flex flex-wrap gap-1">
+                      {film.genres.slice(0, 2).map(g => (
+                        <span
+                          key={g}
+                          onClick={e => {
+                            e.stopPropagation();
+                            setSelectedGenre(g);
+                          }}
+                          className={`text-[9px] font-medium px-1.5 py-0.2 rounded ${
+                            selectedGenre.toLowerCase() === g.toLowerCase()
+                              ? 'bg-[#FF2E7E] text-white font-bold'
+                              : 'text-slate-400 bg-slate-800/80 hover:text-white'
+                          }`}
+                        >
+                          {g}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ========================================================================= */}
+        {/* SECTION 3: POPULAR THIS WEEK (Capped to 8 items) */}
+        {/* ========================================================================= */}
+        <section id="popular-this-week-section" className="space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800 flex-wrap gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#FF2E7E]/20 text-[#FF2E7E] flex items-center justify-center">
+                <TrendingUp className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="font-display font-black text-xl text-white">Popular This Week</h2>
+                <p className="text-slate-400 text-xs">Paling banyak dibicarakan di Buzz Feed dan media sosial pekan ini</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-slate-400">
+                {filteredPopularThisWeek.length} Judul
+              </span>
+              <button
+                onClick={() => {
+                  setSortBy('rating');
+                  scrollToDatabase();
+                }}
+                className="text-xs font-bold text-slate-300 hover:text-white bg-slate-900 border border-slate-700 hover:border-[#FF2E7E] px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 shrink-0"
+              >
+                <span>Lihat Semua</span>
+                <ChevronRight className="w-3.5 h-3.5 text-[#FF2E7E]" />
+              </button>
+            </div>
+          </div>
+
+          {isLoadingFilms && films.length === 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <FilmCardSkeleton key={`trending-film-skeleton-${i}`} />
+              ))}
+            </div>
+          ) : filteredPopularThisWeek.length === 0 ? (
+            <div className="text-center py-8 bg-slate-900/30 rounded-2xl border border-slate-800/80">
+              <p className="text-slate-400 text-xs">
+                Tidak ada film trending pekan ini untuk genre <strong className="text-white">{activeCategoryConfig.name}</strong>.
+              </p>
+              <button
+                onClick={() => setSelectedGenre('all')}
+                className="mt-2 text-xs font-bold text-[#FF2E7E] hover:underline"
+              >
+                Lihat semua film trending
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-4">
+              {filteredPopularThisWeek.slice(0, 8).map(film => (
+                <div
+                  key={film.id}
+                  id={`trending-film-card-${film.id}`}
+                  onClick={() => navigateTo('film-detail', { filmId: film.id })}
+                  className="bg-[#171A1F] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FF2E7E]/70 hover:shadow-[0_0_24px_rgba(255,46,126,0.18)] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
+                >
+                  <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
+                    <img
+                      src={film.poster}
+                      alt={film.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent opacity-80" />
+
+                    <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/30 text-[#FFD000] text-[11px] font-black flex items-center gap-1">
+                      <Star className="w-3 h-3 fill-current text-[#FFD000]" />
+                      <span>{film.skorSotoy.toFixed(1)}</span>
+                    </div>
+
+                    <span className="absolute top-2 right-2 bg-cyan-500 text-slate-950 text-[9px] font-black uppercase px-2 py-0.5 rounded shadow">
+                      TRENDING
+                    </span>
+
+                    <div className="absolute bottom-2 left-2 right-2 text-[10px] text-slate-300 font-bold">
+                      {film.whereToWatch[0]?.platform}
+                    </div>
+                  </div>
+
+                  <div className="p-3">
+                    <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-1 mb-1">
+                      {film.title}
+                    </h3>
+                    <div className="flex flex-wrap gap-1">
+                      {film.genres.slice(0, 2).map(g => (
+                        <span
+                          key={g}
+                          onClick={e => {
+                            e.stopPropagation();
+                            setSelectedGenre(g);
+                          }}
+                          className={`text-[9px] font-medium px-1.5 py-0.2 rounded ${
+                            selectedGenre.toLowerCase() === g.toLowerCase()
+                              ? 'bg-[#FF2E7E] text-slate-950 font-bold'
+                              : 'text-slate-400 bg-slate-800/80 hover:text-white'
+                          }`}
+                        >
+                          {g}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ========================================================================= */}
+        {/* SECTION: SOTOY LEADERBOARD (SPLIT KRITIKUS & WARGA) */}
+        {/* ========================================================================= */}
+        <section id="sotoy-leaderboard-section" className="space-y-6 pt-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 text-[#FF2E7E] flex items-center justify-center shadow-lg">
+                <Trophy className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="font-display font-black text-2xl text-white tracking-tight">
+                  Sotoy Leaderboard
+                </h2>
+                <p className="text-slate-400 text-xs">
+                  Peringkat teratas kontributor ulasan sinema berdasarkan jumlah ulasan dan reaksi apresiasi
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => navigateTo('panduan-leaderboard')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-bold border border-slate-700 hover:border-[#FF2E7E] transition-all shrink-0 self-start sm:self-auto shadow-sm"
+            >
+              <Info className="w-4 h-4 text-[#FF2E7E]" />
+              <span>Panduan Leaderboard</span>
+            </button>
+          </div>
+
+          {/* Two Side-by-side Panels on Desktop */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* Panel 1: Leaderboard Kritikus */}
+            <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#FF2E7E]" />
+                  <h3 className="font-display font-black text-base text-white">
+                    Leaderboard Kritikus
+                  </h3>
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-[#FF2E7E]/20 text-[#FF2E7E] border border-[#FF2E7E]/30">
+                  Si Paling Sotoy
+                </span>
+              </div>
+
+              {criticLeaderboard.length === 0 ? (
+                <div className="text-center py-8 bg-slate-900/40 rounded-2xl border border-slate-800/80">
+                  <p className="text-slate-400 text-xs">Belum ada Kritikus Terverifikasi di leaderboard.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {criticLeaderboard.map(entry => (
+                    <div
+                      key={entry.user.id}
+                      onClick={() => navigateTo('user-profile', { userId: entry.user.id })}
+                      className="flex items-center justify-between p-3 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-[#FF2E7E]/50 transition-all cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        {/* Rank Badge - Pink emphasis */}
+                        <div className="w-7 h-7 rounded-xl bg-[#FF2E7E] text-slate-950 font-black text-xs flex items-center justify-center shrink-0 shadow-md">
+                          #{entry.rank}
+                        </div>
+
+                        <img
+                          src={entry.user.avatar}
+                          alt={entry.user.name}
+                          className="w-10 h-10 rounded-xl object-cover ring-1 ring-white/10 group-hover:ring-[#FF2E7E] transition-all shrink-0"
+                        />
+
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-xs text-white group-hover:text-[#FF2E7E] transition-colors truncate">
+                              {entry.user.name}
+                            </span>
+                            <RoleBadge role={entry.user.role} size="xs" />
+                          </div>
+                          <div className="text-[10px] text-slate-400 truncate">
+                            {entry.user.handle} • {entry.totalReviews} ulasan
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <div className="text-xs font-black text-[#FF2E7E] flex items-center justify-end gap-1">
+                          <Flame className="w-3.5 h-3.5 fill-current" />
+                          <span>{entry.score} pts</span>
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          {entry.helpfulVotes} suka ulasan
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Panel 2: Leaderboard Warga */}
+            <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-cyan-400" />
+                  <h3 className="font-display font-black text-base text-white">
+                    Leaderboard Warga
+                  </h3>
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                  Warga Sotoy
+                </span>
+              </div>
+
+              {wargaLeaderboard.length === 0 ? (
+                <div className="text-center py-8 bg-slate-900/40 rounded-2xl border border-slate-800/80">
+                  <p className="text-slate-400 text-xs">Belum ada Warga Sotoy di leaderboard.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {wargaLeaderboard.map(entry => (
+                    <div
+                      key={entry.user.id}
+                      onClick={() => navigateTo('user-profile', { userId: entry.user.id })}
+                      className="flex items-center justify-between p-3 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-cyan-400/50 transition-all cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        {/* Rank Badge - Pink emphasis */}
+                        <div className="w-7 h-7 rounded-xl bg-[#FF2E7E] text-slate-950 font-black text-xs flex items-center justify-center shrink-0 shadow-md">
+                          #{entry.rank}
+                        </div>
+
+                        <img
+                          src={entry.user.avatar}
+                          alt={entry.user.name}
+                          className="w-10 h-10 rounded-xl object-cover ring-1 ring-white/10 group-hover:ring-cyan-400 transition-all shrink-0"
+                        />
+
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-xs text-white group-hover:text-cyan-400 transition-colors truncate">
+                              {entry.user.name}
+                            </span>
+                            <RoleBadge role={entry.user.role} size="xs" />
+                          </div>
+                          <div className="text-[10px] text-slate-400 truncate">
+                            {entry.user.handle} • {entry.totalReviews} ulasan
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <div className="text-xs font-black text-[#FF2E7E] flex items-center justify-end gap-1">
+                          <Flame className="w-3.5 h-3.5 fill-current" />
+                          <span>{entry.score} pts</span>
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          {entry.helpfulVotes} suka ulasan
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+          </div>
+        </section>
+
+        {/* ========================================================================= */}
+        {/* POPULAR REVIEWS SECTION */}
+        {/* ========================================================================= */}
+        <section id="popular-reviews-section" className="pt-2 space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
             <div>
-              <h2 className="font-display font-black text-xl text-white flex items-center gap-2">
-                <Search className="w-5 h-5 text-[#FF2E7E]" />
-                <span>Film Search & Ratings</span>
+              <h2 className="font-display font-black text-xl sm:text-2xl text-white flex items-center gap-2">
+                <Star className="w-5 h-5 text-[#FF2E7E] fill-current" />
+                <span>Popular Reviews</span>
               </h2>
-              <p className="text-slate-400 text-xs mt-0.5">
+              <p className="text-slate-400 text-xs">Ulasan mendalam dan penilaian skor film dari kritikus & komunitas</p>
+            </div>
+
+            {/* Filter critic vs warga */}
+            <div className="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1 text-xs">
+              <button
+                onClick={() => setReviewsFilterRole('all')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${
+                  reviewsFilterRole === 'all'
+                    ? 'bg-[#FF2E7E] text-white shadow'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Semua
+              </button>
+              <button
+                onClick={() => setReviewsFilterRole('critic')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${
+                  reviewsFilterRole === 'critic'
+                    ? 'bg-[#FF2E7E] text-slate-950 shadow'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Si Paling Sotoy
+              </button>
+              <button
+                onClick={() => setReviewsFilterRole('warga')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${
+                  reviewsFilterRole === 'warga'
+                    ? 'bg-[#FF2E7E] text-slate-950 shadow'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Warga Sotoy
+              </button>
+            </div>
+          </div>
+
+          {/* Reviews Feed List Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filteredReviews.map(rev => {
+              const targetFilm = films.find(f => f.id === rev.filmId);
+
+              return (
+                <div
+                  key={rev.id}
+                  id={`popular-review-item-${rev.id}`}
+                  className="bg-[#171A1F] border border-slate-800/80 rounded-3xl p-5 sm:p-6 hover:border-slate-700 transition-all shadow-xl flex flex-col justify-between space-y-4"
+                >
+                  <div className="space-y-4">
+                    {/* Reviewer Header */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={rev.userAvatar}
+                          alt={rev.userName}
+                          className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/10"
+                        />
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-sm text-white">{rev.userName}</span>
+                            {rev.userRole && (
+                              <RoleBadge role={rev.userRole} size="xs" />
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-400" title={formatFullDateTime(rev.createdAt)}>{formatRelativeTime(rev.createdAt)}</div>
+                        </div>
+                      </div>
+
+                      {/* Star Rating Badge */}
+                      <div className="bg-black/60 border border-[#FFD000]/40 px-3 py-1 rounded-xl text-[#FFD000] font-black text-xs sm:text-sm flex items-center gap-1 shadow-md">
+                        <Star className="w-4 h-4 fill-current text-[#FFD000]" />
+                        <span>{rev.score.toFixed(1)}</span>
+                        <span className="text-slate-500 font-normal text-[10px]">/ 10.0</span>
+                      </div>
+                    </div>
+
+                    {/* Film Target Reference Box */}
+                    {targetFilm && (
+                      <div
+                        onClick={() => navigateTo('film-detail', { filmId: targetFilm.id })}
+                        className="flex items-center gap-3 p-2.5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-[#FF2E7E]/50 cursor-pointer group transition-colors"
+                      >
+                        <img
+                          src={targetFilm.poster}
+                          alt={targetFilm.title}
+                          className="w-10 h-14 object-cover rounded-lg shrink-0 group-hover:scale-105 transition-transform"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[10px] text-slate-400 uppercase font-bold">Ulasan untuk:</div>
+                          <div className="text-xs font-bold text-white group-hover:text-[#FF2E7E] truncate">
+                            {targetFilm.title} ({targetFilm.year})
+                          </div>
+                          <div className="text-[10px] text-slate-400 truncate">
+                            {targetFilm.director} • {targetFilm.genres.join(', ')}
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white" />
+                      </div>
+                    )}
+
+                    {/* Review Headline & Body */}
+                    <div className="space-y-1.5">
+                      <h3 className="font-display font-black text-base text-white leading-snug">
+                        "{rev.headline}"
+                      </h3>
+                      <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                        {rev.reviewText}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Review Card Footer */}
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-800/80 text-xs text-slate-400">
+                    <div className="flex items-center gap-4">
+                      <span className="flex items-center gap-1 text-[#FF2E7E] font-bold">
+                        <Heart className="w-3.5 h-3.5 fill-current" />
+                        {rev.likes} suka ulasan ini
+                      </span>
+                    </div>
+                    {targetFilm && (
+                      <button
+                        onClick={() => {
+                          if (!isLoggedIn) setLoginModalOpen(true);
+                          else setRatingModalFilm(targetFilm);
+                        }}
+                        className="text-[11px] font-bold text-[#FF2E7E] hover:underline"
+                      >
+                        Tulis Ulasan Tandingan →
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* ========================================================================= */}
+        {/* SECTION: BROWSE ALL DATABASE (SEARCH, FILTERS, RESULTS GRID) - MOVED TO BOTTOM */}
+        {/* ========================================================================= */}
+        <section id="database-lengkap" className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6 pt-6 scroll-mt-20">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+            <div>
+              <h2 className="font-display font-black text-2xl text-white flex items-center gap-2.5">
+                <Search className="w-6 h-6 text-[#FF2E7E]" />
+                <span>Jelajahi Database Lengkap</span>
+              </h2>
+              <p className="text-slate-400 text-xs mt-1">
                 Cari judul film, sutradara, atau filter berdasarkan genre, rating bintang, dan format tayangan
               </p>
             </div>
@@ -506,7 +1079,7 @@ export const FilmDatabasePage: React.FC = () => {
           </div>
 
           {/* Filter Toolbar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800 text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-slate-800 text-xs">
             {/* Format Pills */}
             <div
               className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none scroll-smooth touch-pan-x"
@@ -775,613 +1348,6 @@ export const FilmDatabasePage: React.FC = () => {
                 })}
               </div>
             )}
-          </div>
-        </section>
-
-        {/* Global Page Ad Banner */}
-        <AdBannerSlot variant="leaderboard" />
-
-        {/* ========================================================================= */}
-        {/* SECTION 1: RECENT RELEASED */}
-        {/* ========================================================================= */}
-        <section id="recent-released-section" className="space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-cyan-500/20 text-[#FF2E7E] flex items-center justify-center">
-                <Clock className="w-4 h-4" />
-              </div>
-              <div>
-                <h2 className="font-display font-black text-xl text-white">Recent Released</h2>
-                <p className="text-slate-400 text-xs">Film bioskop dan tayangan serial yang baru saja dirilis resmi</p>
-              </div>
-            </div>
-            <span className="text-xs font-bold text-[#FF2E7E]">
-              {filteredRecentReleased.length} Judul {selectedGenre !== 'all' ? `(${activeCategoryConfig.name})` : 'Rilis Baru'}
-            </span>
-          </div>
-
-          {isLoadingFilms && films.length === 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <FilmCardSkeleton key={`recent-film-skeleton-${i}`} />
-              ))}
-            </div>
-          ) : filteredRecentReleased.length === 0 ? (
-            <div className="text-center py-8 bg-slate-900/30 rounded-2xl border border-slate-800/80">
-              <p className="text-slate-400 text-xs">
-                Tidak ada film rilis baru untuk genre <strong className="text-white">{activeCategoryConfig.name}</strong>.
-              </p>
-              <button
-                onClick={() => setSelectedGenre('all')}
-                className="mt-2 text-xs font-bold text-[#FF2E7E] hover:underline"
-              >
-                Lihat semua rilis baru
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {filteredRecentReleased.map(film => (
-                <div
-                  key={film.id}
-                  id={`recent-film-card-${film.id}`}
-                  onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                  className="bg-[#171A1F] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FF2E7E]/70 hover:shadow-[0_0_24px_rgba(255,208,0,0.18)] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
-                >
-                  <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
-                    <img
-                      src={film.poster}
-                      alt={film.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent opacity-80" />
-
-                    <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FF2E7E]/50 text-[#FF2E7E] text-[11px] font-medium flex items-center gap-1">
-                      <Star className="w-3 h-3 fill-current" />
-                      <span>{film.skorSotoy.toFixed(1)}</span>
-                    </div>
-
-                    <span className="absolute top-2 right-2 bg-cyan-500 text-slate-950 text-[9px] font-black uppercase px-2 py-0.5 rounded shadow">
-                      NEW
-                    </span>
-
-                    <div className="absolute bottom-2 left-2 right-2 text-[10px] text-slate-300 font-bold">
-                      {film.duration} • {film.year}
-                    </div>
-                  </div>
-
-                  <div className="p-3">
-                    <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-1 mb-1">
-                      {film.title}
-                    </h3>
-                    <div className="flex flex-wrap gap-1">
-                      {film.genres.slice(0, 2).map(g => (
-                        <span
-                          key={g}
-                          onClick={e => {
-                            e.stopPropagation();
-                            setSelectedGenre(g);
-                          }}
-                          className={`text-[9px] font-medium px-1.5 py-0.2 rounded ${
-                            selectedGenre.toLowerCase() === g.toLowerCase()
-                              ? 'bg-cyan-500 text-slate-950 font-bold'
-                              : 'text-slate-400 bg-slate-800/80 hover:text-white'
-                          }`}
-                        >
-                          {g}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* ========================================================================= */}
-        {/* SECTION 2: POPULAR RELEASED */}
-        {/* ========================================================================= */}
-        <section id="popular-released-section" className="space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-pink-500/20 text-[#FF2E7E] flex items-center justify-center">
-                <Flame className="w-4 h-4" />
-              </div>
-              <div>
-                <h2 className="font-display font-black text-xl text-white">Popular Released</h2>
-                <p className="text-slate-400 text-xs">Film dengan jumlah vote ulasan tertinggi dan antusiasme penonton terbesar</p>
-              </div>
-            </div>
-            <span className="text-xs font-bold text-[#FF2E7E]">
-              {filteredPopularReleased.length} Judul {selectedGenre !== 'all' ? `(${activeCategoryConfig.name})` : 'Paling Banyak Diulas'}
-            </span>
-          </div>
-
-          {isLoadingFilms && films.length === 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <FilmCardSkeleton key={`popular-film-skeleton-${i}`} />
-              ))}
-            </div>
-          ) : filteredPopularReleased.length === 0 ? (
-            <div className="text-center py-8 bg-slate-900/30 rounded-2xl border border-slate-800/80">
-              <p className="text-slate-400 text-xs">
-                Belum ada film populer dalam kurasi untuk genre <strong className="text-white">{activeCategoryConfig.name}</strong>.
-              </p>
-              <button
-                onClick={() => setSelectedGenre('all')}
-                className="mt-2 text-xs font-bold text-[#FF2E7E] hover:underline"
-              >
-                Lihat semua film populer
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {filteredPopularReleased.map(film => (
-                <div
-                  key={film.id}
-                  id={`popular-film-card-${film.id}`}
-                  onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                  className="bg-[#171A1F] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FF2E7E]/70 hover:shadow-[0_0_24px_rgba(255,208,0,0.18)] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
-                >
-                  <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
-                    <img
-                      src={film.poster}
-                      alt={film.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent opacity-80" />
-
-                    <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FF2E7E]/50 text-[#FF2E7E] text-[11px] font-medium flex items-center gap-1">
-                      <Star className="w-3 h-3 fill-current" />
-                      <span>{film.skorSotoy.toFixed(1)}</span>
-                    </div>
-
-                    <span className="absolute top-2 right-2 bg-[#FF2E7E] text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow">
-                      HOT
-                    </span>
-
-                    <div className="absolute bottom-2 left-2 right-2 text-[10px] text-slate-300 font-bold">
-                      {film.totalVotes} votes
-                    </div>
-                  </div>
-
-                  <div className="p-3">
-                    <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-1 mb-1">
-                      {film.title}
-                    </h3>
-                    <div className="flex flex-wrap gap-1">
-                      {film.genres.slice(0, 2).map(g => (
-                        <span
-                          key={g}
-                          onClick={e => {
-                            e.stopPropagation();
-                            setSelectedGenre(g);
-                          }}
-                          className={`text-[9px] font-medium px-1.5 py-0.2 rounded ${
-                            selectedGenre.toLowerCase() === g.toLowerCase()
-                              ? 'bg-[#FF2E7E] text-white font-bold'
-                              : 'text-slate-400 bg-slate-800/80 hover:text-white'
-                          }`}
-                        >
-                          {g}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* ========================================================================= */}
-        {/* SECTION 3: POPULAR THIS WEEK */}
-        {/* ========================================================================= */}
-        <section id="popular-this-week-section" className="space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-[#FF2E7E] flex items-center justify-center">
-                <TrendingUp className="w-4 h-4" />
-              </div>
-              <div>
-                <h2 className="font-display font-black text-xl text-white">Popular This Week</h2>
-                <p className="text-slate-400 text-xs">Paling banyak dibicarakan di Buzz Feed dan media sosial pekan ini</p>
-              </div>
-            </div>
-            <span className="text-xs font-bold text-[#FF2E7E]">
-              {filteredPopularThisWeek.length} Judul {selectedGenre !== 'all' ? `(${activeCategoryConfig.name})` : 'Trending Minggu Ini'}
-            </span>
-          </div>
-
-          {isLoadingFilms && films.length === 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <FilmCardSkeleton key={`trending-film-skeleton-${i}`} />
-              ))}
-            </div>
-          ) : filteredPopularThisWeek.length === 0 ? (
-            <div className="text-center py-8 bg-slate-900/30 rounded-2xl border border-slate-800/80">
-              <p className="text-slate-400 text-xs">
-                Tidak ada film trending pekan ini untuk genre <strong className="text-white">{activeCategoryConfig.name}</strong>.
-              </p>
-              <button
-                onClick={() => setSelectedGenre('all')}
-                className="mt-2 text-xs font-bold text-[#FF2E7E] hover:underline"
-              >
-                Lihat semua film trending
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {filteredPopularThisWeek.map(film => (
-                <div
-                  key={film.id}
-                  id={`trending-film-card-${film.id}`}
-                  onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                  className="bg-[#171A1F] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FF2E7E]/70 hover:shadow-[0_0_24px_rgba(255,208,0,0.18)] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
-                >
-                  <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
-                    <img
-                      src={film.poster}
-                      alt={film.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent opacity-80" />
-
-                    <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FF2E7E]/50 text-[#FF2E7E] text-[11px] font-medium flex items-center gap-1">
-                      <Star className="w-3 h-3 fill-current" />
-                      <span>{film.skorSotoy.toFixed(1)}</span>
-                    </div>
-
-                    <span className="absolute top-2 right-2 bg-amber-400 text-slate-950 text-[9px] font-black uppercase px-2 py-0.5 rounded shadow">
-                      TRENDING
-                    </span>
-
-                    <div className="absolute bottom-2 left-2 right-2 text-[10px] text-slate-300 font-bold">
-                      {film.whereToWatch[0]?.platform}
-                    </div>
-                  </div>
-
-                  <div className="p-3">
-                    <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-1 mb-1">
-                      {film.title}
-                    </h3>
-                    <div className="flex flex-wrap gap-1">
-                      {film.genres.slice(0, 2).map(g => (
-                        <span
-                          key={g}
-                          onClick={e => {
-                            e.stopPropagation();
-                            setSelectedGenre(g);
-                          }}
-                          className={`text-[9px] font-medium px-1.5 py-0.2 rounded ${
-                            selectedGenre.toLowerCase() === g.toLowerCase()
-                              ? 'bg-[#FF2E7E] text-slate-950 font-bold'
-                              : 'text-slate-400 bg-slate-800/80 hover:text-white'
-                          }`}
-                        >
-                          {g}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* ========================================================================= */}
-        {/* TWO-COLUMN GRID: POPULAR REVIEWS + REVIEW LEADERBOARD */}
-        {/* ========================================================================= */}
-        <section id="reviews-and-leaderboard-grid" className="pt-4">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            
-            {/* LEFT COLUMN: POPULAR REVIEWS (7 Columns) */}
-            <div className="lg:col-span-7 space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
-                <div>
-                  <h2 className="font-display font-black text-xl sm:text-2xl text-white flex items-center gap-2">
-                    <Star className="w-5 h-5 text-[#FF2E7E] fill-current" />
-                    <span>Popular Reviews</span>
-                  </h2>
-                  <p className="text-slate-400 text-xs">Ulasan mendalam dan penilaian skor film dari kritikus & komunitas</p>
-                </div>
-
-                {/* Filter critic vs warga */}
-                <div className="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1 text-xs">
-                  <button
-                    onClick={() => setReviewsFilterRole('all')}
-                    className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${
-                      reviewsFilterRole === 'all'
-                        ? 'bg-[#FF2E7E] text-white shadow'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    Semua
-                  </button>
-                  <button
-                    onClick={() => setReviewsFilterRole('critic')}
-                    className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${
-                      reviewsFilterRole === 'critic'
-                        ? 'bg-[#FF2E7E] text-slate-950 shadow'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    Si Paling Sotoy
-                  </button>
-                  <button
-                    onClick={() => setReviewsFilterRole('warga')}
-                    className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${
-                      reviewsFilterRole === 'warga'
-                        ? 'bg-[#FF2E7E] text-slate-950 shadow'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    Warga Sotoy
-                  </button>
-                </div>
-              </div>
-
-              {/* Reviews Feed List */}
-              <div className="space-y-4">
-                {filteredReviews.map(rev => {
-                  const targetFilm = films.find(f => f.id === rev.filmId);
-
-                  return (
-                    <div
-                      key={rev.id}
-                      id={`popular-review-item-${rev.id}`}
-                      className="bg-[#171A1F] border border-slate-800/80 rounded-3xl p-5 sm:p-6 hover:border-slate-700 transition-all shadow-xl space-y-4"
-                    >
-                      {/* Reviewer Header */}
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={rev.userAvatar}
-                            alt={rev.userName}
-                            className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/10"
-                          />
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-sm text-white">{rev.userName}</span>
-                              {rev.userRole && (
-                                <RoleBadge role={rev.userRole} size="xs" />
-                              )}
-                            </div>
-                            <div className="text-[11px] text-slate-400" title={formatFullDateTime(rev.createdAt)}>{formatRelativeTime(rev.createdAt)}</div>
-                          </div>
-                        </div>
-
-                        {/* Star Rating Badge */}
-                        <div className="bg-black/60 border border-[#FF2E7E]/40 px-3 py-1 rounded-xl text-[#FF2E7E] font-medium text-xs sm:text-sm flex items-center gap-1 shadow-md">
-                          <Star className="w-4 h-4 fill-current" />
-                          <span>{rev.score.toFixed(1)}</span>
-                          <span className="text-slate-500 text-[10px]">/ 10.0</span>
-                        </div>
-                      </div>
-
-                      {/* Film Target Reference Box */}
-                      {targetFilm && (
-                        <div
-                          onClick={() => navigateTo('film-detail', { filmId: targetFilm.id })}
-                          className="flex items-center gap-3 p-2.5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-[#FF2E7E]/50 cursor-pointer group transition-colors"
-                        >
-                          <img
-                            src={targetFilm.poster}
-                            alt={targetFilm.title}
-                            className="w-10 h-14 object-cover rounded-lg shrink-0 group-hover:scale-105 transition-transform"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[10px] text-slate-400 uppercase font-bold">Ulasan untuk:</div>
-                            <div className="text-xs font-bold text-white group-hover:text-[#FF2E7E] truncate">
-                              {targetFilm.title} ({targetFilm.year})
-                            </div>
-                            <div className="text-[10px] text-slate-400 truncate">
-                              {targetFilm.director} • {targetFilm.genres.join(', ')}
-                            </div>
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white" />
-                        </div>
-                      )}
-
-                      {/* Review Headline & Body */}
-                      <div className="space-y-1.5">
-                        <h3 className="font-display font-black text-base text-white leading-snug">
-                          "{rev.headline}"
-                        </h3>
-                        <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
-                          {rev.reviewText}
-                        </p>
-                      </div>
-
-                      {/* Review Card Footer */}
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs text-slate-400">
-                        <div className="flex items-center gap-4">
-                          <span className="flex items-center gap-1 text-[#FF2E7E] font-bold">
-                            <Heart className="w-3.5 h-3.5 fill-current" />
-                            {rev.likes} suka ulasan ini
-                          </span>
-                        </div>
-                        {targetFilm && (
-                          <button
-                            onClick={() => {
-                              if (!isLoggedIn) setLoginModalOpen(true);
-                              else setRatingModalFilm(targetFilm);
-                            }}
-                            className="text-[11px] font-bold text-[#FF2E7E] hover:underline"
-                          >
-                            Tulis Ulasan Tandingan →
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* RIGHT COLUMN: REVIEW LEADERBOARD & TOP REVIEWER (5 Columns) */}
-            <div className="lg:col-span-5 space-y-6">
-              
-              {/* TOP REVIEWER OF THE MONTH SPOTLIGHT */}
-              <div
-                id="top-reviewer-spotlight"
-                className="bg-gradient-to-br from-[#1C162E] via-[#16172E] to-[#171A1F] border-2 border-[#FF2E7E]/50 rounded-3xl p-6 shadow-2xl relative overflow-hidden"
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF2E7E]/10 rounded-full blur-2xl pointer-events-none" />
-
-                <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-800">
-                  <Trophy className="w-5 h-5 text-[#FF2E7E]" />
-                  <div>
-                    <h3 className="font-display font-black text-sm uppercase tracking-wider text-white">
-                      Top Reviewer Spotlight
-                    </h3>
-                    <span className="text-[10px] text-[#FF2E7E] font-bold">Kritikus Terpopuler Bulan Ini</span>
-                  </div>
-                </div>
-
-                {/* Profile Card */}
-                <div className="flex items-center gap-4 mb-4">
-                  <img
-                    src={topReviewers[0].avatar}
-                    alt={topReviewers[0].name}
-                    className="w-16 h-16 rounded-2xl object-cover ring-2 ring-[#FF2E7E] shadow-lg"
-                  />
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <h4 className="font-display font-black text-lg text-white">
-                        {topReviewers[0].name}
-                      </h4>
-                      <UserCheck className="w-4 h-4 text-[#FF2E7E]" />
-                    </div>
-                    <div className="text-xs text-slate-400">{topReviewers[0].handle}</div>
-                    <span className="inline-block mt-1 bg-[#FF2E7E]/20 text-[#FF2E7E] border border-[#FF2E7E]/40 text-[10px] font-black px-2 py-0.5 rounded">
-                      SI PALING SOTOY (CRITIC)
-                    </span>
-                  </div>
-                </div>
-
-                {/* Reviewer Description / Editorial Philosophy */}
-                <div className="bg-black/40 border border-slate-800/80 rounded-2xl p-4 mb-4 space-y-2">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Filosofi & Pendekatan Review:
-                  </div>
-                  <p className="text-slate-300 text-xs leading-relaxed italic">
-                    "{topReviewers[0].bio}"
-                  </p>
-                </div>
-
-                {/* Stats Grid */}
-                <div className="grid grid-cols-3 gap-2 text-center pt-1 border-t border-slate-800">
-                  <div className="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
-                    <div className="text-base font-black text-white">{topReviewers[0].totalReviews}</div>
-                    <div className="text-[9px] text-slate-400 font-bold uppercase">Ulasan</div>
-                  </div>
-                  <div className="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
-                    <div className="text-base font-black text-[#FF2E7E]">{topReviewers[0].helpfulVotes}</div>
-                    <div className="text-[9px] text-slate-400 font-bold uppercase">Suka</div>
-                  </div>
-                  <div className="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
-                    <div className="text-base font-medium text-[#FF2E7E]">★ {topReviewers[0].avgScoreGiven}</div>
-                    <div className="text-[9px] text-slate-400 font-bold uppercase">Rerata Skor</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* REVIEW LEADERBOARD LIST */}
-              <div id="review-leaderboard-card" className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                  <div className="flex items-center gap-2">
-                    <Award className="w-5 h-5 text-[#FF2E7E]" />
-                    <h3 className="font-display font-black text-base text-white">
-                      Review Leaderboard
-                    </h3>
-                  </div>
-                  <span className="text-[10px] font-black uppercase text-slate-400 bg-slate-900 px-2 py-0.5 rounded">
-                    Musim Ini
-                  </span>
-                </div>
-
-                {/* List of top 5 reviewers */}
-                <div className="space-y-3">
-                  {topReviewers.map((user: any, idx: number) => (
-                    <div
-                      key={user.id}
-                      id={`leaderboard-item-${user.id}`}
-                      className={`flex items-center justify-between p-3 rounded-2xl border transition-colors ${
-                        idx === 0
-                          ? 'bg-[#FF2E7E]/10 border-[#FF2E7E]/30'
-                          : idx === 1
-                          ? 'bg-[#FF2E7E]/10 border-[#FF2E7E]/30'
-                          : idx === 2
-                          ? 'bg-cyan-500/10 border-cyan-500/30'
-                          : 'bg-slate-900/50 border-slate-800/80'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        {/* Rank Badge */}
-                        <div
-                          className={`w-6 h-6 rounded-lg font-black text-xs flex items-center justify-center ${
-                            idx === 0
-                              ? 'bg-[#FF2E7E] text-slate-950 shadow-md'
-                              : idx === 1
-                              ? 'bg-[#FF2E7E] text-white shadow-md'
-                              : idx === 2
-                              ? 'bg-[#FF2E7E] text-slate-950 shadow-md'
-                              : 'bg-slate-800 text-slate-400'
-                          }`}
-                        >
-                          {user.rank}
-                        </div>
-
-                        <img
-                          src={user.avatar}
-                          alt={user.name}
-                          className="w-9 h-9 rounded-xl object-cover ring-1 ring-white/10"
-                        />
-
-                         <div>
-                          <div className="flex items-center gap-1.5">
-                            <div className="text-xs font-bold text-white line-clamp-1">
-                              {user.name}
-                            </div>
-                            <RoleBadge role={user.role as UserRole} size="xs" />
-                          </div>
-                          <div className="text-[10px] text-slate-400">
-                            {getRoleBadgeStyle(user.role as UserRole).name} • {user.totalReviews} ulasan
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <div className="text-xs font-medium text-[#FF2E7E]">
-                          ★ {user.avgScoreGiven}
-                        </div>
-                        <div className="text-[10px] text-slate-400">
-                          {user.helpfulVotes} likes
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* How to become a top reviewer info */}
-                <div className="mt-4 p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-white">
-                    <Info className="w-3.5 h-3.5 text-[#FF2E7E]" />
-                    <span>Mau Jadi Si Paling Sotoy (Verified Critic)?</span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 leading-relaxed">
-                    Tulis ulasan berbobot minimal 10 ulasan film dengan argumen sinematik mendalam. Tim redaksi akan memverifikasi dan menyematkan badge resmi Si Paling Sotoy!
-                  </p>
-                </div>
-              </div>
-
-              {/* Sidebar Infeed Ad */}
-              <AdBannerSlot variant="sidebar" />
-            </div>
           </div>
         </section>
 

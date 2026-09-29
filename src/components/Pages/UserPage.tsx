@@ -38,6 +38,8 @@ import {
   ChevronRight,
   TrendingUp,
   Flame,
+  Trophy,
+  Info,
   Layers,
   Camera,
   Users,
@@ -63,6 +65,7 @@ import { StarRating } from '../Common/StarRating';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
 import { BuzzImageAttachment } from '../Buzz/BuzzImageAttachment';
+import { getUserRankInRole } from '../../utils/leaderboard';
 
 const AdminDashboard = React.lazy(() =>
   import('../Admin/AdminDashboard').then(m => ({ default: m.AdminDashboard }))
@@ -176,6 +179,11 @@ export const UserPage: React.FC = () => {
     : (isLoggedIn ? currentUser : GUEST_USER);
 
   const isOwnProfile = isLoggedIn && currentUser.id === targetUser.id;
+
+  const rankInfo = React.useMemo(() => {
+    if (!targetUser) return null;
+    return getUserRankInRole(targetUser, allUsers, ratings);
+  }, [targetUser, allUsers, ratings]);
 
   // Follow Modal State: 'followers' | 'following' | 'discover' | null
   const [followModalType, setFollowModalType] = useState<'followers' | 'following' | 'discover' | null>(null);
@@ -783,6 +791,41 @@ export const UserPage: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Leaderboard Rank Widget (Only for Warga & Kritikus) */}
+            {rankInfo && (
+              <div className="mt-4 bg-[#171A1F] border border-[#FF2E7E]/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg relative overflow-hidden">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 text-[#FF2E7E] flex items-center justify-center shrink-0 shadow-md">
+                    <Trophy className="w-5 h-5 text-[#FF2E7E]" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-black text-[#FF2E7E]">
+                        Peringkat #{rankInfo.rank}
+                      </span>
+                      <span className="text-slate-500 text-[10px]">•</span>
+                      <span className="text-xs text-slate-300 font-bold">
+                        {targetUser.role === 'si_paling_sotoy' ? 'Leaderboard Kritikus' : 'Leaderboard Warga'}
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                      <Flame className="w-3.5 h-3.5 text-[#FF2E7E] fill-[#FF2E7E]" />
+                      <span className="font-bold text-white">{rankInfo.score} Poin Leaderboard</span>
+                      <span className="text-slate-500 text-[10px]">({rankInfo.totalReviews} ulasan, {rankInfo.helpfulVotes} suka)</span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => navigateTo('panduan-leaderboard')}
+                  className="self-start sm:self-auto px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-bold border border-slate-700 hover:border-[#FF2E7E] transition-all flex items-center gap-1.5 shrink-0"
+                >
+                  <Info className="w-3.5 h-3.5 text-[#FF2E7E]" />
+                  <span>Lihat Panduan</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

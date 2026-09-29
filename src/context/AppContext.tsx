@@ -215,6 +215,7 @@ export type AppView =
   | 'business-inquiries'
   | 'critic-submission'
   | 'critic-criteria'
+  | 'panduan-leaderboard'
   | 'admin-critic-submissions'
   | 'admin-dashboard'
   | 'writer-dashboard'
@@ -2688,6 +2689,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         break;
       case 'critic-criteria':
         targetPath = '/kriteria-kritikus';
+        break;
+      case 'panduan-leaderboard':
+        targetPath = '/panduan-leaderboard';
         break;
       case 'admin-critic-submissions':
         targetPath = '/admin/submissions';
