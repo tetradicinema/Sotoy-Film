@@ -287,8 +287,34 @@ export const FilmDetailPage: React.FC = () => {
     document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Helper to convert watch/short YouTube URLs to embed format so they can play in iframes
+  const getEmbedUrl = (url: string | undefined): string => {
+    if (!url) return '';
+    // If it's already an embed URL, return as-is
+    if (url.includes('youtube.com/embed/')) {
+      return url;
+    }
+    // If it's a standard watch URL: https://www.youtube.com/watch?v=ID
+    if (url.includes('youtube.com/watch?v=')) {
+      const parts = url.split('v=');
+      if (parts.length > 1) {
+        const id = parts[1].split('&')[0];
+        return `https://www.youtube.com/embed/${id}?autoplay=1`;
+      }
+    }
+    // If it's a short URL: https://youtu.be/ID
+    if (url.includes('youtu.be/')) {
+      const parts = url.split('youtu.be/');
+      if (parts.length > 1) {
+        const id = parts[1].split('?')[0].split('&')[0];
+        return `https://www.youtube.com/embed/${id}?autoplay=1`;
+      }
+    }
+    return url;
+  };
+
   // Trailer URL (YouTube embed or Fallback)
-  const trailerEmbed = film.trailerUrl || (
+  const trailerEmbed = getEmbedUrl(film.trailerUrl) || (
     film.id === 'film-1'
       ? 'https://www.youtube.com/embed/Way9Dexny3w?autoplay=1'
       : film.id === 'film-2'
@@ -605,12 +631,6 @@ export const FilmDetailPage: React.FC = () => {
             Pemeran & Kru ({allCastList.length + allCrewList.length})
           </button>
           <button
-            onClick={() => scrollToSection('section-stills')}
-            className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 hover:border-[#FF2E7E] hover:text-white transition-colors shrink-0"
-          >
-            Foto Adegan ({stillsList.length})
-          </button>
-          <button
             onClick={() => scrollToSection('section-articles')}
             className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 hover:border-[#FF2E7E] hover:text-white transition-colors shrink-0"
           >
@@ -849,48 +869,6 @@ export const FilmDetailPage: React.FC = () => {
                   <span>Lihat Cast & Crew Lengkap ({allCastList.length + allCrewList.length} Orang)</span>
                   <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#FF2E7E] group-hover:translate-x-1 transition-all" />
                 </button>
-              </div>
-            </div>
-
-            {/* 4. GALERI CINEMATIC STILLS */}
-            <div
-              id="section-stills"
-              className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-5"
-            >
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                <div>
-                  <h2 className="font-display font-black text-xl sm:text-2xl text-white flex items-center gap-2.5">
-                    <Camera className="w-5 h-5 text-[#FF2E7E]" />
-                    <span>Cinematic Stills Gallery</span>
-                  </h2>
-                  <p className="text-slate-400 text-xs mt-1">
-                    Tangkapan layar adegan dan foto produksi film {film.title}
-                  </p>
-                </div>
-                <span className="text-xs text-slate-400 bg-slate-900 px-3 py-1 rounded-full border border-slate-800">
-                  {stillsList.length} Foto Resolusi Tinggi
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {stillsList.map((still, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => setSelectedStill(still)}
-                    className="aspect-video rounded-2xl overflow-hidden cursor-pointer group relative border border-slate-800 bg-slate-900"
-                  >
-                    <img
-                      src={still}
-                      alt={`Production Still ${idx + 1}`}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                      <div className="p-3 bg-black/60 rounded-full text-white backdrop-blur">
-                        <Maximize2 className="w-5 h-5" />
-                      </div>
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
 
