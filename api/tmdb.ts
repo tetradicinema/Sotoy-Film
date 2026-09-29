@@ -32,12 +32,16 @@ export async function handleTmdbRequest(req: any, res: any) {
   let query = '';
   let type = 'movie';
   let id = '';
+  let list = 'popular';
+  let page = '1';
 
   if (req.query && typeof req.query === 'object') {
     action = String(req.query.action || '');
     query = String(req.query.query || '');
     type = String(req.query.type || 'movie');
     id = String(req.query.id || '');
+    list = String(req.query.list || 'popular');
+    page = String(req.query.page || '1');
   } else if (req.url) {
     try {
       const parsedUrl = new URL(req.url, 'http://localhost');
@@ -45,12 +49,15 @@ export async function handleTmdbRequest(req: any, res: any) {
       query = parsedUrl.searchParams.get('query') || '';
       type = parsedUrl.searchParams.get('type') || 'movie';
       id = parsedUrl.searchParams.get('id') || '';
+      list = parsedUrl.searchParams.get('list') || 'popular';
+      page = parsedUrl.searchParams.get('page') || '1';
     } catch {
       // ignore
     }
   }
 
   const normalizedType = type === 'tv' ? 'tv' : 'movie';
+  const pageNumber = Math.max(1, Math.min(500, parseInt(page, 10) || 1));
 
   // Determine headers and URL params for TMDB authentication
   // Supports both TMDB v3 API Key and v4 Read Access Token
@@ -141,8 +148,92 @@ export async function handleTmdbRequest(req: any, res: any) {
       return res.status(200).json(data);
     }
 
+    if (action === 'list') {
+      let endpoint = '';
+      const normalizedList = list.toLowerCase().trim();
+
+      if (normalizedType === 'tv') {
+        switch (normalizedList) {
+          case 'popular':
+            endpoint = 'tv/popular';
+            break;
+          case 'top_rated':
+            endpoint = 'tv/top_rated';
+            break;
+          case 'trending':
+            endpoint = 'trending/tv/week';
+            break;
+          case 'now_playing':
+            endpoint = 'tv/on_the_air';
+            break;
+          default:
+            return res.status(400).json({
+              error: 'Invalid list parameter. Supported lists: "popular", "top_rated", "trending", "now_playing".'
+            });
+        }
+      } else {
+        switch (normalizedList) {
+          case 'popular':
+            endpoint = 'movie/popular';
+            break;
+          case 'top_rated':
+            endpoint = 'movie/top_rated';
+            break;
+          case 'trending':
+            endpoint = 'trending/movie/week';
+            break;
+          case 'now_playing':
+            endpoint = 'movie/now_playing';
+            break;
+          default:
+            return res.status(400).json({
+              error: 'Invalid list parameter. Supported lists: "popular", "top_rated", "trending", "now_playing".'
+            });
+        }
+      }
+
+      const tmdbUrl = new URL(`https://api.themoviedb.org/3/${endpoint}`);
+      if (!isBearer) {
+        tmdbUrl.searchParams.set('api_key', apiKey);
+      }
+      tmdbUrl.searchParams.set('language', 'en-US');
+      tmdbUrl.searchParams.set('page', String(pageNumber));
+
+      const response = await fetch(tmdbUrl.toString(), {
+        method: 'GET',
+        headers: authHeaders,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return res.status(response.status).json({
+          error: data.status_message || `TMDB API error (${response.status})`,
+          code: 'TMDB_API_ERROR'
+        });
+      }
+
+      // Return raw results array containing id, title/name, release_date/first_air_date, poster_path, overview, vote_average
+      const results = (data.results || []).map((item: any) => ({
+        id: item.id,
+        title: item.title || item.name || '',
+        name: item.name || item.title || '',
+        original_title: item.original_title || item.original_name || '',
+        original_name: item.original_name || item.original_title || '',
+        release_date: item.release_date || item.first_air_date || '',
+        first_air_date: item.first_air_date || item.release_date || '',
+        poster_path: item.poster_path || null,
+        backdrop_path: item.backdrop_path || null,
+        overview: item.overview || '',
+        vote_average: item.vote_average || 0,
+        media_type: normalizedType,
+      }));
+
+      return res.status(200).json(results);
+    }
+
     return res.status(400).json({
-      error: 'Invalid action. Supported actions: "search" or "details".'
+      error: 'Invalid action. Supported actions: "search", "details", or "list".'
     });
   } catch (err: any) {
     console.error('TMDB Proxy Server Error:', err);

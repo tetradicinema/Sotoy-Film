@@ -85,6 +85,32 @@ export const searchTmdbFilms = async (
   }
 };
 
+/**
+ * Fetches curated list items from TMDB (popular, top_rated, trending, now_playing)
+ */
+export const fetchTmdbList = async (
+  list: 'popular' | 'top_rated' | 'trending' | 'now_playing',
+  type: 'movie' | 'tv' = 'movie',
+  page: number = 1
+): Promise<TmdbSearchResultItem[]> => {
+  try {
+    const res = await fetch(`/api/tmdb?action=list&list=${encodeURIComponent(list)}&type=${encodeURIComponent(type)}&page=${page}`);
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `Gagal mengambil daftar ${list} dari TMDB (${res.status})`);
+    }
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+    return data.map((item: any) => ({
+      ...item,
+      media_type: item.media_type || (type === 'tv' ? 'tv' : 'movie'),
+    }));
+  } catch (err: any) {
+    console.warn('[tmdbHelper] Fetch TMDB list error:', err);
+    throw err;
+  }
+};
+
 // Helper to format minutes as "Xh Ym"
 export const formatDuration = (minutes?: number): string => {
   if (!minutes || minutes <= 0) return '';
