@@ -25,25 +25,35 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
       setLoginModalOpen(true);
       return;
     }
-    if (!reviewText.trim()) return;
+
+    const hasReview = reviewText.trim().length > 0;
+    const defaultHeadline = hasReview
+      ? `Ulasan ${film.title} dari ${currentUser.name}`
+      : `${currentUser.name} memberi skor ${score.toFixed(1)}/10.0 untuk ${film.title}`;
+    const finalHeadline = headline.trim() || defaultHeadline;
 
     addFilmRating(
       film.id,
       score,
-      headline || `Ulasan ${film.title} dari ${currentUser.name}`,
-      reviewText
+      finalHeadline,
+      reviewText.trim()
     );
 
     setSubmitted(true);
   };
 
   const handleShareReview = () => {
-    const finalHeadline = headline || `Ulasan ${film.title} oleh ${currentUser.name}`;
+    const hasReview = reviewText.trim().length > 0;
+    const defaultHeadline = hasReview
+      ? `Ulasan ${film.title} oleh ${currentUser.name}`
+      : `${currentUser.name} memberi skor ${score.toFixed(1)}/10.0 untuk ${film.title}`;
+    const finalHeadline = headline.trim() || defaultHeadline;
+
     onClose();
     setSubmitted(false);
     openShareModal({
       title: `Rating ${film.title} - ${score.toFixed(1)}/10.0 oleh ${currentUser.name}`,
-      text: reviewText,
+      text: hasReview ? reviewText.trim() : `${currentUser.name} memberi skor ${score.toFixed(1)}/10.0 untuk ${film.title}`,
       headline: finalHeadline,
       url: window.location.href,
       type: 'film',
@@ -145,7 +155,9 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
                 Skor Sotoy Berhasil Terkirim!
               </h3>
               <p className="text-slate-400 text-xs mt-1">
-                Terima kasih atas kontribusi ulasanmu untuk komunitas Sotoy Film.
+                {reviewText.trim().length > 0
+                  ? 'Terima kasih atas kontribusi ulasanmu untuk komunitas Sotoy Film.'
+                  : 'Skor Sotoy kamu berhasil tercatat!'}
               </p>
             </div>
 
@@ -171,7 +183,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
                 className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#FF2E7E] via-[#e0266e] to-[#FF2E7E] text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-sm hover:brightness-110 active:scale-95 transition-all"
               >
                 <Share2 className="w-4 h-4 text-slate-950" />
-                <span>Bagikan ke Instagram / Sosmed</span>
+                <span>{reviewText.trim().length > 0 ? 'Bagikan Review ke Sosmed' : 'Bagikan Skor ke Sosmed'}</span>
               </button>
               <button
                 type="button"
@@ -265,16 +277,18 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
             {/* Review Body */}
             <div>
               <label className="block text-xs font-bold text-slate-300 mb-1">
-                Ulasan Mendalam Kamu <span className="text-[#FF2E7E]">*</span>
+                Tulis Ulasan Singkat <span className="text-slate-500 font-normal">(opsional)</span>
               </label>
               <textarea
                 value={reviewText}
                 onChange={e => setReviewText(e.target.value)}
-                placeholder="Ceritakan apa yang kamu sukai atau kurang sukai dari akting, cerita, sinematografi, atau musiknya..."
-                required
-                rows={4}
+                placeholder="Tulis ulasan singkat (opsional)..."
+                rows={3}
                 className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] resize-none"
               />
+              <p className="text-[11px] text-slate-400 mt-1 italic leading-tight">
+                Kasih bintang aja juga boleh — tapi nulis ulasan bikin skor kontribusimu di Leaderboard lebih tinggi.
+              </p>
             </div>
 
             {/* Role Note */}

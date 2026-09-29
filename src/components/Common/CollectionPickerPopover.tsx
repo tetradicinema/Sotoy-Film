@@ -218,7 +218,7 @@ export const CollectionPickerPopover: React.FC<CollectionPickerPopoverProps> = (
         className={
           buttonClassName ||
           (variant === 'compact'
-            ? `px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl font-bold transition-all border flex items-center gap-1.5 text-xs select-none ${
+            ? `p-2 sm:p-2.5 rounded-xl font-bold transition-all border inline-flex items-center justify-center gap-1 select-none shrink-0 ${
                 isInAny
                   ? 'bg-[#FF2E7E]/25 text-[#FF2E7E] border-[#FF2E7E]/50 hover:bg-[#FF2E7E]/35 backdrop-blur-md shadow-sm'
                   : 'bg-black/75 hover:bg-slate-900 text-slate-200 border-white/20 hover:border-white/40 backdrop-blur-md'
@@ -242,14 +242,16 @@ export const CollectionPickerPopover: React.FC<CollectionPickerPopoverProps> = (
               : 'text-slate-300'
           }`}
         />
-        <span>
-          {isInAny
-            ? 'Tersimpan'
-            : itemType === 'film'
-            ? (variant === 'compact' ? 'Simpan' : 'Simpan ke Watchlist')
-            : 'Simpan Artikel'}
-        </span>
-        <ChevronDown className={`w-3 h-3 transition-transform duration-200 opacity-60 ${isOpen ? 'rotate-180' : ''}`} />
+        {variant === 'full' && (
+          <span>
+            {isInAny
+              ? 'Tersimpan'
+              : itemType === 'film'
+              ? 'Simpan ke Watchlist'
+              : 'Simpan Artikel'}
+          </span>
+        )}
+        <ChevronDown className={`w-3 h-3 transition-transform duration-200 opacity-60 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Portaled Popover Dropdown (Not constrained by any parent overflow-hidden!) */}

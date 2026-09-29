@@ -1083,9 +1083,11 @@ export const FilmDetailPage: React.FC = () => {
                         "{rev.headline}"
                       </h4>
 
-                      <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
-                        {rev.reviewText}
-                      </p>
+                      {Boolean(rev.reviewText && rev.reviewText.trim()) && (
+                        <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                          {rev.reviewText}
+                        </p>
+                      )}
 
                       <div className="flex items-center justify-between pt-2.5 border-t border-slate-800 text-xs text-slate-400 flex-wrap gap-2">
                         {(() => {

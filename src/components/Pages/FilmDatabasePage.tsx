@@ -792,7 +792,7 @@ export const FilmDatabasePage: React.FC = () => {
           </div>
 
           {/* Two Side-by-side Panels on Desktop */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
             <LeaderboardCard
               title="Leaderboard Kritikus"
               subtitle="Si Paling Sotoy"

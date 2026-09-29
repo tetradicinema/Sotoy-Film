@@ -72,16 +72,20 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({
 
   return (
     <div
-      className={`bg-[#171A1F] border border-slate-800/80 rounded-3xl p-4 sm:p-5 shadow-xl flex flex-col justify-between space-y-4 ${className}`}
+      className={`bg-[#171A1F] border border-slate-800/80 rounded-3xl p-4 sm:p-5 shadow-xl flex flex-col justify-start space-y-4 ${className}`}
     >
       {/* Card Header */}
-      <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-800/80">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-7 h-7 rounded-xl bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 text-[#FF2E7E] flex items-center justify-center shrink-0">
+      <div className="flex items-center justify-between gap-1.5 sm:gap-2 pb-3 border-b border-slate-800/80 min-w-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-xl bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 text-[#FF2E7E] flex items-center justify-center shrink-0">
             <Trophy className="w-3.5 h-3.5" />
           </div>
-          <div className="min-w-0">
-            <h3 className="font-display font-black text-sm sm:text-base text-white truncate">
+          <div className="min-w-0 flex-1">
+            <h3
+              className={`font-display font-black text-white truncate ${
+                compact ? 'text-xs' : 'text-sm sm:text-base'
+              }`}
+            >
               {title}
             </h3>
             {subtitle && (
@@ -94,11 +98,18 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({
           <button
             type="button"
             onClick={() => navigateTo('panduan-leaderboard')}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-[11px] font-bold border border-slate-700 hover:border-[#FF2E7E] transition-all shrink-0 cursor-pointer shadow-sm"
+            title="Panduan Leaderboard"
+            className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-[11px] font-bold border border-slate-700 hover:border-[#FF2E7E] transition-all shrink-0 cursor-pointer shadow-sm"
           >
-            <Info className="w-3.5 h-3.5 text-[#FF2E7E]" />
-            <span className="hidden sm:inline">Panduan Leaderboard</span>
-            <span className="sm:hidden">Panduan</span>
+            <Info className="w-3.5 h-3.5 text-[#FF2E7E] shrink-0" />
+            {compact ? (
+              <span className="hidden min-[360px]:inline text-[10px]">Panduan</span>
+            ) : (
+              <>
+                <span className="hidden sm:inline">Panduan Leaderboard</span>
+                <span className="sm:hidden">Panduan</span>
+              </>
+            )}
           </button>
         )}
       </div>
