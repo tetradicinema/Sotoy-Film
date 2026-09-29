@@ -10,6 +10,7 @@ import {
   TrendingUp,
   Share2,
   User as UserIcon,
+  Star,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
@@ -35,12 +36,40 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
     navigateTo,
     showToast,
     openShareModal,
+    allUsers,
   } = useApp();
 
   const [quickBuzzText, setQuickBuzzText] = useState('');
   const [quickTaggedFilmId, setQuickTaggedFilmId] = useState('');
   const [quickSkor, setQuickSkor] = useState<number | undefined>(undefined);
   const [newsletterEmail, setNewsletterEmail] = useState('');
+
+  // Dynamic leaderboard calculation from actual community contributors
+  const leaderboardData = React.useMemo(() => {
+    return (allUsers || []).map(user => {
+      // Find all buzz posts by this user to count engagement received
+      const userBuzz = buzzList.filter(b => b.author.id === user.id);
+      const likesReceived = userBuzz.reduce((acc, b) => acc + (b.likes || 0), 0);
+      const repliesReceived = userBuzz.reduce((acc, b) => acc + (b.repliesCount || 0), 0);
+      
+      // Compute contributor score: (Reviews * 25) + (Buzz * 15) + (Likes + Replies * 5)
+      const reviewsScore = (user.totalReviews || 0) * 25;
+      const buzzScore = (user.totalBuzz || 0) * 15;
+      const reactionScore = (likesReceived + repliesReceived) * 5;
+      const totalSotoyScore = reviewsScore + buzzScore + reactionScore;
+
+      // Engagement Frequency
+      const engagementCount = (user.totalBuzz || 0) + (user.totalReviews || 0) + likesReceived + repliesReceived;
+
+      return {
+        user,
+        score: totalSotoyScore,
+        engagement: engagementCount,
+        postsCount: user.totalBuzz || 0,
+        reviewsCount: user.totalReviews || 0,
+      };
+    }).sort((a, b) => b.score - a.score || b.engagement - a.engagement);
+  }, [allUsers, buzzList]);
 
   // Recommended articles for sidebar (excluding currently opened article if provided)
   const recommendedArticles = articles
@@ -247,6 +276,85 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* SOTOY LEADERBOARD WIDGET */}
+      <div id="sidebar-sotoy-leaderboard" className="bg-[#171A1F] border border-white/[0.08] rounded-3xl p-5 shadow-xl space-y-3">
+        <div className="flex items-center justify-between pb-3 mb-1 border-b border-white/[0.08]">
+          <div className="flex items-center gap-2">
+            <Star className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0" />
+            <h3 className="font-display font-bold text-sm text-white">
+              Sotoy Leaderboard
+            </h3>
+          </div>
+          <button
+            onClick={() => navigateTo('community-feed')}
+            className="text-[10px] font-bold text-[#FF2E7E] bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 px-2 py-0.5 rounded-full hover:bg-[#FF2E7E]/20 transition-all shrink-0"
+          >
+            Semua →
+          </button>
+        </div>
+
+        <div className="space-y-2.5">
+          {leaderboardData.slice(0, 5).map((item, idx) => {
+            const rank = idx + 1;
+            const isMe = item.user.id === currentUser?.id;
+            
+            return (
+              <div 
+                key={item.user.id} 
+                className={`flex items-center justify-between gap-2 p-1.5 rounded-xl transition-all ${
+                  isMe 
+                    ? 'bg-[#FF2E7E]/10 border border-[#FF2E7E]/20 shadow-sm' 
+                    : 'hover:bg-white/[0.03]'
+                }`}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  {/* Rank Badge */}
+                  <div className="flex items-center justify-center w-5 shrink-0 font-mono text-[11px] font-black">
+                    {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`}
+                  </div>
+
+                  {/* Avatar & User Details */}
+                  <div 
+                    onClick={() => navigateTo('user-profile', { userId: item.user.id })}
+                    className="flex items-center gap-2 min-w-0 cursor-pointer group"
+                  >
+                    <div className="relative shrink-0">
+                      <img
+                        src={item.user.avatar}
+                        alt={item.user.name}
+                        className={`w-7 h-7 rounded-full object-cover ring-1 ring-white/10 group-hover:ring-[#FF2E7E] transition-all`}
+                      />
+                      {isMe && (
+                        <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 border border-[#171A1F]" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-bold text-white truncate group-hover:text-[#FF2E7E] transition-colors leading-tight">
+                        {item.user.name}
+                      </p>
+                      <p className="text-[9px] text-slate-400 truncate">
+                        @{item.user.handle} • {item.postsCount + item.reviewsCount} Karya
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Score */}
+                <div className="text-right shrink-0">
+                  <span className="text-xs font-black text-amber-400 flex items-center justify-end gap-0.5 leading-none">
+                    <Flame className="w-3 h-3 text-orange-500 fill-orange-500 shrink-0" />
+                    <span>{item.score.toLocaleString()}</span>
+                  </span>
+                  <span className="text-[8px] text-slate-500 block mt-0.5">
+                    {item.engagement} aksi
+                  </span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

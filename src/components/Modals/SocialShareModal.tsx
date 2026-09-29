@@ -429,6 +429,24 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
   const [buzzStoryDataUrl, setBuzzStoryDataUrl] = useState<string | null>(null);
   const [isRenderingBuzzStory, setIsRenderingBuzzStory] = useState(false);
   const buzzCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [isFileShareSupported, setIsFileShareSupported] = useState(false);
+
+  useEffect(() => {
+    if (
+      typeof navigator !== 'undefined' &&
+      typeof navigator.share === 'function' &&
+      typeof navigator.canShare === 'function'
+    ) {
+      try {
+        const dummyFile = new File([''], 'dummy.png', { type: 'image/png' });
+        setIsFileShareSupported(navigator.canShare({ files: [dummyFile] }));
+      } catch (e) {
+        setIsFileShareSupported(false);
+      }
+    } else {
+      setIsFileShareSupported(false);
+    }
+  }, []);
 
   const isOpen = propIsOpen !== undefined ? propIsOpen : shareModalData !== null;
   const onClose = propOnClose || closeShareModal;
@@ -2570,31 +2588,38 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                 id="download-ig-story-card-btn"
                 onClick={() => handleDownloadInstagramVisual('story')}
                 disabled={isGeneratingImage}
-                className="w-full py-3 bg-[#FF2E7E] hover:brightness-110 active:scale-98 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-sm flex items-center justify-center gap-2 transition-all"
+                className="w-full py-3 bg-[#FF2E7E] hover:brightness-110 active:scale-98 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-sm flex flex-col items-center justify-center gap-0.5 transition-all"
               >
-                <Download className="w-4 h-4" />
-                <span>{isGeneratingImage ? 'Membuat Gambar...' : 'Unduh Gambar Story (PNG 9:16)'}</span>
+                <div className="flex items-center gap-2">
+                  <Download className="w-4 h-4" />
+                  <span>
+                    {isGeneratingImage
+                      ? 'Membuat Gambar...'
+                      : isFileShareSupported
+                      ? 'Bagikan ke Instagram Story'
+                      : 'Unduh Gambar Story (PNG 9:16)'}
+                  </span>
+                </div>
+                {isFileShareSupported && !isGeneratingImage && (
+                  <span className="text-[9px] lowercase font-normal opacity-90 normal-case">
+                    (atau simpan sebagai gambar)
+                  </span>
+                )}
               </button>
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleCopyCaption}
-                  className="flex-1 py-2.5 bg-slate-900 border border-slate-700 hover:border-slate-500 rounded-xl text-xs font-bold text-slate-200 flex items-center justify-center gap-1.5 transition-colors"
-                >
-                  {copiedCaption ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedCaption ? 'Caption Tersalin' : 'Salin Caption & Tagar'}</span>
-                </button>
+              <button
+                onClick={handleCopyCaption}
+                className="w-full py-2.5 bg-slate-900 border border-slate-700 hover:border-slate-500 rounded-xl text-xs font-bold text-slate-200 flex items-center justify-center gap-1.5 transition-colors"
+              >
+                {copiedCaption ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedCaption ? 'Caption Tersalin' : 'Salin Caption & Tagar'}</span>
+              </button>
 
-                <a
-                  href="https://www.instagram.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2.5 bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#FCB045] rounded-xl text-xs font-bold text-white flex items-center gap-1.5 hover:brightness-110 transition-all shrink-0"
-                >
-                  <Instagram className="w-3.5 h-3.5" />
-                  <span>Buka IG</span>
-                </a>
-              </div>
+              {!isFileShareSupported && (
+                <div className="text-[11px] text-slate-400 text-center bg-slate-900/60 border border-slate-800/80 p-2.5 rounded-xl leading-relaxed">
+                  Setelah diunduh, buka <strong className="text-white">Instagram &gt; Story &gt; pilih gambar</strong> dari galeri.
+                </div>
+              )}
             </div>
           </div>
         )}

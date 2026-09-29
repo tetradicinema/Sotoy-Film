@@ -198,6 +198,34 @@ export const CommunityFeedPage: React.FC = () => {
 
   // Overflow menu state for post cards
   const [openMenuPostId, setOpenMenuPostId] = useState<string | null>(null);
+  const [isMobileLeaderboardOpen, setIsMobileLeaderboardOpen] = useState(false);
+
+  // Dynamic leaderboard calculation from actual community contributors
+  const leaderboardData = useMemo(() => {
+    return allUsers.map(user => {
+      // Find all buzz posts by this user to count engagement received
+      const userBuzz = buzzList.filter(b => b.author.id === user.id);
+      const likesReceived = userBuzz.reduce((acc, b) => acc + (b.likes || 0), 0);
+      const repliesReceived = userBuzz.reduce((acc, b) => acc + (b.repliesCount || 0), 0);
+      
+      // Compute contributor score: (Reviews * 25) + (Buzz * 15) + (Likes + Replies * 5)
+      const reviewsScore = (user.totalReviews || 0) * 25;
+      const buzzScore = (user.totalBuzz || 0) * 15;
+      const reactionScore = (likesReceived + repliesReceived) * 5;
+      const totalSotoyScore = reviewsScore + buzzScore + reactionScore;
+
+      // Engagement Frequency
+      const engagementCount = (user.totalBuzz || 0) + (user.totalReviews || 0) + likesReceived + repliesReceived;
+
+      return {
+        user,
+        score: totalSotoyScore,
+        engagement: engagementCount,
+        postsCount: user.totalBuzz || 0,
+        reviewsCount: user.totalReviews || 0,
+      };
+    }).sort((a, b) => b.score - a.score || b.engagement - a.engagement);
+  }, [allUsers, buzzList]);
 
   // Close overflow menu on outside click or escape
   useEffect(() => {
@@ -709,6 +737,97 @@ export const CommunityFeedPage: React.FC = () => {
 
           {/* Global Page Ad Banner */}
           <AdBannerSlot variant="leaderboard" />
+
+          {/* ========================================================================= */}
+          {/* MOBILE & TABLET COLLAPSIBLE SOTOY LEADERBOARD */}
+          {/* ========================================================================= */}
+          <div className="xl:hidden bg-[#171A1F] border border-slate-800/80 rounded-2xl p-4 shadow-xl space-y-3">
+            <div className="flex items-center justify-between pb-1.5 border-b border-slate-800/60">
+              <div className="flex items-center gap-1.5">
+                <Star className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0" />
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-200">
+                  Sotoy Leaderboard
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsMobileLeaderboardOpen(!isMobileLeaderboardOpen)}
+                className="text-[11px] font-bold text-[#FF2E7E] bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 px-2.5 py-1 rounded-lg hover:bg-[#FF2E7E]/20 transition-all flex items-center gap-1 shrink-0"
+              >
+                <span>{isMobileLeaderboardOpen ? 'Sembunyikan' : 'Lihat Peringkat'}</span>
+                <ChevronRight className={`w-3.5 h-3.5 transition-transform ${isMobileLeaderboardOpen ? 'rotate-90' : ''}`} />
+              </button>
+            </div>
+
+            <AnimatePresence initial={false}>
+              {isMobileLeaderboardOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden space-y-2.5 pt-1.5"
+                >
+                  {leaderboardData.slice(0, 5).map((item, idx) => {
+                    const rank = idx + 1;
+                    const isMe = item.user.id === currentUser?.id;
+                    return (
+                      <div
+                        key={item.user.id}
+                        className={`flex items-center justify-between gap-2 p-2 rounded-xl transition-all ${
+                          isMe
+                            ? 'bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 shadow-sm'
+                            : 'bg-[#0E1013]/40 border border-slate-900'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="flex items-center justify-center w-5 shrink-0 font-mono text-xs font-black">
+                            {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`}
+                          </div>
+
+                          <div
+                            onClick={() => navigateTo('user-profile', { userId: item.user.id })}
+                            className="flex items-center gap-2 min-w-0 cursor-pointer"
+                          >
+                            <img
+                              src={item.user.avatar}
+                              alt={item.user.name}
+                              className={`w-7 h-7 rounded-full object-cover shrink-0 ${
+                                rank === 1 ? 'ring-2 ring-amber-400' : 'ring-1 ring-white/10'
+                              }`}
+                            />
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-white truncate flex items-center gap-1">
+                                <span>{item.user.name}</span>
+                              </p>
+                              <p className="text-[9px] text-slate-400 truncate">
+                                @{item.user.handle} • {item.postsCount + item.reviewsCount} Karya
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <span className="text-xs font-black text-amber-400 flex items-center justify-end gap-0.5">
+                            <Flame className="w-3 h-3 text-orange-500 fill-orange-500 shrink-0" />
+                            <span>{item.score.toLocaleString()}</span>
+                          </span>
+                          <span className="text-[8px] text-slate-500 block">
+                            {item.engagement} aksi
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {!isMobileLeaderboardOpen && (
+              <p className="text-[11px] text-slate-400 text-center italic">
+                Warga teraktif: 🥇 {leaderboardData[0]?.user.name || 'Admin'} ({leaderboardData[0]?.score.toLocaleString()} pts)
+              </p>
+            )}
+          </div>
 
         {/* ========================================================================= */}
         {/* POST COMPOSER CARD WITH SEARCHABLE FILM/ARTICLE TAGGING */}
@@ -1566,6 +1685,97 @@ export const CommunityFeedPage: React.FC = () => {
       {/* RIGHT WIDGETS COLUMN (DESKTOP) */}
       {/* ========================================================================= */}
       <div className="hidden xl:flex flex-col gap-4 w-72 shrink-0 sticky top-20 select-none">
+        {/* Sotoy Leaderboard (DESKTOP) */}
+        <div className="bg-[#171A1F]/90 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 shadow-xl space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-800/60">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+              <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+              <span>Sotoy Leaderboard</span>
+            </h3>
+            <span className="text-[10px] text-slate-400 bg-slate-900 px-2 py-0.5 rounded-full border border-slate-800">
+              Top 5 Kontributor
+            </span>
+          </div>
+
+          <div className="space-y-2.5">
+            {leaderboardData.slice(0, 5).map((item, idx) => {
+              const rank = idx + 1;
+              const isMe = item.user.id === currentUser?.id;
+              
+              return (
+                <div 
+                  key={item.user.id} 
+                  className={`flex items-center justify-between gap-2 p-2 rounded-xl transition-all ${
+                    isMe 
+                      ? 'bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 shadow-sm' 
+                      : 'hover:bg-slate-900/50'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {/* Rank Badge */}
+                    <div className="flex items-center justify-center w-5 shrink-0 font-mono text-xs font-black">
+                      {rank === 1 ? (
+                        <span className="text-base">🥇</span>
+                      ) : rank === 2 ? (
+                        <span className="text-base">🥈</span>
+                      ) : rank === 3 ? (
+                        <span className="text-base">🥉</span>
+                      ) : (
+                        <span className="text-slate-500">#{rank}</span>
+                      )}
+                    </div>
+
+                    {/* Avatar & User Details */}
+                    <div 
+                      onClick={() => navigateTo('user-profile', { userId: item.user.id })}
+                      className="flex items-center gap-2 min-w-0 cursor-pointer group"
+                    >
+                      <div className="relative shrink-0">
+                        <img
+                          src={item.user.avatar}
+                          alt={item.user.name}
+                          className={`w-8 h-8 rounded-full object-cover transition-all ${
+                            rank === 1 
+                              ? 'ring-2 ring-amber-400 ring-offset-1 ring-offset-[#171A1F]' 
+                              : 'ring-1 ring-white/10'
+                          }`}
+                        />
+                        {isMe && (
+                          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-[#171A1F]" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-white truncate group-hover:text-[#FF2E7E] transition-colors flex items-center gap-1">
+                          <span>{item.user.name}</span>
+                          {item.user.role === 'admin' && (
+                            <span className="text-[8px] bg-[#FF2E7E]/20 text-[#FF2E7E] px-1 rounded font-black uppercase font-mono">
+                              Admin
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-[10px] text-slate-400 truncate">
+                          @{item.user.handle} • {item.postsCount + item.reviewsCount} Karya
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Score displaying contribution points */}
+                  <div className="text-right shrink-0">
+                    <span className="text-xs font-black text-amber-400 flex items-center justify-end gap-0.5">
+                      <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500 shrink-0" />
+                      <span>{item.score.toLocaleString()}</span>
+                    </span>
+                    <span className="text-[8px] text-slate-500 font-medium block">
+                      {item.engagement} aksi
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Trending Tags & Topics */}
         <div className="bg-[#171A1F]/90 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 shadow-xl space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-slate-800/60">
