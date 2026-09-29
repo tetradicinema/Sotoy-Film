@@ -29,6 +29,7 @@ import { SEOHead } from '../SEO/SEOHead';
 import { generateArticleSchema, generateBreadcrumbSchema } from '../../utils/schemaHelpers';
 import { StarRating } from '../Common/StarRating';
 import { AddToCollectionModal } from '../Modals/AddToCollectionModal';
+import { CollectionPickerPopover } from '../Common/CollectionPickerPopover';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { BreadcrumbNavigation } from '../Navigation/BreadcrumbNavigation';
 import { EditorialSidebar } from '../Common/EditorialSidebar';
@@ -349,39 +350,13 @@ export const ArticleDetailPage: React.FC = () => {
                 </button>
               )}
 
-              <button
-                id="article-save-library-btn"
-                onClick={() => {
-                  if (!isLoggedIn) {
-                    setLoginModalOpen(true);
-                    showToast('Silakan Log In terlebih dahulu untuk menyimpan artikel ke Perpustakaan!');
-                    return;
-                  }
-                  if (collections.length > 1) {
-                    setCollectionModalArticle(article);
-                  } else {
-                    toggleSaveArticle(article.id);
-                  }
-                }}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-bold transition-all border ${
-                  isItemInAnyCollection(article.id, 'article')
-                    ? 'bg-[#FF2E7E]/20 text-[#FF2E7E] border-[#FF2E7E]/40 hover:bg-[#FF2E7E]/30'
-                    : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-800'
-                }`}
-                title={isItemInAnyCollection(article.id, 'article') ? 'Hapus dari Perpustakaan' : 'Simpan ke Perpustakaan'}
-              >
-                {isItemInAnyCollection(article.id, 'article') ? (
-                  <>
-                    <BookmarkCheck className="w-4 h-4 text-[#FF2E7E]" />
-                    <span>Tersimpan di Library</span>
-                  </>
-                ) : (
-                  <>
-                    <Bookmark className="w-4 h-4 text-[#FF2E7E]" />
-                    <span>+ Simpan ke Library</span>
-                  </>
-                )}
-              </button>
+              <CollectionPickerPopover
+                itemId={article.id}
+                itemType="article"
+                itemName={article.title}
+                buttonId="article-save-library-btn"
+                variant="compact"
+              />
 
               <button
                 id="article-like-btn"
@@ -590,38 +565,13 @@ export const ArticleDetailPage: React.FC = () => {
                     <span>Beri Skor Sotoy & Ulas Film Ini</span>
                   </button>
 
-                  <button
-                    id="watchlist-discussed-film-btn"
-                    onClick={() => {
-                      if (!isLoggedIn) {
-                        setLoginModalOpen(true);
-                        showToast('Silakan Log In terlebih dahulu untuk menyimpan ke Daftar Tonton!');
-                        return;
-                      }
-                      if (collections.length > 1) {
-                        setCollectionModalFilm(discussedFilm);
-                      } else {
-                        toggleWatchlist(discussedFilm.id);
-                      }
-                    }}
-                    className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 border transition-all ${
-                      isItemInAnyCollection(discussedFilm.id, 'film')
-                        ? 'bg-[#FF2E7E]/20 text-[#FF2E7E] border-[#FF2E7E]/40'
-                        : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
-                    }`}
-                  >
-                    {isItemInAnyCollection(discussedFilm.id, 'film') ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-[#FF2E7E]" />
-                        <span>Di Watchlist Kamu</span>
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Simpan ke Watchlist</span>
-                      </>
-                    )}
-                  </button>
+                  <CollectionPickerPopover
+                    itemId={discussedFilm.id}
+                    itemType="film"
+                    itemName={discussedFilm.title}
+                    buttonId="watchlist-discussed-film-btn"
+                    variant="full"
+                  />
                 </div>
               </div>
             </div>

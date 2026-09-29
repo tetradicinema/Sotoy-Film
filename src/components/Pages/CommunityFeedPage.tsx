@@ -36,6 +36,7 @@ import {
   Repeat2,
   Trophy,
   Info,
+  Layers,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
@@ -1517,7 +1518,11 @@ export const CommunityFeedPage: React.FC = () => {
                 {post.sharedCollection && (
                   <div
                     id={`buzz-shared-collection-${post.sharedCollection.collectionId}`}
-                    onClick={() => navigateTo('collection-detail', { userId: post.sharedCollection.ownerId, collectionId: post.sharedCollection.collectionId })}
+                    onClick={() => {
+                      if (post.sharedCollection) {
+                        navigateTo('collection-detail', { userId: post.sharedCollection.ownerId, collectionId: post.sharedCollection.collectionId });
+                      }
+                    }}
                     className="p-3.5 sm:p-4 rounded-2xl bg-[#0E1013] border border-white/10 hover:border-[#FF2E7E]/50 transition-all cursor-pointer group flex items-center justify-between gap-4 shadow-md text-left"
                   >
                     <div className="flex items-center gap-3.5 min-w-0">

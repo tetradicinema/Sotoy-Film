@@ -167,6 +167,7 @@ service cloud.firestore {
         data.id is string && data.id.size() <= 128 &&
         data.name is string && data.name.size() <= 100 &&
         data.isDefault is bool &&
+        (!('isPublic' in data) || data.isPublic is bool) &&
         data.items is list;
     }
 
@@ -320,7 +321,7 @@ service cloud.firestore {
       }
 
       match /collections/{collectionId} {
-        allow read: if isOwner(userId);
+        allow read: if isOwner(userId) || resource.data.get('isPublic', true) == true;
         allow create, update: if isOwner(userId) && isValidCollection(incoming()) && isValidId(collectionId);
         allow delete: if isOwner(userId);
       }

@@ -117,11 +117,12 @@ export const FilmDatabasePage: React.FC = () => {
     setLoginModalOpen,
     navigateTo,
     watchlist,
-    toggleWatchlist,
-    isFilmInWatchlist,
     allUsers,
     collections,
     isItemInAnyCollection,
+    addItemToCollection,
+    removeItemFromCollection,
+    getOrCreateDefaultCollection,
     showToast,
   } = useApp();
 
@@ -1287,17 +1288,20 @@ export const FilmDatabasePage: React.FC = () => {
 
                         {/* Watchlist toggle */}
                         <button
-                          onClick={e => {
+                          onClick={async (e) => {
                             e.stopPropagation();
                             if (!isLoggedIn) {
                               setLoginModalOpen(true);
                               showToast('Silakan Log In terlebih dahulu untuk menyimpan ke Daftar Tonton!');
                               return;
                             }
-                            if (collections.length > 1) {
-                              setCollectionModalFilm(film);
+                            const defaultCol = await getOrCreateDefaultCollection();
+                            if (!defaultCol) return;
+                            const isInDefault = defaultCol.items.some((i: any) => i.itemId === film.id && i.itemType === 'film');
+                            if (isInDefault) {
+                              await removeItemFromCollection(defaultCol.id, film.id);
                             } else {
-                              toggleWatchlist(film.id);
+                              await addItemToCollection(defaultCol.id, film.id, 'film');
                             }
                           }}
                           className={`absolute top-2 right-2 w-7 h-7 rounded-lg flex items-center justify-center transition-all ${

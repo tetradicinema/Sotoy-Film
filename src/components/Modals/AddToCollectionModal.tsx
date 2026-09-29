@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, FolderHeart, Plus } from 'lucide-react';
+import { X, FolderHeart, Plus, Lock, Globe } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 interface AddToCollectionModalProps {
@@ -26,6 +26,8 @@ export const AddToCollectionModal: React.FC<AddToCollectionModalProps> = ({
   } = useApp();
 
   const [newCollectionName, setNewCollectionName] = useState('');
+  const [newCollectionDesc, setNewCollectionDesc] = useState('');
+  const [newCollectionIsPublic, setNewCollectionIsPublic] = useState(true);
   const [isCreatingInline, setIsCreatingInline] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -48,10 +50,12 @@ export const AddToCollectionModal: React.FC<AddToCollectionModalProps> = ({
 
     setLoading(true);
     try {
-      const colId = await createCollection(newCollectionName);
+      const colId = await createCollection(newCollectionName.trim(), newCollectionDesc.trim(), newCollectionIsPublic);
       if (colId) {
         await addItemToCollection(colId, itemId, itemType);
         setNewCollectionName('');
+        setNewCollectionDesc('');
+        setNewCollectionIsPublic(true);
         setIsCreatingInline(false);
       }
     } catch (err) {
@@ -98,7 +102,7 @@ export const AddToCollectionModal: React.FC<AddToCollectionModalProps> = ({
         <div className="p-6 space-y-4 max-h-[300px] overflow-y-auto">
           {collections.map((col) => {
             const hasItem = col.items.some(
-              (item) => item.itemId === itemId && item.itemType === itemType
+              (item: any) => item.itemId === itemId && item.itemType === itemType
             );
 
             return (
@@ -154,6 +158,40 @@ export const AddToCollectionModal: React.FC<AddToCollectionModalProps> = ({
                 disabled={loading}
                 autoFocus
               />
+              <textarea
+                placeholder="Deskripsi singkat (opsional)..."
+                value={newCollectionDesc}
+                onChange={(e) => setNewCollectionDesc(e.target.value)}
+                maxLength={100}
+                rows={2}
+                className="w-full px-3.5 py-1.5 text-xs bg-slate-800/80 border border-white/10 rounded-xl text-white focus:outline-none focus:border-[#FF2E7E]/50 resize-none"
+                disabled={loading}
+              />
+              {/* Public/Private toggle */}
+              <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                    {newCollectionIsPublic ? <Globe className="w-3.5 h-3.5 text-emerald-400" /> : <Lock className="w-3.5 h-3.5 text-amber-400" />}
+                    <span>{newCollectionIsPublic ? 'Koleksi Publik' : 'Koleksi Privat'}</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400">
+                    {newCollectionIsPublic ? 'Dapat dilihat penonton lain di profil' : 'Hanya kamu yang dapat melihat'}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setNewCollectionIsPublic(prev => !prev)}
+                  className={`w-11 h-6 rounded-full transition-colors relative p-0.5 shrink-0 ${
+                    newCollectionIsPublic ? 'bg-emerald-500' : 'bg-slate-800'
+                  }`}
+                >
+                  <div
+                    className={`w-5 h-5 rounded-full bg-black transition-transform ${
+                      newCollectionIsPublic ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
               <div className="flex gap-2 justify-end text-xs">
                 <button
                   type="button"

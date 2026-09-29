@@ -23,6 +23,7 @@ import {
   Trash2,
   Repeat2,
   MoreHorizontal,
+  Layers,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
@@ -498,7 +499,11 @@ export const BuzzDetailPage: React.FC = () => {
             {buzz.sharedCollection && (
               <div
                 id={`buzz-shared-collection-${buzz.sharedCollection.collectionId}`}
-                onClick={() => navigateTo('collection-detail', { userId: buzz.sharedCollection.ownerId, collectionId: buzz.sharedCollection.collectionId })}
+                onClick={() => {
+                  if (buzz.sharedCollection) {
+                    navigateTo('collection-detail', { userId: buzz.sharedCollection.ownerId, collectionId: buzz.sharedCollection.collectionId });
+                  }
+                }}
                 className="p-4 rounded-2xl bg-[#0E1013] border border-white/10 hover:border-[#FF2E7E]/50 transition-all cursor-pointer group flex items-center justify-between gap-4 shadow-lg text-left"
               >
                 <div className="flex items-center gap-3.5 min-w-0">

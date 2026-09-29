@@ -320,6 +320,7 @@ export interface UserCollection {
   name: string;
   description?: string;
   isDefault: boolean;
+  isPublic: boolean;
   items: CollectionItem[];
   createdAt: string;
   updatedAt: string;

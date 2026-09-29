@@ -139,7 +139,7 @@ export const CollectionDetailPage: React.FC = () => {
           </p>
         </div>
         <button
-          onClick={() => navigateTo('komunitas')}
+          onClick={() => navigateTo('community-feed')}
           className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold text-xs transition-colors border border-slate-850"
         >
           Kembali ke Forum Komunitas
@@ -152,7 +152,7 @@ export const CollectionDetailPage: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-in fade-in duration-300">
       {/* Back button */}
       <button
-        onClick={() => navigateTo('profil')}
+        onClick={() => navigateTo('user-profile')}
         className="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-xs font-bold bg-slate-900/50 hover:bg-slate-900 px-3.5 py-2 rounded-xl border border-slate-850"
       >
         <ChevronLeft className="w-4 h-4" />
@@ -305,7 +305,7 @@ export const CollectionDetailPage: React.FC = () => {
                             {film.title}
                           </h3>
                           <p className="text-slate-400 text-xs line-clamp-2 mt-1">
-                            {film.synopsis || film.kurasiRedaksi}
+                            {film.synopsis || (film as any).kurasiRedaksi || ''}
                           </p>
                         </div>
 

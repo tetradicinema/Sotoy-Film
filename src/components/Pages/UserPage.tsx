@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   Film,
   Lock,
+  Globe,
   LogOut,
   LogIn,
   Activity,
@@ -61,7 +62,7 @@ import { INITIAL_FILMS, INITIAL_ARTICLES } from '../../data/mockData';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
 import { RoleBadge } from '../Common/RoleBadge';
 import { QuickReactionBar } from '../Common/QuickReactionBar';
-import { User, UserTab, UserSettings, BuzzReply, BuzzPost } from '../../types';
+import { User, UserTab, UserSettings, BuzzReply, BuzzPost, UserCollection, FilmItem, Article } from '../../types';
 import { StarRating } from '../Common/StarRating';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
@@ -194,10 +195,11 @@ export const UserPage: React.FC = () => {
   // Follow Modal State: 'followers' | 'following' | 'discover' | null
   const [followModalType, setFollowModalType] = useState<'followers' | 'following' | 'discover' | null>(null);
   const [modalSearchQuery, setModalSearchQuery] = useState('');
-  const [librarySubTab, setLibrarySubTab] = useState<'films' | 'articles'>('films');
+  const [librarySubTab, setLibrarySubTab] = useState<'films' | 'articles' | 'collections'>('films');
   const [isCreatingInTab, setIsCreatingInTab] = useState(false);
   const [tabNewCollectionName, setTabNewCollectionName] = useState('');
   const [tabNewCollectionDesc, setTabNewCollectionDesc] = useState('');
+  const [tabNewCollectionIsPublic, setTabNewCollectionIsPublic] = useState(true);
 
   // Real-time follow lists for viewed profile (when not own profile)
   const [viewedFollowersIds, setViewedFollowersIds] = useState<string[]>([]);
@@ -251,6 +253,42 @@ export const UserPage: React.FC = () => {
     return () => {
       unsubFollowers();
       unsubFollowing();
+    };
+  }, [isOwnProfile, targetUser?.id]);
+
+  // Real-time public collections for viewed profile (when not own profile)
+  const [viewedUserCollections, setViewedUserCollections] = useState<UserCollection[]>([]);
+
+  useEffect(() => {
+    if (isOwnProfile || !targetUser?.id || targetUser.id === 'guest') {
+      setViewedUserCollections([]);
+      return;
+    }
+
+    let isMounted = true;
+    const collectionsRef = collection(db, 'users', targetUser.id, 'collections');
+    const unsub = onSnapshot(
+      collectionsRef,
+      (snap) => {
+        if (!isMounted) return;
+        const list: UserCollection[] = [];
+        snap.forEach(docSnap => {
+          const data = docSnap.data() as UserCollection;
+          if (data.isPublic !== false) {
+            list.push(data);
+          }
+        });
+        setViewedUserCollections(list);
+      },
+      (err) => {
+        console.warn('[UserPage] Error loading public collections for user:', err.message);
+        if (isMounted) setViewedUserCollections([]);
+      }
+    );
+
+    return () => {
+      isMounted = false;
+      unsub();
     };
   }, [isOwnProfile, targetUser?.id]);
 
@@ -354,19 +392,50 @@ export const UserPage: React.FC = () => {
       });
   }, [buzzList, targetUser.id]);
 
-  // Watchlist & saved items perspective:
-  // If viewing own profile, use currentUser's state; if viewing another user, use targetUser.watchlist
-  const targetWatchlistIds = isOwnProfile
-    ? watchlist
-    : (targetUser.watchlist && targetUser.watchlist.length > 0
-        ? targetUser.watchlist
-        : myReviews.map(r => r.filmId));
-  const targetSavedArticleIds = isOwnProfile
-    ? savedArticles
-    : (targetUser.savedArticles || []);
+  // Collections-based Watchlist & saved items perspective:
+  // If isOwnProfile: all collections from AppContext (includes private)
+  // If not own profile: viewedUserCollections filtered by isPublic !== false
+  const profileCollections: UserCollection[] = isOwnProfile
+    ? collections
+    : viewedUserCollections.filter(c => c.isPublic !== false);
 
-  const myWatchlistFilms = films.filter(f => targetWatchlistIds.includes(f.id));
-  const mySavedArticles = articles.filter(a => targetSavedArticleIds.includes(a.id));
+  // Extract all unique film IDs across these collections (deduplicated)
+  const collectionFilmIds = useMemo(() => {
+    const ids = new Set<string>();
+    profileCollections.forEach(col => {
+      col.items?.forEach(item => {
+        if (item.itemType === 'film' && item.itemId) {
+          ids.add(item.itemId);
+        }
+      });
+    });
+    return Array.from(ids);
+  }, [profileCollections]);
+
+  // Extract all unique article IDs across these collections (deduplicated)
+  const collectionArticleIds = useMemo(() => {
+    const ids = new Set<string>();
+    profileCollections.forEach(col => {
+      col.items?.forEach(item => {
+        if (item.itemType === 'article' && item.itemId) {
+          ids.add(item.itemId);
+        }
+      });
+    });
+    return Array.from(ids);
+  }, [profileCollections]);
+
+  const myWatchlistFilms = useMemo(() => {
+    return collectionFilmIds
+      .map(id => films.find(f => f.id === id) || INITIAL_FILMS.find(f => f.id === id))
+      .filter((f): f is FilmItem => Boolean(f));
+  }, [collectionFilmIds, films]);
+
+  const mySavedArticles = useMemo(() => {
+    return collectionArticleIds
+      .map(id => articles.find(a => a.id === id) || INITIAL_ARTICLES.find(a => a.id === id))
+      .filter((a): a is Article => Boolean(a));
+  }, [collectionArticleIds, articles]);
 
   // Bulk Selection States for Watchlist & Saved Articles
   const [selectedFilmIds, setSelectedFilmIds] = useState<string[]>([]);
@@ -1497,224 +1566,620 @@ export const UserPage: React.FC = () => {
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 2: PERPUSTAKAAN SAYA (LIBRARY - FILMS & ARTICLES) */}
+        {/* TAB 2: PERPUSTAKAAN & WATCHLIST (COLLECTIONS, FILMS & ARTICLES) */}
         {/* ========================================================================= */}
         {activeUserTab === 'watchlist' && (
           <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
+            {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
               <div>
                 <h3 className="font-display font-black text-xl text-white flex items-center gap-2.5">
                   <Bookmark className="w-5 h-5 text-[#FF2E7E]" />
                   <span>
-                    {isOwnProfile ? 'Koleksi Saya' : `Koleksi ${targetUser.name}`}
+                    {isOwnProfile ? 'Watchlist & Koleksi Saya' : `Watchlist & Koleksi ${targetUser.name}`}
                   </span>
                 </h3>
                 <p className="text-slate-400 text-xs mt-1">
                   {isOwnProfile
-                    ? 'Koleksi playlist campuran film dan artikel buatanmu yang bisa kamu kelola dan bagikan.'
-                    : `Daftar koleksi publik yang dibuat oleh ${targetUser.name}.`}
+                    ? 'Daftar tontonan film, artikel tersimpan, dan playlist koleksi pribadimu.'
+                    : `Daftar film dan koleksi publik yang dibagikan oleh ${targetUser.name}.`}
                 </p>
               </div>
             </div>
 
-            {!isOwnProfile ? (
-              <div className="text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800/80 space-y-4 max-w-md mx-auto p-6">
-                <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center text-slate-500 mx-auto border border-slate-700/50">
-                  <Lock className="w-5 h-5 text-slate-400" />
-                </div>
-                <div className="space-y-1.5">
-                  <h4 className="font-display font-bold text-white text-base">
-                    Koleksi Bersifat Pribadi
-                  </h4>
-                  <p className="text-slate-400 text-xs leading-relaxed">
-                    Koleksi pengguna bersifat pribadi demi menjaga kenyamanan. Pengguna hanya dapat membagikan koleksi mereka ke publik melalui snapshot postingan <strong>Buzz</strong> di Feed Komunitas.
-                  </p>
-                </div>
+            {/* Sub-Tabs: Film, Artikel, Koleksi + Bulk action controls */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-850">
+              <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
+                <button
+                  id="watchlist-subtab-films"
+                  onClick={() => setLibrarySubTab('films')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    librarySubTab === 'films'
+                      ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/20'
+                      : 'bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
+                  }`}
+                >
+                  <Film className="w-3.5 h-3.5" />
+                  <span>Film ({myWatchlistFilms.length})</span>
+                </button>
+
+                <button
+                  id="watchlist-subtab-articles"
+                  onClick={() => setLibrarySubTab('articles')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    librarySubTab === 'articles'
+                      ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/20'
+                      : 'bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
+                  }`}
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Artikel ({mySavedArticles.length})</span>
+                </button>
+
+                <button
+                  id="watchlist-subtab-collections"
+                  onClick={() => setLibrarySubTab('collections')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    librarySubTab === 'collections'
+                      ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/20'
+                      : 'bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Koleksi ({profileCollections.length})</span>
+                </button>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {/* "+ Buat Koleksi Baru" Card for Owner */}
-                {isOwnProfile && (
-                  <div className="bg-slate-900/60 hover:bg-slate-900 border border-dashed border-slate-800 hover:border-[#FF2E7E]/50 rounded-2xl p-5 flex flex-col justify-between min-h-[260px] transition-all group">
-                    {!isCreatingInTab ? (
-                      <div className="flex-1 flex flex-col items-center justify-center text-center cursor-pointer py-8" onClick={() => setIsCreatingInTab(true)}>
-                        <div className="w-12 h-12 bg-[#FF2E7E]/10 group-hover:bg-[#FF2E7E]/20 rounded-full flex items-center justify-center text-[#FF2E7E] transition-all mb-3 border border-[#FF2E7E]/20">
-                          <Plus className="w-6 h-6" />
-                        </div>
-                        <h4 className="font-display font-bold text-sm text-white group-hover:text-[#FF2E7E] transition-colors">
-                          Buat Koleksi Baru
-                        </h4>
-                        <p className="text-slate-400 text-[11px] mt-1 max-w-[180px]">
-                          Buat playlist baru dan campur film dengan artikel sesukamu.
-                        </p>
-                      </div>
-                    ) : (
-                      <form
-                        onSubmit={async (e) => {
-                          e.preventDefault();
-                          if (!tabNewCollectionName.trim()) {
-                            showToast('Nama koleksi wajib diisi.', 'error');
-                            return;
-                          }
-                          const colId = await createCollection(tabNewCollectionName, tabNewCollectionDesc);
-                          if (colId) {
-                            setTabNewCollectionName('');
-                            setTabNewCollectionDesc('');
-                            setIsCreatingInTab(false);
+
+              {/* Bulk Actions for Films (when on films tab & is own profile) */}
+              {isOwnProfile && librarySubTab === 'films' && myWatchlistFilms.length > 0 && (
+                <div className="flex items-center gap-2 self-end sm:self-auto">
+                  {!isFilmSelectMode ? (
+                    <button
+                      id="watchlist-select-mode-btn"
+                      onClick={() => setIsFilmSelectMode(true)}
+                      className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-xs font-bold text-slate-300 hover:text-white transition-all flex items-center gap-1.5"
+                    >
+                      <CheckSquare className="w-3.5 h-3.5 text-[#FF2E7E]" />
+                      <span>Mode Pilih</span>
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleToggleSelectAllFilms}
+                        className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-slate-200 transition-colors"
+                      >
+                        {selectedFilmIds.length === myWatchlistFilms.length ? 'Batal Semua' : 'Pilih Semua'}
+                      </button>
+                      <button
+                        onClick={handleExecuteBulkDeleteFilms}
+                        disabled={selectedFilmIds.length === 0 || isBulkDeleting}
+                        className="px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-[11px] font-bold transition-colors flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Hapus ({selectedFilmIds.length})</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsFilmSelectMode(false);
+                          setSelectedFilmIds([]);
+                        }}
+                        className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-400 hover:text-white"
+                      >
+                        Selesai
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Bulk Actions for Articles (when on articles tab & is own profile) */}
+              {isOwnProfile && librarySubTab === 'articles' && mySavedArticles.length > 0 && (
+                <div className="flex items-center gap-2 self-end sm:self-auto">
+                  {!isArticleSelectMode ? (
+                    <button
+                      onClick={() => setIsArticleSelectMode(true)}
+                      className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-xs font-bold text-slate-300 hover:text-white transition-all flex items-center gap-1.5"
+                    >
+                      <CheckSquare className="w-3.5 h-3.5 text-[#FF2E7E]" />
+                      <span>Mode Pilih</span>
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleToggleSelectAllArticles}
+                        className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-bold text-slate-200 transition-colors"
+                      >
+                        {selectedArticleIds.length === mySavedArticles.length ? 'Batal Semua' : 'Pilih Semua'}
+                      </button>
+                      <button
+                        onClick={handleExecuteBulkDeleteArticles}
+                        disabled={selectedArticleIds.length === 0 || isBulkDeleting}
+                        className="px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-[11px] font-bold transition-colors flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Hapus ({selectedArticleIds.length})</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsArticleSelectMode(false);
+                          setSelectedArticleIds([]);
+                        }}
+                        className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-400 hover:text-white"
+                      >
+                        Selesai
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* TAB CONTENT: FILMS */}
+            {librarySubTab === 'films' && (
+              myWatchlistFilms.length === 0 ? (
+                <div className="text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800/80 space-y-4 max-w-md mx-auto p-6">
+                  <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center text-slate-500 mx-auto border border-slate-700/50">
+                    <Bookmark className="w-5 h-5 text-slate-400" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <h4 className="font-display font-bold text-white text-base">
+                      {isOwnProfile ? 'Watchlist Film Masih Kosong' : `${targetUser.name} belum memiliki film di watchlist publik`}
+                    </h4>
+                    <p className="text-slate-400 text-xs leading-relaxed">
+                      {isOwnProfile
+                        ? 'Simpan film dari database ke dalam koleksi atau watchlist untuk ditonton nanti.'
+                        : 'Belum ada film yang dibagikan dalam koleksi publik pengguna ini.'}
+                    </p>
+                  </div>
+                  {isOwnProfile && (
+                    <button
+                      onClick={() => navigateTo('film-database')}
+                      className="px-4 py-2 rounded-xl bg-[#FF2E7E] hover:bg-[#E0246F] text-white font-bold text-xs transition-colors shadow-md shadow-[#FF2E7E]/20"
+                    >
+                      Jelajahi Database Film
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  {myWatchlistFilms.map(film => {
+                    const isSelected = selectedFilmIds.includes(film.id);
+
+                    return (
+                      <div
+                        key={film.id}
+                        id={`watchlist-film-card-${film.id}`}
+                        onClick={() => {
+                          if (isFilmSelectMode) {
+                            handleToggleFilmSelection(film.id);
+                          } else {
+                            navigateTo('film-detail', { filmId: film.id });
                           }
                         }}
-                        className="space-y-3 flex-1 flex flex-col justify-between"
+                        className={`bg-[#171A1F] border rounded-2xl overflow-hidden transition-all duration-200 flex flex-col group shadow-lg cursor-pointer ${
+                          isSelected
+                            ? 'border-[#FF2E7E] ring-2 ring-[#FF2E7E]/40'
+                            : 'border-white/10 hover:border-[#FF2E7E]/60 hover:-translate-y-1'
+                        }`}
                       >
-                        <div className="space-y-2.5">
-                          <h4 className="font-display font-bold text-xs text-slate-300 uppercase tracking-wider">
+                        {/* Poster */}
+                        <div className="relative aspect-[2/3] w-full overflow-hidden bg-[#0E1013]">
+                          <img
+                            src={film.poster}
+                            alt={film.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent opacity-80" />
+
+                          {/* Skor Sotoy Badge */}
+                          <div className="absolute top-2 left-2 bg-black/90 backdrop-blur-md px-1.5 py-0.5 rounded-lg border border-[#FFD000]/30 text-[#FFD000] text-[10px] font-black flex items-center gap-1 shadow-md">
+                            <Star className="w-3 h-3 fill-current text-[#FFD000]" />
+                            <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
+                          </div>
+
+                          {/* Selection Checkbox or Remove Button */}
+                          {isFilmSelectMode ? (
+                            <div className="absolute top-2 right-2">
+                              <div
+                                className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${
+                                  isSelected
+                                    ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/40'
+                                    : 'bg-black/70 text-slate-400 border border-white/20'
+                                }`}
+                              >
+                                {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                              </div>
+                            </div>
+                          ) : (
+                            isOwnProfile && (
+                              <button
+                                type="button"
+                                title="Hapus dari Watchlist"
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  await removeBulkFromWatchlist([film.id]);
+                                }}
+                                className="absolute top-2 right-2 w-7 h-7 rounded-lg bg-black/70 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )
+                          )}
+
+                          <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[10px] font-bold text-slate-300">
+                            <span className="bg-slate-900/90 px-1.5 py-0.5 rounded uppercase text-[9px]">
+                              {film.type}
+                            </span>
+                            <span>{film.year}</span>
+                          </div>
+                        </div>
+
+                        {/* Info Body */}
+                        <div className="p-3 flex-1 flex flex-col justify-between">
+                          <div>
+                            <h4 className="font-display font-bold text-xs text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-1 mb-0.5">
+                              {film.title}
+                            </h4>
+                            <p className="text-[10px] text-slate-400 line-clamp-1">
+                              {film.director}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )
+            )}
+
+            {/* TAB CONTENT: ARTICLES */}
+            {librarySubTab === 'articles' && (
+              mySavedArticles.length === 0 ? (
+                <div className="text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800/80 space-y-4 max-w-md mx-auto p-6">
+                  <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center text-slate-500 mx-auto border border-slate-700/50">
+                    <BookOpen className="w-5 h-5 text-slate-400" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <h4 className="font-display font-bold text-white text-base">
+                      {isOwnProfile ? 'Belum Ada Artikel Tersimpan' : `${targetUser.name} belum menyimpan artikel publik`}
+                    </h4>
+                    <p className="text-slate-400 text-xs leading-relaxed">
+                      {isOwnProfile
+                        ? 'Simpan artikel analisis, wawancara, dan berita film favoritmu ke perpustakaan.'
+                        : 'Tidak ada artikel yang tersimpan dalam koleksi publik pengguna ini.'}
+                    </p>
+                  </div>
+                  {isOwnProfile && (
+                    <button
+                      onClick={() => navigateTo('category')}
+                      className="px-4 py-2 rounded-xl bg-[#FF2E7E] hover:bg-[#E0246F] text-white font-bold text-xs transition-colors shadow-md shadow-[#FF2E7E]/20"
+                    >
+                      Jelajahi Editorial
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {mySavedArticles.map(article => {
+                    const isSelected = selectedArticleIds.includes(article.id);
+
+                    return (
+                      <div
+                        key={article.id}
+                        id={`saved-article-card-${article.id}`}
+                        onClick={() => {
+                          if (isArticleSelectMode) {
+                            handleToggleArticleSelection(article.id);
+                          } else {
+                            navigateTo('article-detail', { articleId: article.id });
+                          }
+                        }}
+                        className={`bg-[#171A1F] border rounded-2xl overflow-hidden transition-all duration-200 flex flex-col group shadow-lg cursor-pointer ${
+                          isSelected
+                            ? 'border-[#FF2E7E] ring-2 ring-[#FF2E7E]/40'
+                            : 'border-white/10 hover:border-[#FF2E7E]/60 hover:-translate-y-0.5'
+                        }`}
+                      >
+                        {/* Cover Image */}
+                        <div className="relative aspect-[16/9] w-full overflow-hidden bg-[#0E1013]">
+                          <img
+                            src={article.coverImage}
+                            alt={article.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute top-2.5 left-2.5 bg-black/80 backdrop-blur-md px-2 py-0.5 rounded-lg text-[10px] font-bold text-[#FF2E7E] border border-[#FF2E7E]/30 uppercase">
+                            {article.category}
+                          </div>
+
+                          {isArticleSelectMode ? (
+                            <div className="absolute top-2.5 right-2.5">
+                              <div
+                                className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${
+                                  isSelected
+                                    ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/40'
+                                    : 'bg-black/70 text-slate-400 border border-white/20'
+                                }`}
+                              >
+                                {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                              </div>
+                            </div>
+                          ) : (
+                            isOwnProfile && (
+                              <button
+                                type="button"
+                                title="Hapus dari Artikel Tersimpan"
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  await removeBulkFromSavedArticles([article.id]);
+                                }}
+                                className="absolute top-2.5 right-2.5 w-7 h-7 rounded-lg bg-black/70 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )
+                          )}
+                        </div>
+
+                        <div className="p-4 flex-1 flex flex-col justify-between space-y-2">
+                          <h4 className="font-display font-bold text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-2">
+                            {article.title}
+                          </h4>
+                          <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800">
+                            <span>{article.author.name}</span>
+                            <span>{formatRelativeTime(article.publishedAt)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )
+            )}
+
+            {/* TAB CONTENT: COLLECTIONS */}
+            {librarySubTab === 'collections' && (
+              !isOwnProfile && profileCollections.length === 0 ? (
+                <div className="text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800/80 space-y-4 max-w-md mx-auto p-6">
+                  <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center text-slate-500 mx-auto border border-slate-700/50">
+                    <Layers className="w-5 h-5 text-slate-400" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <h4 className="font-display font-bold text-white text-base">
+                      Belum Ada Koleksi Publik
+                    </h4>
+                    <p className="text-slate-400 text-xs leading-relaxed">
+                      {targetUser.name} belum membagikan playlist atau koleksi publik apa pun.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {/* "+ Buat Koleksi Baru" Card for Owner */}
+                  {isOwnProfile && (
+                    <div className="bg-slate-900/60 hover:bg-slate-900 border border-dashed border-slate-800 hover:border-[#FF2E7E]/50 rounded-2xl p-5 flex flex-col justify-between min-h-[260px] transition-all group">
+                      {!isCreatingInTab ? (
+                        <div className="flex-1 flex flex-col items-center justify-center text-center cursor-pointer py-8" onClick={() => setIsCreatingInTab(true)}>
+                          <div className="w-12 h-12 bg-[#FF2E7E]/10 group-hover:bg-[#FF2E7E]/20 rounded-full flex items-center justify-center text-[#FF2E7E] transition-all mb-3 border border-[#FF2E7E]/20">
+                            <Plus className="w-6 h-6" />
+                          </div>
+                          <h4 className="font-display font-bold text-sm text-white group-hover:text-[#FF2E7E] transition-colors">
                             Buat Koleksi Baru
                           </h4>
-                          <input
-                            type="text"
-                            placeholder="Nama koleksi (cth: Sci-Fi Favorit)..."
-                            value={tabNewCollectionName}
-                            onChange={e => setTabNewCollectionName(e.target.value)}
-                            maxLength={40}
-                            className="w-full px-3 py-1.5 text-xs bg-slate-850 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-[#FF2E7E]"
-                            autoFocus
-                          />
-                          <textarea
-                            placeholder="Deskripsi singkat (opsional)..."
-                            value={tabNewCollectionDesc}
-                            onChange={e => setTabNewCollectionDesc(e.target.value)}
-                            maxLength={100}
-                            rows={2}
-                            className="w-full px-3 py-1.5 text-xs bg-slate-850 border border-slate-800 rounded-xl text-white resize-none focus:outline-none focus:border-[#FF2E7E]"
-                          />
+                          <p className="text-slate-400 text-[11px] mt-1 max-w-[180px]">
+                            Buat playlist baru dan campur film dengan artikel sesukamu.
+                          </p>
                         </div>
-                        <div className="flex gap-2 justify-end text-[11px] pt-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsCreatingInTab(false);
+                      ) : (
+                        <form
+                          onSubmit={async (e) => {
+                            e.preventDefault();
+                            if (!tabNewCollectionName.trim()) {
+                              showToast('Nama koleksi wajib diisi.', 'error');
+                              return;
+                            }
+                            const colId = await createCollection(tabNewCollectionName, tabNewCollectionDesc, tabNewCollectionIsPublic);
+                            if (colId) {
                               setTabNewCollectionName('');
                               setTabNewCollectionDesc('');
-                            }}
-                            className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-colors"
-                          >
-                            Batal
-                          </button>
-                          <button
-                            type="submit"
-                            className="px-3 py-1.5 rounded-lg bg-[#FF2E7E] hover:bg-[#E0246F] text-white font-bold transition-colors"
-                          >
-                            Simpan
-                          </button>
-                        </div>
-                      </form>
-                    )}
-                  </div>
-                )}
+                              setTabNewCollectionIsPublic(true);
+                              setIsCreatingInTab(false);
+                            }
+                          }}
+                          className="space-y-3 flex-1 flex flex-col justify-between"
+                        >
+                          <div className="space-y-2.5">
+                            <h4 className="font-display font-bold text-xs text-slate-300 uppercase tracking-wider">
+                              Buat Koleksi Baru
+                            </h4>
+                            <input
+                              type="text"
+                              placeholder="Nama koleksi (cth: Sci-Fi Favorit)..."
+                              value={tabNewCollectionName}
+                              onChange={e => setTabNewCollectionName(e.target.value)}
+                              maxLength={40}
+                              className="w-full px-3 py-1.5 text-xs bg-slate-850 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-[#FF2E7E]"
+                              autoFocus
+                            />
+                            <textarea
+                              placeholder="Deskripsi singkat (opsional)..."
+                              value={tabNewCollectionDesc}
+                              onChange={e => setTabNewCollectionDesc(e.target.value)}
+                              maxLength={100}
+                              rows={2}
+                              className="w-full px-3 py-1.5 text-xs bg-slate-850 border border-slate-800 rounded-xl text-white resize-none focus:outline-none focus:border-[#FF2E7E]"
+                            />
 
-                {/* Collections List */}
-                {collections.map((col) => {
-                  const imageUrls = [];
-                  col.items.slice(0, 4).forEach((item) => {
-                    if (item.itemType === 'film') {
-                      const f = films.find(x => x.id === item.itemId) || INITIAL_FILMS.find(x => x.id === item.itemId);
-                      if (f?.poster) imageUrls.push(f.poster);
-                    } else {
-                      const a = articles.find(x => x.id === item.itemId) || INITIAL_ARTICLES.find(x => x.id === item.itemId);
-                      if (a?.coverImage) imageUrls.push(a.coverImage);
-                    }
-                  });
-
-                  return (
-                    <div
-                      key={col.id}
-                      id={`collection-card-${col.id}`}
-                      className="bg-slate-900/60 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl overflow-hidden transition-all flex flex-col group shadow-lg min-h-[260px] cursor-pointer"
-                      onClick={() => navigateTo('collection-detail', { userId: targetUser.id, collectionId: col.id })}
-                    >
-                      {/* Collage Cover preview */}
-                      <div className="relative aspect-[16/10] bg-slate-950 flex overflow-hidden">
-                        {imageUrls.length === 0 ? (
-                          <div className="w-full h-full bg-slate-900/80 flex flex-col items-center justify-center border-b border-slate-800">
-                            <Layers className="w-8 h-8 text-slate-700" />
-                            <span className="text-[10px] text-slate-600 mt-1">Belum ada item</span>
-                          </div>
-                        ) : imageUrls.length === 1 ? (
-                          <img src={imageUrls[0]} alt="" className="w-full h-full object-cover border-b border-slate-800" />
-                        ) : imageUrls.length === 2 ? (
-                          <div className="w-full h-full grid grid-cols-2 gap-0.5 border-b border-slate-800">
-                            <img src={imageUrls[0]} alt="" className="w-full h-full object-cover" />
-                            <img src={imageUrls[1]} alt="" className="w-full h-full object-cover" />
-                          </div>
-                        ) : imageUrls.length === 3 ? (
-                          <div className="w-full h-full grid grid-cols-3 gap-0.5 border-b border-slate-800">
-                            <img src={imageUrls[0]} alt="" className="w-full h-full object-cover col-span-2" />
-                            <div className="grid grid-rows-2 gap-0.5">
-                              <img src={imageUrls[1]} alt="" className="w-full h-full object-cover" />
-                              <img src={imageUrls[2]} alt="" className="w-full h-full object-cover" />
+                            {/* Public/Private Toggle Switch matching SettingsPage */}
+                            <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                                  {tabNewCollectionIsPublic ? <Globe className="w-3.5 h-3.5 text-emerald-400" /> : <Lock className="w-3.5 h-3.5 text-amber-400" />}
+                                  <span>{tabNewCollectionIsPublic ? 'Koleksi Publik' : 'Koleksi Privat'}</span>
+                                </div>
+                                <div className="text-[10px] text-slate-400">
+                                  {tabNewCollectionIsPublic ? 'Dapat dilihat publik di profil' : 'Hanya kamu yang dapat melihat'}
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setTabNewCollectionIsPublic(prev => !prev)}
+                                className={`w-11 h-6 rounded-full transition-colors relative p-0.5 shrink-0 ${
+                                  tabNewCollectionIsPublic ? 'bg-emerald-500' : 'bg-slate-800'
+                                }`}
+                              >
+                                <div
+                                  className={`w-5 h-5 rounded-full bg-black transition-transform ${
+                                    tabNewCollectionIsPublic ? 'translate-x-5' : 'translate-x-0'
+                                  }`}
+                                />
+                              </button>
                             </div>
                           </div>
-                        ) : (
-                          <div className="w-full h-full grid grid-cols-2 grid-rows-2 gap-0.5 border-b border-slate-800">
-                            <img src={imageUrls[0]} alt="" className="w-full h-full object-cover" />
-                            <img src={imageUrls[1]} alt="" className="w-full h-full object-cover" />
-                            <img src={imageUrls[2]} alt="" className="w-full h-full object-cover" />
-                            <img src={imageUrls[3]} alt="" className="w-full h-full object-cover" />
-                          </div>
-                        )}
-
-                        <div className="absolute top-2.5 right-2.5 bg-black/80 backdrop-blur-md px-2 py-1 rounded-lg text-[10px] font-bold text-slate-300 border border-white/10 flex items-center gap-1">
-                          <span>{col.items.length} item</span>
-                        </div>
-
-                        {col.isDefault && (
-                          <div className="absolute top-2.5 left-2.5 bg-[#FF2E7E] text-white px-2 py-0.5 rounded-lg text-[9px] font-extrabold uppercase tracking-wider shadow-sm">
-                            Utama
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Card Info Body */}
-                      <div className="p-4 flex-1 flex flex-col justify-between space-y-2">
-                        <div>
-                          <h4 className="font-display font-black text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-1 leading-snug">
-                            {col.name}
-                          </h4>
-                          {col.description && (
-                            <p className="text-slate-400 text-xs line-clamp-2 mt-1">
-                              {col.description}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2" onClick={e => e.stopPropagation()}>
-                          <button
-                            onClick={() => shareCollectionToBuzz(col.id)}
-                            className="text-slate-400 hover:text-[#FF2E7E] p-1.5 rounded-lg bg-slate-800/50 hover:bg-[#FF2E7E]/10 border border-slate-800 hover:border-[#FF2E7E]/30 transition-all text-xs font-bold flex items-center gap-1.5"
-                            title="Bagikan ke Buzz"
-                          >
-                            <Share2 className="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline text-[10px]">Bagikan</span>
-                          </button>
-
-                          {!col.isDefault && (
+                          <div className="flex gap-2 justify-end text-[11px] pt-2">
                             <button
-                              onClick={async () => {
-                                if (confirm(`Apakah Anda yakin ingin menghapus koleksi "${col.name}"?`)) {
-                                  await deleteCollection(col.id);
-                                }
+                              type="button"
+                              onClick={() => {
+                                setIsCreatingInTab(false);
+                                setTabNewCollectionName('');
+                                setTabNewCollectionDesc('');
+                                setTabNewCollectionIsPublic(true);
                               }}
-                              className="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg bg-slate-800/50 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all"
-                              title="Hapus Koleksi"
+                              className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-colors"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              Batal
                             </button>
+                            <button
+                              type="submit"
+                              className="px-3 py-1.5 rounded-lg bg-[#FF2E7E] hover:bg-[#E0246F] text-white font-bold transition-colors"
+                            >
+                              Simpan
+                            </button>
+                          </div>
+                        </form>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Collections List */}
+                  {profileCollections.map((col) => {
+                    const imageUrls: string[] = [];
+                    col.items.slice(0, 4).forEach((item) => {
+                      if (item.itemType === 'film') {
+                        const f = films.find(x => x.id === item.itemId) || INITIAL_FILMS.find(x => x.id === item.itemId);
+                        if (f?.poster) imageUrls.push(f.poster);
+                      } else {
+                        const a = articles.find(x => x.id === item.itemId) || INITIAL_ARTICLES.find(x => x.id === item.itemId);
+                        if (a?.coverImage) imageUrls.push(a.coverImage);
+                      }
+                    });
+
+                    return (
+                      <div
+                        key={col.id}
+                        id={`collection-card-${col.id}`}
+                        className="bg-slate-900/60 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl overflow-hidden transition-all flex flex-col group shadow-lg min-h-[260px] cursor-pointer"
+                        onClick={() => navigateTo('collection-detail', { userId: targetUser.id, collectionId: col.id })}
+                      >
+                        {/* Collage Cover preview */}
+                        <div className="relative aspect-[16/10] bg-slate-950 flex overflow-hidden">
+                          {imageUrls.length === 0 ? (
+                            <div className="w-full h-full bg-slate-900/80 flex flex-col items-center justify-center border-b border-slate-800">
+                              <Layers className="w-8 h-8 text-slate-700" />
+                              <span className="text-[10px] text-slate-600 mt-1">Belum ada item</span>
+                            </div>
+                          ) : imageUrls.length === 1 ? (
+                            <img src={imageUrls[0]} alt="" className="w-full h-full object-cover border-b border-slate-800" />
+                          ) : imageUrls.length === 2 ? (
+                            <div className="w-full h-full grid grid-cols-2 gap-0.5 border-b border-slate-800">
+                              <img src={imageUrls[0]} alt="" className="w-full h-full object-cover" />
+                              <img src={imageUrls[1]} alt="" className="w-full h-full object-cover" />
+                            </div>
+                          ) : imageUrls.length === 3 ? (
+                            <div className="w-full h-full grid grid-cols-3 gap-0.5 border-b border-slate-800">
+                              <img src={imageUrls[0]} alt="" className="w-full h-full object-cover col-span-2" />
+                              <div className="grid grid-rows-2 gap-0.5">
+                                <img src={imageUrls[1]} alt="" className="w-full h-full object-cover" />
+                                <img src={imageUrls[2]} alt="" className="w-full h-full object-cover" />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-full h-full grid grid-cols-2 grid-rows-2 gap-0.5 border-b border-slate-800">
+                              <img src={imageUrls[0]} alt="" className="w-full h-full object-cover" />
+                              <img src={imageUrls[1]} alt="" className="w-full h-full object-cover" />
+                              <img src={imageUrls[2]} alt="" className="w-full h-full object-cover" />
+                              <img src={imageUrls[3]} alt="" className="w-full h-full object-cover" />
+                            </div>
                           )}
+
+                          <div className="absolute top-2.5 right-2.5 bg-black/80 backdrop-blur-md px-2 py-1 rounded-lg text-[10px] font-bold text-slate-300 border border-white/10 flex items-center gap-1">
+                            <span>{col.items.length} item</span>
+                          </div>
+
+                          <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                            {col.isDefault && (
+                              <div className="bg-[#FF2E7E] text-white px-2 py-0.5 rounded-lg text-[9px] font-extrabold uppercase tracking-wider shadow-sm">
+                                Utama
+                              </div>
+                            )}
+                            <div className="bg-black/70 backdrop-blur-sm text-slate-300 px-2 py-0.5 rounded-lg text-[9px] font-bold flex items-center gap-1 border border-white/10">
+                              {col.isPublic ? (
+                                <>
+                                  <Globe className="w-2.5 h-2.5 text-emerald-400" />
+                                  <span className="text-emerald-400">Publik</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Lock className="w-2.5 h-2.5 text-amber-400" />
+                                  <span className="text-amber-400">Privat</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Card Info Body */}
+                        <div className="p-4 flex-1 flex flex-col justify-between space-y-2">
+                          <div>
+                            <h4 className="font-display font-black text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-1 leading-snug">
+                              {col.name}
+                            </h4>
+                            {col.description && (
+                              <p className="text-slate-400 text-xs line-clamp-2 mt-1">
+                                {col.description}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2" onClick={e => e.stopPropagation()}>
+                            <button
+                              onClick={() => shareCollectionToBuzz(col.id)}
+                              className="text-slate-400 hover:text-[#FF2E7E] p-1.5 rounded-lg bg-slate-800/50 hover:bg-[#FF2E7E]/10 border border-slate-800 hover:border-[#FF2E7E]/30 transition-all text-xs font-bold flex items-center gap-1.5"
+                              title="Bagikan ke Buzz"
+                            >
+                              <Share2 className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline text-[10px]">Bagikan</span>
+                            </button>
+
+                            {isOwnProfile && !col.isDefault && (
+                              <button
+                                onClick={async () => {
+                                  if (confirm(`Apakah Anda yakin ingin menghapus koleksi "${col.name}"?`)) {
+                                    await deleteCollection(col.id);
+                                  }
+                                }}
+                                className="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg bg-slate-800/50 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all"
+                                title="Hapus Koleksi"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )
             )}
           </div>
         )}

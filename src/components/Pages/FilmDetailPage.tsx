@@ -41,6 +41,7 @@ import { RoleBadge } from '../Common/RoleBadge';
 import { FilmItem, CastMember, CrewMember } from '../../types';
 import { RateFilmModal } from '../Modals/RateFilmModal';
 import { AddToCollectionModal } from '../Modals/AddToCollectionModal';
+import { CollectionPickerPopover } from '../Common/CollectionPickerPopover';
 import { FullCastCrewModal } from '../Modals/FullCastCrewModal';
 import { PersonAvatar } from '../Common/PersonAvatar';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
@@ -579,39 +580,12 @@ export const FilmDetailPage: React.FC = () => {
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5 pt-1">
-                <button
-                  id="detail-toggle-watchlist-btn"
-                  onClick={() => {
-                    if (!isLoggedIn) {
-                      setLoginModalOpen(true);
-                      showToast('Silakan Log In terlebih dahulu untuk menyimpan ke Daftar Tonton!');
-                      return;
-                    }
-                    if (collections.length > 1) {
-                      setCollectionModalOpen(true);
-                    } else {
-                      toggleWatchlist(film.id);
-                    }
-                  }}
-                  className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all min-h-[40px] ${
-                    isInWatchlist
-                      ? 'bg-[#FF2E7E]/20 text-[#FF2E7E] border border-[#FF2E7E]/40 hover:bg-[#FF2E7E]/30'
-                      : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
-                  }`}
-                  title={isInWatchlist ? 'Hapus dari Perpustakaan & Watchlist' : 'Simpan ke Perpustakaan & Watchlist'}
-                >
-                  {isInWatchlist ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Tersimpan di Library</span>
-                    </>
-                  ) : (
-                    <>
-                      <Bookmark className="w-3.5 h-3.5 text-[#FF2E7E]" />
-                      <span>+ Simpan ke Library</span>
-                    </>
-                  )}
-                </button>
+                <CollectionPickerPopover
+                  itemId={film.id}
+                  itemType="film"
+                  itemName={film.title}
+                  buttonId="detail-toggle-watchlist-btn"
+                />
 
                 <button
                   onClick={() => {

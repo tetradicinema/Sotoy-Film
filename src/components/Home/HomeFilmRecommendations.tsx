@@ -14,12 +14,13 @@ export const HomeFilmRecommendations: React.FC = () => {
   const {
     films,
     navigateTo,
-    toggleWatchlist,
-    isFilmInWatchlist,
     isLoggedIn,
     setLoginModalOpen,
     collections,
     isItemInAnyCollection,
+    addItemToCollection,
+    removeItemFromCollection,
+    getOrCreateDefaultCollection,
     showToast,
   } = useApp();
 
@@ -132,17 +133,20 @@ export const HomeFilmRecommendations: React.FC = () => {
                   {/* Watchlist Quick Button */}
                   <button
                     id={`rec-watchlist-btn-${film.id}`}
-                    onClick={e => {
+                    onClick={async (e) => {
                       e.stopPropagation();
                       if (!isLoggedIn) {
                         setLoginModalOpen(true);
                         showToast('Silakan Log In terlebih dahulu untuk menyimpan ke Daftar Tonton!');
                         return;
                       }
-                      if (collections.length > 1) {
-                        setCollectionModalFilm(film);
+                      const defaultCol = await getOrCreateDefaultCollection();
+                      if (!defaultCol) return;
+                      const isInDefault = defaultCol.items.some((i: any) => i.itemId === film.id && i.itemType === 'film');
+                      if (isInDefault) {
+                        await removeItemFromCollection(defaultCol.id, film.id);
                       } else {
-                        toggleWatchlist(film.id);
+                        await addItemToCollection(defaultCol.id, film.id, 'film');
                       }
                     }}
                     title={inWatchlist ? 'Hapus dari Watchlist' : 'Tambah ke Watchlist'}

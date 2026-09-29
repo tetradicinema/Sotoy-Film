@@ -25,6 +25,8 @@ import {
   AccountAppeal,
   AuditLog,
   AuditLogActionType,
+  UserCollection,
+  CollectionItem,
 } from '../types';
 import {
   DEFAULT_FALLBACK_AUTHOR,
@@ -222,6 +224,7 @@ export type AppView =
   | 'critic-dashboard'
   | 'cms'
   | 'cms-workspace'
+  | 'collection-detail'
   | 'onboarding';
 
 interface AppContextType {
@@ -264,13 +267,15 @@ interface AppContextType {
   removeBulkFromSavedArticles: (articleIds: string[]) => Promise<void>;
   isArticleSaved: (articleId: string) => boolean;
   collections: UserCollection[];
-  createCollection: (name: string, description?: string) => Promise<string | null>;
+  createCollection: (name: string, description?: string, isPublic?: boolean) => Promise<string | null>;
   renameCollection: (collectionId: string, newName: string) => Promise<boolean>;
   deleteCollection: (collectionId: string) => Promise<boolean>;
   addItemToCollection: (collectionId: string, itemId: string, itemType: 'film' | 'article') => Promise<boolean>;
   removeItemFromCollection: (collectionId: string, itemId: string) => Promise<boolean>;
   isItemInAnyCollection: (itemId: string, itemType: 'film' | 'article') => boolean;
   getCollectionsContainingItem: (itemId: string, itemType: 'film' | 'article') => UserCollection[];
+  getOrCreateDefaultCollection: () => Promise<UserCollection | null>;
+  toggleItemInDefaultCollection: (itemId: string, itemType: 'film' | 'article') => Promise<void>;
   savedBuzzIds: string[];
   toggleSaveBuzz: (buzzId: string) => void;
   isBuzzSaved: (buzzId: string) => boolean;
@@ -315,6 +320,7 @@ interface AppContextType {
       userId?: string;
       buzzFeedTab?: 'for-you' | 'following' | 'saved' | 'liked' | 'trending';
       searchQuery?: string;
+      collectionId?: string;
     }
   ) => void;
   goBack: () => void;
@@ -470,8 +476,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       collectionId: string;
       ownerId: string;
       name: string;
+      description?: string;
       itemCount: number;
       previewImages: string[];
+      items: { itemId: string; itemType: 'film' | 'article' }[];
     };
   } | null>(null);
 
@@ -1498,6 +1506,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               id: 'default',
               name: 'Watchlist Utama',
               isDefault: true,
+              isPublic: true,
               items: mergedItems,
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
@@ -1785,69 +1794,87 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [isLoggedIn, currentUser?.id, currentUser?.role, currentUser?.email]);
 
-  const toggleWatchlist = async (filmId: string) => {
+  const getOrCreateDefaultCollection = async (): Promise<UserCollection | null> => {
     if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') {
       setLoginModalOpen(true);
-      showToast('Silakan Log In terlebih dahulu untuk menyimpan ke Daftar Tonton!');
+      showToast('Silakan Log In terlebih dahulu!');
+      return null;
+    }
+
+    const existing = collections.find(c => c.isDefault);
+    if (existing) return existing;
+
+    const defaultColRef = doc(db, 'users', currentUser.id, 'collections', 'default');
+    try {
+      const snap = await getDoc(defaultColRef);
+      if (snap.exists()) {
+        const data = snap.data() as UserCollection;
+        setCollections(prev => {
+          if (prev.some(c => c.id === 'default')) return prev;
+          return [...prev, data];
+        });
+        return data;
+      }
+    } catch (err) {
+      console.warn('[Collections] Error checking default collection doc:', err);
+    }
+
+    const newDefault: UserCollection = {
+      id: 'default',
+      name: 'Watchlist Utama',
+      description: 'Daftar tontonan utama kamu.',
+      isDefault: true,
+      isPublic: true,
+      items: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    setCollections(prev => {
+      if (prev.some(c => c.id === 'default')) return prev;
+      return [...prev, newDefault];
+    });
+
+    try {
+      await setDoc(defaultColRef, newDefault);
+    } catch (err) {
+      console.error('[Collections] Error creating default collection doc:', err);
+    }
+
+    return newDefault;
+  };
+
+  const toggleItemInDefaultCollection = async (itemId: string, itemType: 'film' | 'article') => {
+    if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') {
+      setLoginModalOpen(true);
+      showToast(
+        itemType === 'film'
+          ? 'Silakan Log In terlebih dahulu untuk menyimpan ke Daftar Tonton!'
+          : 'Silakan Log In terlebih dahulu untuk menyimpan artikel!'
+      );
       return;
     }
 
-    const exists = watchlist.includes(filmId);
-    const itemRef = doc(db, 'users', currentUser.id, 'watchlist', filmId);
+    const defaultCol = await getOrCreateDefaultCollection();
+    if (!defaultCol) return;
 
-    // Optimistic UI state update
-    setWatchlist(prev => (exists ? prev.filter(id => id !== filmId) : [...prev, filmId]));
-    showToast(exists ? 'Dihapus dari Daftar Tonton (Watchlist)' : 'Ditambahkan ke Daftar Tonton (Watchlist)!');
-
-    try {
-      if (exists) {
-        await deleteDoc(itemRef);
-      } else {
-        await setDoc(itemRef, {
-          filmId,
-          addedAt: new Date().toISOString(),
-        });
-        // Track interest signal when adding film to watchlist (+3 weight)
-        const film = films.find(f => f.id === filmId);
+    const inDefault = defaultCol.items.some((i: any) => i.itemId === itemId && i.itemType === itemType);
+    if (inDefault) {
+      await removeItemFromCollection(defaultCol.id, itemId);
+    } else {
+      await addItemToCollection(defaultCol.id, itemId, itemType);
+      if (itemType === 'film') {
+        const film = films.find(f => f.id === itemId);
         if (film) {
           const topics = [...(film.genres || []), film.type, film.title];
           recordUserInterest(topics, 3);
         }
       }
-
-      // Mirror to default collection
-      try {
-        const defaultColRef = doc(db, 'users', currentUser.id, 'collections', 'default');
-        const defaultSnap = await getDoc(defaultColRef);
-        if (defaultSnap.exists()) {
-          const defaultData = defaultSnap.data() as UserCollection;
-          const newItems = [...defaultData.items];
-          const itemIdx = newItems.findIndex(item => item.itemId === filmId && item.itemType === 'film');
-          if (exists) {
-            if (itemIdx > -1) newItems.splice(itemIdx, 1);
-          } else {
-            if (itemIdx === -1) {
-              newItems.push({
-                itemId: filmId,
-                itemType: 'film',
-                addedAt: new Date().toISOString()
-              });
-            }
-          }
-          await updateDoc(defaultColRef, {
-            items: newItems,
-            updatedAt: new Date().toISOString()
-          });
-        }
-      } catch (colErr) {
-        console.warn('[Watchlist Mirror] Error updating default collection:', colErr);
-      }
-    } catch (err) {
-      console.error('[Watchlist] Firestore error:', err);
-      // Revert optimistic update on error
-      setWatchlist(prev => (exists ? [...prev, filmId] : prev.filter(id => id !== filmId)));
-      showToast('Gagal memperbarui Daftar Tonton.', 'error');
     }
+  };
+
+  const toggleWatchlist = async (filmId: string) => {
+    await toggleItemInDefaultCollection(filmId, 'film');
   };
 
   const removeBulkFromWatchlist = async (filmIds: string[]) => {
@@ -1855,28 +1882,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    const prevWatchlist = [...watchlist];
-    // Optimistic UI state update
-    setWatchlist(prev => prev.filter(id => !filmIds.includes(id)));
-    showToast(`${filmIds.length} film dihapus dari Daftar Tonton.`);
+    const affectedCollections = collections.filter(col =>
+      col.items.some((item: any) => item.itemType === 'film' && filmIds.includes(item.itemId))
+    );
+
+    // Optimistic UI state update across collections
+    setCollections(prev => prev.map(col => ({
+      ...col,
+      items: col.items.filter((item: any) => !(item.itemType === 'film' && filmIds.includes(item.itemId)))
+    })));
+    showToast(`${filmIds.length} film dihapus dari koleksi.`);
 
     try {
       const batch = writeBatch(db);
-      filmIds.forEach(filmId => {
-        const itemRef = doc(db, 'users', currentUser.id, 'watchlist', filmId);
-        batch.delete(itemRef);
-      });
+      for (const col of affectedCollections) {
+        const colRef = doc(db, 'users', currentUser.id, 'collections', col.id);
+        const updatedItems = col.items.filter((item: any) => !(item.itemType === 'film' && filmIds.includes(item.itemId)));
+        batch.update(colRef, {
+          items: updatedItems,
+          updatedAt: new Date().toISOString()
+        });
+      }
       await batch.commit();
     } catch (err) {
-      console.error('[Watchlist] Bulk delete error:', err);
-      // Revert optimistic update on error
-      setWatchlist(prevWatchlist);
-      showToast('Gagal menghapus film terpilih dari Daftar Tonton.', 'error');
+      console.error('[Collections] Bulk remove error:', err);
+      setCollections(collections);
+      showToast('Gagal menghapus film terpilih dari koleksi.', 'error');
     }
   };
 
   const isFilmInWatchlist = (filmId: string) => {
-    return watchlist.includes(filmId);
+    return isItemInAnyCollection(filmId, 'film') || watchlist.includes(filmId);
   };
 
   const toggleSaveBuzz = async (buzzId: string) => {
@@ -1928,62 +1964,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const toggleSaveArticle = async (articleId: string) => {
-    if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') {
-      setLoginModalOpen(true);
-      showToast('Silakan Log In terlebih dahulu untuk menyimpan artikel ke Perpustakaan!');
-      return;
-    }
-
-    const exists = savedArticles.includes(articleId);
-    const itemRef = doc(db, 'users', currentUser.id, 'savedArticles', articleId);
-
-    // Optimistic UI state update
-    setSavedArticles(prev => (exists ? prev.filter(id => id !== articleId) : [...prev, articleId]));
-    showToast(exists ? 'Artikel dihapus dari Perpustakaan!' : 'Artikel berhasil disimpan ke Perpustakaan!');
-
-    try {
-      if (exists) {
-        await deleteDoc(itemRef);
-      } else {
-        await setDoc(itemRef, {
-          articleId,
-          addedAt: new Date().toISOString(),
-        });
-      }
-
-      // Mirror to default collection
-      try {
-        const defaultColRef = doc(db, 'users', currentUser.id, 'collections', 'default');
-        const defaultSnap = await getDoc(defaultColRef);
-        if (defaultSnap.exists()) {
-          const defaultData = defaultSnap.data() as UserCollection;
-          const newItems = [...defaultData.items];
-          const itemIdx = newItems.findIndex(item => item.itemId === articleId && item.itemType === 'article');
-          if (exists) {
-            if (itemIdx > -1) newItems.splice(itemIdx, 1);
-          } else {
-            if (itemIdx === -1) {
-              newItems.push({
-                itemId: articleId,
-                itemType: 'article',
-                addedAt: new Date().toISOString()
-              });
-            }
-          }
-          await updateDoc(defaultColRef, {
-            items: newItems,
-            updatedAt: new Date().toISOString()
-          });
-        }
-      } catch (colErr) {
-        console.warn('[Article Save Mirror] Error updating default collection:', colErr);
-      }
-    } catch (err) {
-      console.error('[SavedArticles] Firestore error:', err);
-      // Revert optimistic update on error
-      setSavedArticles(prev => (exists ? [...prev, articleId] : prev.filter(id => id !== articleId)));
-      showToast('Gagal memperbarui Perpustakaan.', 'error');
-    }
+    await toggleItemInDefaultCollection(articleId, 'article');
   };
 
   const removeBulkFromSavedArticles = async (articleIds: string[]) => {
@@ -1991,28 +1972,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    const prevSavedArticles = [...savedArticles];
-    // Optimistic UI state update
-    setSavedArticles(prev => prev.filter(id => !articleIds.includes(id)));
-    showToast(`${articleIds.length} artikel dihapus dari Perpustakaan.`);
+    const affectedCollections = collections.filter(col =>
+      col.items.some((item: any) => item.itemType === 'article' && articleIds.includes(item.itemId))
+    );
+
+    setCollections(prev => prev.map(col => ({
+      ...col,
+      items: col.items.filter((item: any) => !(item.itemType === 'article' && articleIds.includes(item.itemId)))
+    })));
+    showToast(`${articleIds.length} artikel dihapus dari koleksi.`);
 
     try {
       const batch = writeBatch(db);
-      articleIds.forEach(articleId => {
-        const itemRef = doc(db, 'users', currentUser.id, 'savedArticles', articleId);
-        batch.delete(itemRef);
-      });
+      for (const col of affectedCollections) {
+        const colRef = doc(db, 'users', currentUser.id, 'collections', col.id);
+        const updatedItems = col.items.filter((item: any) => !(item.itemType === 'article' && articleIds.includes(item.itemId)));
+        batch.update(colRef, {
+          items: updatedItems,
+          updatedAt: new Date().toISOString()
+        });
+      }
       await batch.commit();
     } catch (err) {
       console.error('[SavedArticles] Bulk delete error:', err);
-      // Revert optimistic update on error
-      setSavedArticles(prevSavedArticles);
-      showToast('Gagal menghapus artikel terpilih dari Perpustakaan.', 'error');
+      setCollections(collections);
+      showToast('Gagal menghapus artikel terpilih dari koleksi.', 'error');
     }
   };
 
   const isArticleSaved = (articleId: string) => {
-    return savedArticles.includes(articleId);
+    return isItemInAnyCollection(articleId, 'article') || savedArticles.includes(articleId);
   };
 
   const toggleSaveFilm = (filmId: string) => {
@@ -2023,7 +2012,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return isFilmInWatchlist(filmId);
   };
 
-  const createCollection = async (name: string, description?: string): Promise<string | null> => {
+  const createCollection = async (name: string, description?: string, isPublic: boolean = true): Promise<string | null> => {
     if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') {
       setLoginModalOpen(true);
       showToast('Silakan Log In terlebih dahulu untuk membuat koleksi!');
@@ -2036,6 +2025,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       name: name.trim(),
       description: description?.trim() || '',
       isDefault: false,
+      isPublic: isPublic !== false,
       items: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -2115,8 +2105,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addItemToCollection = async (collectionId: string, itemId: string, itemType: 'film' | 'article'): Promise<boolean> => {
     if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') return false;
 
-    const collectionRef = doc(db, 'users', currentUser.id, 'collections', collectionId);
-    const target = collections.find(c => c.id === collectionId);
+    let target = collections.find(c => c.id === collectionId);
+    if (!target && collectionId === 'default') {
+      target = (await getOrCreateDefaultCollection()) || undefined;
+    }
     if (!target) return false;
 
     const alreadyExists = target.items.some(item => item.itemId === itemId && item.itemType === itemType);
@@ -2130,31 +2122,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const updatedItems = [...target.items, newItem];
 
-    setCollections(prev => prev.map(c => c.id === collectionId ? { ...c, items: updatedItems, updatedAt: new Date().toISOString() } : c));
+    setCollections(prev => prev.map(c => c.id === target!.id ? { ...c, items: updatedItems, updatedAt: new Date().toISOString() } : c));
     showToast(`Ditambahkan ke "${target.name}"!`);
 
     try {
-      await updateDoc(collectionRef, {
+      const collectionRef = doc(db, 'users', currentUser.id, 'collections', target.id);
+      await setDoc(collectionRef, {
+        ...target,
         items: updatedItems,
         updatedAt: new Date().toISOString()
-      });
-
-      if (target.isDefault) {
-        if (itemType === 'film') {
-          const itemRef = doc(db, 'users', currentUser.id, 'watchlist', itemId);
-          await setDoc(itemRef, { filmId: itemId, addedAt: new Date().toISOString() });
-          setWatchlist(prev => [...prev, itemId]);
-        } else {
-          const itemRef = doc(db, 'users', currentUser.id, 'savedArticles', itemId);
-          await setDoc(itemRef, { articleId: itemId, addedAt: new Date().toISOString() });
-          setSavedArticles(prev => [...prev, itemId]);
-        }
-      }
+      }, { merge: true });
 
       return true;
     } catch (err) {
       console.error('[Collections] Error adding item to collection:', err);
-      setCollections(prev => prev.map(c => c.id === collectionId ? target : c));
+      setCollections(prev => prev.map(c => c.id === target!.id ? target! : c));
       showToast('Gagal menambahkan ke koleksi.', 'error');
       return false;
     }
@@ -2163,7 +2145,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const removeItemFromCollection = async (collectionId: string, itemId: string): Promise<boolean> => {
     if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') return false;
 
-    const collectionRef = doc(db, 'users', currentUser.id, 'collections', collectionId);
     const target = collections.find(c => c.id === collectionId);
     if (!target) return false;
 
@@ -2176,22 +2157,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast(`Dihapus dari "${target.name}".`);
 
     try {
-      await updateDoc(collectionRef, {
+      const collectionRef = doc(db, 'users', currentUser.id, 'collections', collectionId);
+      await setDoc(collectionRef, {
+        ...target,
         items: updatedItems,
         updatedAt: new Date().toISOString()
-      });
-
-      if (target.isDefault) {
-        if (item.itemType === 'film') {
-          const itemRef = doc(db, 'users', currentUser.id, 'watchlist', itemId);
-          await deleteDoc(itemRef);
-          setWatchlist(prev => prev.filter(id => id !== itemId));
-        } else {
-          const itemRef = doc(db, 'users', currentUser.id, 'savedArticles', itemId);
-          await deleteDoc(itemRef);
-          setSavedArticles(prev => prev.filter(id => id !== itemId));
-        }
-      }
+      }, { merge: true });
 
       return true;
     } catch (err) {
@@ -3001,6 +2972,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       userId?: string;
       buzzFeedTab?: 'for-you' | 'following' | 'saved' | 'liked' | 'trending';
       searchQuery?: string;
+      collectionId?: string;
     }
   ) => {
     setViewHistory(prev => {
@@ -4977,6 +4949,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         removeItemFromCollection,
         isItemInAnyCollection,
         getCollectionsContainingItem,
+        getOrCreateDefaultCollection,
+        toggleItemInDefaultCollection,
         savedBuzzIds,
         toggleSaveBuzz,
         isBuzzSaved,
