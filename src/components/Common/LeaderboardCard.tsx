@@ -99,17 +99,9 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({
             type="button"
             onClick={() => navigateTo('panduan-leaderboard')}
             title="Panduan Leaderboard"
-            className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-[11px] font-bold border border-slate-700 hover:border-[#FF2E7E] transition-all shrink-0 cursor-pointer shadow-sm"
+            className="p-1.5 sm:p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 hover:border-[#FF2E7E] transition-all shrink-0 cursor-pointer shadow-sm inline-flex items-center justify-center"
           >
             <Info className="w-3.5 h-3.5 text-[#FF2E7E] shrink-0" />
-            {compact ? (
-              <span className="hidden min-[360px]:inline text-[10px]">Panduan</span>
-            ) : (
-              <>
-                <span className="hidden sm:inline">Panduan Leaderboard</span>
-                <span className="sm:hidden">Panduan</span>
-              </>
-            )}
           </button>
         )}
       </div>
@@ -174,19 +166,15 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({
                     )}
                   </div>
 
-                  {/* Name & Role */}
-                  <div className="min-w-0 flex flex-col sm:flex-row sm:items-center gap-1">
+                  {/* Name Only (Full Visibility, No Role Badge) */}
+                  <div className="min-w-0 flex-1">
                     <span
                       onClick={() => navigateTo('user-profile', { userId: entry.user.id })}
-                      className="font-bold text-xs sm:text-sm text-white truncate group-hover:text-[#FF2E7E] transition-colors cursor-pointer"
+                      className="font-bold text-xs sm:text-sm text-white truncate block group-hover:text-[#FF2E7E] transition-colors cursor-pointer"
+                      title={entry.user.name}
                     >
                       {entry.user.name}
                     </span>
-                    {entry.user.role && (
-                      <span className="shrink-0">
-                        <RoleBadge role={entry.user.role} size="xs" />
-                      </span>
-                    )}
                   </div>
                 </div>
 
