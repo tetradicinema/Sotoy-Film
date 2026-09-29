@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, Info } from 'lucide-react';
+import { Trophy, Info, ChevronRight } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { RoleBadge } from './RoleBadge';
 import { LeaderboardEntry, LeaderboardPeriod } from '../../utils/leaderboard';
@@ -185,37 +185,52 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({
                 </div>
 
                 {/* Right: Stat Columns */}
-                <div className="flex items-center gap-2 sm:gap-4 shrink-0 text-right tabular-nums">
-                  <div className="flex flex-col items-end min-w-[32px] sm:min-w-[40px]">
-                    <span className="font-bold text-xs sm:text-sm text-white">
-                      {entry.ratings.toLocaleString('id-ID')}
-                    </span>
-                    <span className="text-[9px] text-slate-400 font-medium uppercase tracking-tight">
-                      Rating
-                    </span>
-                  </div>
+                {!compact && !flat && (
+                  <div className="flex items-center gap-2 sm:gap-4 shrink-0 text-right tabular-nums">
+                    <div className="flex flex-col items-end min-w-[32px] sm:min-w-[40px]">
+                      <span className="font-bold text-xs sm:text-sm text-white">
+                        {entry.ratings.toLocaleString('id-ID')}
+                      </span>
+                      <span className="text-[9px] text-slate-400 font-medium uppercase tracking-tight">
+                        Rating
+                      </span>
+                    </div>
 
-                  <div className="flex flex-col items-end min-w-[32px] sm:min-w-[40px]">
-                    <span className="font-bold text-xs sm:text-sm text-[#FF2E7E]">
-                      {entry.reviews.toLocaleString('id-ID')}
-                    </span>
-                    <span className="text-[9px] text-slate-400 font-medium uppercase tracking-tight">
-                      Ulasan
-                    </span>
-                  </div>
+                    <div className="flex flex-col items-end min-w-[32px] sm:min-w-[40px]">
+                      <span className="font-bold text-xs sm:text-sm text-[#FF2E7E]">
+                        {entry.reviews.toLocaleString('id-ID')}
+                      </span>
+                      <span className="text-[9px] text-slate-400 font-medium uppercase tracking-tight">
+                        Ulasan
+                      </span>
+                    </div>
 
-                  <div className="flex flex-col items-end min-w-[32px] sm:min-w-[40px]">
-                    <span className="font-bold text-xs sm:text-sm text-amber-400">
-                      {entry.likes.toLocaleString('id-ID')}
-                    </span>
-                    <span className="text-[9px] text-slate-400 font-medium uppercase tracking-tight">
-                      Suka
-                    </span>
+                    <div className="flex flex-col items-end min-w-[32px] sm:min-w-[40px]">
+                      <span className="font-bold text-xs sm:text-sm text-amber-400">
+                        {entry.likes.toLocaleString('id-ID')}
+                      </span>
+                      <span className="text-[9px] text-slate-400 font-medium uppercase tracking-tight">
+                        Suka
+                      </span>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             );
           })}
+        </div>
+      )}
+
+      {(compact || flat) && (
+        <div className="pt-3 border-t border-slate-800/80 text-center">
+          <button
+            type="button"
+            onClick={() => navigateTo('film-database')}
+            className="text-xs font-bold text-[#FF2E7E] hover:text-white transition-all inline-flex items-center gap-1 cursor-pointer bg-transparent"
+          >
+            <span>Lihat Leaderboard Lengkap</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
     </div>
