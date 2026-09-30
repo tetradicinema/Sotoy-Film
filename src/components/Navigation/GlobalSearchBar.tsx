@@ -618,7 +618,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
           aria-expanded={isOpen}
           aria-autocomplete="list"
           aria-controls="global-search-dropdown"
-          className={`w-full bg-[#171A1F] border text-xs text-white placeholder-slate-400 rounded-2xl pl-9 pr-14 py-2 transition-all shadow-inner focus:outline-none ${
+          className={`w-full bg-[#171A1F] border text-xs text-white placeholder-slate-400 rounded-full pl-9 pr-14 py-2 transition-all shadow-inner focus:outline-none ${
             isOpen
               ? 'border-[#FF2E7E] ring-2 ring-[#FF2E7E]/20 bg-[#171A1F]'
               : 'border-slate-800 hover:border-slate-700'

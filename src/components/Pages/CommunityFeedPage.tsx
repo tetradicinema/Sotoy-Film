@@ -1696,20 +1696,47 @@ export const CommunityFeedPage: React.FC = () => {
       {/* ========================================================================= */}
       <div className="hidden xl:flex flex-col gap-4 w-72 shrink-0 sticky top-20 select-none">
         {/* Sotoy Leaderboard (DESKTOP) */}
-        <div className="bg-[#171A1F]/90 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 shadow-xl space-y-3">
+        <div className="bg-[#171A1F]/90 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 shadow-xl space-y-3.5">
+          {/* Plain Heading */}
+          <div className="flex items-center justify-between pb-2 border-b border-slate-800/60">
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-3.5 bg-[#FF2E7E] rounded-full inline-block" />
+              <h3 className="font-display font-bold text-xs uppercase tracking-wider text-white">
+                Sotoy Leaderboard
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigateTo('panduan-leaderboard')}
+              title="Panduan Leaderboard"
+              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+            >
+              <Info className="w-3.5 h-3.5 text-[#FF2E7E]" />
+            </button>
+          </div>
+
+          {/* Short Description */}
+          <p className="text-xs text-slate-400 leading-relaxed -mt-1">
+            Peringkat warga teraktif yang paling rajin mengulas dan memberi rating film.
+          </p>
+
+          {/* Period Tabs */}
           <div className="flex items-center justify-start">
             <LeaderboardPeriodTabs
               activePeriod={desktopLeaderboardPeriod}
               onChangePeriod={setDesktopLeaderboardPeriod}
             />
           </div>
+
+          {/* Flat Leaderboard List */}
           <LeaderboardCard
-            title="Sotoy Leaderboard"
             entries={desktopLeaderboardData}
             compact={true}
             limit={5}
             flat={true}
-            minimal={true}
+            minimal={false}
+            hideHeader={true}
+            showFooterLink={true}
           />
         </div>
 

@@ -265,20 +265,47 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
       </div>
 
       {/* SOTOY LEADERBOARD WIDGET */}
-      <div id="sidebar-sotoy-leaderboard" className="bg-[#171A1F] border border-white/[0.08] rounded-3xl p-5 shadow-xl space-y-3">
+      <div id="sidebar-sotoy-leaderboard" className="bg-[#171A1F] border border-white/[0.08] rounded-3xl p-5 shadow-xl space-y-3.5">
+        {/* Plain Heading */}
+        <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-3.5 bg-[#FF2E7E] rounded-full inline-block" />
+            <h3 className="font-display font-bold text-sm text-white">
+              Sotoy Leaderboard
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigateTo('panduan-leaderboard')}
+            title="Panduan Leaderboard"
+            className="p-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 hover:border-[#FF2E7E] transition-all cursor-pointer inline-flex items-center justify-center shadow-sm"
+          >
+            <Info className="w-3.5 h-3.5 text-[#FF2E7E]" />
+          </button>
+        </div>
+
+        {/* Short Description */}
+        <p className="text-xs text-slate-400 leading-relaxed -mt-1">
+          Peringkat warga teraktif yang paling rajin mengulas dan memberi rating film.
+        </p>
+
+        {/* Period Tabs */}
         <div className="flex items-center justify-start">
           <LeaderboardPeriodTabs
             activePeriod={sidebarLeaderboardPeriod}
             onChangePeriod={setSidebarLeaderboardPeriod}
           />
         </div>
+
+        {/* Flat Leaderboard List */}
         <LeaderboardCard
-          title="Sotoy Leaderboard"
           entries={leaderboardData}
           compact={true}
           limit={5}
           flat={true}
-          minimal={true}
+          minimal={false}
+          hideHeader={true}
+          showFooterLink={true}
         />
       </div>
 

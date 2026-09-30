@@ -79,7 +79,9 @@ export interface LeaderboardCardProps {
   minimal?: boolean;
   title?: string;
   subtitle?: string;
+  hideHeader?: boolean;
   hideGuideButton?: boolean;
+  showFooterLink?: boolean;
   emptyText?: string;
   className?: string;
 }
@@ -92,7 +94,9 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({
   minimal = false,
   title = 'Review Leaderboards',
   subtitle,
+  hideHeader = false,
   hideGuideButton = false,
+  showFooterLink = false,
   emptyText = 'Belum ada aktivitas di periode ini',
   className = '',
 }) => {
@@ -103,41 +107,43 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({
     <div
       className={
         flat
-          ? `flex flex-col justify-start space-y-4 ${className}`
+          ? `flex flex-col justify-start space-y-3 ${className}`
           : `bg-[#171A1F] border border-slate-800/80 rounded-3xl p-4 sm:p-5 shadow-xl flex flex-col justify-start space-y-4 ${className}`
       }
     >
       {/* Card Header */}
-      <div className="flex items-center justify-between gap-1.5 sm:gap-2 pb-3 border-b border-slate-800/80 min-w-0">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-xl bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 text-[#FF2E7E] flex items-center justify-center shrink-0">
-            <Trophy className="w-3.5 h-3.5" />
+      {!hideHeader && (
+        <div className="flex items-center justify-between gap-1.5 sm:gap-2 pb-3 border-b border-slate-800/80 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-xl bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 text-[#FF2E7E] flex items-center justify-center shrink-0">
+              <Trophy className="w-3.5 h-3.5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h3
+                className={`font-display font-black text-white truncate ${
+                  compact ? 'text-xs' : 'text-sm sm:text-base'
+                }`}
+              >
+                {title}
+              </h3>
+              {subtitle && (
+                <p className="text-[11px] text-slate-400 truncate">{subtitle}</p>
+              )}
+            </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <h3
-              className={`font-display font-black text-white truncate ${
-                compact ? 'text-xs' : 'text-sm sm:text-base'
-              }`}
-            >
-              {title}
-            </h3>
-            {subtitle && (
-              <p className="text-[11px] text-slate-400 truncate">{subtitle}</p>
-            )}
-          </div>
-        </div>
 
-        {!hideGuideButton && (
-          <button
-            type="button"
-            onClick={() => navigateTo('panduan-leaderboard')}
-            title="Panduan Leaderboard"
-            className="p-1.5 sm:p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 hover:border-[#FF2E7E] transition-all shrink-0 cursor-pointer shadow-sm inline-flex items-center justify-center"
-          >
-            <Info className="w-3.5 h-3.5 text-[#FF2E7E] shrink-0" />
-          </button>
-        )}
-      </div>
+          {!hideGuideButton && (
+            <button
+              type="button"
+              onClick={() => navigateTo('panduan-leaderboard')}
+              title="Panduan Leaderboard"
+              className="p-1.5 sm:p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 hover:border-[#FF2E7E] transition-all shrink-0 cursor-pointer shadow-sm inline-flex items-center justify-center"
+            >
+              <Info className="w-3.5 h-3.5 text-[#FF2E7E] shrink-0" />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Card Body / Rows */}
       {displayedEntries.length === 0 ? (
@@ -237,8 +243,8 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({
 
                 {/* Right: Stat Columns */}
                 {!minimal && (
-                  <div className="flex items-center gap-2 sm:gap-4 shrink-0 text-right tabular-nums">
-                    <div className="flex flex-col items-end min-w-[32px] sm:min-w-[40px]">
+                  <div className={`flex items-center ${compact ? 'gap-1.5 sm:gap-2.5' : 'gap-2 sm:gap-4'} shrink-0 text-right tabular-nums`}>
+                    <div className={`flex flex-col items-end ${compact ? 'min-w-[26px] sm:min-w-[34px]' : 'min-w-[32px] sm:min-w-[40px]'}`}>
                       <span className="font-bold text-xs sm:text-sm text-white">
                         {entry.ratings.toLocaleString('id-ID')}
                       </span>
@@ -247,7 +253,7 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({
                       </span>
                     </div>
 
-                    <div className="flex flex-col items-end min-w-[32px] sm:min-w-[40px]">
+                    <div className={`flex flex-col items-end ${compact ? 'min-w-[26px] sm:min-w-[34px]' : 'min-w-[32px] sm:min-w-[40px]'}`}>
                       <span className="font-bold text-xs sm:text-sm text-[#FF2E7E]">
                         {entry.reviews.toLocaleString('id-ID')}
                       </span>
@@ -256,7 +262,7 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({
                       </span>
                     </div>
 
-                    <div className="flex flex-col items-end min-w-[32px] sm:min-w-[40px]">
+                    <div className={`flex flex-col items-end ${compact ? 'min-w-[26px] sm:min-w-[34px]' : 'min-w-[32px] sm:min-w-[40px]'}`}>
                       <span className="font-bold text-xs sm:text-sm text-amber-400">
                         {entry.likes.toLocaleString('id-ID')}
                       </span>
@@ -272,7 +278,7 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({
         </motion.div>
       )}
 
-      {minimal && (
+      {(minimal || showFooterLink) && (
         <div className="pt-3 border-t border-slate-800/80 text-center">
           <button
             type="button"

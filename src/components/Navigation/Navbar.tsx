@@ -13,6 +13,8 @@ import {
   Tv,
   Camera,
   BookOpen,
+  Menu,
+  X,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
@@ -44,7 +46,10 @@ export const Navbar: React.FC = () => {
 
   const [activeDropdown, setActiveDropdown] = useState<MainCategory | null>(null);
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
+  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
+  const [expandedMobileCategory, setExpandedMobileCategory] = useState<MainCategory | null>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const categoryDrawerRef = useRef<HTMLDivElement>(null);
 
   // Close user dropdown when clicking outside
   useEffect(() => {
@@ -56,6 +61,52 @@ export const Navbar: React.FC = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Close mobile category drawer when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        categoryDrawerRef.current &&
+        !categoryDrawerRef.current.contains(event.target as Node)
+      ) {
+        setCategoryMenuOpen(false);
+      }
+    };
+    if (categoryMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [categoryMenuOpen]);
+
+  // Close mobile category drawer on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && categoryMenuOpen) {
+        setCategoryMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [categoryMenuOpen]);
+
+  // Lock body scroll when mobile category drawer is open
+  useEffect(() => {
+    if (categoryMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [categoryMenuOpen]);
+
+  // Auto-expand current active category when opening drawer if on category view
+  useEffect(() => {
+    if (categoryMenuOpen && currentView === 'category' && activeCategory) {
+      setExpandedMobileCategory(activeCategory);
+    }
+  }, [categoryMenuOpen, currentView, activeCategory]);
 
   const categoriesConfig: {
     id: MainCategory;
@@ -121,130 +172,149 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-[#0E1013]/95 backdrop-blur-md border-b border-white/[0.08]">
-      {/* Main Navbar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-4">
-          {/* Brand Logo */}
-          <div
-            id="brand-logo"
-            onClick={() => navigateTo('home')}
-            className="flex items-center cursor-pointer group shrink-0 select-none transition-transform active:scale-95 p-2 -m-2"
-          >
-            <img
-              src="/sotoy-logo-full.png"
-              alt="Sotoy Film — Pop-Culture & Cinema"
-              loading="eager"
-              fetchPriority="high"
-              className="h-14 md:h-[68px] w-auto -my-2 object-contain transition-all duration-300 group-hover:scale-[1.015] group-hover:opacity-90"
-            />
-          </div>
+    <header className="sticky top-0 z-50">
+      {/* Main Navbar Bar */}
+      <div className="bg-[#0E1013]/95 backdrop-blur-md border-b border-white/[0.08]">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-6">
+          <div className="flex items-center justify-between h-16 gap-2 lg:gap-3 xl:gap-4">
+            {/* Brand Logo Section & Mobile Category Drawer Trigger */}
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0 pr-1">
+              {/* Hamburger Button for Category Drawer (visible only below lg) */}
+              <button
+                id="mobile-category-hamburger-btn"
+                type="button"
+                onClick={() => {
+                  setCategoryMenuOpen(prev => !prev);
+                  setRoleDropdownOpen(false);
+                }}
+                aria-label="Menu Kategori"
+                aria-expanded={categoryMenuOpen}
+                className="lg:hidden flex items-center justify-center min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl text-slate-300 hover:text-white hover:bg-white/[0.08] active:scale-95 transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FF2E7E]/40"
+              >
+                <Menu className="w-5 h-5 text-slate-200" />
+              </button>
 
-          {/* Desktop Category Navigation */}
-          <nav className="hidden lg:flex items-center gap-1">
-            {categoriesConfig.map(cat => {
-              const isSelected = activeCategory === cat.id && currentView === 'category';
+              {/* Brand Logo */}
+              <div
+                id="brand-logo"
+                onClick={() => navigateTo('home')}
+                className="flex items-center cursor-pointer group shrink-0 select-none transition-transform active:scale-95 p-2 -m-2"
+              >
+                <img
+                  src="/sotoy-logo-full.png"
+                  alt="Sotoy Film — Pop-Culture & Cinema"
+                  loading="eager"
+                  fetchPriority="high"
+                  className="h-14 md:h-[68px] w-auto -my-2 object-contain transition-all duration-300 group-hover:scale-[1.015] group-hover:opacity-90"
+                />
+              </div>
+            </div>
 
-              return (
-                <div
-                  key={cat.id}
-                  className="relative group"
-                  onMouseEnter={() => setActiveDropdown(cat.id)}
-                  onMouseLeave={() => setActiveDropdown(null)}
-                >
-                  <button
-                    id={`nav-cat-${cat.id}`}
-                    onClick={() => handleCategoryClick(cat.id)}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
-                      isSelected
-                        ? 'text-white bg-white/[0.08] border border-white/15'
-                        : 'text-slate-300 hover:text-white hover:bg-white/[0.04]'
-                    }`}
+            {/* Desktop Category Navigation */}
+            <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1 shrink-0">
+              {categoriesConfig.map(cat => {
+                const isSelected = activeCategory === cat.id && currentView === 'category';
+
+                return (
+                  <div
+                    key={cat.id}
+                    className="relative group"
+                    onMouseEnter={() => setActiveDropdown(cat.id)}
+                    onMouseLeave={() => setActiveDropdown(null)}
                   >
-                    <span>{cat.name}</span>
-                    <ChevronDown className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 transition-transform group-hover:rotate-180" />
-                  </button>
+                    <button
+                      id={`nav-cat-${cat.id}`}
+                      onClick={() => handleCategoryClick(cat.id)}
+                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                        isSelected
+                          ? 'text-white bg-white/[0.08] border border-white/15'
+                          : 'text-slate-300 hover:text-white hover:bg-white/[0.04]'
+                      }`}
+                    >
+                      <span>{cat.name}</span>
+                      <ChevronDown className="w-3 h-3 text-slate-500 group-hover:text-slate-300 transition-transform group-hover:rotate-180" />
+                    </button>
 
-                  {/* Dropdown Menu for Subcategories */}
-                  {activeDropdown === cat.id && (
-                    <div className="absolute left-0 top-full pt-1.5 w-56 z-50">
-                      <div className="bg-[#171A1F] border border-white/10 rounded-xl p-2 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-1 duration-150">
-                        <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 border-b border-white/[0.08]">
-                          Sub-Kategori {cat.name}
-                        </div>
-                        <div className="py-1 space-y-0.5">
-                          {cat.subCategories.map(sub => (
+                    {/* Dropdown Menu for Subcategories */}
+                    {activeDropdown === cat.id && (
+                      <div className="absolute left-0 top-full pt-1.5 w-52 z-50">
+                        <div className="bg-[#171A1F] border border-white/10 rounded-xl p-2 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-1 duration-150">
+                          <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 border-b border-white/[0.08]">
+                            Sub-Kategori {cat.name}
+                          </div>
+                          <div className="py-1 space-y-0.5">
+                            {cat.subCategories.map(sub => (
+                              <button
+                                key={sub.id}
+                                id={`subnav-${cat.id}-${sub.id}`}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  handleCategoryClick(cat.id, sub.id);
+                                }}
+                                className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
+                                  activeCategory === cat.id && activeSubCategory === sub.id
+                                    ? 'bg-[#FF2E7E] text-white font-semibold'
+                                    : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
+                                }`}
+                              >
+                                <span>{sub.label}</span>
+                                <span className="text-[10px] text-slate-400 group-hover:text-slate-200">
+                                  →
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                          <div className="pt-1.5 border-t border-white/[0.08] mt-1">
                             <button
-                              key={sub.id}
-                              id={`subnav-${cat.id}-${sub.id}`}
-                              onClick={e => {
-                                e.stopPropagation();
-                                handleCategoryClick(cat.id, sub.id);
-                              }}
-                              className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition-colors ${
-                                activeCategory === cat.id && activeSubCategory === sub.id
-                                  ? 'bg-[#FF2E7E] text-white font-semibold'
-                                  : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
-                              }`}
+                              onClick={() => handleCategoryClick(cat.id)}
+                              className="w-full text-center text-xs font-semibold text-[#FF2E7E] hover:underline py-1 cursor-pointer"
                             >
-                              <span>{sub.label}</span>
-                              <span className="text-[10px] text-slate-400 group-hover:text-slate-200">
-                                →
-                              </span>
+                              Buka Halaman Utama {cat.name}
                             </button>
-                          ))}
-                        </div>
-                        <div className="pt-1.5 border-t border-white/[0.08] mt-1">
-                          <button
-                            onClick={() => handleCategoryClick(cat.id)}
-                            className="w-full text-center text-xs font-semibold text-[#FF2E7E] hover:underline py-1"
-                          >
-                            Buka Halaman Utama {cat.name}
-                          </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </nav>
+                    )}
+                  </div>
+                );
+              })}
+            </nav>
 
-          {/* Direct Feature Links */}
-          <div className="hidden xl:flex items-center gap-1.5 border-l border-white/[0.08] pl-3">
-            <button
-              id="nav-film-database"
-              onClick={() => navigateTo('film-database')}
-              className={`px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                currentView === 'film-database' || currentView === 'film-detail'
-                  ? 'bg-[#FF2E7E] text-white shadow-sm'
-                  : 'text-slate-300 hover:text-white hover:bg-white/[0.04]'
-              }`}
-            >
-              <span>{t('nav.filmDatabase', 'Film Database')}</span>
-            </button>
+            {/* Direct Feature Links */}
+            <div className="hidden xl:flex items-center gap-1 border-l border-white/[0.08] pl-2 xl:pl-3 shrink-0">
+              <button
+                id="nav-film-database"
+                onClick={() => navigateTo('film-database')}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
+                  currentView === 'film-database' || currentView === 'film-detail'
+                    ? 'bg-[#FF2E7E] text-white shadow-sm'
+                    : 'text-slate-300 hover:text-white hover:bg-white/[0.04]'
+                }`}
+              >
+                <span>{t('nav.filmDatabase', 'Film Database')}</span>
+              </button>
 
-            <button
-              id="nav-buzz"
-              onClick={() => navigateTo('community-feed')}
-              className={`px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                currentView === 'community-feed'
-                  ? 'bg-[#FF2E7E] text-white shadow-sm'
-                  : 'text-slate-300 hover:text-white hover:bg-white/[0.04]'
-              }`}
-            >
-              <span>{t('nav.buzzFeed', 'Buzz Feed')}</span>
-            </button>
-          </div>
-
-          {/* Right Controls: Search & User Profile */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Real-time Global Search Bar (Desktop) */}
-            <div className="hidden md:block w-48 sm:w-56 lg:w-72 xl:w-80">
-              <GlobalSearchBar
-                placeholder="Cari film, artikel, buzz..."
-              />
+              <button
+                id="nav-buzz"
+                onClick={() => navigateTo('community-feed')}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
+                  currentView === 'community-feed'
+                    ? 'bg-[#FF2E7E] text-white shadow-sm'
+                    : 'text-slate-300 hover:text-white hover:bg-white/[0.04]'
+                }`}
+              >
+                <span>{t('nav.buzzFeed', 'Buzz Feed')}</span>
+              </button>
             </div>
+
+            {/* Right Controls: Search & User Profile */}
+            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+              {/* Real-time Global Search Bar (Desktop) */}
+              <div className="hidden md:block w-36 sm:w-44 lg:w-48 xl:w-56 shrink-0 transition-all">
+                <GlobalSearchBar
+                  placeholder="Cari film, artikel..."
+                />
+              </div>
 
             {/* Global Notification Bell */}
             {isLoggedIn && (
@@ -637,7 +707,208 @@ export const Navbar: React.FC = () => {
 
           </div>
         </div>
+        </div>
       </div>
+
+      {/* Mobile / Tablet Category Drawer */}
+      {categoryMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-[60]">
+          {/* Semi-transparent dark overlay */}
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
+            onClick={() => setCategoryMenuOpen(false)}
+            aria-hidden="true"
+          />
+
+          {/* Drawer panel */}
+          <div
+            ref={categoryDrawerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Kategori Artikel"
+            className="fixed inset-y-0 left-0 w-80 max-w-[85vw] h-full h-[100dvh] bg-[#171A1F] border-r border-white/10 shadow-2xl flex flex-col z-[61] animate-in slide-in-from-left duration-200 overflow-hidden"
+          >
+            {/* Drawer Header */}
+            <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-white/[0.08] bg-[#0E1013] pt-[max(0.75rem,env(safe-area-inset-top))] min-h-[56px] w-full">
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <div className="w-8 h-8 rounded-lg bg-[#FF2E7E]/10 border border-[#FF2E7E]/25 flex items-center justify-center text-[#FF2E7E] shrink-0">
+                  <BookOpen className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="font-display font-black text-sm text-white tracking-wide truncate leading-tight">
+                    Kategori Artikel
+                  </h2>
+                  <p className="text-[10px] text-slate-400 truncate leading-tight mt-0.5">
+                    Jelajahi sinema & pop culture
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                id="close-mobile-category-drawer-btn"
+                onClick={() => setCategoryMenuOpen(false)}
+                className="shrink-0 flex items-center justify-center min-w-[36px] min-h-[36px] w-9 h-9 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.08] active:scale-95 transition-all cursor-pointer ml-2"
+                aria-label="Tutup menu kategori"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Accordion List */}
+            <div className="flex-1 overflow-y-auto py-3 px-3 space-y-2 scrollbar-thin scrollbar-thumb-slate-800">
+              {categoriesConfig.map(cat => {
+                const CatIcon = cat.icon;
+                const isCategorySelected = activeCategory === cat.id && currentView === 'category';
+                const isExpanded = expandedMobileCategory === cat.id;
+
+                return (
+                  <div
+                    key={cat.id}
+                    className={`rounded-xl border transition-colors overflow-hidden ${
+                      isCategorySelected
+                        ? 'border-[#FF2E7E]/40 bg-[#FF2E7E]/[0.06]'
+                        : isExpanded
+                        ? 'border-white/15 bg-white/[0.03]'
+                        : 'border-white/[0.06] bg-slate-900/40 hover:bg-white/[0.02]'
+                    }`}
+                  >
+                    {/* Category Header Row */}
+                    <div className="flex items-center justify-between p-1 gap-1">
+                      {/* Tapping category name navigates directly to main category page */}
+                      <button
+                        type="button"
+                        id={`mobile-drawer-cat-${cat.id}`}
+                        onClick={() => {
+                          handleCategoryClick(cat.id);
+                          setCategoryMenuOpen(false);
+                        }}
+                        className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-colors min-h-[42px] cursor-pointer ${
+                          isCategorySelected
+                            ? 'text-[#FF2E7E] font-bold'
+                            : 'text-slate-200 hover:text-white'
+                        }`}
+                      >
+                        <CatIcon className={`w-4 h-4 shrink-0 ${isCategorySelected ? 'text-[#FF2E7E]' : 'text-slate-400'}`} />
+                        <span className="text-xs font-semibold">{cat.name}</span>
+                      </button>
+
+                      {/* Separate chevron/caret button toggles subcategories accordion */}
+                      {cat.subCategories && cat.subCategories.length > 0 && (
+                        <button
+                          type="button"
+                          id={`mobile-drawer-toggle-${cat.id}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedMobileCategory(prev => prev === cat.id ? null : cat.id);
+                          }}
+                          aria-label={`Buka sub-kategori ${cat.name}`}
+                          aria-expanded={isExpanded}
+                          className="flex items-center justify-center min-w-[42px] min-h-[42px] w-10 h-10 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
+                        >
+                          <ChevronDown
+                            className={`w-4 h-4 transition-transform duration-200 ${
+                              isExpanded ? 'rotate-180 text-[#FF2E7E]' : ''
+                            }`}
+                          />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Subcategories List (Indented accordion content) */}
+                    {isExpanded && cat.subCategories && cat.subCategories.length > 0 && (
+                      <div className="px-2 pb-2 pt-0.5 space-y-1 border-t border-white/[0.06] bg-black/20">
+                        <div className="pt-1.5 pb-0.5 px-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          Sub-Kategori {cat.name}
+                        </div>
+                        {cat.subCategories.map(sub => {
+                          const isSubSelected =
+                            activeCategory === cat.id &&
+                            activeSubCategory === sub.id &&
+                            currentView === 'category';
+
+                          return (
+                            <button
+                              key={sub.id}
+                              type="button"
+                              id={`mobile-drawer-subnav-${cat.id}-${sub.id}`}
+                              onClick={() => {
+                                handleCategoryClick(cat.id, sub.id);
+                                setCategoryMenuOpen(false);
+                              }}
+                              className={`w-full text-left pl-4 pr-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition-colors min-h-[36px] cursor-pointer ${
+                                isSubSelected
+                                  ? 'bg-[#FF2E7E] text-white font-semibold shadow-sm'
+                                  : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
+                              }`}
+                            >
+                              <span className="flex items-center gap-2">
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isSubSelected ? 'bg-white' : 'bg-slate-500'}`} />
+                                <span>{sub.label}</span>
+                              </span>
+                              <span className="text-[10px] text-slate-400">→</span>
+                            </button>
+                          );
+                        })}
+
+                        {/* View all in this category shortcut */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleCategoryClick(cat.id);
+                            setCategoryMenuOpen(false);
+                          }}
+                          className="w-full text-left pl-4 pr-3 py-1.5 rounded-lg text-[11px] font-semibold text-[#FF2E7E] hover:underline"
+                        >
+                          Buka Semua {cat.name} →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Drawer Footer with Quick Access Links */}
+            <div className="p-3 border-t border-white/[0.08] bg-[#0E1013]/80 space-y-2 pb-[max(0.875rem,env(safe-area-inset-bottom))]">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  id="mobile-drawer-film-db-btn"
+                  onClick={() => {
+                    navigateTo('film-database');
+                    setCategoryMenuOpen(false);
+                  }}
+                  className={`flex-1 py-2 px-2.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    currentView === 'film-database' || currentView === 'film-detail'
+                      ? 'bg-[#FF2E7E] text-white shadow-sm'
+                      : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08]'
+                  }`}
+                >
+                  <Film className="w-3.5 h-3.5 text-[#FF2E7E]" />
+                  <span>Film DB</span>
+                </button>
+                <button
+                  type="button"
+                  id="mobile-drawer-buzz-btn"
+                  onClick={() => {
+                    navigateTo('community-feed');
+                    setCategoryMenuOpen(false);
+                  }}
+                  className={`flex-1 py-2 px-2.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    currentView === 'community-feed'
+                      ? 'bg-[#FF2E7E] text-white shadow-sm'
+                      : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08]'
+                  }`}
+                >
+                  <MessageSquare className="w-3.5 h-3.5 text-[#FF2E7E]" />
+                  <span>Buzz Feed</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };
