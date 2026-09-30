@@ -203,8 +203,8 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
     const hasExplicitType = (typeName: string) =>
       explicitSchemas.some(s => s && s['@type'] === typeName);
 
-    // 1. Dynamic Movie Schema
-    if (!hasExplicitType('Movie')) {
+    // 1. Dynamic Movie / TVSeries Schema
+    if (!hasExplicitType('Movie') && !hasExplicitType('TVSeries')) {
       if (film) {
         list.push(
           createMovieSchemaFromFilm(film, {

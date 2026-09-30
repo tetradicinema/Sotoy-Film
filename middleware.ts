@@ -144,6 +144,42 @@ export default async function middleware(request: Request): Promise<Response> {
       baseHtml = FALLBACK_HTML_TEMPLATE;
     }
 
+    const schemaJson = collection === 'films' ? {
+      '@context': 'https://schema.org',
+      '@type': data.type === 'series' ? 'TVSeries' : 'Movie',
+      name: data.title || title,
+      alternateName: data.originalTitle || undefined,
+      description,
+      image: [image],
+      datePublished: data.releaseDate || (data.year ? `${data.year}-01-01` : undefined),
+      director: data.director ? { '@type': 'Person', name: data.director } : undefined,
+      actor: (data.castDetails?.map((c: any) => ({ '@type': 'Person', name: c.name })) || data.cast?.map((name: string) => ({ '@type': 'Person', name }))),
+      genre: data.genres,
+      aggregateRating: (data.totalVotes > 0 && data.skorSotoy > 0) ? {
+        '@type': 'AggregateRating',
+        ratingValue: Number(Number(data.skorSotoy).toFixed(1)),
+        bestRating: '10.0',
+        worstRating: '1.0',
+        ratingCount: Number(data.totalVotes),
+      } : undefined,
+    } : {
+      '@context': 'https://schema.org',
+      '@type': 'NewsArticle',
+      headline: data.seoTitle || data.title || title,
+      description,
+      image: [image],
+      datePublished: data.publishedAt,
+      dateModified: data.updatedAt || data.publishedAt,
+      author: data.author?.name ? { '@type': 'Person', name: data.author.name } : undefined,
+      publisher: {
+        '@type': 'Organization',
+        name: 'Sotoy Film',
+        url: baseUrl,
+        logo: { '@type': 'ImageObject', url: `${baseUrl}/stacked logo-sotoyfilm.PNG` },
+      },
+      mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
+    };
+
     // 5. Inject meta tags and return pre-rendered HTML response
     const modifiedHtml = injectMetaTags(baseHtml, {
       title,
@@ -159,6 +195,7 @@ export default async function middleware(request: Request): Promise<Response> {
       videoDuration: collection === 'films' ? data.duration : undefined,
       videoTags: collection === 'films' ? data.genres : undefined,
       videoActors: collection === 'films' && data.castDetails ? data.castDetails.map((c: any) => c.name) : data.cast,
+      schemaJson,
     });
 
     return new Response(modifiedHtml, {

@@ -14,6 +14,90 @@
 
 import middleware, { isBotUserAgent } from '../middleware.js';
 
+// Setup Mock Fetch for Standalone, Deterministic Test Execution (Bypasses Google API Free Quota Limitations)
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
+  const urlStr = url.toString();
+
+  // 1. Mock index.html subrequest
+  if (urlStr.includes('/index.html')) {
+    return new Response(`<!doctype html><html><head><title>Sotoy Film</title></head><body><div id="root"></div></body></html>`, {
+      status: 200,
+      headers: { 'content-type': 'text/html' }
+    });
+  }
+
+  // 2. Mock Firestore REST API individual document lookups
+  if (urlStr.includes('/documents/films/breaking-bad')) {
+    return new Response(JSON.stringify({
+      name: 'projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents/films/breaking-bad',
+      fields: {
+        title: { stringValue: 'Breaking Bad' },
+        year: { integerValue: '2008' },
+        synopsis: { stringValue: 'A high school chemistry teacher diagnosed with inoperable lung cancer turns to manufacturing and selling methamphetamine.' },
+        poster: { stringValue: '/breaking-bad-poster.png' },
+        backdrop: { stringValue: '/breaking-bad-backdrop.png' },
+        director: { stringValue: 'Vince Gilligan' }
+      }
+    }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' }
+    });
+  }
+
+  if (urlStr.includes('/documents/films/boyhood')) {
+    return new Response(JSON.stringify({
+      name: 'projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents/films/boyhood',
+      fields: {
+        title: { stringValue: 'Boyhood' },
+        year: { integerValue: '2014' },
+        synopsis: { stringValue: 'The life of Mason, from early childhood to his arrival at college.' },
+        poster: { stringValue: '/boyhood-poster.png' },
+        backdrop: { stringValue: '/boyhood-backdrop.png' },
+        director: { stringValue: 'Richard Linklater' }
+      }
+    }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' }
+    });
+  }
+
+  // 3. Mock general fallback collection requests (Strategic fallback list)
+  if (urlStr.includes('/documents/films')) {
+    return new Response(JSON.stringify({
+      documents: [
+        {
+          name: 'projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents/films/breaking-bad',
+          fields: {
+            title: { stringValue: 'Breaking Bad' },
+            year: { integerValue: '2008' },
+            slug: { stringValue: 'breaking-bad' },
+            synopsis: { stringValue: 'Chemistry teacher turned meth lord.' }
+          }
+        },
+        {
+          name: 'projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents/films/boyhood',
+          fields: {
+            title: { stringValue: 'Boyhood' },
+            year: { integerValue: '2014' },
+            slug: { stringValue: 'boyhood' },
+            synopsis: { stringValue: 'Growing up over 12 years.' }
+          }
+        }
+      ]
+    }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' }
+    });
+  }
+
+  // Fallback response
+  return new Response(JSON.stringify({ documents: [] }), {
+    status: 200,
+    headers: { 'content-type': 'application/json' }
+  });
+};
+
 interface TestCase {
   name: string;
   userAgent: string;

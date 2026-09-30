@@ -26,7 +26,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
 import { SEOHead } from '../SEO/SEOHead';
-import { generateArticleSchema, generateBreadcrumbSchema } from '../../utils/schemaHelpers';
+import { createArticleSchemaFromArticle, generateBreadcrumbSchema } from '../../utils/schemaHelpers';
 import { StarRating } from '../Common/StarRating';
 import { AddToCollectionModal } from '../Modals/AddToCollectionModal';
 import { CollectionPickerPopover } from '../Common/CollectionPickerPopover';
@@ -166,15 +166,10 @@ export const ArticleDetailPage: React.FC = () => {
     { name: article.title, item: seoUrl },
   ]);
 
-  const articleSchema = generateArticleSchema({
-    title: article.seoTitle || article.title,
-    description: article.metaDescription || article.excerpt || article.content.slice(0, 160),
-    image: article.ogImage || article.coverImage,
-    url: seoUrl,
-    datePublished: article.publishedAt || new Date().toISOString(),
+  const articleSchema = createArticleSchemaFromArticle(article, {
+    currentUrl: seoUrl,
     authorName: author.displayName || author.name || article.author.name,
     authorAvatar: author.avatarURL || author.avatar || article.author.avatar,
-    keywords: article.tags || [],
   });
 
   return (

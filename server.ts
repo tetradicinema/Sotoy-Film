@@ -66,6 +66,8 @@ async function startServer() {
           let videoTags: string[] | undefined;
           let videoActors: string[] | undefined;
 
+          let schemaJson: Record<string, any> | undefined;
+
           // Check if it's a dynamic entity route
           if (pathname.startsWith("/film/")) {
             const slug = decodeURIComponent(pathname.replace(/^\/film\/?/, "")).replace(/\/$/, "");
@@ -79,6 +81,25 @@ async function startServer() {
               videoReleaseDate = data.year ? `${data.year}-01-01` : undefined;
               videoTags = data.genres;
               videoActors = data.castDetails?.map((c: any) => c.name) || data.cast;
+              schemaJson = {
+                "@context": "https://schema.org",
+                "@type": data.type === "series" ? "TVSeries" : "Movie",
+                name: data.title || title,
+                alternateName: data.originalTitle || undefined,
+                description,
+                image: [image || "https://www.sotoyfilm.my.id/og-default.png"],
+                datePublished: data.releaseDate || (data.year ? `${data.year}-01-01` : undefined),
+                director: data.director ? { "@type": "Person", name: data.director } : undefined,
+                actor: data.castDetails?.map((c: any) => ({ "@type": "Person", name: c.name })) || data.cast?.map((name: string) => ({ "@type": "Person", name })),
+                genre: data.genres,
+                aggregateRating: (data.totalVotes > 0 && data.skorSotoy > 0) ? {
+                  "@type": "AggregateRating",
+                  ratingValue: Number(Number(data.skorSotoy).toFixed(1)),
+                  bestRating: "10.0",
+                  worstRating: "1.0",
+                  ratingCount: Number(data.totalVotes),
+                } : undefined,
+              };
             }
           } else if (pathname.startsWith("/artikel/") || pathname.startsWith("/article/")) {
             const slug = decodeURIComponent(pathname.replace(/^\/(?:artikel|article)\/?/, "")).replace(/\/$/, "");
@@ -89,6 +110,23 @@ async function startServer() {
               image = data.ogImage || data.coverImage || "";
               type = "article";
               publishedTime = data.publishedAt;
+              schemaJson = {
+                "@context": "https://schema.org",
+                "@type": "NewsArticle",
+                headline: data.seoTitle || data.title || title,
+                description,
+                image: [image || "https://www.sotoyfilm.my.id/og-default.png"],
+                datePublished: data.publishedAt,
+                dateModified: data.updatedAt || data.publishedAt,
+                author: data.author?.name ? { "@type": "Person", name: data.author.name } : undefined,
+                publisher: {
+                  "@type": "Organization",
+                  name: "Sotoy Film",
+                  url: "https://www.sotoyfilm.my.id",
+                  logo: { "@type": "ImageObject", url: "https://www.sotoyfilm.my.id/stacked%20logo-sotoyfilm.PNG" },
+                },
+                mainEntityOfPage: { "@type": "WebPage", "@id": `https://www.sotoyfilm.my.id${pathname}` },
+              };
             }
           }
 
@@ -112,6 +150,7 @@ async function startServer() {
             videoReleaseDate,
             videoTags,
             videoActors,
+            schemaJson,
           });
 
           return res.status(200).type("html").send(renderedHtml);

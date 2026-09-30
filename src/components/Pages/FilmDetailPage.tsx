@@ -32,7 +32,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
 import { SEOHead } from '../SEO/SEOHead';
-import { generateMovieSchema, generateBreadcrumbSchema } from '../../utils/schemaHelpers';
+import { createMovieSchemaFromFilm, generateBreadcrumbSchema } from '../../utils/schemaHelpers';
 import { slugify } from '../../utils/slugify';
 import { INITIAL_FILMS } from '../../data/mockData';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
@@ -349,25 +349,14 @@ export const FilmDetailPage: React.FC = () => {
     { name: film.title, item: seoUrl },
   ]);
 
-  const movieSchema = generateMovieSchema({
-    title: film.title,
-    originalTitle: film.originalTitle,
-    image: film.poster,
-    description: film.synopsis,
-    director: film.director,
-    writer: film.writer,
-    actorNames: film.cast,
-    genre: film.genres,
-    year: film.year,
-    skorSotoy: film.skorSotoy,
-    totalVotes: film.totalVotes || 0,
+  const movieSchema = createMovieSchemaFromFilm(film, {
     reviews: filmReviews.slice(0, 5).map(r => ({
-      authorName: r.userName,
-      reviewHeadline: r.headline || 'Ulasan Sotoy',
-      reviewBody: r.reviewText,
-      reviewRating: r.score,
+      userName: r.userName,
+      reviewText: r.reviewText,
+      score: r.score,
       createdAt: r.createdAt,
     })),
+    currentUrl: seoUrl,
   });
 
   return (

@@ -219,8 +219,16 @@ async function run() {
     }
 
     console.log(`[Sitemap Builder] Indexed ${filmsCount} films.`);
-  } catch (dbError) {
-    console.error('[Sitemap Builder] Warning: Error querying Firestore collections:', dbError);
+  } catch (dbError: any) {
+    const errorMsg = dbError?.message || String(dbError);
+    const isQuotaExceeded = errorMsg.includes('Quota limit exceeded') || errorMsg.includes('quota') || dbError?.code === 'resource-exhausted';
+
+    if (isQuotaExceeded) {
+      console.log('[Sitemap Builder] Info: Firestore quota limit exceeded (Free Tier). Gracefully falling back to build-time offline static catalog.');
+    } else {
+      console.log(`[Sitemap Builder] Info: Firestore offline or unreachable (${errorMsg}). Gracefully falling back to build-time offline static catalog.`);
+    }
+
     // Graceful offline fallback
     for (const item of INITIAL_ARTICLES) {
       if (item.status === 'trash' || item.status === 'draft') continue;
