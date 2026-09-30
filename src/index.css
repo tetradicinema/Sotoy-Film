@@ -44,23 +44,6 @@
     outline: none;
     box-shadow: 0 0 0 2px #0E1013, 0 0 0 4px #FF2E7E;
   }
-
-  /* Prevent iOS Safari auto-zoom on field focus for mobile viewports */
-  @media screen and (max-width: 767px) {
-    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
-    textarea,
-    select {
-      font-size: 16px !important;
-    }
-  }
-}
-
-/* Standalone iOS App installed mode zoom prevention */
-@media (display-mode: standalone) {
-  html, body {
-    touch-action: pan-x pan-y;
-    -webkit-text-size-adjust: 100%;
-  }
 }
 
 /* Custom scrollbar for buzz feeds and tab lists */
