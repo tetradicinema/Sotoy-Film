@@ -2,7 +2,17 @@ import React, { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { FilmItem, Article } from '../../types';
-import { generateMetadata } from '../../utils/generateMetadata';
+import {
+  CompletePageMetadata,
+  buildRouteMetadata,
+  buildFilmMetadata,
+  buildArticleMetadata,
+  resolveAbsoluteUrl,
+  getImageMimeType,
+  parseDurationInSeconds,
+  DEFAULT_BASE_URL,
+  DEFAULT_TWITTER_SITE,
+} from '../../utils/seoMetadata';
 import {
   BreadcrumbItem,
   generateBreadcrumbSchema,
@@ -22,10 +32,13 @@ export interface SEOHeadProps {
   imageWidth?: number | string;
   imageHeight?: number | string;
   url?: string;
-  type?: 'website' | 'article' | 'video.movie';
+  type?: 'website' | 'article' | 'video.movie' | string;
   canonicalUrl?: string;
   schema?: Record<string, any> | Record<string, any>[];
   noindex?: boolean;
+
+  // Complete pre-built metadata (optional direct injection)
+  metadata?: CompletePageMetadata;
 
   // Dynamic entity props for automatic Schema.org JSON-LD generation
   film?: FilmItem;
@@ -52,58 +65,9 @@ export interface SEOHeadProps {
   tags?: string[];
 }
 
-const DEFAULT_TITLE = 'Sotoy Film - Ulasan & Kritik Film Terpercaya';
-const DEFAULT_DESC = 'Platform komunitas & media pop-culture film, series, anime, cinema gear, dan film studies dengan ulasan Skor Sotoy dan diskusi buzz.';
-const DEFAULT_KEYWORDS = 'ulasan film, kritik film, film indonesia, skor sotoy, cinema gear, anime, pop culture';
-const DEFAULT_IMAGE = 'https://www.sotoyfilm.my.id/og-default.png';
-const DEFAULT_URL = 'https://www.sotoyfilm.my.id';
-
-/**
- * Resolves any image URL to a fully qualified, absolute HTTPS URL for crawler compatibility.
- */
-const resolveAbsoluteUrl = (urlStr?: string, baseUrl = DEFAULT_URL): string => {
-  if (!urlStr || typeof urlStr !== 'string') return DEFAULT_IMAGE;
-  const trimmed = urlStr.trim();
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-    return trimmed;
-  }
-  if (trimmed.startsWith('//')) {
-    return `https:${trimmed}`;
-  }
-  if (trimmed.startsWith('/')) {
-    return `${baseUrl.replace(/\/$/, '')}${trimmed}`;
-  }
-  return `${baseUrl.replace(/\/$/, '')}/${trimmed}`;
-};
-
-/**
- * Detects image MIME type from URL extension.
- */
-const getImageMimeType = (url: string): string => {
-  const clean = url.split('?')[0].toLowerCase();
-  if (clean.endsWith('.png')) return 'image/png';
-  if (clean.endsWith('.webp')) return 'image/webp';
-  if (clean.endsWith('.gif')) return 'image/gif';
-  if (clean.endsWith('.svg')) return 'image/svg+xml';
-  return 'image/jpeg';
-};
-
-/**
- * Parses duration strings like "2h 46m" or "120 min" into total seconds.
- */
-const parseDurationInSeconds = (durationStr?: string): number | null => {
-  if (!durationStr) return null;
-  const hoursMatch = durationStr.match(/(\d+)\s*h/i);
-  const minsMatch = durationStr.match(/(\d+)\s*(?:m|min)/i);
-  let totalSeconds = 0;
-  if (hoursMatch) totalSeconds += parseInt(hoursMatch[1], 10) * 3600;
-  if (minsMatch) totalSeconds += parseInt(minsMatch[1], 10) * 60;
-  return totalSeconds > 0 ? totalSeconds : null;
-};
-
 export const SEOHead: React.FC<SEOHeadProps> = ({
   title,
-  description = DEFAULT_DESC,
+  description,
   keywords,
   image,
   imageAlt,
@@ -114,13 +78,14 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
   canonicalUrl,
   schema,
   noindex = false,
+  metadata: explicitMetadata,
   film,
   article,
   author,
   reviews,
   breadcrumbs,
   twitterCard = 'summary_large_image',
-  twitterSite = '@sotoyfilm',
+  twitterSite = DEFAULT_TWITTER_SITE,
   twitterCreator,
   publishedTime,
   modifiedTime,
@@ -129,84 +94,107 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
 }) => {
   const location = useLocation();
 
-  // Dynamic route-specific metadata resolved from current pathname
-  const routeMeta = useMemo(() => {
-    return generateMetadata(location.pathname);
-  }, [location.pathname]);
-
-  const rawTitle = title || routeMeta.title;
-  const finalTitle = rawTitle.includes('Sotoy Film') ? rawTitle : `${rawTitle} | Sotoy Film`;
-
-  const finalDescription = (description && description !== DEFAULT_DESC)
-    ? description
-    : (routeMeta.description || DEFAULT_DESC);
-
-  // Dynamic URL resolution based on client location or fallback
-  const clientLocationUrl = typeof window !== 'undefined' 
-    ? `${window.location.origin}${window.location.pathname}`
-    : DEFAULT_URL;
-  const finalUrl = url || clientLocationUrl;
-  const finalCanonical = canonicalUrl || finalUrl;
-
-  const finalKeywords = useMemo(() => {
-    if (keywords) {
-      return Array.isArray(keywords) ? keywords.filter(Boolean).join(', ') : keywords;
+  // Dynamic Central Metadata Assembly
+  const metadata = useMemo<CompletePageMetadata>(() => {
+    if (explicitMetadata) {
+      return explicitMetadata;
     }
-    if (routeMeta.keywords && routeMeta.keywords.length > 0) {
-      return routeMeta.keywords.join(', ');
+
+    const clientLocationUrl = typeof window !== 'undefined'
+      ? `${window.location.origin}${window.location.pathname}`
+      : DEFAULT_BASE_URL;
+    const finalUrl = url || clientLocationUrl;
+    const finalCanonical = canonicalUrl || finalUrl;
+
+    if (film) {
+      return buildFilmMetadata(film, {
+        currentUrl: finalUrl,
+        canonicalUrl: finalCanonical,
+        reviews,
+        overrides: {
+          ...(title ? { title: title.includes('Sotoy Film') ? title : `${title} | Sotoy Film`, rawTitle: title } : {}),
+          ...(description ? { description } : {}),
+          ...(image ? { primaryImage: resolveAbsoluteUrl(image, finalUrl) } : {}),
+          ...(type ? { type } : {}),
+          ...(keywords ? { keywords: Array.isArray(keywords) ? keywords : [keywords] } : {}),
+          noindex,
+        },
+      });
     }
-    return DEFAULT_KEYWORDS;
-  }, [keywords, routeMeta.keywords]);
 
-  // Determine effective page type
-  const effectiveType = type || (film ? 'video.movie' : article ? 'article' : (routeMeta.type || 'website'));
-
-  const effectiveNoindex = noindex || !!routeMeta.noindex;
-
-  // Dynamic Image Resolution:
-  // For films: prioritize high-res landscape backdrop (optimal for 16:9 / summary_large_image), then poster
-  // For articles: prioritize ogImage, then coverImage
-  // Otherwise: fall back to image prop or DEFAULT_IMAGE
-  const rawPrimaryImage = useMemo(() => {
-    if (image && image !== DEFAULT_IMAGE) return image;
-    if (film) return film.backdrop || film.poster || DEFAULT_IMAGE;
-    if (article) return article.ogImage || article.coverImage || DEFAULT_IMAGE;
-    return image || DEFAULT_IMAGE;
-  }, [image, film, article]);
-
-  const primaryImageUrl = useMemo(
-    () => resolveAbsoluteUrl(rawPrimaryImage, finalUrl),
-    [rawPrimaryImage, finalUrl]
-  );
-
-  // Secondary portrait poster for films (useful for platforms supporting multiple OG images)
-  const secondaryImageUrl = useMemo(() => {
-    if (film && film.backdrop && film.poster && film.backdrop !== film.poster) {
-      return resolveAbsoluteUrl(film.poster, finalUrl);
+    if (article) {
+      return buildArticleMetadata(article, {
+        currentUrl: finalUrl,
+        canonicalUrl: finalCanonical,
+        author,
+        overrides: {
+          ...(title ? { title: title.includes('Sotoy Film') ? title : `${title} | Sotoy Film`, rawTitle: title } : {}),
+          ...(description ? { description } : {}),
+          ...(image ? { primaryImage: resolveAbsoluteUrl(image, finalUrl) } : {}),
+          ...(type ? { type } : {}),
+          ...(keywords ? { keywords: Array.isArray(keywords) ? keywords : [keywords] } : {}),
+          noindex,
+        },
+      });
     }
+
+    return buildRouteMetadata(location.pathname, {
+      currentUrl: finalUrl,
+      canonicalUrl: finalCanonical,
+      overrides: {
+        ...(title ? { title: title.includes('Sotoy Film') ? title : `${title} | Sotoy Film`, rawTitle: title } : {}),
+        ...(description ? { description } : {}),
+        ...(image ? { primaryImage: resolveAbsoluteUrl(image, finalUrl) } : {}),
+        ...(type ? { type } : {}),
+        ...(keywords ? { keywords: Array.isArray(keywords) ? keywords : [keywords] } : {}),
+        noindex,
+      },
+    });
+  }, [
+    explicitMetadata,
+    location.pathname,
+    film,
+    article,
+    author,
+    reviews,
+    url,
+    canonicalUrl,
+    title,
+    description,
+    image,
+    type,
+    keywords,
+    noindex,
+  ]);
+
+  const finalTitle = metadata.title;
+  const finalDescription = metadata.description;
+  const finalKeywords = metadata.keywords.join(', ');
+  const finalUrl = metadata.url;
+  const finalCanonical = metadata.canonicalUrl;
+  const effectiveType = type || metadata.type;
+  const effectiveNoindex = noindex || metadata.noindex;
+
+  const primaryImageUrl = metadata.primaryImage;
+  const secondaryImageUrl = metadata.secondaryImage;
+  const primaryImageMime = metadata.imageMimeType || getImageMimeType(primaryImageUrl);
+  const finalImageAlt = imageAlt || metadata.imageAlt || finalTitle;
+
+  const finalAuthor = author?.name || metadata.authorName || 'Redaksi Sotoy Film';
+  const effectiveTwitterCreator =
+    twitterCreator ||
+    metadata.twitter['twitter:creator'] ||
+    (author?.name ? `@${author.name.replace(/\s+/g, '')}` : DEFAULT_TWITTER_SITE);
+  const effectivePublishedTime = publishedTime || metadata.publishedTime;
+  const effectiveModifiedTime = modifiedTime || metadata.modifiedTime || effectivePublishedTime;
+  const effectiveSection = section || metadata.section;
+  const effectiveTags = tags || metadata.tags || metadata.filmDetails?.genres || [];
+
+  const filmDurationSeconds = useMemo(() => {
+    if (metadata.filmDetails?.durationSeconds) return metadata.filmDetails.durationSeconds;
+    if (film?.duration) return parseDurationInSeconds(film.duration);
     return null;
-  }, [film, finalUrl]);
-
-  const primaryImageMime = useMemo(() => getImageMimeType(primaryImageUrl), [primaryImageUrl]);
-
-  const finalImageAlt = useMemo(() => {
-    if (imageAlt) return imageAlt;
-    if (film) return `${film.title} (${film.year}) - Poster & Ulasan Film di Sotoy Film`;
-    if (article) return `${article.title} - Sotoy Film Pop Culture Media`;
-    return finalTitle;
-  }, [imageAlt, film, article, finalTitle]);
-
-  const finalAuthor = author?.name || article?.author?.name || 'Redaksi Sotoy Film';
-  const effectiveTwitterCreator = twitterCreator || (author?.name ? `@${author.name.replace(/\s+/g, '')}` : '@sotoyfilm');
-  const effectivePublishedTime = publishedTime || article?.publishedAt;
-  const effectiveModifiedTime = modifiedTime || (article as any)?.updatedAt || effectivePublishedTime;
-  const effectiveSection = section || article?.category;
-  const effectiveTags = tags || article?.tags || film?.genres || [];
-
-  const filmDurationSeconds = useMemo(
-    () => (film?.duration ? parseDurationInSeconds(film.duration) : null),
-    [film?.duration]
-  );
+  }, [metadata.filmDetails?.durationSeconds, film?.duration]);
 
   // Dynamically assemble Schema.org structured data
   const resolvedSchemas = useMemo(() => {
@@ -229,7 +217,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
           '@context': 'https://schema.org',
           '@type': 'Movie',
           name: title,
-          description,
+          description: finalDescription,
           image: primaryImageUrl,
           url: finalUrl,
         });
@@ -254,14 +242,14 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
         list.push(
           generateArticleSchema({
             title,
-            description,
+            description: finalDescription,
             image: primaryImageUrl,
             url: finalUrl,
             datePublished: effectivePublishedTime || new Date().toISOString(),
             dateModified: effectiveModifiedTime,
             authorName: finalAuthor,
             authorAvatar: author?.avatar,
-            keywords: Array.isArray(keywords) ? keywords : keywords ? [keywords] : [],
+            keywords: metadata.keywords,
           })
         );
       }
@@ -273,12 +261,15 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
     }
 
     // 4. Dynamic WebSite & Organization Schemas
-    if (effectiveType === 'website' || (!film && !article && effectiveType !== 'video.movie' && effectiveType !== 'article')) {
+    if (
+      effectiveType === 'website' ||
+      (!film && !article && effectiveType !== 'video.movie' && effectiveType !== 'article')
+    ) {
       if (!hasExplicitType('WebSite')) {
-        list.push(generateWebSiteSchema('https://www.sotoyfilm.my.id'));
+        list.push(generateWebSiteSchema(DEFAULT_BASE_URL));
       }
       if (!hasExplicitType('Organization')) {
-        list.push(generateOrganizationSchema('https://www.sotoyfilm.my.id'));
+        list.push(generateOrganizationSchema(DEFAULT_BASE_URL));
       }
     }
 
@@ -295,10 +286,10 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
     breadcrumbs,
     effectiveType,
     title,
-    description,
+    finalDescription,
     primaryImageUrl,
     finalUrl,
-    keywords,
+    metadata.keywords,
     effectivePublishedTime,
     effectiveModifiedTime,
     finalAuthor,
@@ -314,12 +305,12 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
       {effectiveNoindex && <meta name="robots" content="noindex, nofollow" />}
 
       {/* Open Graph / Facebook / WhatsApp */}
-      <meta property="og:site_name" content="Sotoy Film" />
+      <meta property="og:site_name" content={metadata.openGraph['og:site_name'] || 'Sotoy Film'} />
       <meta property="og:title" content={finalTitle} />
       <meta property="og:description" content={finalDescription} />
       <meta property="og:url" content={finalUrl} />
       <meta property="og:type" content={effectiveType} />
-      <meta property="og:locale" content="id_ID" />
+      <meta property="og:locale" content={metadata.openGraph['og:locale'] || 'id_ID'} />
 
       {/* Primary Dynamic Open Graph Image */}
       <meta property="og:image" content={primaryImageUrl} />
@@ -340,22 +331,28 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
       )}
 
       {/* Film Specific Open Graph Meta (video.movie) */}
-      {film && (
+      {(film || metadata.filmDetails) && (
         <>
-          {film.director && <meta property="video:director" content={film.director} />}
-          {film.year && <meta property="video:release_date" content={`${film.year}-01-01`} />}
+          {(film?.director || metadata.filmDetails?.director) && (
+            <meta property="video:director" content={film?.director || metadata.filmDetails?.director} />
+          )}
+          {(film?.year || metadata.filmDetails?.year) && (
+            <meta property="video:release_date" content={`${film?.year || metadata.filmDetails?.year}-01-01`} />
+          )}
           {filmDurationSeconds && <meta property="video:duration" content={String(filmDurationSeconds)} />}
-          {film.genres?.map(genre => (
+          {(metadata.filmDetails?.genres || film?.genres || []).map(genre => (
             <meta key={`video-genre-${genre}`} property="video:tag" content={genre} />
           ))}
-          {(film.castDetails?.map(c => c.name) || film.cast || []).slice(0, 5).map(actor => (
-            <meta key={`video-actor-${actor}`} property="video:actor" content={actor} />
-          ))}
+          {(metadata.filmDetails?.cast || film?.castDetails?.map(c => c.name) || film?.cast || [])
+            .slice(0, 5)
+            .map(actor => (
+              <meta key={`video-actor-${actor}`} property="video:actor" content={actor} />
+            ))}
         </>
       )}
 
       {/* Article Specific Open Graph Meta */}
-      {article && (
+      {(article || effectiveType === 'article') && (
         <>
           {effectivePublishedTime && (
             <meta property="article:published_time" content={effectivePublishedTime} />
@@ -379,7 +376,10 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
       <meta name="twitter:description" content={finalDescription} />
       <meta name="twitter:image" content={primaryImageUrl} />
       <meta name="twitter:image:alt" content={finalImageAlt} />
-      <meta name="twitter:domain" content={typeof window !== 'undefined' ? window.location.hostname : 'www.sotoyfilm.my.id'} />
+      <meta
+        name="twitter:domain"
+        content={typeof window !== 'undefined' ? window.location.hostname : 'www.sotoyfilm.my.id'}
+      />
       <meta name="twitter:url" content={finalUrl} />
 
       {/* Schema.org Structured Data (JSON-LD) */}
@@ -391,4 +391,3 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
     </Helmet>
   );
 };
-

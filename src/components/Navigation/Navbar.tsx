@@ -736,10 +736,10 @@ export const Navbar: React.FC = () => {
                 </div>
                 <div className="min-w-0 flex-1">
                   <h2 className="font-display font-black text-sm text-white tracking-wide truncate leading-tight">
-                    Kategori Artikel
+                    Sotoy Navigasi
                   </h2>
                   <p className="text-[10px] text-slate-400 truncate leading-tight mt-0.5">
-                    Jelajahi sinema & pop culture
+                    Cari & Jelajahi Konten Film
                   </p>
                 </div>
               </div>
@@ -755,8 +755,59 @@ export const Navbar: React.FC = () => {
               </button>
             </div>
 
-            {/* Accordion List */}
-            <div className="flex-1 overflow-y-auto py-3 px-3 space-y-2 scrollbar-thin scrollbar-thumb-slate-800">
+            {/* Top Navigation & Search Section */}
+            <div className="shrink-0 p-3 space-y-2.5 border-b border-white/[0.08] bg-[#0E1013]/60">
+              {/* Global Search Bar in Drawer */}
+              <div className="w-full">
+                <GlobalSearchBar
+                  isMobile={true}
+                  onItemSelect={() => setCategoryMenuOpen(false)}
+                  placeholder="Cari film, artikel, buzz..."
+                />
+              </div>
+
+              {/* Main Feature Shortcuts (Film DB & Buzz Feed) */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  id="mobile-drawer-film-db-btn"
+                  onClick={() => {
+                    navigateTo('film-database');
+                    setCategoryMenuOpen(false);
+                  }}
+                  className={`py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border transition-all cursor-pointer ${
+                    currentView === 'film-database' || currentView === 'film-detail'
+                      ? 'bg-[#FF2E7E] text-white border-[#FF2E7E] shadow-md shadow-[#FF2E7E]/20'
+                      : 'text-slate-200 hover:text-white bg-slate-900/80 hover:bg-slate-800 border-white/10'
+                  }`}
+                >
+                  <Film className="w-4 h-4 text-[#FF2E7E]" />
+                  <span>Film DB</span>
+                </button>
+                <button
+                  type="button"
+                  id="mobile-drawer-buzz-btn"
+                  onClick={() => {
+                    navigateTo('community-feed');
+                    setCategoryMenuOpen(false);
+                  }}
+                  className={`py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border transition-all cursor-pointer ${
+                    currentView === 'community-feed'
+                      ? 'bg-[#FF2E7E] text-white border-[#FF2E7E] shadow-md shadow-[#FF2E7E]/20'
+                      : 'text-slate-200 hover:text-white bg-slate-900/80 hover:bg-slate-800 border-white/10'
+                  }`}
+                >
+                  <MessageSquare className="w-4 h-4 text-[#FF2E7E]" />
+                  <span>Buzz Feed</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Accordion Category List */}
+            <div className="flex-1 overflow-y-auto py-3 px-3 space-y-2 scrollbar-thin scrollbar-thumb-slate-800 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <div className="px-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1.5">
+                <span>Kategori Artikel</span>
+              </div>
               {categoriesConfig.map(cat => {
                 const CatIcon = cat.icon;
                 const isCategorySelected = activeCategory === cat.id && currentView === 'category';
@@ -867,44 +918,6 @@ export const Navbar: React.FC = () => {
                   </div>
                 );
               })}
-            </div>
-
-            {/* Drawer Footer with Quick Access Links */}
-            <div className="p-3 border-t border-white/[0.08] bg-[#0E1013]/80 space-y-2 pb-[max(0.875rem,env(safe-area-inset-bottom))]">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  id="mobile-drawer-film-db-btn"
-                  onClick={() => {
-                    navigateTo('film-database');
-                    setCategoryMenuOpen(false);
-                  }}
-                  className={`flex-1 py-2 px-2.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    currentView === 'film-database' || currentView === 'film-detail'
-                      ? 'bg-[#FF2E7E] text-white shadow-sm'
-                      : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08]'
-                  }`}
-                >
-                  <Film className="w-3.5 h-3.5 text-[#FF2E7E]" />
-                  <span>Film DB</span>
-                </button>
-                <button
-                  type="button"
-                  id="mobile-drawer-buzz-btn"
-                  onClick={() => {
-                    navigateTo('community-feed');
-                    setCategoryMenuOpen(false);
-                  }}
-                  className={`flex-1 py-2 px-2.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    currentView === 'community-feed'
-                      ? 'bg-[#FF2E7E] text-white shadow-sm'
-                      : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08]'
-                  }`}
-                >
-                  <MessageSquare className="w-3.5 h-3.5 text-[#FF2E7E]" />
-                  <span>Buzz Feed</span>
-                </button>
-              </div>
             </div>
           </div>
         </div>

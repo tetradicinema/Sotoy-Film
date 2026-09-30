@@ -154,6 +154,11 @@ export default async function middleware(request: Request): Promise<Response> {
       imageAlt: data.title || title,
       locale: 'id_ID',
       publishedTime,
+      videoDirector: collection === 'films' ? data.director : undefined,
+      videoReleaseDate: collection === 'films' && data.year ? `${data.year}-01-01` : undefined,
+      videoDuration: collection === 'films' ? data.duration : undefined,
+      videoTags: collection === 'films' ? data.genres : undefined,
+      videoActors: collection === 'films' && data.castDetails ? data.castDetails.map((c: any) => c.name) : data.cast,
     });
 
     return new Response(modifiedHtml, {
