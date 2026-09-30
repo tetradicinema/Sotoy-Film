@@ -1,5 +1,6 @@
 import React from 'react';
 import { Home, Film, MessageSquare, LogIn, Plus } from 'lucide-react';
+import { motion } from 'motion/react';
 import { useApp } from '../../context/AppContext';
 
 export const MobileBottomNav: React.FC = () => {
@@ -14,6 +15,25 @@ export const MobileBottomNav: React.FC = () => {
     unreadNotificationsCount,
   } = useApp();
 
+  const [isVisible, setIsVisible] = React.useState(true);
+  const lastScrollY = React.useRef(0);
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      // Hide on scroll down, show on scroll up
+      if (currentScrollY > lastScrollY.current && currentScrollY > 60) {
+        setIsVisible(false);
+      } else {
+        setIsVisible(true);
+      }
+      lastScrollY.current = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const isHomeActive = currentView === 'home';
   const isFilmActive = currentView === 'film-database' || currentView === 'film-detail' || currentView === 'film-recommendations';
   const isBuzzActive = currentView === 'community-feed' || currentView === 'buzz-detail';
@@ -23,7 +43,11 @@ export const MobileBottomNav: React.FC = () => {
     <nav
       id="mobile-bottom-navigation-bar"
       aria-label="Navigasi Bawah Mobile"
-      className="lg:hidden tabletbottomnav fixed bottom-0 left-0 right-0 z-40 bg-[#0E1013]/95 backdrop-blur-xl border-t border-white/[0.08] shadow-[0_-8px_24px_rgba(14,16,19,0.8)] px-2 py-1.5 md:py-2.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] overflow-auto scrollbar-none scroll-smooth touch-pan-x"
+      className={`lg:hidden tabletbottomnav fixed left-3 right-3 max-w-md mx-auto z-40 bg-[#0E1013]/95 backdrop-blur-xl border border-white/[0.08] shadow-[0_12px_36px_rgba(0,0,0,0.6)] px-2 py-1.5 md:py-2 rounded-2xl overflow-auto scrollbar-none scroll-smooth touch-pan-x transition-all duration-300 ${
+        isVisible 
+          ? 'bottom-5 opacity-100 scale-100 translate-y-0' 
+          : 'bottom-2 opacity-0 scale-95 translate-y-24 pointer-events-none'
+      }`}
       style={{ overflow: 'auto', WebkitOverflowScrolling: 'touch' }}
     >
       <div className="flex items-center justify-around min-w-max sm:min-w-full w-full max-w-md md:max-w-2xl mx-auto gap-1 md:gap-4 px-0.5">
@@ -40,7 +64,11 @@ export const MobileBottomNav: React.FC = () => {
           <div className="relative">
             <Home className={`w-5 h-5 md:w-6 md:h-6 transition-transform ${isHomeActive ? 'scale-110 stroke-[2.5]' : 'stroke-2'}`} />
             {isHomeActive && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#FF2E7E]" />
+              <motion.span
+                layoutId="mobileActiveIndicatorDot"
+                className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#FF2E7E]"
+                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+              />
             )}
           </div>
           <span className={`text-[10px] md:text-xs mt-1 md:mt-1.5 tracking-tight font-semibold ${isHomeActive ? 'text-white' : 'text-slate-400'}`}>
@@ -61,7 +89,11 @@ export const MobileBottomNav: React.FC = () => {
           <div className="relative">
             <Film className={`w-5 h-5 md:w-6 md:h-6 transition-transform ${isFilmActive ? 'scale-110 stroke-[2.5]' : 'stroke-2'}`} />
             {isFilmActive && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#FF2E7E]" />
+              <motion.span
+                layoutId="mobileActiveIndicatorDot"
+                className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#FF2E7E]"
+                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+              />
             )}
           </div>
           <span className={`text-[10px] md:text-xs mt-1 md:mt-1.5 tracking-tight font-semibold ${isFilmActive ? 'text-white' : 'text-slate-400'}`}>
@@ -104,7 +136,11 @@ export const MobileBottomNav: React.FC = () => {
           <div className="relative">
             <MessageSquare className={`w-5 h-5 md:w-6 md:h-6 transition-transform ${isBuzzActive ? 'scale-110 stroke-[2.5]' : 'stroke-2'}`} />
             {isBuzzActive && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#FF2E7E]" />
+              <motion.span
+                layoutId="mobileActiveIndicatorDot"
+                className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#FF2E7E]"
+                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+              />
             )}
           </div>
           <span className={`text-[10px] md:text-xs mt-1 md:mt-1.5 tracking-tight font-semibold ${isBuzzActive ? 'text-white' : 'text-slate-400'}`}>
@@ -139,7 +175,11 @@ export const MobileBottomNav: React.FC = () => {
                 </span>
               )}
               {isProfileActive && (
-                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#FF2E7E]" />
+                <motion.span
+                  layoutId="mobileActiveIndicatorDot"
+                  className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#FF2E7E]"
+                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                />
               )}
             </div>
             <span className={`text-[10px] md:text-xs mt-1 md:mt-1.5 tracking-tight font-semibold ${isProfileActive ? 'text-white' : 'text-slate-400'}`}>
