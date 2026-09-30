@@ -1,8 +1,33 @@
 import React from 'react';
-import { Trophy, Info, ChevronRight } from 'lucide-react';
+import { Trophy, Info, ChevronRight, Users, ArrowRight } from 'lucide-react';
+import { motion } from 'motion/react';
 import { useApp } from '../../context/AppContext';
 import { RoleBadge } from './RoleBadge';
 import { LeaderboardEntry, LeaderboardPeriod } from '../../utils/leaderboard';
+
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, x: -12, y: 5 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    y: 0,
+    transition: {
+      duration: 0.3,
+    },
+  },
+};
 
 export interface LeaderboardPeriodTabsProps {
   activePeriod: LeaderboardPeriod;
@@ -51,6 +76,7 @@ export interface LeaderboardCardProps {
   limit?: number;
   compact?: boolean;
   flat?: boolean;
+  minimal?: boolean;
   title?: string;
   subtitle?: string;
   hideGuideButton?: boolean;
@@ -63,6 +89,7 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({
   limit = 5,
   compact = false,
   flat = false,
+  minimal = false,
   title = 'Review Leaderboards',
   subtitle,
   hideGuideButton = false,
@@ -114,19 +141,40 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({
 
       {/* Card Body / Rows */}
       {displayedEntries.length === 0 ? (
-        <div className="text-center py-8 px-4 bg-slate-900/40 rounded-2xl border border-slate-800/60 text-slate-400 text-xs italic">
-          {emptyText}
+        <div className="text-center py-10 px-6 bg-slate-900/40 rounded-3xl border border-dashed border-slate-800/60 flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-slate-500">
+            <Users className="w-6 h-6" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-slate-300 font-bold text-sm">Belum ada jawara di sini</p>
+            <p className="text-slate-500 text-xs italic leading-relaxed">
+              {emptyText === 'Belum ada aktivitas di periode ini' ? 'Jadilah orang pertama yang mendominasi puncak klasemen!' : emptyText}
+            </p>
+          </div>
+          <button
+            onClick={() => navigateTo('community-feed')}
+            className="mt-2 px-4 py-2 rounded-xl bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 text-[#FF2E7E] text-[11px] font-black uppercase tracking-wider flex items-center gap-2 hover:bg-[#FF2E7E]/20 transition-all cursor-pointer"
+          >
+            <span>Mulai Berdiskusi</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
         </div>
       ) : (
-        <div className={flat ? 'space-y-3' : 'divide-y divide-slate-800/60'}>
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className={flat ? 'space-y-3' : 'divide-y divide-slate-800/60'}
+        >
           {displayedEntries.map(entry => {
             const userInitial = entry.user.name
               ? entry.user.name.charAt(0).toUpperCase()
               : 'U';
 
             return (
-              <div
+              <motion.div
                 key={entry.user.id}
+                variants={itemVariants}
                 className={`flex items-center justify-between gap-2 sm:gap-3 ${
                   flat ? 'py-1' : compact ? 'py-2' : 'py-2.5 sm:py-3'
                 } group`}
@@ -134,7 +182,10 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({
                 {/* Left: Rank & User Info */}
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
                   {/* Rank Badge */}
-                  <div className="shrink-0 flex items-center justify-center">
+                  <div 
+                    className="shrink-0 flex items-center justify-center"
+                    title={`Peringkat #${entry.rank} berdasarkan akumulasi poin dari ulasan, rating, dan jumlah suka.`}
+                  >
                     {entry.rank === 1 ? (
                       <div className="w-6 h-6 rounded-full flex items-center justify-center font-black text-xs border border-[#F5C542]/60 bg-[#F5C542]/15 text-[#F5C542] shadow-[0_0_8px_rgba(245,197,66,0.2)]">
                         1
@@ -185,7 +236,7 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({
                 </div>
 
                 {/* Right: Stat Columns */}
-                {!compact && !flat && (
+                {!minimal && (
                   <div className="flex items-center gap-2 sm:gap-4 shrink-0 text-right tabular-nums">
                     <div className="flex flex-col items-end min-w-[32px] sm:min-w-[40px]">
                       <span className="font-bold text-xs sm:text-sm text-white">
@@ -215,13 +266,13 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({
                     </div>
                   </div>
                 )}
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       )}
 
-      {(compact || flat) && (
+      {minimal && (
         <div className="pt-3 border-t border-slate-800/80 text-center">
           <button
             type="button"

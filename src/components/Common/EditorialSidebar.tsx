@@ -278,6 +278,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
           compact={true}
           limit={5}
           flat={true}
+          minimal={true}
         />
       </div>
 

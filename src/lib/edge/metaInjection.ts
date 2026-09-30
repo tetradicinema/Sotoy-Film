@@ -85,8 +85,8 @@ export const FALLBACK_HTML_TEMPLATE = `<!doctype html>
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/favicon-flat.png" />
-    <link rel="apple-touch-icon" href="/sotoy-icon-512.png" />
+    <link rel="icon" type="image/png" href="/stacked logo-sotoyfilm.PNG" />
+    <link rel="apple-touch-icon" href="/stacked logo-sotoyfilm.PNG" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sotoy Film</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">

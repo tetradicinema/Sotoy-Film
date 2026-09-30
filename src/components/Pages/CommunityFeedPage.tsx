@@ -767,6 +767,7 @@ export const CommunityFeedPage: React.FC = () => {
                     entries={mobileLeaderboardData}
                     compact={true}
                     limit={5}
+                    minimal={true}
                   />
                 </motion.div>
               )}
@@ -1708,6 +1709,7 @@ export const CommunityFeedPage: React.FC = () => {
             compact={true}
             limit={5}
             flat={true}
+            minimal={true}
           />
         </div>
 
