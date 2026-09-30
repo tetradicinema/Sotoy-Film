@@ -82,12 +82,35 @@ const META_FIELD_PATHS = [
 ];
 
 /**
+ * Module-level short-TTL cache for raw collection fetches (films & articles).
+ * Reused for 5 minutes before re-fetching, deduplicating bursts of crawls
+ * against the same edge worker.
+ */
+const COLLECTION_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+interface CachedCollection {
+  docs: any[];
+  timestamp: number;
+}
+
+const collectionCache: Record<'films' | 'articles', CachedCollection | null> = {
+  films: null,
+  articles: null,
+};
+
+/**
  * Fetches all documents in a collection via Firestore REST API, requesting only fields needed for meta tags.
  * Supports both paginated GET /documents/{collection} and POST /documents:runQuery fallback.
  */
 export async function fetchCollectionDocuments(
   collection: 'films' | 'articles'
 ): Promise<any[]> {
+  const cached = collectionCache[collection];
+  const now = Date.now();
+  if (cached && now - cached.timestamp < COLLECTION_CACHE_TTL_MS && cached.docs.length > 0) {
+    return cached.docs;
+  }
+
   // Strategy A: Paginated GET .../documents/{collection} with mask.fieldPaths
   try {
     const allDocs: any[] = [];
@@ -116,6 +139,7 @@ export async function fetchCollectionDocuments(
     } while (pageToken && pageCount < 5);
 
     if (allDocs.length > 0) {
+      collectionCache[collection] = { docs: allDocs, timestamp: Date.now() };
       return allDocs;
     }
   } catch {
@@ -150,12 +174,20 @@ export async function fetchCollectionDocuments(
     }
 
     if (queryRes.ok && Array.isArray(results)) {
-      return results
+      const docs = results
         .filter((r: any) => r && r.document)
         .map((r: any) => r.document);
+      if (docs.length > 0) {
+        collectionCache[collection] = { docs, timestamp: Date.now() };
+        return docs;
+      }
     }
   } catch (err) {
     console.error('[Edge Firestore] Collection fetch error:', err);
+  }
+
+  if (cached && cached.docs.length > 0) {
+    return cached.docs;
   }
 
   return [];

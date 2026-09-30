@@ -333,6 +333,7 @@ interface AppContextType {
   followingIds: string[];
   followersIds: string[];
   allUsers: User[];
+  refreshAllUsers: () => Promise<void>;
   toggleFollowUser: (userId: string) => void;
   isFollowing: (userId: string) => boolean;
   getUserById: (userId: string) => User | undefined;
@@ -515,6 +516,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { ...prev, [userId]: profile };
     });
   }, []);
+
+  const mapRawUsers = useCallback((rawDocs: { id: string; data: () => any }[]) => {
+    const userMap = new Map<string, User>();
+    rawDocs.forEach(docSnap => {
+      const data = docSnap.data() as User;
+      const id = data.id || docSnap.id;
+      if (id) {
+        userMap.set(id, { ...data, id });
+      }
+    });
+    const items = Array.from(userMap.values());
+    if (items.length > 0) {
+      const mapped = items.map(u => {
+        if (u.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02' || WRITER_UIDS.includes(u.id)) {
+          return { 
+            ...u, 
+            role: 'penulis_sotoy' as UserRole, 
+            roleTitle: u.roleTitle && u.roleTitle.includes('Penulis') ? u.roleTitle : 'Penulis Sotoy (Jurnalis Film & Pop-Culture)' 
+          };
+        }
+        if (ADMIN_UIDS.includes(u.id)) {
+          return { 
+            ...u, 
+            role: 'admin' as UserRole, 
+            roleTitle: u.roleTitle && u.roleTitle.includes('Admin') ? u.roleTitle : 'Head Admin & Lead Editor' 
+          };
+        }
+        return u;
+      });
+      setAllUsers(mapped);
+      setUserProfilesCache(prev => {
+        const nextCache = { ...prev };
+        mapped.forEach(u => {
+          nextCache[u.id] = u;
+        });
+        return nextCache;
+      });
+    } else {
+      setAllUsers([]);
+    }
+  }, []);
+
+  // One-time fetch for all users without permanent real-time snapshot overhead
+  const refreshAllUsers = useCallback(async () => {
+    try {
+      const snapshot = await getDocs(collection(db, 'users'));
+      mapRawUsers(snapshot.docs);
+    } catch (err: any) {
+      console.warn('[Firestore] users fetch fallback notice:', err?.message || err);
+    }
+  }, [mapRawUsers]);
+
+  // One-time getDocs on mount + periodic self-healing timer (every 3 minutes)
+  // Replaces the permanent onSnapshot listener on the entire 'users' collection to eliminate read-amplification
+  useEffect(() => {
+    refreshAllUsers();
+
+    const intervalId = setInterval(() => {
+      refreshAllUsers();
+    }, 3 * 60 * 1000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [refreshAllUsers]);
 
   // Local Preferences States
   const [activeUserTab, setActiveUserTab] = useState<UserTab>('buzz');
@@ -904,54 +970,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     );
 
-    const unsubUsers = onSnapshot(
-      collection(db, 'users'),
-      (snapshot) => {
-        const userMap = new Map<string, User>();
-        snapshot.forEach(docSnap => {
-          const data = docSnap.data() as User;
-          const id = data.id || docSnap.id;
-          if (id) {
-            userMap.set(id, { ...data, id });
-          }
-        });
-        const items = Array.from(userMap.values());
-        if (items.length > 0) {
-          const mapped = items.map(u => {
-            if (u.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02' || WRITER_UIDS.includes(u.id)) {
-              return { 
-                ...u, 
-                role: 'penulis_sotoy' as UserRole, 
-                roleTitle: u.roleTitle && u.roleTitle.includes('Penulis') ? u.roleTitle : 'Penulis Sotoy (Jurnalis Film & Pop-Culture)' 
-              };
-            }
-            if (ADMIN_UIDS.includes(u.id)) {
-              return { 
-                ...u, 
-                role: 'admin' as UserRole, 
-                roleTitle: u.roleTitle && u.roleTitle.includes('Admin') ? u.roleTitle : 'Head Admin & Lead Editor' 
-              };
-            }
-            return u;
-          });
-          setAllUsers(mapped);
-          setUserProfilesCache(prev => {
-            const nextCache = { ...prev };
-            mapped.forEach(u => {
-              nextCache[u.id] = u;
-            });
-            return nextCache;
-          });
-        } else {
-          setAllUsers([]);
-        }
-      },
-      (err) => {
-        console.warn('[Firestore] users subscription fallback notice:', err.message);
-        setAllUsers([]);
-      }
-    );
-
     const unsubAppeals = onSnapshot(
       collection(db, 'appeals'),
       (snapshot) => {
@@ -988,7 +1006,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubArticles();
       unsubBuzz();
       unsubRatings();
-      unsubUsers();
       unsubAppeals();
       unsubAudit();
     };
@@ -997,6 +1014,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const isAdmin = isLoggedIn && isUserAdmin(currentUser);
   const isWriter = isLoggedIn && (isUserWriter(currentUser) || currentUser.role === 'penulis_sotoy' || isAdmin || currentUser.role === 'admin');
   const isCritic = isLoggedIn && (isUserCritic(currentUser) || currentUser.role === 'si_paling_sotoy' || isAdmin);
+
+  // Immediate manual refresh of allUsers when an admin accesses any admin view
+  useEffect(() => {
+    if (isAdmin && (currentView === 'admin-dashboard' || currentView.startsWith('admin'))) {
+      refreshAllUsers();
+    }
+  }, [isAdmin, currentView, refreshAllUsers]);
 
   // Admin-only realtime subscription to userPrivate collection to join emails in memory
   const [adminUserEmails, setAdminUserEmails] = useState<Record<string, string>>({});
@@ -1207,6 +1231,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return;
       }
       if (fbUser && !fbUser.isAnonymous) {
+        refreshAllUsers();
         const uid = fbUser.uid;
         const userDocRef = doc(db, 'users', uid);
         try {
@@ -2613,6 +2638,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       showToast('Menghubungkan ke Firebase Auth...');
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       if (userCredential.user) {
+        refreshAllUsers();
         // Fetch profile
         const userDocRef = doc(db, 'users', userCredential.user.uid);
         const userSnap = await getDoc(userDocRef);
@@ -2722,6 +2748,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCurrentUser({ ...newUser, email: email.trim() });
         setIsEmailVerified(computeIsEmailVerified(newUser, userCredential.user));
         setIsLoggedIn(true);
+        refreshAllUsers();
         localStorage.setItem('sotoy_is_logged_in', 'true');
         showToast('Akun berhasil dibuat! Mari lengkapi profilmu. 🎬');
         setLoginModalOpen(false);
@@ -2755,6 +2782,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const provider = new GoogleAuthProvider();
       const userCredential = await signInWithPopup(auth, provider);
       if (userCredential.user) {
+        refreshAllUsers();
         const uid = userCredential.user.uid;
         const userDocRef = doc(db, 'users', uid);
         const userSnap = await getDoc(userDocRef);
@@ -2965,12 +2993,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Optimistic update
       const prevFollowing = followingIds;
       setFollowingIds(prev => prev.filter(id => id !== targetUserId));
+      setCurrentUser(prev => ({
+        ...prev,
+        followingCount: Math.max(0, (prev.followingCount || 0) - 1),
+      }));
+      setAllUsers(prev => prev.map(u => {
+        if (u.id === targetUserId) {
+          return { ...u, followersCount: Math.max(0, (u.followersCount || 0) - 1) };
+        }
+        if (u.id === currentUser.id) {
+          return { ...u, followingCount: Math.max(0, (u.followingCount || 0) - 1) };
+        }
+        return u;
+      }));
+      setUserProfilesCache(prev => {
+        const next = { ...prev };
+        if (next[targetUserId]) {
+          next[targetUserId] = {
+            ...next[targetUserId],
+            followersCount: Math.max(0, (next[targetUserId].followersCount || 0) - 1),
+          };
+        }
+        if (next[currentUser.id]) {
+          next[currentUser.id] = {
+            ...next[currentUser.id],
+            followingCount: Math.max(0, (next[currentUser.id].followingCount || 0) - 1),
+          };
+        }
+        return next;
+      });
 
       try {
         await deleteDoc(doc(db, 'follows', followDocId));
       } catch (err: any) {
         // Roll back optimistic state on Firestore failure
         setFollowingIds(prevFollowing);
+        setCurrentUser(prev => ({
+          ...prev,
+          followingCount: (prev.followingCount || 0) + 1,
+        }));
+        setAllUsers(prev => prev.map(u => {
+          if (u.id === targetUserId) {
+            return { ...u, followersCount: (u.followersCount || 0) + 1 };
+          }
+          if (u.id === currentUser.id) {
+            return { ...u, followingCount: (u.followingCount || 0) + 1 };
+          }
+          return u;
+        }));
         console.error('[Firestore] Error removing follow record:', err);
         const reason = err?.code === 'permission-denied'
           ? 'Izin ditolak (permission denied)'
@@ -3002,6 +3072,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Optimistic update
       const prevFollowing = followingIds;
       setFollowingIds(prev => [...prev, targetUserId]);
+      setCurrentUser(prev => ({
+        ...prev,
+        followingCount: (prev.followingCount || 0) + 1,
+      }));
+      setAllUsers(prev => prev.map(u => {
+        if (u.id === targetUserId) {
+          return { ...u, followersCount: (u.followersCount || 0) + 1 };
+        }
+        if (u.id === currentUser.id) {
+          return { ...u, followingCount: (u.followingCount || 0) + 1 };
+        }
+        return u;
+      }));
+      setUserProfilesCache(prev => {
+        const next = { ...prev };
+        if (next[targetUserId]) {
+          next[targetUserId] = {
+            ...next[targetUserId],
+            followersCount: (next[targetUserId].followersCount || 0) + 1,
+          };
+        }
+        if (next[currentUser.id]) {
+          next[currentUser.id] = {
+            ...next[currentUser.id],
+            followingCount: (next[currentUser.id].followingCount || 0) + 1,
+          };
+        }
+        return next;
+      });
 
       try {
         await setDoc(doc(db, 'follows', followDocId), {
@@ -3012,6 +3111,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch (err: any) {
         // Roll back optimistic state on Firestore failure
         setFollowingIds(prevFollowing);
+        setCurrentUser(prev => ({
+          ...prev,
+          followingCount: Math.max(0, (prev.followingCount || 0) - 1),
+        }));
+        setAllUsers(prev => prev.map(u => {
+          if (u.id === targetUserId) {
+            return { ...u, followersCount: Math.max(0, (u.followersCount || 0) - 1) };
+          }
+          if (u.id === currentUser.id) {
+            return { ...u, followingCount: Math.max(0, (u.followingCount || 0) - 1) };
+          }
+          return u;
+        }));
         console.error('[Firestore] Error saving follow record:', err);
         const reason = err?.code === 'permission-denied'
           ? 'Izin ditolak (permission denied)'
@@ -5246,6 +5358,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         followingIds,
         followersIds,
         allUsers: resolvedAllUsers,
+        refreshAllUsers,
         toggleFollowUser,
         isFollowing,
         getUserById,

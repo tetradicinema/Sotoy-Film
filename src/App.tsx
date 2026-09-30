@@ -82,7 +82,7 @@ const AppContent: React.FC = () => {
       {toastMessage && (
         <div
           id="global-toast-notification"
-          className={`fixed bottom-20 sm:bottom-6 right-4 sm:right-6 left-4 sm:left-auto z-50 bg-[#171A1F]/95 backdrop-blur-md border ${
+          className={`fixed bottom-20 sm:bottom-6 right-4 sm:right-6 left-4 sm:left-auto z-[100] bg-[#171A1F]/95 backdrop-blur-md border ${
             toastType === 'success' ? 'border-emerald-500/60' : 
             toastType === 'error' ? 'border-red-500/60' : 
             'border-[#FF2E7E]/60'

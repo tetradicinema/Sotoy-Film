@@ -23,17 +23,21 @@ export const LoginModal: React.FC = () => {
   const [handle, setHandle] = useState('');
   const [loading, setLoading] = useState(false);
   const [showRestrictedWarning, setShowRestrictedWarning] = useState(false);
+  const [authErrorMessage, setAuthErrorMessage] = useState<string | null>(null);
 
   if (!loginModalOpen) return null;
 
   const handleSubmitAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAuthErrorMessage(null);
     if (!email.trim() || !password.trim()) {
+      setAuthErrorMessage('Email dan password wajib diisi.');
       showToast('Email dan password wajib diisi.');
       return;
     }
 
     if (password.length < 6) {
+      setAuthErrorMessage('Password minimal berukuran 6 karakter.');
       showToast('Password minimal berukuran 6 karakter.');
       return;
     }
@@ -44,6 +48,7 @@ export const LoginModal: React.FC = () => {
     try {
       if (isSignUp) {
         if (!name.trim()) {
+          setAuthErrorMessage('Nama Lengkap wajib diisi.');
           showToast('Nama Lengkap wajib diisi.');
           setLoading(false);
           return;
@@ -56,35 +61,42 @@ export const LoginModal: React.FC = () => {
           setName('');
           setHandle('');
           setShowRestrictedWarning(false);
+          setAuthErrorMessage(null);
         } else {
           const errCode = getLastAuthErrorCode();
-          if (errCode === 'auth/admin-restricted-operation') {
+          if (errCode === 'auth/admin-restricted-operation' || errCode === 'auth/operation-not-allowed') {
             setShowRestrictedWarning(true);
+          } else if (errCode === 'auth/email-already-in-use') {
+            setAuthErrorMessage('Email sudah terdaftar. Silakan beralih ke Masuk dengan Email.');
           } else {
-            setShowRestrictedWarning(false);
+            setAuthErrorMessage('Gagal mendaftar. Mohon periksa kembali format email dan password Anda.');
           }
         }
       } else {
         const success = await signInWithEmail(email, password);
         if (success) {
           setShowRestrictedWarning(false);
+          setAuthErrorMessage(null);
         } else {
           const errCode = getLastAuthErrorCode();
-          if (errCode === 'auth/admin-restricted-operation') {
+          if (errCode === 'auth/admin-restricted-operation' || errCode === 'auth/operation-not-allowed') {
             setShowRestrictedWarning(true);
+          } else if (errCode === 'auth/invalid-credential' || errCode === 'auth/wrong-password' || errCode === 'auth/user-not-found') {
+            setAuthErrorMessage('Email atau password salah. Jika Anda belum memiliki akun, silakan klik "Daftar dengan Email" di bawah.');
           } else {
-            setShowRestrictedWarning(false);
+            setAuthErrorMessage('Gagal masuk. Mohon periksa email dan password atau masuk dengan Google.');
           }
         }
       }
     } catch (err: any) {
       console.error(err);
       const errCode = err?.code || getLastAuthErrorCode();
-      if (errCode === 'auth/admin-restricted-operation') {
+      if (errCode === 'auth/admin-restricted-operation' || errCode === 'auth/operation-not-allowed') {
         setShowRestrictedWarning(true);
       } else {
         setShowRestrictedWarning(false);
-        showToast(err?.message || 'Gagal masuk. Mohon coba lagi.');
+        setAuthErrorMessage(err?.message || 'Gagal masuk. Mohon coba lagi.');
+        showToast(err?.message || 'Gagal masuk. Mohon coba lagi.', 'error');
       }
     } finally {
       setLoading(false);
@@ -141,10 +153,26 @@ export const LoginModal: React.FC = () => {
               onClick={async () => {
                 setLoading(true);
                 setShowRestrictedWarning(false);
+                setAuthErrorMessage(null);
                 try {
-                  await signInWithGoogle();
-                } catch (err) {
+                  const success = await signInWithGoogle();
+                  if (!success) {
+                    const errCode = getLastAuthErrorCode();
+                    if (errCode === 'auth/popup-blocked') {
+                      setAuthErrorMessage('Popup Google diblokir oleh browser. Harap izinkan popup di pengaturan browser Anda.');
+                    } else if (errCode === 'auth/popup-closed-by-user') {
+                      setAuthErrorMessage('Jendela masuk Google ditutup sebelum selesai.');
+                    } else if (errCode === 'auth/unauthorized-domain') {
+                      setAuthErrorMessage('Domain ini belum terdaftar di Firebase Authorized Domains.');
+                    } else if (errCode === 'resource-exhausted') {
+                      setAuthErrorMessage('Kuota harian Firebase tercapai (Spark Tier). Sistem menggunakan sesi lokal.');
+                    } else if (errCode) {
+                      setAuthErrorMessage(`Gagal masuk dengan Google (${errCode}).`);
+                    }
+                  }
+                } catch (err: any) {
                   console.error(err);
+                  setAuthErrorMessage(err?.message || 'Gagal masuk dengan Google.');
                 } finally {
                   setLoading(false);
                 }
@@ -246,6 +274,16 @@ export const LoginModal: React.FC = () => {
               </div>
             </div>
 
+            {authErrorMessage && !showRestrictedWarning && (
+              <div className="bg-red-950/40 border border-red-500/40 rounded-lg p-3 text-left flex items-start gap-2.5 animate-in slide-in-from-top-2 duration-200">
+                <AlertTriangle className="w-4 h-4 mt-0.5 text-red-400 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-red-300">Gagal Masuk</p>
+                  <p className="text-[11px] text-slate-300 mt-0.5 leading-relaxed">{authErrorMessage}</p>
+                </div>
+              </div>
+            )}
+
             {showRestrictedWarning && (
               <div className="bg-amber-950/40 border border-amber-500/30 rounded-lg p-3 text-left space-y-2.5 animate-in slide-in-from-top-2 duration-200">
                 <div className="flex items-start gap-2 text-amber-400">
@@ -304,6 +342,7 @@ export const LoginModal: React.FC = () => {
                 onClick={() => {
                   setIsSignUp(!isSignUp);
                   setShowRestrictedWarning(false);
+                  setAuthErrorMessage(null);
                   clearAuthError();
                 }}
                 className="text-xs text-[#FF2E7E] hover:underline cursor-pointer"

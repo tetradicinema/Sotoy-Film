@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Users, 
   Search, 
@@ -43,12 +43,31 @@ export const AdminUserManagement: React.FC = () => {
     bulkDeleteUserAccounts,
     showToast, 
     currentUser, 
-    navigateTo 
+    navigateTo,
+    refreshAllUsers,
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | UserRole | 'suspended'>('all');
   const [copiedUid, setCopiedUid] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Trigger immediate refresh on mount so the admin sees up-to-the-second live accuracy
+  useEffect(() => {
+    refreshAllUsers();
+  }, [refreshAllUsers]);
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshAllUsers();
+      showToast('Data pengguna berhasil diperbarui! 🔄');
+    } catch {
+      showToast('Gagal memperbarui data pengguna.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Bulk Selection State
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
@@ -251,6 +270,15 @@ export const AdminUserManagement: React.FC = () => {
             Ubah hak akses role secara instan, kelola penangguhan akun, dan bersihkan akun pengguna beserta ulasan dan postingan mereka secara permanen.
           </p>
         </div>
+        <button
+          onClick={handleManualRefresh}
+          disabled={isRefreshing}
+          className="self-start sm:self-auto px-3.5 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-xs font-semibold text-slate-200 border border-white/10 flex items-center gap-2 transition-colors disabled:opacity-50"
+          title="Segarkan data pengguna dari Firestore"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-[#FF2E7E]' : 'text-slate-400'}`} />
+          <span>{isRefreshing ? 'Memuat...' : 'Segarkan Data'}</span>
+        </button>
       </div>
 
       {/* Filter & Search Bar */}

@@ -203,6 +203,7 @@ export default async function middleware(request: Request): Promise<Response> {
       headers: {
         'content-type': 'text/html; charset=utf-8',
         'x-robots-tag': 'all',
+        'cache-control': 'public, s-maxage=900, stale-while-revalidate=3600',
       },
     });
   } catch (err) {

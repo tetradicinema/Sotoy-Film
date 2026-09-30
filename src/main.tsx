@@ -21,11 +21,15 @@ if (isStandalone) {
     },
     { passive: false }
   );
-  // Block double-tap zoom
+  // Block double-tap zoom on non-interactive elements only
   let lastTouchEnd = 0;
   document.addEventListener(
     'touchend',
     (e) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('button, input, textarea, select, a, label, [role="button"]')) {
+        return;
+      }
       const now = Date.now();
       if (now - lastTouchEnd <= 300) e.preventDefault();
       lastTouchEnd = now;
