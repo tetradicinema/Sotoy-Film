@@ -20,8 +20,6 @@ import {
   Award,
   Globe,
 } from 'lucide-react';
-import { collection, getDocs, query, limit } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { useApp } from '../../context/AppContext';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
 import { RoleBadge } from '../Common/RoleBadge';
@@ -214,7 +212,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Real-time Autocomplete queries to Firestore Database as user types
+  // Instant in-memory Autocomplete suggestions from context catalog (0 Firestore reads)
   useEffect(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) {
@@ -223,101 +221,46 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
       return;
     }
 
-    let isCancelled = false;
-    const timer = setTimeout(async () => {
-      try {
-        setIsSearchingFirestore(true);
-        // Direct query to Firestore collection with limit for fast autocomplete retrieval
-        const [filmsSnap, articlesSnap] = await Promise.allSettled([
-          getDocs(query(collection(db, 'films'), limit(15))),
-          getDocs(query(collection(db, 'articles'), limit(15))),
-        ]);
+    const suggestions: FirestoreAutocompleteSuggestion[] = [];
 
-        if (isCancelled) return;
+    // Filter matching films from in-memory catalog
+    films
+      .filter(f =>
+        f.title?.toLowerCase().includes(q) ||
+        f.director?.toLowerCase().includes(q) ||
+        f.genres?.some(g => g.toLowerCase().includes(q))
+      )
+      .slice(0, 4)
+      .forEach(data => {
+        suggestions.push({
+          id: data.id,
+          title: data.title,
+          type: 'film',
+          subtitle: `${data.year} • Dir. ${data.director}`,
+          extra: `★ ${(data.skorSotoy || 4.0).toFixed(1)}`,
+        });
+      });
 
-        const suggestions: FirestoreAutocompleteSuggestion[] = [];
+    // Filter matching articles from in-memory catalog
+    articles
+      .filter(a =>
+        a.title?.toLowerCase().includes(q) ||
+        a.category?.toLowerCase().includes(q) ||
+        a.author?.name?.toLowerCase().includes(q)
+      )
+      .slice(0, 4)
+      .forEach(data => {
+        suggestions.push({
+          id: data.id,
+          title: data.title,
+          type: 'article',
+          subtitle: `${data.category} • Oleh ${data.author?.name || 'Redaksi'}`,
+          extra: data.readTime,
+        });
+      });
 
-        // Parse Firestore films
-        if (filmsSnap.status === 'fulfilled' && !filmsSnap.value.empty) {
-          filmsSnap.value.forEach(docSnap => {
-            const data = docSnap.data() as FilmItem;
-            if (
-              data.title?.toLowerCase().includes(q) ||
-              data.director?.toLowerCase().includes(q) ||
-              data.genres?.some(g => g.toLowerCase().includes(q))
-            ) {
-              suggestions.push({
-                id: data.id,
-                title: data.title,
-                type: 'film',
-                subtitle: `${data.year} • Dir. ${data.director}`,
-                extra: `★ ${(data.skorSotoy || 4.0).toFixed(1)}`,
-              });
-            }
-          });
-        }
-
-        // Parse Firestore articles
-        if (articlesSnap.status === 'fulfilled' && !articlesSnap.value.empty) {
-          articlesSnap.value.forEach(docSnap => {
-            const data = docSnap.data() as Article;
-            if (
-              data.title?.toLowerCase().includes(q) ||
-              data.category?.toLowerCase().includes(q) ||
-              data.author?.name?.toLowerCase().includes(q)
-            ) {
-              suggestions.push({
-                id: data.id,
-                title: data.title,
-                type: 'article',
-                subtitle: `${data.category} • Oleh ${data.author?.name || 'Redaksi'}`,
-                extra: data.readTime,
-              });
-            }
-          });
-        }
-
-        // Merge with context cached films & articles to ensure instant response
-        if (suggestions.length === 0) {
-          films
-            .filter(f => f.title.toLowerCase().includes(q) || f.director.toLowerCase().includes(q))
-            .slice(0, 3)
-            .forEach(f => {
-              suggestions.push({
-                id: f.id,
-                title: f.title,
-                type: 'film',
-                subtitle: `${f.year} • Dir. ${f.director}`,
-                extra: `★ ${f.skorSotoy.toFixed(1)}`,
-              });
-            });
-
-          articles
-            .filter(a => a.title.toLowerCase().includes(q) || a.author.name.toLowerCase().includes(q))
-            .slice(0, 3)
-            .forEach(a => {
-              suggestions.push({
-                id: a.id,
-                title: a.title,
-                type: 'article',
-                subtitle: `${a.category} • Oleh ${a.author.name}`,
-                extra: a.readTime,
-              });
-            });
-        }
-
-        setFirestoreSuggestions(suggestions.slice(0, 5));
-      } catch (err) {
-        console.warn('[Firestore] Autocomplete retrieval note:', err);
-      } finally {
-        if (!isCancelled) setIsSearchingFirestore(false);
-      }
-    }, 180);
-
-    return () => {
-      isCancelled = true;
-      clearTimeout(timer);
-    };
+    setFirestoreSuggestions(suggestions.slice(0, 6));
+    setIsSearchingFirestore(false);
   }, [searchQuery, films, articles]);
 
   // Real-time Search to TMDB API for global film dataset

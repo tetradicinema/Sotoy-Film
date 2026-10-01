@@ -44,8 +44,8 @@ export async function handleImageProxy(req: any, res: any) {
     return res.status ? res.status(204).end() : res.writeHead(204).end();
   }
 
-  if (req.method && req.method !== 'GET') {
-    const errorJson = { error: 'Method not allowed. Only GET requests are supported.' };
+  if (req.method && req.method !== 'GET' && req.method !== 'HEAD') {
+    const errorJson = { error: 'Method not allowed. Only GET and HEAD requests are supported.' };
     return res.status
       ? res.status(405).json(errorJson)
       : (res.writeHead(405, { 'Content-Type': 'application/json' }), res.end(JSON.stringify(errorJson)));
@@ -171,6 +171,10 @@ export async function handleImageProxy(req: any, res: any) {
     res.setHeader?.('Content-Length', buffer.length);
     res.setHeader?.('Access-Control-Allow-Origin', '*');
     res.setHeader?.('Cache-Control', 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800');
+
+    if (req.method === 'HEAD') {
+      return res.status ? res.status(200).end() : res.end();
+    }
 
     if (res.send) {
       return res.send(buffer);

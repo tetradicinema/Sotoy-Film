@@ -347,7 +347,8 @@ service cloud.firestore {
 
     match /article_presence/{presenceId} {
       allow read: if true;
-      allow create, update, delete: if true;
+      allow create, update: if isSignedIn() && (isWriter() || isAdmin()) && incoming().userId == request.auth.uid;
+      allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin() || isWriter());
     }
 
     match /files/{fileId} {
@@ -364,12 +365,15 @@ service cloud.firestore {
         request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' ||
         incoming().author.id == request.auth.uid
       );
-      allow update: if isSignedIn() && !isSuspended() && isValidId(articleId) && isValidArticle(incoming()) && (
-        isOwner(existing().author.id) || 
-        isAdmin() || 
-        isWriter() ||
-        (request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' && (existing().author.id == request.auth.uid || incoming().author.id == request.auth.uid)) ||
-        (request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' && (existing().author.id == request.auth.uid || incoming().author.id == request.auth.uid))
+      allow update: if isSignedIn() && !isSuspended() && isValidId(articleId) && (
+        (isValidArticle(incoming()) && (
+          isOwner(existing().author.id) || 
+          isAdmin() || 
+          isWriter() ||
+          (request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' && (existing().author.id == request.auth.uid || incoming().author.id == request.auth.uid)) ||
+          (request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' && (existing().author.id == request.auth.uid || incoming().author.id == request.auth.uid))
+        )) ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['commentsCount', 'likes', 'views'])
       );
       allow delete: if isSignedIn() && !isSuspended() && (
         isOwner(existing().author.id) || 
@@ -378,6 +382,12 @@ service cloud.firestore {
         (request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' && existing().author.id == request.auth.uid) ||
         (request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' && existing().author.id == request.auth.uid)
       );
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isSignedIn() && !isSuspended() && isValidId(commentId) && incoming().userId == request.auth.uid;
+        allow update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin() || isWriter());
+      }
     }
 
     match /films/{filmId} {

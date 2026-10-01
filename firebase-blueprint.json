@@ -277,9 +277,53 @@
         "addedAt": { "type": "string" }
       },
       "required": ["addedAt"]
+    },
+    "Report": {
+      "title": "ModerationReport",
+      "description": "Moderation reports submitted by users",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "reporterId": { "type": "string" },
+        "reporterName": { "type": "string" },
+        "targetType": { "type": "string", "enum": ["post", "user", "review", "comment"] },
+        "targetId": { "type": "string" },
+        "targetContent": { "type": "string" },
+        "reason": { "type": "string" },
+        "details": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "reviewed", "dismissed", "actioned"] },
+        "createdAt": { "type": "string" },
+        "resolvedAt": { "type": "string" },
+        "resolvedBy": { "type": "string" },
+        "adminAction": { "type": "string" }
+      },
+      "required": ["id", "reporterId", "targetType", "targetId", "reason", "status", "createdAt"]
+    },
+    "ArticleComment": {
+      "title": "ArticleComment",
+      "description": "User comments on articles",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "articleId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userAvatar": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "articleId", "userId", "userName", "text", "createdAt"]
     }
   },
   "firestore": {
+    "/reports/{reportId}": {
+      "schema": "Report",
+      "description": "Community moderation reports"
+    },
+    "/articles/{articleId}/comments/{commentId}": {
+      "schema": "ArticleComment",
+      "description": "Comments on articles"
+    },
     "/users/{userId}/collections/{collectionId}": {
       "schema": "UserCollection",
       "description": "Personal collections playlists of mixed films and articles for a specific user"

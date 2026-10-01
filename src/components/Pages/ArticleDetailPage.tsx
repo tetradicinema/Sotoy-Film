@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { collection, doc, setDoc, onSnapshot, updateDoc, increment } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
+import { formatRelativeTime } from '../../utils/formatRelativeTime';
 import {
   ArrowLeft,
   Clock,
@@ -70,20 +73,68 @@ export const ArticleDetailPage: React.FC = () => {
   const [rateModalOpen, setRateModalOpen] = useState(false);
   const [collectionModalArticle, setCollectionModalArticle] = useState<any | null>(null);
   const [collectionModalFilm, setCollectionModalFilm] = useState<any | null>(null);
-  const [comments, setComments] = useState<{ name: string; avatar: string; text: string; time: string }[]>([
+
+  interface ArticleCommentItem {
+    id: string;
+    name: string;
+    avatar: string;
+    text: string;
+    time: string;
+    userId?: string;
+  }
+
+  const DEFAULT_COMMENTS: ArticleCommentItem[] = [
     {
+      id: 'c-default-1',
       name: 'Penggemar Sinema',
       avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=200&q=80',
       text: 'Analisis yang sangat tajam! Penulisan ulasannya mendalam.',
       time: '1 jam lalu',
     },
     {
+      id: 'c-default-2',
       name: 'Warga Sotoy',
       avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
       text: 'Setuju banget sama poin artikel ini. Ulasannya sangat menarik.',
       time: '3 jam lalu',
     },
-  ]);
+  ];
+
+  const [comments, setComments] = useState<ArticleCommentItem[]>(DEFAULT_COMMENTS);
+
+  // Real-time synchronization of persistent article comments from Firestore
+  useEffect(() => {
+    if (!article?.id) return;
+    const commentsCol = collection(db, 'articles', article.id, 'comments');
+    const unsub = onSnapshot(
+      commentsCol,
+      (snapshot) => {
+        if (snapshot.empty) {
+          setComments(DEFAULT_COMMENTS);
+          return;
+        }
+        const loaded: ArticleCommentItem[] = [];
+        snapshot.forEach((docSnap) => {
+          const d = docSnap.data();
+          loaded.push({
+            id: docSnap.id,
+            name: d.userName || 'Warga Sotoy',
+            avatar: d.userAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+            text: d.text || '',
+            time: d.createdAt ? formatRelativeTime(d.createdAt) : 'Baru saja',
+            userId: d.userId,
+          });
+        });
+        loaded.sort((a, b) => b.id.localeCompare(a.id));
+        setComments(loaded.length > 0 ? loaded : DEFAULT_COMMENTS);
+      },
+      (err) => {
+        console.warn('[ArticleComments] Error loading comments:', err.message);
+        setComments(DEFAULT_COMMENTS);
+      }
+    );
+    return () => unsub();
+  }, [article?.id]);
 
   if (articles.length === 0) {
     return <ArticleDetailSkeleton />;
@@ -120,21 +171,47 @@ export const ArticleDetailPage: React.FC = () => {
         (f.id === 'film-1' && (article.category === 'movies' || article.title.includes('Dune')))
       );
 
-  const handleAddComment = (e: React.FormEvent) => {
+  const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentText.trim()) return;
+    if (!isLoggedIn) {
+      setLoginModalOpen(true);
+      return;
+    }
 
-    setComments(prev => [
-      {
-        name: currentUser.name,
-        avatar: currentUser.avatar,
-        text: commentText,
-        time: 'Baru saja',
-      },
-      ...prev,
-    ]);
+    const textToSave = commentText.trim();
+    const commentId = `comment-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const newCommentItem: ArticleCommentItem = {
+      id: commentId,
+      name: currentUser.name,
+      avatar: currentUser.avatar,
+      text: textToSave,
+      time: 'Baru saja',
+      userId: currentUser.id,
+    };
+
+    setComments(prev => [newCommentItem, ...prev]);
     setCommentText('');
     showToast('Komentar kamu berhasil ditambahkan!');
+
+    if (article?.id) {
+      try {
+        await setDoc(doc(db, 'articles', article.id, 'comments', commentId), {
+          id: commentId,
+          articleId: article.id,
+          userId: currentUser.id,
+          userName: currentUser.name,
+          userAvatar: currentUser.avatar,
+          text: textToSave,
+          createdAt: new Date().toISOString(),
+        });
+        updateDoc(doc(db, 'articles', article.id), {
+          commentsCount: increment(1),
+        }).catch(() => {});
+      } catch (err) {
+        console.warn('[ArticleComments] Failed to persist comment to Firestore:', err);
+      }
+    }
   };
 
   const handleShare = () => {
@@ -636,12 +713,19 @@ export const ArticleDetailPage: React.FC = () => {
           {/* Comments List */}
           <div className="space-y-3 pt-2">
             {comments.map((c, i) => (
-              <div key={i} className="p-3.5 rounded-2xl bg-slate-900/50 border border-slate-800/80 space-y-1">
+              <div key={c.id || i} className="p-3.5 rounded-2xl bg-slate-900/50 border border-slate-800/80 space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-white">{c.name}</span>
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={c.avatar}
+                      alt={c.name}
+                      className="w-6 h-6 rounded-full object-cover border border-white/10"
+                    />
+                    <span className="font-bold text-white">{c.name}</span>
+                  </div>
                   <span className="text-slate-500 text-[10px]">{c.time}</span>
                 </div>
-                <p className="text-slate-300 text-xs leading-relaxed">{c.text}</p>
+                <p className="text-slate-300 text-xs leading-relaxed pl-8">{c.text}</p>
               </div>
             ))}
           </div>

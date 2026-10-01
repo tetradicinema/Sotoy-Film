@@ -265,17 +265,17 @@ export const UserPage: React.FC = () => {
     }
 
     let isMounted = true;
-    const collectionsRef = collection(db, 'users', targetUser.id, 'collections');
+    const collectionsQuery = query(
+      collection(db, 'users', targetUser.id, 'collections'),
+      where('isPublic', '==', true)
+    );
     const unsub = onSnapshot(
-      collectionsRef,
+      collectionsQuery,
       (snap) => {
         if (!isMounted) return;
         const list: UserCollection[] = [];
         snap.forEach(docSnap => {
-          const data = docSnap.data() as UserCollection;
-          if (data.isPublic !== false) {
-            list.push(data);
-          }
+          list.push(docSnap.data() as UserCollection);
         });
         setViewedUserCollections(list);
       },

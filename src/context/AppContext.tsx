@@ -769,40 +769,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, 4000);
   };
 
-  // Bootstrap Firestore with Mock Data if empty
-  useEffect(() => {
-    const bootstrapData = async () => {
-      try {
-        const testSnap = await getDocs(collection(db, 'films'));
-        if (testSnap.empty) {
-          console.log('[Bootstrap] Initializing Firestore collections with mock data...');
-          
-          // Seed Films
-          for (const item of INITIAL_FILMS) {
-            try { await setDoc(doc(db, 'films', item.id), item); } catch (e) { /* ignore seed permission errors */ }
-          }
-          // Seed Articles
-          for (const item of INITIAL_ARTICLES) {
-            try { await setDoc(doc(db, 'articles', item.id), item); } catch (e) { /* ignore seed permission errors */ }
-          }
-          // Seed Buzz Posts
-          for (const item of INITIAL_BUZZ) {
-            try { await setDoc(doc(db, 'buzz', item.id), item); } catch (e) { /* ignore seed permission errors */ }
-          }
-          // Seed Ratings
-          for (const item of INITIAL_RATINGS) {
-            try { await setDoc(doc(db, 'ratings', item.id), item); } catch (e) { /* ignore seed permission errors */ }
-          }
-          // Seed Users database skipped (dynamic Firestore users collection only)
-          console.log('[Bootstrap] Seeding completed.');
-        }
-      } catch (err) {
-        console.warn('[Bootstrap] Firestore seeding skipped:', err);
-      }
-    };
-    bootstrapData();
-  }, []);
-
   // Initialize Real-time Firestore Sync Subscriptions
   useEffect(() => {
     let latestFirestoreFilmMap = new Map<string, FilmItem>();
@@ -970,44 +936,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     );
 
-    const unsubAppeals = onSnapshot(
-      collection(db, 'appeals'),
-      (snapshot) => {
-        const items: AccountAppeal[] = [];
-        snapshot.forEach(docSnap => {
-          items.push({ ...docSnap.data() as AccountAppeal, id: docSnap.id });
-        });
-        setAppeals(items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-      },
-      (err) => {
-        console.warn('[Firestore] appeals subscription error:', err);
-      }
-    );
-
-    const unsubAudit = onSnapshot(
-      collection(db, 'auditLogs'),
-      (snapshot) => {
-        const items: AuditLog[] = [];
-        snapshot.forEach(docSnap => {
-          items.push({ ...docSnap.data() as AuditLog, id: docSnap.id });
-        });
-        if (items.length > 0) {
-          setAuditLogs(items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
-        }
-      },
-      (err) => {
-        console.warn('[Firestore] auditLogs subscription notice:', err.message);
-      }
-    );
-
     return () => {
       unsubRemovedMockFilms();
       unsubFilms();
       unsubArticles();
       unsubBuzz();
       unsubRatings();
-      unsubAppeals();
-      unsubAudit();
     };
   }, []);
 
@@ -1048,6 +982,92 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
     return () => unsub();
   }, [isAdmin]);
+
+  // Scoped subscriptions for administrative collections: appeals, auditLogs, reports
+  useEffect(() => {
+    let unsubAppeals = () => {};
+    let unsubAudit = () => {};
+    let unsubReports = () => {};
+
+    if (isAdmin || isWriter) {
+      // Admins and Writers listen to all appeals, audit logs, and reports
+      unsubAppeals = onSnapshot(
+        collection(db, 'appeals'),
+        (snapshot) => {
+          const items: AccountAppeal[] = [];
+          snapshot.forEach(docSnap => {
+            items.push({ ...docSnap.data() as AccountAppeal, id: docSnap.id });
+          });
+          setAppeals(items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        },
+        (err) => {
+          console.warn('[Firestore] appeals subscription error:', err.message);
+        }
+      );
+
+      unsubAudit = onSnapshot(
+        collection(db, 'auditLogs'),
+        (snapshot) => {
+          const items: AuditLog[] = [];
+          snapshot.forEach(docSnap => {
+            items.push({ ...docSnap.data() as AuditLog, id: docSnap.id });
+          });
+          if (items.length > 0) {
+            setAuditLogs(items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+          }
+        },
+        (err) => {
+          console.warn('[Firestore] auditLogs subscription notice:', err.message);
+        }
+      );
+
+      unsubReports = onSnapshot(
+        collection(db, 'reports'),
+        (snapshot) => {
+          const items: ModerationReport[] = [];
+          snapshot.forEach(doc => items.push(doc.data() as ModerationReport));
+          if (items.length > 0) {
+            setModerationReports(items.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+          }
+        },
+        (err) => {
+          console.warn('[Firestore] reports subscription fallback:', err.message);
+        }
+      );
+    } else if (isLoggedIn && currentUser?.id) {
+      // Regular logged-in users only listen to their own appeal status
+      const userAppealQuery = query(
+        collection(db, 'appeals'),
+        where('userId', '==', currentUser.id)
+      );
+      unsubAppeals = onSnapshot(
+        userAppealQuery,
+        (snapshot) => {
+          const items: AccountAppeal[] = [];
+          snapshot.forEach(docSnap => {
+            items.push({ ...docSnap.data() as AccountAppeal, id: docSnap.id });
+          });
+          setAppeals(items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        },
+        (err) => {
+          console.warn('[Firestore] user appeal subscription notice:', err.message);
+        }
+      );
+      setAuditLogs([]);
+      setModerationReports([]);
+    } else {
+      // Guests don't subscribe to appeals, audit logs, or reports
+      setAppeals([]);
+      setAuditLogs([]);
+      setModerationReports([]);
+    }
+
+    return () => {
+      unsubAppeals();
+      unsubAudit();
+      unsubReports();
+    };
+  }, [isAdmin, isWriter, isLoggedIn, currentUser?.id]);
 
   // Merge private emails onto users for admin viewer, and currentUser's auth email for currentUser
   const resolvedAllUsers = useMemo(() => {
@@ -4298,24 +4318,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'pending',
     }
   ]);
-
-  // Realtime subscription for reports
-  useEffect(() => {
-    const unsubReports = onSnapshot(
-      collection(db, 'reports'),
-      (snapshot) => {
-        const items: ModerationReport[] = [];
-        snapshot.forEach(doc => items.push(doc.data() as ModerationReport));
-        if (items.length > 0) {
-          setModerationReports(items.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
-        }
-      },
-      (err) => {
-        console.warn('[Firestore] reports subscription fallback:', err.message);
-      }
-    );
-    return () => unsubReports();
-  }, []);
 
   const recordAuditLog = async (logData: {
     action: AuditLogActionType;

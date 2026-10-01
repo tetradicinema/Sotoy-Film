@@ -23,7 +23,7 @@ async function startServer() {
   });
 
   // Image Proxy route for canvas rendering without CORS tainting (mirrors Vercel api/image-proxy.ts)
-  app.get("/api/image-proxy", (req, res) => {
+  app.all("/api/image-proxy", (req, res) => {
     return handleImageProxy(req, res);
   });
 
