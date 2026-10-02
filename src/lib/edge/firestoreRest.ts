@@ -5,11 +5,19 @@
  */
 
 import { slugify } from '../../utils/slugify.js';
+import firebaseConfig from '../../../firebase-applet-config.json';
 
-export const FIRESTORE_API_KEY =
-  typeof process !== 'undefined' && process.env && process.env.VITE_FIREBASE_API_KEY
-    ? process.env.VITE_FIREBASE_API_KEY
-    : 'AIzaSyCJPXxHQZ8hEdRHIfSGNzU6Z8rqUJZVVs4';
+const envApiKey = typeof process !== 'undefined' && process.env ? process.env.VITE_FIREBASE_API_KEY : undefined;
+const configApiKey = (firebaseConfig as any)?.apiKey;
+
+const resolvedApiKey = envApiKey || configApiKey;
+if (!resolvedApiKey) {
+  throw new Error(
+    'Firebase API Key is missing. Please set VITE_FIREBASE_API_KEY or configure apiKey in firebase-applet-config.json.'
+  );
+}
+
+export const FIRESTORE_API_KEY = resolvedApiKey;
 
 export const FIRESTORE_DOCUMENTS_URL =
   'https://firestore.googleapis.com/v1/projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents';
