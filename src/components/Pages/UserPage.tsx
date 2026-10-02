@@ -61,7 +61,7 @@ import { INITIAL_FILMS, INITIAL_ARTICLES } from '../../data/mockData';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
 import { RoleBadge } from '../Common/RoleBadge';
 import { QuickReactionBar } from '../Common/QuickReactionBar';
-import { User, UserTab, UserSettings, BuzzReply, BuzzPost, UserCollection, FilmItem, Article } from '../../types';
+import { User, UserTab, UserSettings, BuzzReply, BuzzPost, UserCollection, FilmItem, Article, UserRating } from '../../types';
 import { StarRating } from '../Common/StarRating';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
@@ -187,10 +187,50 @@ export const UserPage: React.FC = () => {
 
   const isOwnProfile = isLoggedIn && currentUser.id === targetUser.id;
 
+  // Local state to store ratings for the viewed user profile
+  const [targetUserRatings, setTargetUserRatings] = useState<UserRating[]>([]);
+  const [loadingRatings, setLoadingRatings] = useState<boolean>(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!targetUser?.id || targetUser.id === 'guest') {
+      setTargetUserRatings([]);
+      setLoadingRatings(false);
+      return;
+    }
+
+    if (isOwnProfile) {
+      setTargetUserRatings(ratings);
+      setLoadingRatings(false);
+      return;
+    }
+
+    setLoadingRatings(true);
+    getRatingsForUser(targetUser.id)
+      .then(fetched => {
+        if (isMounted) {
+          setTargetUserRatings(fetched || []);
+          setLoadingRatings(false);
+        }
+      })
+      .catch(err => {
+        console.warn('[UserPage] Failed to fetch ratings for target user:', err);
+        if (isMounted) {
+          setTargetUserRatings([]);
+          setLoadingRatings(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [targetUser?.id, isOwnProfile, ratings, getRatingsForUser]);
+
   const rankInfo = React.useMemo(() => {
     if (!targetUser) return null;
-    return getUserRankInRole(targetUser, allUsers, ratings);
-  }, [targetUser, allUsers, ratings]);
+    const list = isOwnProfile ? ratings : targetUserRatings;
+    return getUserRankInRole(targetUser, allUsers, list);
+  }, [targetUser, allUsers, isOwnProfile, ratings, targetUserRatings]);
 
   // Follow Modal State: 'followers' | 'following' | 'discover' | null
   const [followModalType, setFollowModalType] = useState<'followers' | 'following' | 'discover' | null>(null);
@@ -387,10 +427,13 @@ export const UserPage: React.FC = () => {
     b => b.author.id === targetUser.id || 
          (targetUser.handle && b.author.handle && b.author.handle.toLowerCase() === targetUser.handle.toLowerCase())
   );
-  const myReviews = ratings.filter(
-    r => r.userId === targetUser.id || 
-         (targetUser.name && r.userName && r.userName.toLowerCase() === targetUser.name.toLowerCase())
-  );
+  const myReviews = useMemo(() => {
+    const list = isOwnProfile ? ratings : targetUserRatings;
+    return list.filter(
+      r => r.userId === targetUser.id || 
+           (targetUser.name && r.userName && r.userName.toLowerCase() === targetUser.name.toLowerCase())
+    );
+  }, [isOwnProfile, ratings, targetUserRatings, targetUser.id, targetUser.name]);
   const myArticles = articles.filter(a => a.author.id === targetUser.id || a.author.name === targetUser.name);
 
   // Derived lists for Replies and Reposts
@@ -937,7 +980,7 @@ export const UserPage: React.FC = () => {
             )}
 
             {/* Monthly Progression Sotoy Score Sparkline Chart */}
-            <SotoyScoreSparkline user={targetUser} ratings={ratings} className="mt-4" />
+            <SotoyScoreSparkline user={targetUser} ratings={isOwnProfile ? ratings : targetUserRatings} className="mt-4" />
           </div>
         </div>
 
@@ -2197,7 +2240,12 @@ export const UserPage: React.FC = () => {
               )}
             </div>
 
-            {myReviews.length === 0 ? (
+            {loadingRatings ? (
+              <div className="flex flex-col items-center justify-center py-16 text-slate-400 space-y-3">
+                <Loader2 className="w-8 h-8 text-[#FF2E7E] animate-spin" />
+                <p className="text-xs font-bold">Memuat ulasan dan skor film...</p>
+              </div>
+            ) : myReviews.length === 0 ? (
               <div className="text-center py-16 bg-slate-900/50 rounded-2xl border border-slate-800 space-y-4">
                 <Star className="w-12 h-12 text-slate-600 mx-auto" />
                 <div className="space-y-1">
