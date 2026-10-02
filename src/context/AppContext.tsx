@@ -118,6 +118,8 @@ import {
   onSnapshot,
   query,
   where,
+  orderBy,
+  limit,
   increment,
   writeBatch,
   runTransaction,
@@ -256,6 +258,10 @@ interface AppContextType {
   isLoadingBuzz: boolean;
   isInitialLoading: boolean;
   ratings: UserRating[];
+  getRatingsForFilm: (filmId: string) => Promise<UserRating[]>;
+  getRatingsForUser: (userId: string) => Promise<UserRating[]>;
+  refreshFilms: () => Promise<void>;
+  refreshArticles: () => Promise<void>;
   criticSubmissions: CriticSubmission[];
   addCriticSubmission: (sub: Omit<CriticSubmission, 'id' | 'status' | 'date'>) => Promise<boolean>;
   updateCriticSubmissionStatus: (id: string, status: 'approved' | 'rejected') => Promise<void>;
@@ -500,7 +506,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isLoadingArticles, setIsLoadingArticles] = useState<boolean>(true);
   const [isLoadingFilms, setIsLoadingFilms] = useState<boolean>(true);
   const [isLoadingBuzz, setIsLoadingBuzz] = useState<boolean>(true);
-  const [ratings, setRatings] = useState<UserRating[]>([]);
+  const [ratings, setRatings] = useState<UserRating[]>(INITIAL_RATINGS);
   const [criticSubmissions, setCriticSubmissions] = useState<CriticSubmission[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [appeals, setAppeals] = useState<AccountAppeal[]>([]);
@@ -558,28 +564,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  // One-time fetch for all users without permanent real-time snapshot overhead
+  // One-time fetch for all users without permanent real-time snapshot overhead (capped at 500)
   const refreshAllUsers = useCallback(async () => {
     try {
-      const snapshot = await getDocs(collection(db, 'users'));
+      const snapshot = await getDocs(query(collection(db, 'users'), limit(500)));
       mapRawUsers(snapshot.docs);
     } catch (err: any) {
       console.warn('[Firestore] users fetch fallback notice:', err?.message || err);
     }
   }, [mapRawUsers]);
 
-  // One-time getDocs on mount + periodic self-healing timer (every 3 minutes)
-  // Replaces the permanent onSnapshot listener on the entire 'users' collection to eliminate read-amplification
+  // One-time getDocs on mount (periodic 3-minute interval removed to eliminate unnecessary reads)
   useEffect(() => {
     refreshAllUsers();
-
-    const intervalId = setInterval(() => {
-      refreshAllUsers();
-    }, 3 * 60 * 1000);
-
-    return () => {
-      clearInterval(intervalId);
-    };
   }, [refreshAllUsers]);
 
   // Local Preferences States
@@ -769,122 +766,223 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, 4000);
   };
 
-  // Initialize Real-time Firestore Sync Subscriptions
-  useEffect(() => {
-    let latestFirestoreFilmMap = new Map<string, FilmItem>();
-    let hasReceivedFilms = false;
+  const getSortTimestamp = useCallback((item: { id: string; createdAt?: string; timestamp?: number }): number => {
+    if (item.timestamp && typeof item.timestamp === 'number') {
+      return item.timestamp;
+    }
+    if (item.createdAt && !isNaN(Date.parse(item.createdAt))) {
+      return Date.parse(item.createdAt);
+    }
+    const numMatch = item.id.match(/\d+/g);
+    if (numMatch && numMatch.length > 0) {
+      const lastNum = parseInt(numMatch[numMatch.length - 1], 10);
+      if (lastNum > 1000000000) return lastNum;
+      return 1700000000000 + lastNum * 1000;
+    }
+    return 0;
+  }, []);
 
-    const syncFilmsWithRemovedMarkers = (currentFilmMap: Map<string, FilmItem>, removedSet: Set<string>) => {
-      const mergedMap = new Map<string, FilmItem>(currentFilmMap);
-      for (const init of INITIAL_FILMS) {
-        if (!mergedMap.has(init.id) && !removedSet.has(init.id)) {
-          mergedMap.set(init.id, init);
-        }
+  const syncFilmsWithRemovedMarkers = useCallback((currentFilmMap: Map<string, FilmItem>, removedSet: Set<string>) => {
+    const mergedMap = new Map<string, FilmItem>(currentFilmMap);
+    for (const init of INITIAL_FILMS) {
+      if (!mergedMap.has(init.id) && !removedSet.has(init.id)) {
+        mergedMap.set(init.id, init);
       }
-      const merged = Array.from(mergedMap.values()).filter(f => !removedSet.has(f.id));
-      setFilms(merged.sort((a, b) => (a.trendingRank || 99) - (b.trendingRank || 99)));
+    }
+    const merged = Array.from(mergedMap.values()).filter(f => !removedSet.has(f.id));
+    setFilms(merged.sort((a, b) => (a.trendingRank || 99) - (b.trendingRank || 99)));
+    setIsLoadingFilms(false);
+  }, []);
+
+  // Optimized fetch for films with limit(100), ordered by year, merged with INITIAL_FILMS
+  const refreshFilms = useCallback(async () => {
+    try {
+      setIsLoadingFilms(true);
+      const [removedSnap, filmsSnap] = await Promise.all([
+        getDocs(query(collection(db, 'removedMockFilms'), limit(100))),
+        getDocs(query(collection(db, 'films'), orderBy('year', 'desc'), limit(100))),
+      ]);
+
+      const removedSet = new Set<string>();
+      removedSnap.forEach(docSnap => {
+        removedSet.add(docSnap.id);
+        const data = docSnap.data();
+        if (data?.id) removedSet.add(data.id);
+      });
+      removedMockFilmIdsRef.current = removedSet;
+
+      const filmMap = new Map<string, FilmItem>();
+      filmsSnap.forEach(docSnap => {
+        const data = docSnap.data() as FilmItem;
+        const id = data.id || docSnap.id;
+        if (id) {
+          const isLegacy = data.scoreScale === undefined;
+          const normalizedSkor = isLegacy && data.skorSotoy && data.skorSotoy <= 5.0 && data.skorSotoy > 0
+            ? Number((data.skorSotoy * 2).toFixed(1))
+            : data.skorSotoy;
+          const normalizedCriticsSkor = isLegacy && data.criticsSkorSotoy && data.criticsSkorSotoy <= 5.0 && data.criticsSkorSotoy > 0
+            ? Number((data.criticsSkorSotoy * 2).toFixed(1))
+            : data.criticsSkorSotoy;
+          filmMap.set(id, {
+            ...data,
+            id,
+            skorSotoy: normalizedSkor,
+            criticsSkorSotoy: normalizedCriticsSkor || normalizedSkor,
+          });
+        }
+      });
+
+      syncFilmsWithRemovedMarkers(filmMap, removedSet);
       setIsLoadingFilms(false);
-    };
+    } catch (err: any) {
+      console.warn('[Firestore] films subscription fallback to initial mock:', err.message);
+      const fallbackMap = new Map<string, FilmItem>();
+      syncFilmsWithRemovedMarkers(fallbackMap, removedMockFilmIdsRef.current);
+      setIsLoadingFilms(false);
+    }
+  }, [syncFilmsWithRemovedMarkers]);
 
-    const unsubRemovedMockFilms = onSnapshot(
-      collection(db, 'removedMockFilms'),
-      (snapshot) => {
-        const removedSet = new Set<string>();
-        snapshot.forEach(docSnap => {
-          removedSet.add(docSnap.id);
-          const data = docSnap.data();
-          if (data?.id) removedSet.add(data.id);
-        });
-        removedMockFilmIdsRef.current = removedSet;
-        if (hasReceivedFilms) {
-          syncFilmsWithRemovedMarkers(latestFirestoreFilmMap, removedSet);
+  // Optimized fetch for articles with limit(50), ordered by publishedAt desc, merged with INITIAL_ARTICLES
+  const refreshArticles = useCallback(async () => {
+    try {
+      setIsLoadingArticles(true);
+      let snapshot;
+      try {
+        snapshot = await getDocs(query(collection(db, 'articles'), orderBy('publishedAt', 'desc'), limit(50)));
+      } catch (orderErr) {
+        snapshot = await getDocs(query(collection(db, 'articles'), limit(50)));
+      }
+
+      const articleMap = new Map<string, Article>();
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data() as Article;
+        const id = data.id || docSnap.id;
+        if (id) {
+          articleMap.set(id, { ...data, id });
         }
-      },
-      (err) => {
-        console.warn('[Firestore] removedMockFilms subscription notice:', err.message);
-      }
-    );
-
-    const unsubFilms = onSnapshot(
-      collection(db, 'films'),
-      (snapshot) => {
-        const filmMap = new Map<string, FilmItem>();
-        snapshot.forEach(docSnap => {
-          const data = docSnap.data() as FilmItem;
-          const id = data.id || docSnap.id;
-          if (id) {
-            // Normalize legacy 5-point scale to 10-point scale only if scoreScale is missing (undefined)
-            const isLegacy = data.scoreScale === undefined;
-            const normalizedSkor = isLegacy && data.skorSotoy && data.skorSotoy <= 5.0 && data.skorSotoy > 0
-              ? Number((data.skorSotoy * 2).toFixed(1))
-              : data.skorSotoy;
-            const normalizedCriticsSkor = isLegacy && data.criticsSkorSotoy && data.criticsSkorSotoy <= 5.0 && data.criticsSkorSotoy > 0
-              ? Number((data.criticsSkorSotoy * 2).toFixed(1))
-              : data.criticsSkorSotoy;
-            filmMap.set(id, {
-              ...data,
-              id,
-              skorSotoy: normalizedSkor,
-              criticsSkorSotoy: normalizedCriticsSkor || normalizedSkor,
-            });
-          }
-        });
-        latestFirestoreFilmMap = filmMap;
-        hasReceivedFilms = true;
-        syncFilmsWithRemovedMarkers(filmMap, removedMockFilmIdsRef.current);
-      },
-      (err) => {
-        console.warn('[Firestore] films subscription fallback to initial mock:', err.message);
-        const fallbackMap = new Map<string, FilmItem>();
-        syncFilmsWithRemovedMarkers(fallbackMap, removedMockFilmIdsRef.current);
-      }
-    );
-
-    const unsubArticles = onSnapshot(
-      collection(db, 'articles'),
-      (snapshot) => {
-        const articleMap = new Map<string, Article>();
-        snapshot.forEach(docSnap => {
-          const data = docSnap.data() as Article;
-          const id = data.id || docSnap.id;
-          if (id) {
-            articleMap.set(id, { ...data, id });
-          }
-        });
-        for (const init of INITIAL_ARTICLES) {
-          if (!articleMap.has(init.id)) {
-            articleMap.set(init.id, init);
-          }
+      });
+      for (const init of INITIAL_ARTICLES) {
+        if (!articleMap.has(init.id)) {
+          articleMap.set(init.id, init);
         }
-        const merged = Array.from(articleMap.values());
-        setArticles(merged.sort((a, b) => b.id.localeCompare(a.id)));
-        setIsLoadingArticles(false);
-      },
-      (err) => {
-        console.warn('[Firestore] articles subscription fallback to initial mock:', err.message);
-        setArticles(INITIAL_ARTICLES);
-        setIsLoadingArticles(false);
       }
-    );
+      const merged = Array.from(articleMap.values());
+      setArticles(merged.sort((a, b) => b.id.localeCompare(a.id)));
+      setIsLoadingArticles(false);
+    } catch (err: any) {
+      console.warn('[Firestore] articles subscription fallback to initial mock:', err.message);
+      setArticles(INITIAL_ARTICLES);
+      setIsLoadingArticles(false);
+    }
+  }, []);
 
-    const getSortTimestamp = (item: { id: string; createdAt?: string; timestamp?: number }): number => {
-      if (item.timestamp && typeof item.timestamp === 'number') {
-        return item.timestamp;
-      }
-      if (item.createdAt && !isNaN(Date.parse(item.createdAt))) {
-        return Date.parse(item.createdAt);
-      }
-      const numMatch = item.id.match(/\d+/g);
-      if (numMatch && numMatch.length > 0) {
-        const lastNum = parseInt(numMatch[numMatch.length - 1], 10);
-        if (lastNum > 1000000000) return lastNum;
-        return 1700000000000 + lastNum * 1000;
-      }
-      return 0;
-    };
+  // In-memory ratings caches for film and user on-demand lookups
+  const filmRatingsCache = useRef<Map<string, UserRating[]>>(new Map());
+  const userRatingsCache = useRef<Map<string, UserRating[]>>(new Map());
 
+  const normalizeRating = useCallback((data: UserRating, id: string): UserRating => {
+    const isLegacy = data.scoreScale === undefined;
+    const normalizedScore = isLegacy && data.score && data.score <= 5.0 && data.score > 0
+      ? Number((data.score * 2).toFixed(1))
+      : data.score;
+    return { ...data, id, score: normalizedScore };
+  }, []);
+
+  const getRatingsForFilm = useCallback(async (filmId: string): Promise<UserRating[]> => {
+    if (!filmId) return [];
+    if (filmRatingsCache.current.has(filmId)) {
+      return filmRatingsCache.current.get(filmId)!;
+    }
+    try {
+      const q = query(collection(db, 'ratings'), where('filmId', '==', filmId));
+      const snap = await getDocs(q);
+      const list: UserRating[] = [];
+      snap.forEach(docSnap => {
+        const data = docSnap.data() as UserRating;
+        const id = data.id || docSnap.id;
+        if (id) {
+          list.push(normalizeRating(data, id));
+        }
+      });
+      for (const init of INITIAL_RATINGS) {
+        if (init.filmId === filmId && !list.some(r => r.id === init.id)) {
+          list.push(init);
+        }
+      }
+      list.sort((a, b) => getSortTimestamp(b) - getSortTimestamp(a));
+      filmRatingsCache.current.set(filmId, list);
+
+      setRatings(prev => {
+        const map = new Map<string, UserRating>(prev.map(r => [r.id, r]));
+        list.forEach(r => map.set(r.id, r));
+        return Array.from(map.values()).sort((a, b) => getSortTimestamp(b) - getSortTimestamp(a));
+      });
+
+      return list;
+    } catch (err: any) {
+      console.warn('[Firestore] getRatingsForFilm fallback notice:', err?.message || err);
+      const fallback = INITIAL_RATINGS.filter(r => r.filmId === filmId);
+      filmRatingsCache.current.set(filmId, fallback);
+      return fallback;
+    }
+  }, [normalizeRating, getSortTimestamp]);
+
+  const getRatingsForUser = useCallback(async (userId: string): Promise<UserRating[]> => {
+    if (!userId) return [];
+    if (userRatingsCache.current.has(userId)) {
+      return userRatingsCache.current.get(userId)!;
+    }
+    try {
+      const q = query(collection(db, 'ratings'), where('userId', '==', userId));
+      const snap = await getDocs(q);
+      const list: UserRating[] = [];
+      snap.forEach(docSnap => {
+        const data = docSnap.data() as UserRating;
+        const id = data.id || docSnap.id;
+        if (id) {
+          list.push(normalizeRating(data, id));
+        }
+      });
+      for (const init of INITIAL_RATINGS) {
+        if (init.userId === userId && !list.some(r => r.id === init.id)) {
+          list.push(init);
+        }
+      }
+      list.sort((a, b) => getSortTimestamp(b) - getSortTimestamp(a));
+      userRatingsCache.current.set(userId, list);
+
+      setRatings(prev => {
+        const map = new Map<string, UserRating>(prev.map(r => [r.id, r]));
+        list.forEach(r => map.set(r.id, r));
+        return Array.from(map.values()).sort((a, b) => getSortTimestamp(b) - getSortTimestamp(a));
+      });
+
+      return list;
+    } catch (err: any) {
+      console.warn('[Firestore] getRatingsForUser fallback notice:', err?.message || err);
+      const fallback = INITIAL_RATINGS.filter(r => r.userId === userId);
+      userRatingsCache.current.set(userId, fallback);
+      return fallback;
+    }
+  }, [normalizeRating, getSortTimestamp]);
+
+  // Initial load for films and articles
+  useEffect(() => {
+    refreshFilms();
+    refreshArticles();
+  }, [refreshFilms, refreshArticles]);
+
+  // Fetch logged-in user ratings for quick access
+  useEffect(() => {
+    if (isLoggedIn && currentUser?.id && currentUser.id !== 'guest') {
+      getRatingsForUser(currentUser.id);
+    }
+  }, [isLoggedIn, currentUser?.id, getRatingsForUser]);
+
+  // Real-time Firestore Sync Subscriptions for high-frequency social feeds (Buzz only, with limit 50 and orderBy)
+  useEffect(() => {
     const unsubBuzz = onSnapshot(
-      collection(db, 'buzz'),
+      query(collection(db, 'buzz'), orderBy('createdAt', 'desc'), limit(50)),
       (snapshot) => {
         const buzzMap = new Map<string, BuzzPost>();
         snapshot.forEach(docSnap => {
@@ -908,42 +1006,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     );
 
-    const unsubRatings = onSnapshot(
-      collection(db, 'ratings'),
-      (snapshot) => {
-        const ratingMap = new Map<string, UserRating>();
-        snapshot.forEach(docSnap => {
-          const data = docSnap.data() as UserRating;
-          const id = data.id || docSnap.id;
-          if (id) {
-            // Normalize legacy 5-point rating to 10-point scale only if scoreScale is missing (undefined)
-            const isLegacy = data.scoreScale === undefined;
-            const normalizedScore = isLegacy && data.score && data.score <= 5.0 && data.score > 0
-              ? Number((data.score * 2).toFixed(1))
-              : data.score;
-            ratingMap.set(id, { ...data, id, score: normalizedScore });
-          }
-        });
-        if (ratingMap.size === 0) {
-          INITIAL_RATINGS.forEach(r => ratingMap.set(r.id, r));
-        }
-        const merged = Array.from(ratingMap.values());
-        setRatings(merged.sort((a, b) => getSortTimestamp(b) - getSortTimestamp(a)));
-      },
-      (err) => {
-        console.warn('[Firestore] ratings subscription fallback to initial mock:', err.message);
-        setRatings(INITIAL_RATINGS);
-      }
-    );
-
     return () => {
-      unsubRemovedMockFilms();
-      unsubFilms();
-      unsubArticles();
       unsubBuzz();
-      unsubRatings();
     };
-  }, []);
+  }, [getSortTimestamp]);
 
   const isAdmin = isLoggedIn && isUserAdmin(currentUser);
   const isWriter = isLoggedIn && (isUserWriter(currentUser) || currentUser.role === 'penulis_sotoy' || isAdmin || currentUser.role === 'admin');
@@ -3488,6 +3554,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     try {
       await setDoc(doc(db, 'articles', articleId), created);
+      refreshArticles();
       const toastMsg = status === 'draft' 
         ? 'Draf artikel berhasil disimpan!' 
         : status === 'scheduled' 
@@ -3517,6 +3584,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     try {
       await updateDoc(doc(db, 'articles', id), updatedFields);
+      refreshArticles();
       const toastMsg = updatedFields.status === 'draft'
         ? 'Draf artikel berhasil disimpan!'
         : updatedFields.status === 'scheduled'
@@ -3546,6 +3614,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     try {
       await deleteDoc(doc(db, 'articles', id));
+      refreshArticles();
       showToast('Artikel berhasil dihapus.', 'success');
     } catch (error: any) {
       console.error('[Article] Error deleting article:', error);
@@ -4066,11 +4135,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Optimistically update local ratings state
     setRatings(prev => [newRating, ...prev.filter(r => r.id !== ratingId)]);
+    filmRatingsCache.current.delete(filmId);
+    userRatingsCache.current.delete(currentUser.id);
 
     try {
       await setDoc(doc(db, 'ratings', ratingId), newRating);
     } catch (error: any) {
       setRatings(previousRatings);
+      filmRatingsCache.current.delete(filmId);
+      userRatingsCache.current.delete(currentUser.id);
       console.error('[FilmRating] Error adding rating:', error?.code, error?.message, error);
       const reason = error?.code === 'permission-denied'
         ? 'Izin ditolak (permission denied).'
@@ -4155,12 +4228,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Optimistically update local ratings state
     setRatings(prev => prev.map(r => r.id === ratingId ? updated : r));
+    filmRatingsCache.current.delete(rating.filmId);
+    userRatingsCache.current.delete(rating.userId);
 
     try {
       await setDoc(doc(db, 'ratings', ratingId), updated);
       showToast('Ulasan film kamu berhasil diperbarui!', 'success');
     } catch (error: any) {
       setRatings(previousRatings);
+      filmRatingsCache.current.delete(rating.filmId);
+      userRatingsCache.current.delete(rating.userId);
       console.error('[FilmRating] Error updating rating:', error?.code, error?.message, error);
       const reason = error?.code === 'permission-denied'
         ? 'Izin ditolak (permission denied).'
@@ -4181,12 +4258,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const previousRatings = [...ratings];
     setRatings(prev => prev.filter(r => r.id !== ratingId));
+    filmRatingsCache.current.delete(rating.filmId);
+    userRatingsCache.current.delete(rating.userId);
 
     try {
       await deleteDoc(doc(db, 'ratings', ratingId));
       showToast('Ulasan film kamu telah dihapus.', 'success');
     } catch (error: any) {
       setRatings(previousRatings);
+      filmRatingsCache.current.delete(rating.filmId);
+      userRatingsCache.current.delete(rating.userId);
       console.error('[FilmRating] Error deleting rating:', error);
       const reason = error?.code === 'permission-denied'
         ? 'Izin ditolak (permission denied).'
@@ -4819,6 +4900,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         articleIds.map(id => updateDoc(doc(db, 'articles', id), updates))
       );
       setArticles(prev => prev.map(a => articleIds.includes(a.id) ? { ...a, ...updates } : a));
+      refreshArticles();
       showToast(`${articleIds.length} artikel berhasil diperbarui secara massal.`);
       return true;
     } catch (error) {
@@ -4833,6 +4915,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         articleIds.map(id => deleteDoc(doc(db, 'articles', id)))
       );
       setArticles(prev => prev.filter(a => !articleIds.includes(a.id)));
+      refreshArticles();
       showToast(`${articleIds.length} artikel berhasil dihapus dari database.`);
       return true;
     } catch (error) {
@@ -4853,6 +4936,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }))
       );
       setArticles(prev => prev.map(a => articleIds.includes(a.id) ? { ...a, author: targetAuthor, authorId: targetAuthor.id } : a));
+      refreshArticles();
       showToast(`Kepemilikan ${articleIds.length} artikel berhasil dipindahkan ke ${targetAuthor.name}.`);
       return true;
     } catch (error) {
@@ -4939,7 +5023,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         criticsSkorSotoy: mapped.skorSotoy,
         whereToWatch: [
           { platform: 'TMDB Global', type: 'stream', badgeColor: 'bg-cyan-500' }
-        ]
+        ],
+        createdAt: new Date().toISOString(),
       };
 
       setFilms(prev => {
@@ -4951,6 +5036,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         const sanitized = JSON.parse(JSON.stringify(newFilm));
         await setDoc(doc(db, 'films', newFilm.id), sanitized);
+        refreshFilms();
       } catch (e) {
         console.warn('[AppContext] Could not persist TMDB film to Firestore:', e);
       }
@@ -4979,6 +5065,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newFilm: FilmItem = {
       ...filmData,
       id: filmId,
+      createdAt: (filmData as any).createdAt || new Date().toISOString(),
     };
 
     console.log('[AppContext] Generated filmId:', filmId);
@@ -5006,6 +5093,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         return [newFilm, ...prev];
       });
+      refreshFilms();
       showToast(`Film "${newFilm.title}" berhasil ditambahkan ke database.`);
       return true;
     } catch (error: any) {
@@ -5038,6 +5126,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const sanitizedUpdates = JSON.parse(JSON.stringify(updates));
       await updateDoc(doc(db, 'films', id), sanitizedUpdates);
       setFilms(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
+      refreshFilms();
       showToast('Metadata film berhasil diperbarui.');
       return true;
     } catch (error: any) {
@@ -5069,6 +5158,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     try {
       await deleteDoc(doc(db, 'films', id));
+      refreshFilms();
       showToast('Film berhasil dihapus dari katalog.');
       return true;
     } catch (error: any) {
@@ -5104,6 +5194,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await Promise.all(
         filmIds.map(id => deleteDoc(doc(db, 'films', id)))
       );
+      refreshFilms();
       showToast(`${filmIds.length} film berhasil dihapus dari katalog.`);
       return true;
     } catch (error: any) {
@@ -5121,6 +5212,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         filmIds.map(id => updateDoc(doc(db, 'films', id), sanitizedUpdates))
       );
       setFilms(prev => prev.map(f => filmIds.includes(f.id) ? { ...f, ...updates } : f));
+      refreshFilms();
       showToast(`${filmIds.length} film berhasil diperbarui secara massal.`);
       return true;
     } catch (error: any) {
@@ -5304,6 +5396,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isLoadingBuzz,
         isInitialLoading: isLoadingArticles || isLoadingFilms || isLoadingBuzz,
         ratings,
+        getRatingsForFilm,
+        getRatingsForUser,
+        refreshFilms,
+        refreshArticles,
         criticSubmissions,
         addCriticSubmission,
         updateCriticSubmissionStatus,

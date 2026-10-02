@@ -82,6 +82,7 @@ export const UserPage: React.FC = () => {
     setLoginModalOpen,
     logout,
     ratings,
+    getRatingsForUser,
     buzzList,
     films,
     articles,
@@ -133,28 +134,28 @@ export const UserPage: React.FC = () => {
   useEffect(() => {
     let isMounted = true;
     const targetId = effectiveUserId;
-    if (targetId && targetId !== currentUser.id) {
+    if (targetId && targetId !== currentUser.id && targetId !== 'guest') {
       const localFound = allUsers.find(u => u.id === targetId);
       if (localFound) {
         setFetchedUser(localFound);
       } else {
         setLoadingProfile(true);
-        getDoc(doc(db, 'users', targetId))
-          .then(snap => {
-            if (isMounted) {
-              if (snap.exists()) {
-                setFetchedUser(snap.data() as User);
-              } else {
-                setFetchedUser(null);
-              }
-              setLoadingProfile(false);
-            }
-          })
-          .catch(err => {
-            console.warn('[UserPage] Error fetching user doc from Firestore:', err);
-            if (isMounted) setLoadingProfile(false);
-          });
       }
+      getDoc(doc(db, 'users', targetId))
+        .then(snap => {
+          if (isMounted) {
+            if (snap.exists()) {
+              setFetchedUser(snap.data() as User);
+            } else if (!localFound) {
+              setFetchedUser(null);
+            }
+            setLoadingProfile(false);
+          }
+        })
+        .catch(err => {
+          console.warn('[UserPage] Error fetching user doc from Firestore:', err);
+          if (isMounted) setLoadingProfile(false);
+        });
     } else {
       setFetchedUser(null);
       setLoadingProfile(false);

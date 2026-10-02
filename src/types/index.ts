@@ -183,6 +183,7 @@ export interface FilmItem {
   isPopularThisWeek?: boolean;
   curatorNote?: string;
   scoreScale?: number;
+  createdAt?: string;
 }
 
 export interface UserRating {

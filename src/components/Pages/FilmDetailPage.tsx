@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Star,
@@ -38,7 +38,7 @@ import { INITIAL_FILMS } from '../../data/mockData';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
 import { RoleBadge } from '../Common/RoleBadge';
-import { FilmItem, CastMember, CrewMember } from '../../types';
+import { FilmItem, CastMember, CrewMember, UserRating } from '../../types';
 import { RateFilmModal } from '../Modals/RateFilmModal';
 import { AddToCollectionModal } from '../Modals/AddToCollectionModal';
 import { CollectionPickerPopover } from '../Common/CollectionPickerPopover';
@@ -101,6 +101,7 @@ export const FilmDetailPage: React.FC = () => {
     films,
     articles,
     ratings,
+    getRatingsForFilm,
     toggleWatchlist,
     isFilmInWatchlist,
     navigateTo,
@@ -199,7 +200,33 @@ export const FilmDetailPage: React.FC = () => {
     );
   }
 
-  const filmReviews = ratings.filter(r => r.filmId === film.id);
+  const [loadedFilmRatings, setLoadedFilmRatings] = useState<UserRating[]>(() =>
+    ratings.filter(r => film && r.filmId === film.id)
+  );
+
+  useEffect(() => {
+    if (!film?.id) return;
+    let isMounted = true;
+    getRatingsForFilm(film.id).then(res => {
+      if (isMounted) {
+        setLoadedFilmRatings(res);
+      }
+    }).catch(err => {
+      console.warn('[FilmDetailPage] getRatingsForFilm error:', err);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [film?.id, getRatingsForFilm]);
+
+  const filmReviews = useMemo(() => {
+    const contextFiltered = ratings.filter(r => r.filmId === film.id);
+    if (contextFiltered.length > loadedFilmRatings.length) {
+      return contextFiltered;
+    }
+    return loadedFilmRatings.length > 0 ? loadedFilmRatings : contextFiltered;
+  }, [ratings, loadedFilmRatings, film.id]);
+
   const criticsReviews = filmReviews.filter(r => r.userRole === 'si_paling_sotoy');
   const communityReviews = filmReviews.filter(r => r.userRole !== 'si_paling_sotoy');
   const displayedReviews =
