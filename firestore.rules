@@ -22,6 +22,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() && (
+        // TODO: migrate these hardcoded UIDs to role-based checks only — the users/{uid}.role check below already covers them; remove after verifying those user docs have the correct role field.
         request.auth.uid == 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' ||
         request.auth.uid == 'QkNGf1ZfhsMyUEk90a6Iz8ZplZS2' ||
         request.auth.uid == 'I34eqzOmvsSdS2Rf7jpfxw1ZKeu1' ||
@@ -32,6 +33,7 @@ service cloud.firestore {
 
     function isWriter() {
       return isSignedIn() && (
+        // TODO: migrate these hardcoded UIDs to role-based checks only — the users/{uid}.role check below already covers them; remove after verifying those user docs have the correct role field.
         request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' ||
         request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' ||
         isAdmin() ||
@@ -41,6 +43,7 @@ service cloud.firestore {
 
     function isCritic() {
       return isSignedIn() && (
+        // TODO: migrate these hardcoded UIDs to role-based checks only — the users/{uid}.role check below already covers them; remove after verifying those user docs have the correct role field.
         request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' ||
         isAdmin() ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role in ['si_paling_sotoy', 'admin'])
@@ -102,6 +105,7 @@ service cloud.firestore {
         data.category is string &&
         data.author is map &&
         data.author.id is string &&
+        // TODO: migrate these hardcoded UIDs to role-based checks only — the users/{uid}.role check below already covers them; remove after verifying those user docs have the correct role field.
         (data.author.id == request.auth.uid || isAdmin() || request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' || request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2');
     }
 
@@ -278,6 +282,32 @@ service cloud.firestore {
              incoming().likes == nextUp.size() - nextDown.size();
     }
 
+    function isValidArticleViewsDelta() {
+      let prev = ('views' in existing()) ? existing().views : 0;
+      let next = incoming().views;
+      return next == prev + 1;
+    }
+
+    function isValidArticleLikesDelta() {
+      let prev = ('likes' in existing()) ? existing().likes : 0;
+      let next = incoming().likes;
+      return next == prev + 1 || next == prev - 1 || next == prev;
+    }
+
+    function isValidArticleCommentsCountDelta() {
+      let prev = ('commentsCount' in existing()) ? existing().commentsCount : 0;
+      let next = incoming().commentsCount;
+      return next == prev + 1 || next == prev - 1 || next == prev;
+    }
+
+    function isValidArticleStatsUpdate() {
+      let affected = incoming().diff(existing()).affectedKeys();
+      return affected.hasOnly(['commentsCount', 'likes', 'views']) &&
+             (!('views' in affected) || isValidArticleViewsDelta()) &&
+             (!('likes' in affected) || isValidArticleLikesDelta()) &&
+             (!('commentsCount' in affected) || isValidArticleCommentsCountDelta());
+    }
+
     // Collection userPrivate
     match /userPrivate/{userId} {
       allow read: if isSignedIn() && (isOwner(userId) || isAdmin());
@@ -330,7 +360,8 @@ service cloud.firestore {
       }
 
       match /collections/{collectionId} {
-        allow read: if isOwner(userId) || resource.data.get('isPublic', true) == true;
+        allow get: if isOwner(userId) || resource.data.get('isPublic', true) == true;
+        allow list: if true;
         allow create, update: if isOwner(userId) && isValidCollection(incoming()) && isValidId(collectionId);
         allow delete: if isOwner(userId);
       }
@@ -352,7 +383,9 @@ service cloud.firestore {
     }
 
     match /files/{fileId} {
-      allow read, update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin() || isWriter());
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin() || isWriter());
+      allow list: if isSignedIn();
+      allow update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin() || isWriter());
       allow create: if isSignedIn() && ((incoming().userId == request.auth.uid && isValidFile(incoming())) || isAdmin() || isWriter());
     }
 
@@ -361,6 +394,7 @@ service cloud.firestore {
       allow create: if isSignedIn() && !isSuspended() && isValidId(articleId) && isValidArticle(incoming()) && (
         isWriter() ||
         isAdmin() ||
+        // TODO: migrate these hardcoded UIDs to role-based checks only — the users/{uid}.role check below already covers them; remove after verifying those user docs have the correct role field.
         request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' ||
         request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' ||
         incoming().author.id == request.auth.uid
@@ -370,15 +404,17 @@ service cloud.firestore {
           isOwner(existing().author.id) || 
           isAdmin() || 
           isWriter() ||
+          // TODO: migrate these hardcoded UIDs to role-based checks only — the users/{uid}.role check below already covers them; remove after verifying those user docs have the correct role field.
           (request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' && (existing().author.id == request.auth.uid || incoming().author.id == request.auth.uid)) ||
           (request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' && (existing().author.id == request.auth.uid || incoming().author.id == request.auth.uid))
         )) ||
-        incoming().diff(existing()).affectedKeys().hasOnly(['commentsCount', 'likes', 'views'])
+        isValidArticleStatsUpdate()
       );
       allow delete: if isSignedIn() && !isSuspended() && (
         isOwner(existing().author.id) || 
         isAdmin() || 
         isWriter() ||
+        // TODO: migrate these hardcoded UIDs to role-based checks only — the users/{uid}.role check below already covers them; remove after verifying those user docs have the correct role field.
         (request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' && existing().author.id == request.auth.uid) ||
         (request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' && existing().author.id == request.auth.uid)
       );
@@ -400,7 +436,7 @@ service cloud.firestore {
 
     match /removedMockFilms/{filmId} {
       allow read: if true;
-      allow create, update: if isValidId(filmId) && isValidRemovedMockFilm(incoming());
+      allow create, update: if isSignedIn() && (isAdmin() || isWriter()) && isValidId(filmId) && isValidRemovedMockFilm(incoming());
       allow delete: if (isAdmin() || isWriter()) && isValidId(filmId);
     }
 
@@ -446,7 +482,8 @@ service cloud.firestore {
     }
 
     match /criticSubmissions/{submissionId} {
-      allow read: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin() || isWriter());
+      allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin() || isWriter());
+      allow list: if isSignedIn();
       allow create: if isSignedIn() && isVerifiedUser() && isValidId(submissionId) && isValidCriticSubmission(incoming()) && incoming().status == 'pending';
       allow update: if isSignedIn() && isValidId(submissionId) && (
         (isOwner(existing().userId) && isValidCriticSubmission(incoming()) && incoming().status == existing().status) ||
@@ -463,7 +500,8 @@ service cloud.firestore {
     }
 
     match /notifications/{notificationId} {
-      allow read, list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin() || isWriter());
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin() || isWriter());
+      allow list: if isSignedIn();
       allow create: if isSignedIn() && isVerifiedUser() && !isSuspended() && isValidId(notificationId) && isValidNotification(incoming()) && (incoming().sender.id == request.auth.uid || isAdmin() || isWriter());
       allow update: if isSignedIn() && isValidId(notificationId) && (
         (resource.data.userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['isRead'])) ||
@@ -474,7 +512,8 @@ service cloud.firestore {
     }
 
     match /appeals/{appealId} {
-      allow read: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin() || isWriter());
+      allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin() || isWriter());
+      allow list: if isSignedIn();
       allow create: if isSignedIn() && incoming().userId == request.auth.uid && incoming().status == 'pending';
       allow update, delete: if isAdmin() || isWriter();
     }
