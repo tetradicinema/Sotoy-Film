@@ -295,87 +295,90 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
     finalAuthor,
   ]);
 
+  const filmDirector = (film?.director || metadata.filmDetails?.director || '').trim();
+  const filmYear = film?.year || metadata.filmDetails?.year || null;
+  const filmGenres = (metadata.filmDetails?.genres || film?.genres || []).filter((g): g is string => Boolean(g && typeof g === 'string'));
+  const filmCast = (metadata.filmDetails?.cast || film?.castDetails?.map(c => c.name) || film?.cast || [])
+    .filter((c): c is string => Boolean(c && typeof c === 'string'))
+    .slice(0, 5);
+
+  const cleanPublishedTime = (effectivePublishedTime || '').trim();
+  const cleanModifiedTime = (effectiveModifiedTime || '').trim();
+  const cleanAuthor = (finalAuthor || '').trim();
+  const cleanSection = (effectiveSection || '').trim();
+  const cleanTags = effectiveTags.filter((t): t is string => Boolean(t && typeof t === 'string'));
+  const cleanTwitterCreator = (effectiveTwitterCreator || '').trim();
+  const cleanSecondaryImageUrl = (secondaryImageUrl || '').trim();
+
   return (
     <Helmet>
       {/* Standard Meta Tags */}
-      <title>{finalTitle}</title>
-      <meta name="description" content={finalDescription} />
-      <meta name="keywords" content={finalKeywords} />
-      <link rel="canonical" href={finalCanonical} />
-      {effectiveNoindex && <meta name="robots" content="noindex, nofollow" />}
+      <title>{finalTitle || 'Sotoy Film'}</title>
+      <meta name="description" content={finalDescription || ''} />
+      <meta name="keywords" content={finalKeywords || ''} />
+      <link rel="canonical" href={finalCanonical || finalUrl} />
+      {effectiveNoindex ? <meta name="robots" content="noindex, nofollow" /> : null}
 
       {/* Open Graph / Facebook / WhatsApp */}
       <meta property="og:site_name" content={metadata.openGraph['og:site_name'] || 'Sotoy Film'} />
-      <meta property="og:title" content={finalTitle} />
-      <meta property="og:description" content={finalDescription} />
+      <meta property="og:title" content={finalTitle || 'Sotoy Film'} />
+      <meta property="og:description" content={finalDescription || ''} />
       <meta property="og:url" content={finalUrl} />
-      <meta property="og:type" content={effectiveType} />
+      <meta property="og:type" content={effectiveType || 'website'} />
       <meta property="og:locale" content={metadata.openGraph['og:locale'] || 'id_ID'} />
 
       {/* Primary Dynamic Open Graph Image */}
-      <meta property="og:image" content={primaryImageUrl} />
-      <meta property="og:image:secure_url" content={primaryImageUrl} />
-      <meta property="og:image:type" content={primaryImageMime} />
-      <meta property="og:image:width" content={String(imageWidth)} />
-      <meta property="og:image:height" content={String(imageHeight)} />
-      <meta property="og:image:alt" content={finalImageAlt} />
+      {primaryImageUrl ? <meta property="og:image" content={primaryImageUrl} /> : null}
+      {primaryImageUrl ? <meta property="og:image:secure_url" content={primaryImageUrl} /> : null}
+      {primaryImageUrl ? <meta property="og:image:type" content={primaryImageMime} /> : null}
+      {primaryImageUrl ? <meta property="og:image:width" content={String(imageWidth)} /> : null}
+      {primaryImageUrl ? <meta property="og:image:height" content={String(imageHeight)} /> : null}
+      {primaryImageUrl ? <meta property="og:image:alt" content={finalImageAlt} /> : null}
 
       {/* Secondary Film Poster (if distinct from backdrop) */}
-      {secondaryImageUrl && (
-        <>
-          <meta property="og:image" content={secondaryImageUrl} />
-          <meta property="og:image:secure_url" content={secondaryImageUrl} />
-          <meta property="og:image:type" content={getImageMimeType(secondaryImageUrl)} />
-          <meta property="og:image:alt" content={`${film?.title || 'Film'} Poster Resmi`} />
-        </>
-      )}
+      {cleanSecondaryImageUrl ? <meta property="og:image" content={cleanSecondaryImageUrl} /> : null}
+      {cleanSecondaryImageUrl ? <meta property="og:image:secure_url" content={cleanSecondaryImageUrl} /> : null}
+      {cleanSecondaryImageUrl ? <meta property="og:image:type" content={getImageMimeType(cleanSecondaryImageUrl)} /> : null}
+      {cleanSecondaryImageUrl ? <meta property="og:image:alt" content={`${film?.title || 'Film'} Poster Resmi`} /> : null}
 
       {/* Film Specific Open Graph Meta (video.movie) */}
-      {(film || metadata.filmDetails) && (
-        <>
-          {(film?.director || metadata.filmDetails?.director) && (
-            <meta property="video:director" content={film?.director || metadata.filmDetails?.director} />
-          )}
-          {(film?.year || metadata.filmDetails?.year) && (
-            <meta property="video:release_date" content={`${film?.year || metadata.filmDetails?.year}-01-01`} />
-          )}
-          {filmDurationSeconds && <meta property="video:duration" content={String(filmDurationSeconds)} />}
-          {(metadata.filmDetails?.genres || film?.genres || []).map(genre => (
-            <meta key={`video-genre-${genre}`} property="video:tag" content={genre} />
-          ))}
-          {(metadata.filmDetails?.cast || film?.castDetails?.map(c => c.name) || film?.cast || [])
-            .slice(0, 5)
-            .map(actor => (
-              <meta key={`video-actor-${actor}`} property="video:actor" content={actor} />
-            ))}
-        </>
-      )}
+      {filmDirector ? <meta property="video:director" content={filmDirector} /> : null}
+      {filmYear ? <meta property="video:release_date" content={`${filmYear}-01-01`} /> : null}
+      {filmDurationSeconds ? <meta property="video:duration" content={String(filmDurationSeconds)} /> : null}
+      {filmGenres.map(genre => (
+        <meta key={`video-genre-${genre}`} property="video:tag" content={genre} />
+      ))}
+      {filmCast.map(actor => (
+        <meta key={`video-actor-${actor}`} property="video:actor" content={actor} />
+      ))}
 
       {/* Article Specific Open Graph Meta */}
-      {(article || effectiveType === 'article') && (
-        <>
-          {effectivePublishedTime && (
-            <meta property="article:published_time" content={effectivePublishedTime} />
-          )}
-          {effectiveModifiedTime && (
-            <meta property="article:modified_time" content={effectiveModifiedTime} />
-          )}
-          {finalAuthor && <meta property="article:author" content={finalAuthor} />}
-          {effectiveSection && <meta property="article:section" content={effectiveSection} />}
-          {effectiveTags.map(tag => (
+      {(article || effectiveType === 'article') && cleanPublishedTime ? (
+        <meta property="article:published_time" content={cleanPublishedTime} />
+      ) : null}
+      {(article || effectiveType === 'article') && cleanModifiedTime ? (
+        <meta property="article:modified_time" content={cleanModifiedTime} />
+      ) : null}
+      {(article || effectiveType === 'article') && cleanAuthor ? (
+        <meta property="article:author" content={cleanAuthor} />
+      ) : null}
+      {(article || effectiveType === 'article') && cleanSection ? (
+        <meta property="article:section" content={cleanSection} />
+      ) : null}
+      {(article || effectiveType === 'article')
+        ? cleanTags.map(tag => (
             <meta key={`article-tag-${tag}`} property="article:tag" content={tag} />
-          ))}
-        </>
-      )}
+          ))
+        : null}
 
       {/* Twitter / X Social Cards */}
       <meta name="twitter:card" content={twitterCard} />
       <meta name="twitter:site" content={twitterSite} />
-      {effectiveTwitterCreator && <meta name="twitter:creator" content={effectiveTwitterCreator} />}
-      <meta name="twitter:title" content={finalTitle} />
-      <meta name="twitter:description" content={finalDescription} />
-      <meta name="twitter:image" content={primaryImageUrl} />
-      <meta name="twitter:image:alt" content={finalImageAlt} />
+      {cleanTwitterCreator ? <meta name="twitter:creator" content={cleanTwitterCreator} /> : null}
+      <meta name="twitter:title" content={finalTitle || 'Sotoy Film'} />
+      <meta name="twitter:description" content={finalDescription || ''} />
+      {primaryImageUrl ? <meta name="twitter:image" content={primaryImageUrl} /> : null}
+      {primaryImageUrl ? <meta name="twitter:image:alt" content={finalImageAlt} /> : null}
       <meta
         name="twitter:domain"
         content={typeof window !== 'undefined' ? window.location.hostname : 'www.sotoyfilm.my.id'}
@@ -383,11 +386,13 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
       <meta name="twitter:url" content={finalUrl} />
 
       {/* Schema.org Structured Data (JSON-LD) */}
-      {resolvedSchemas.map((s, i) => (
-        <script key={`schema-${s['@type'] || i}-${i}`} type="application/ld+json">
-          {JSON.stringify(s)}
-        </script>
-      ))}
+      {resolvedSchemas
+        .filter(s => s && typeof s === 'object')
+        .map((s, i) => (
+          <script key={`schema-${s['@type'] || i}-${i}`} type="application/ld+json">
+            {JSON.stringify(s)}
+          </script>
+        ))}
     </Helmet>
   );
 };
