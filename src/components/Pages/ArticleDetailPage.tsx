@@ -25,6 +25,7 @@ import {
   UserPlus,
   Edit3,
   MessageSquare,
+  BookOpen,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
@@ -38,6 +39,7 @@ import { BreadcrumbNavigation } from '../Navigation/BreadcrumbNavigation';
 import { EditorialSidebar } from '../Common/EditorialSidebar';
 import { RateFilmModal } from '../Modals/RateFilmModal';
 import { ArticleDetailSkeleton } from '../Skeletons';
+import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 
 export const ArticleDetailPage: React.FC = () => {
   const {
@@ -452,13 +454,15 @@ export const ArticleDetailPage: React.FC = () => {
           </div>
 
           {/* Cover Image */}
-          <div className="rounded-2xl overflow-hidden max-h-[440px] w-full relative">
-            <img
-              src={article.coverImage}
-              alt={article.title}
-              className="w-full h-full object-cover"
-            />
-          </div>
+          {article.coverImage?.trim() ? (
+            <div className="rounded-2xl overflow-hidden max-h-[440px] w-full relative">
+              <img
+                src={article.coverImage.trim()}
+                alt={article.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ) : null}
 
           {/* Article Main Body Content */}
           <div className="prose prose-invert max-w-none text-slate-200 text-sm sm:text-base leading-relaxed space-y-4 pt-4">
@@ -555,11 +559,17 @@ export const ArticleDetailPage: React.FC = () => {
               {/* Poster Film */}
               <div className="md:col-span-3">
                 <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/10 aspect-[2/3] group">
-                  <img
-                    src={discussedFilm.poster}
-                    alt={discussedFilm.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
+                  {discussedFilm.poster?.trim() ? (
+                    <img
+                      src={discussedFilm.poster.trim()}
+                      alt={discussedFilm.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-700">
+                      <Film className="w-10 h-10" />
+                    </div>
+                  )}
                   <div className="absolute top-2 right-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FF2E7E]/40 text-[#FF2E7E] font-black text-xs">
                     ★ {discussedFilm.skorSotoy.toFixed(1)}
                   </div>
@@ -687,7 +697,7 @@ export const ArticleDetailPage: React.FC = () => {
           ) : (
             <form onSubmit={handleAddComment} className="flex gap-3 items-start">
               <img
-                src={currentUser.avatar}
+                src={currentUser.avatar?.trim() || DEFAULT_AVATAR}
                 alt={currentUser.name}
                 className="w-9 h-9 rounded-xl object-cover shrink-0"
               />
@@ -717,7 +727,7 @@ export const ArticleDetailPage: React.FC = () => {
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
                     <img
-                      src={c.avatar}
+                      src={c.avatar?.trim() || DEFAULT_AVATAR}
                       alt={c.name}
                       className="w-6 h-6 rounded-full object-cover border border-white/10"
                     />
@@ -744,11 +754,17 @@ export const ArticleDetailPage: React.FC = () => {
                   onClick={() => navigateTo('article-detail', { articleId: rel.id })}
                   className="bg-[#171A1F] border border-slate-800 rounded-2xl overflow-hidden p-3 hover:border-[#FF2E7E] cursor-pointer group transition-all"
                 >
-                  <img
-                    src={rel.coverImage}
-                    alt={rel.title}
-                    className="w-full h-28 object-cover rounded-xl mb-2 group-hover:scale-105 transition-transform"
-                  />
+                  {rel.coverImage?.trim() ? (
+                    <img
+                      src={rel.coverImage.trim()}
+                      alt={rel.title}
+                      className="w-full h-28 object-cover rounded-xl mb-2 group-hover:scale-105 transition-transform"
+                    />
+                  ) : (
+                    <div className="w-full h-28 rounded-xl mb-2 bg-slate-800 flex items-center justify-center text-slate-600">
+                      <BookOpen className="w-6 h-6" />
+                    </div>
+                  )}
                   <h4 className="font-bold text-xs text-white group-hover:text-[#FF2E7E] line-clamp-2">
                     {rel.title}
                   </h4>

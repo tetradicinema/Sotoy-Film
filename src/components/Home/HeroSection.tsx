@@ -38,7 +38,7 @@ const HeroActiveAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }
       title={`Kunjungi profil ${author.displayName || author.name}`}
     >
       <img
-        src={author.avatarURL || author.avatar}
+        src={author.avatarURL || author.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}
         alt={author.displayName || author.name}
         className="w-6 h-6 rounded-full object-cover ring-1 ring-white/20 group-hover/author:ring-[#FF2E7E] transition-all"
       />
@@ -125,7 +125,7 @@ export const HeroSection: React.FC = () => {
           >
             <div className="flex items-center gap-3">
               <img
-                src={currentUser.avatar}
+                src={currentUser.avatar?.trim() || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}
                 alt={currentUser.name}
                 className="w-9 h-9 rounded-full object-cover ring-1 ring-[#FF2E7E]/40 shrink-0"
               />
@@ -164,7 +164,7 @@ export const HeroSection: React.FC = () => {
             <div className="relative w-full flex-1 min-h-[460px] sm:min-h-[540px] rounded-3xl overflow-hidden border border-white/[0.08] shadow-2xl bg-[#0E1013] group">
               {/* Background Cover Image with cinematic pan/zoom */}
               <img
-                src={activeArticle.coverImage}
+                src={activeArticle.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80'}
                 alt={activeArticle.title}
                 className="absolute inset-0 w-full h-full object-cover object-center transform transition-transform duration-1000 scale-100 group-hover:scale-105"
               />
@@ -330,7 +330,7 @@ export const HeroSection: React.FC = () => {
 
                         {/* Poster */}
                         <img
-                          src={film.poster}
+                          src={film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=120&q=80'}
                           alt={film.title}
                           className="w-10 h-14 object-cover rounded-lg shrink-0 border border-white/10 group-hover:scale-105 transition-transform"
                         />
@@ -383,7 +383,7 @@ export const HeroSection: React.FC = () => {
                         className="group flex items-center gap-3 p-2 rounded-2xl hover:bg-white/[0.04] border border-transparent hover:border-white/[0.06] transition-all cursor-pointer"
                       >
                         <img
-                          src={film.poster}
+                          src={film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=120&q=80'}
                           alt={film.title}
                           className="w-10 h-14 object-cover rounded-lg shrink-0 border border-white/10 group-hover:scale-105 transition-transform"
                         />
@@ -437,7 +437,7 @@ export const HeroSection: React.FC = () => {
                         className="group flex items-center gap-3 p-2 rounded-2xl hover:bg-white/[0.04] border border-transparent hover:border-white/[0.06] transition-all cursor-pointer"
                       >
                         <img
-                          src={gear.image}
+                          src={gear.image || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=200&q=80'}
                           alt={gear.name}
                           className="w-12 h-12 object-cover rounded-lg shrink-0 border border-white/10 group-hover:scale-105 transition-transform"
                         />

@@ -81,13 +81,13 @@ export const FullCastCrewModal: React.FC<FullCastCrewModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between p-5 sm:p-6 border-b border-slate-800 bg-[#141628]/80 backdrop-blur">
           <div className="flex items-center gap-3.5 sm:gap-4 overflow-hidden">
-            {filmPoster && (
+            {filmPoster?.trim() ? (
               <img
-                src={filmPoster}
+                src={filmPoster.trim()}
                 alt={filmTitle}
                 className="w-12 h-16 sm:w-14 sm:h-20 object-cover rounded-xl border border-slate-700 shadow-md shrink-0 hidden xs:block"
               />
-            )}
+            ) : null}
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold text-[#FF2E7E] bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 px-2 py-0.5 rounded-full">

@@ -293,7 +293,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ mode = 'glob
                     title={senderHandle ? `${senderName} (${senderHandle.startsWith('@') ? senderHandle : `@${senderHandle}`})` : senderName}
                   >
                     <img
-                      src={senderAvatar}
+                      src={senderAvatar?.trim() || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}
                       alt={senderName}
                       className="w-9 h-9 rounded-full object-cover border border-zinc-700"
                     />

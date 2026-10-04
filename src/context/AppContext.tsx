@@ -131,6 +131,8 @@ import {
   signOut,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   sendEmailVerification
 } from 'firebase/auth';
 import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -2862,91 +2864,123 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Shared Google auth completion handler for both popup and redirect paths
+  const handleGoogleUserAuth = async (fbUser: any): Promise<boolean> => {
+    if (!fbUser) return false;
+    try {
+      refreshAllUsers();
+      const uid = fbUser.uid;
+      const userDocRef = doc(db, 'users', uid);
+      const userSnap = await getDoc(userDocRef);
+      
+      if (userSnap.exists()) {
+        const existingData = userSnap.data() as User;
+        if (fbUser.email) {
+          try {
+            await setDoc(doc(db, 'userPrivate', uid), {
+              email: fbUser.email,
+              updatedAt: new Date().toISOString(),
+            }, { merge: true });
+          } catch (e) {}
+        }
+        setCurrentUser({ ...existingData, email: fbUser.email || '' });
+        // Following/followers are populated via Firestore 'follows' listener
+
+        if (existingData.hasFinishedOnboarding === false) {
+          setCurrentView('onboarding');
+        }
+      } else {
+        // First-time signup with Google! Clean, fresh new account
+        const isAdminRole = isUserAdmin(null, uid, fbUser.email || undefined, fbUser.emailVerified);
+        const isWriterRole = !isAdminRole && isUserWriter(null, uid);
+        const isCriticRole = !isAdminRole && !isWriterRole && isUserCritic(null, uid);
+        
+        const cleanHandle = '@' + (fbUser.displayName ? fbUser.displayName.toLowerCase().replace(/[^a-z0-9_]/g, '') : (fbUser.email ? fbUser.email.split('@')[0] : 'user_' + uid.slice(0, 4)));
+        const newUser: User = {
+          id: uid,
+          name: fbUser.displayName || (isAdminRole ? 'Admin Utama' : isWriterRole ? 'Penulis Sotoy' : isCriticRole ? 'Si Paling Sotoy' : 'Warga Baru'),
+          handle: cleanHandle,
+          avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+          role: isAdminRole ? 'admin' : (isWriterRole ? 'penulis_sotoy' : (isCriticRole ? 'si_paling_sotoy' : 'warga_sotoy')),
+          roleTitle: isAdminRole 
+            ? 'Head Admin & Lead Editor' 
+            : (isWriterRole 
+              ? 'Penulis Sotoy (Jurnalis Film & Pop-Culture)' 
+              : (isCriticRole ? 'Si Paling Sotoy (Kritikus Film)' : 'Warga Sotoy (Penonton Santai)')),
+          bio: isAdminRole 
+            ? 'Menjaga ketertiban obrolan sotoy seantero jagat perfilman.' 
+            : (isWriterRole 
+              ? 'Menulis kabar terbaru, ulasan mendalam, dan kurasi film di Sotoy Film.' 
+              : (isCriticRole ? 'Kritikus film kawakan yang hobinya menilai setiap pixel di layar.' : 'Cinephile baru mendarat di Sotoy Film!')),
+          createdAt: new Date().toISOString(),
+          totalReviews: 0,
+          totalBuzz: 0,
+          followers: [],
+          following: [],
+          followersCount: 0,
+          followingCount: 0,
+          hasFinishedOnboarding: false,
+        };
+        const { email: _unused, ...publicUserPayload } = newUser;
+        try {
+          await setDoc(userDocRef, publicUserPayload);
+        } catch (e) {
+          console.warn('[Auth] Firestore setDoc fallback:', e);
+        }
+        if (fbUser.email) {
+          try {
+            await setDoc(doc(db, 'userPrivate', uid), {
+              email: fbUser.email,
+              updatedAt: new Date().toISOString(),
+            }, { merge: true });
+          } catch (e) {}
+        }
+        setCurrentUser({ ...newUser, email: fbUser.email || '' });
+        setFollowingIds([]);
+        setFollowersIds([]);
+        setWatchlist([]);
+        setSavedArticles([]);
+        setCurrentView('onboarding');
+      }
+      setIsLoggedIn(true);
+      localStorage.setItem('sotoy_is_logged_in', 'true');
+      showToast('Berhasil masuk dengan Google! 🎉');
+      setLoginModalOpen(false);
+      return true;
+    } catch (err) {
+      console.error('[Auth] Error during post-login processing:', err);
+      return false;
+    }
+  };
+
+  // Check for redirect sign-in result on mount (for iOS standalone PWA)
+  useEffect(() => {
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (result?.user) {
+          await handleGoogleUserAuth(result.user);
+        }
+      })
+      .catch((err) => {
+        console.error('[Auth] Redirect sign-in result error:', err);
+      });
+  }, []);
+
   const signInWithGoogle = async (): Promise<boolean> => {
     try {
       showToast('Menghubungkan ke Google...');
       const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+
+      const isIosStandalone = ('standalone' in window.navigator) && (window.navigator as any).standalone === true;
+      if (isIosStandalone) {
+        await signInWithRedirect(auth, provider);
+        return true;
+      }
+
       const userCredential = await signInWithPopup(auth, provider);
       if (userCredential.user) {
-        refreshAllUsers();
-        const uid = userCredential.user.uid;
-        const userDocRef = doc(db, 'users', uid);
-        const userSnap = await getDoc(userDocRef);
-        
-        if (userSnap.exists()) {
-          const existingData = userSnap.data() as User;
-          if (userCredential.user.email) {
-            try {
-              await setDoc(doc(db, 'userPrivate', uid), {
-                email: userCredential.user.email,
-                updatedAt: new Date().toISOString(),
-              }, { merge: true });
-            } catch (e) {}
-          }
-          setCurrentUser({ ...existingData, email: userCredential.user.email || '' });
-          // Following/followers are populated via Firestore 'follows' listener
-
-          if (existingData.hasFinishedOnboarding === false) {
-            setCurrentView('onboarding');
-          }
-        } else {
-          // First-time signup with Google! Clean, fresh new account
-          const isAdminRole = isUserAdmin(null, uid, userCredential.user.email || undefined, userCredential.user.emailVerified);
-          const isWriterRole = !isAdminRole && isUserWriter(null, uid);
-          const isCriticRole = !isAdminRole && !isWriterRole && isUserCritic(null, uid);
-          
-          const cleanHandle = '@' + (userCredential.user.displayName ? userCredential.user.displayName.toLowerCase().replace(/[^a-z0-9_]/g, '') : (userCredential.user.email ? userCredential.user.email.split('@')[0] : 'user_' + uid.slice(0, 4)));
-          const newUser: User = {
-            id: uid,
-            name: userCredential.user.displayName || (isAdminRole ? 'Admin Utama' : isWriterRole ? 'Penulis Sotoy' : isCriticRole ? 'Si Paling Sotoy' : 'Warga Baru'),
-            handle: cleanHandle,
-            avatar: userCredential.user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-            role: isAdminRole ? 'admin' : (isWriterRole ? 'penulis_sotoy' : (isCriticRole ? 'si_paling_sotoy' : 'warga_sotoy')),
-            roleTitle: isAdminRole 
-              ? 'Head Admin & Lead Editor' 
-              : (isWriterRole 
-                ? 'Penulis Sotoy (Jurnalis Film & Pop-Culture)' 
-                : (isCriticRole ? 'Si Paling Sotoy (Kritikus Film)' : 'Warga Sotoy (Penonton Santai)')),
-            bio: isAdminRole 
-              ? 'Menjaga ketertiban obrolan sotoy seantero jagat perfilman.' 
-              : (isWriterRole 
-                ? 'Menulis kabar terbaru, ulasan mendalam, dan kurasi film di Sotoy Film.' 
-                : (isCriticRole ? 'Kritikus film kawakan yang hobinya menilai setiap pixel di layar.' : 'Cinephile baru mendarat di Sotoy Film!')),
-            createdAt: new Date().toISOString(),
-            totalReviews: 0,
-            totalBuzz: 0,
-            followers: [],
-            following: [],
-            followersCount: 0,
-            followingCount: 0,
-            hasFinishedOnboarding: false,
-          };
-          const { email: _unused, ...publicUserPayload } = newUser;
-          try {
-            await setDoc(userDocRef, publicUserPayload);
-          } catch (e) {
-            console.warn('[Auth] Firestore setDoc fallback:', e);
-          }
-          if (userCredential.user.email) {
-            try {
-              await setDoc(doc(db, 'userPrivate', uid), {
-                email: userCredential.user.email,
-                updatedAt: new Date().toISOString(),
-              }, { merge: true });
-            } catch (e) {}
-          }
-          setCurrentUser({ ...newUser, email: userCredential.user.email || '' });
-          setFollowingIds([]);
-          setFollowersIds([]);
-          setWatchlist([]);
-          setSavedArticles([]);
-          setCurrentView('onboarding');
-        }
-        setIsLoggedIn(true);
-        localStorage.setItem('sotoy_is_logged_in', 'true');
-        showToast('Berhasil masuk dengan Google! 🎉');
-        setLoginModalOpen(false);
-        return true;
+        return await handleGoogleUserAuth(userCredential.user);
       }
       return false;
     } catch (err: any) {
@@ -3553,7 +3587,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     try {
-      await setDoc(doc(db, 'articles', articleId), created);
+      // Remove any undefined properties which crash Firestore setDoc
+      const sanitizedArticle = JSON.parse(JSON.stringify(created));
+      await setDoc(doc(db, 'articles', articleId), sanitizedArticle);
       refreshArticles();
       const toastMsg = status === 'draft' 
         ? 'Draf artikel berhasil disimpan!' 
@@ -3583,7 +3619,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return false;
     }
     try {
-      await updateDoc(doc(db, 'articles', id), updatedFields);
+      // Remove any undefined properties which crash Firestore updateDoc
+      const sanitizedUpdates = JSON.parse(JSON.stringify(updatedFields));
+      await updateDoc(doc(db, 'articles', id), sanitizedUpdates);
       refreshArticles();
       const toastMsg = updatedFields.status === 'draft'
         ? 'Draf artikel berhasil disimpan!'
@@ -4118,7 +4156,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       filmId,
       userId: activeUserId,
       userName: currentUser.name || auth.currentUser?.displayName || 'Warga Sotoy',
-      userAvatar: currentUser.avatar || auth.currentUser?.photoURL || '',
+      userAvatar: currentUser.avatar?.trim() || auth.currentUser?.photoURL || DEFAULT_FALLBACK_AUTHOR.avatar,
       userRole: currentUser.role,
       score: clampedScore,
       scoreScale: 10,
@@ -4292,7 +4330,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Kamu menyukai artikel ini!', 'success');
 
     try {
-      await setDoc(doc(db, 'articles', articleId), updatedArticle);
+      const sanitizedArticle = JSON.parse(JSON.stringify(updatedArticle));
+      await setDoc(doc(db, 'articles', articleId), sanitizedArticle);
     } catch (error: any) {
       setArticles(previousArticles);
       console.error('[Article] Error liking article:', error);
@@ -4418,7 +4457,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       actorName: currentUser.name || 'Admin Sotoy',
       actorEmail: currentUser.email || '',
       actorRole: currentUser.role || 'admin',
-      actorAvatar: currentUser.avatar || '',
+      actorAvatar: currentUser.avatar?.trim() || DEFAULT_FALLBACK_AUTHOR.avatar,
       targetId: logData.targetId,
       targetName: logData.targetName,
       targetEmail: logData.targetEmail,
@@ -4728,7 +4767,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       userName: currentUser.name || 'Pengguna Sotoy',
       userHandle: currentUser.handle || `@${currentUser.name?.toLowerCase().replace(/\s+/g, '') || 'user'}`,
       userEmail: currentUser.email || '',
-      userAvatar: currentUser.avatar || '',
+      userAvatar: currentUser.avatar?.trim() || DEFAULT_FALLBACK_AUTHOR.avatar,
       userRole: currentUser.role || 'warga_sotoy',
       reason: reason.trim(),
       createdAt: new Date().toISOString(),
@@ -4896,8 +4935,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const bulkUpdateArticles = async (articleIds: string[], updates: Partial<Article>): Promise<boolean> => {
     try {
+      const sanitizedUpdates = JSON.parse(JSON.stringify(updates));
       await Promise.all(
-        articleIds.map(id => updateDoc(doc(db, 'articles', id), updates))
+        articleIds.map(id => updateDoc(doc(db, 'articles', id), sanitizedUpdates))
       );
       setArticles(prev => prev.map(a => articleIds.includes(a.id) ? { ...a, ...updates } : a));
       refreshArticles();

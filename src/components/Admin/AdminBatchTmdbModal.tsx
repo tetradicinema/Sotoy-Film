@@ -680,9 +680,9 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
                     className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 text-xs"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      {item.poster ? (
+                      {item.poster?.trim() ? (
                         <img
-                          src={item.poster}
+                          src={item.poster.trim()}
                           alt={item.title || item.id}
                           className="w-8 h-11 object-cover rounded-md shrink-0 border border-slate-800"
                         />

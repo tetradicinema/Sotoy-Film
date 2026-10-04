@@ -486,7 +486,7 @@ export const FilmDatabasePage: React.FC = () => {
                 >
                   <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
                     <img
-                      src={film.poster}
+                      src={film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80'}
                       alt={film.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
@@ -596,7 +596,7 @@ export const FilmDatabasePage: React.FC = () => {
                 >
                   <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
                     <img
-                      src={film.poster}
+                      src={film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80'}
                       alt={film.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
@@ -706,7 +706,7 @@ export const FilmDatabasePage: React.FC = () => {
                 >
                   <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
                     <img
-                      src={film.poster}
+                      src={film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80'}
                       alt={film.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
@@ -875,7 +875,7 @@ export const FilmDatabasePage: React.FC = () => {
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
                         <img
-                          src={rev.userAvatar}
+                          src={rev.userAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}
                           alt={rev.userName}
                           className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/10"
                         />
@@ -905,7 +905,7 @@ export const FilmDatabasePage: React.FC = () => {
                         className="flex items-center gap-3 p-2.5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-[#FF2E7E]/50 cursor-pointer group transition-colors"
                       >
                         <img
-                          src={targetFilm.poster}
+                          src={targetFilm.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=120&q=80'}
                           alt={targetFilm.title}
                           className="w-10 h-14 object-cover rounded-lg shrink-0 group-hover:scale-105 transition-transform"
                         />
@@ -1169,7 +1169,7 @@ export const FilmDatabasePage: React.FC = () => {
                         className="relative aspect-[2/3] w-full overflow-hidden cursor-pointer bg-[#0E1013]"
                       >
                         <img
-                          src={film.poster}
+                          src={film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80'}
                           alt={film.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />

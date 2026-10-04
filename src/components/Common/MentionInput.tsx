@@ -127,7 +127,7 @@ export const MentionInput: React.FC<MentionInputProps> = ({
                 className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-[#FF2E7E]/15 transition-colors text-left group"
               >
                 <img
-                  src={u.avatar}
+                  src={u.avatar?.trim() || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80'}
                   alt={u.name}
                   className="w-7 h-7 rounded-lg object-cover ring-1 ring-slate-700 group-hover:ring-[#FF2E7E] shrink-0"
                 />

@@ -42,6 +42,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 import { SettingsSubPage, UserSettings } from '../../types';
 import { ProfilePhotoCropModal } from '../Common/ProfilePhotoCropModal';
 
@@ -466,7 +467,7 @@ export const SettingsPage: React.FC = () => {
                     {/* Live Avatar Preview */}
                     <div className="relative group shrink-0">
                       <img
-                        src={avatarPreview}
+                        src={avatarPreview?.trim() || DEFAULT_AVATAR}
                         alt={name}
                         className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover ring-2 ring-[#FF2E7E] shadow-xl"
                       />
@@ -936,9 +937,9 @@ export const SettingsPage: React.FC = () => {
                         >
                           <div className="flex items-start gap-3.5 min-w-0">
                             {/* Thumbnail or Icon */}
-                            {item.imageUrl ? (
+                            {item.imageUrl?.trim() ? (
                               <img
-                                src={item.imageUrl}
+                                src={item.imageUrl.trim()}
                                 alt={item.title}
                                 className="w-11 h-14 sm:w-12 sm:h-12 rounded-xl object-cover border border-slate-800 shrink-0"
                               />

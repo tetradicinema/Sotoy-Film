@@ -232,7 +232,7 @@ export const CMSAnalyticsCard: React.FC<CMSAnalyticsCardProps> = ({ mode }) => {
             {stats.topArticle.author && (
               <div className="flex items-center gap-2 text-[10px] text-slate-400">
                 <img
-                  src={stats.topArticle.author.avatar}
+                  src={stats.topArticle.author.avatar?.trim() || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80'}
                   alt={stats.topArticle.author.name}
                   className="w-5 h-5 rounded-full object-cover border border-white/20"
                 />

@@ -35,6 +35,7 @@ import { MainCategory, SubCategory, FilmItem } from '../../types';
 import { db } from '../../lib/firebase';
 import { doc, setDoc, deleteDoc, onSnapshot, collection } from 'firebase/firestore';
 import { RichTextEditor } from '../CMS/RichTextEditor';
+import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 
 interface CoEditor {
   userId: string;
@@ -274,7 +275,7 @@ export const WriteArticlePage: React.FC = () => {
           ? title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
           : `draft-${Date.now()}`;
 
-        const payload = {
+        const payload: Record<string, any> = {
           title: title.trim() || 'Draf Tanpa Judul',
           slug,
           excerpt: excerpt || title || 'Draf Otomatis',
@@ -284,13 +285,16 @@ export const WriteArticlePage: React.FC = () => {
           subCategory,
           readTime,
           tags: cleanTags.length > 0 ? cleanTags : ['SotoyFilm', 'Draft'],
-          relatedFilmId: selectedFilmId || undefined,
           status: 'draft' as const,
           seoTitle: seoTitle.trim() || title,
           metaDescription: metaDescription.trim() || excerpt,
           ogImage: ogImage.trim() || coverImage,
           seoKeywords: seoKeywords.trim() || cleanTags.join(', '),
         };
+
+        if (selectedFilmId) {
+          payload.relatedFilmId = selectedFilmId;
+        }
 
         if (editingId) {
           await updateArticle(editingId, payload);
@@ -310,7 +314,8 @@ export const WriteArticlePage: React.FC = () => {
               role: currentUser.role,
             },
           };
-          await setDoc(doc(db, 'articles', newDraftId), newArticlePayload);
+          const sanitizedDraft = JSON.parse(JSON.stringify(newArticlePayload));
+          await setDoc(doc(db, 'articles', newDraftId), sanitizedDraft);
           setEditingId(newDraftId);
           setIsEditMode(true);
         }
@@ -474,7 +479,7 @@ export const WriteArticlePage: React.FC = () => {
         customPublishedAt = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
       }
 
-      const payload = {
+      const payload: Record<string, any> = {
         title,
         slug,
         excerpt: excerpt || title,
@@ -484,15 +489,20 @@ export const WriteArticlePage: React.FC = () => {
         subCategory,
         readTime,
         tags: cleanTags.length > 0 ? cleanTags : ['SotoyFilm'],
-        relatedFilmId: selectedFilmId || undefined,
         status: targetStatus,
-        scheduledAt: targetStatus === 'scheduled' ? scheduledAtDate : undefined,
         publishedAt: customPublishedAt,
         seoTitle: seoTitle.trim() || title,
         metaDescription: metaDescription.trim() || excerpt || title,
         ogImage: ogImage.trim() || coverImage,
         seoKeywords: seoKeywords.trim() || (cleanTags.join(', ')),
       };
+
+      if (selectedFilmId) {
+        payload.relatedFilmId = selectedFilmId;
+      }
+      if (targetStatus === 'scheduled' && scheduledAtDate) {
+        payload.scheduledAt = scheduledAtDate;
+      }
 
       if (isEditMode && editingId) {
         const success = await updateArticle(editingId, payload);
@@ -508,7 +518,7 @@ export const WriteArticlePage: React.FC = () => {
             avatar: currentUser.avatar,
             role: currentUser.role,
           },
-        });
+        } as any);
 
         if (success) {
           navigateTo('writer-dashboard');
@@ -696,7 +706,7 @@ export const WriteArticlePage: React.FC = () => {
                 {coEditors.map((editor, idx) => (
                   <img
                     key={idx}
-                    src={editor.userAvatar}
+                    src={editor.userAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}
                     alt={editor.userName}
                     title={`${editor.userName} (${editor.roleTitle || 'Editor'})`}
                     className="w-8 h-8 rounded-full border-2 border-amber-500 object-cover ring-2 ring-black"
@@ -725,20 +735,26 @@ export const WriteArticlePage: React.FC = () => {
                 {title || 'Judul Artikel Kamu'}
               </h2>
 
-              {coverImage && (
+              {coverImage?.trim() ? (
                 <div className="relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-900">
-                  <img src={coverImage} alt="Cover preview" className="w-full max-h-96 object-cover" />
+                  <img src={coverImage.trim()} alt="Cover preview" className="w-full max-h-96 object-cover" />
                 </div>
-              )}
+              ) : null}
 
               {/* Linked Film Feature Card Preview */}
               {selectedFilm && (
                 <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800/80 to-slate-900 border border-cyan-500/30 flex items-center gap-4">
-                  <img
-                    src={selectedFilm.poster}
-                    alt={selectedFilm.title}
-                    className="w-14 h-20 rounded-xl object-cover border border-slate-700 shrink-0"
-                  />
+                  {selectedFilm.poster?.trim() ? (
+                    <img
+                      src={selectedFilm.poster.trim()}
+                      alt={selectedFilm.title}
+                      className="w-14 h-20 rounded-xl object-cover border border-slate-700 shrink-0"
+                    />
+                  ) : (
+                    <div className="w-14 h-20 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 text-slate-500">
+                      <Film className="w-6 h-6" />
+                    </div>
+                  )}
                   <div>
                     <div className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1 mb-1">
                       <Film className="w-3 h-3" />
@@ -903,9 +919,9 @@ export const WriteArticlePage: React.FC = () => {
                 )}
 
                 {/* Cover Image Live Preview Thumbnail */}
-                {coverImage && (
+                {coverImage?.trim() ? (
                   <div className="relative rounded-xl overflow-hidden border border-slate-700 bg-slate-950 group">
-                    <img src={coverImage} alt="Cover preview" className="w-full h-40 object-cover" />
+                    <img src={coverImage.trim()} alt="Cover preview" className="w-full h-40 object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end justify-between p-3">
                       <span className="text-[10px] font-mono text-slate-300 truncate max-w-xs bg-black/60 px-2 py-1 rounded">
                         Cover Aktif
@@ -921,7 +937,7 @@ export const WriteArticlePage: React.FC = () => {
                       </button>
                     </div>
                   </div>
-                )}
+                ) : null}
               </div>
 
               {/* Tag Film Terkait / Film yang Dibahas Section */}
@@ -940,11 +956,17 @@ export const WriteArticlePage: React.FC = () => {
                 {selectedFilm ? (
                   <div className="p-4 rounded-2xl bg-[#0E1013] border border-cyan-500/40 flex items-center justify-between gap-4 shadow-lg">
                     <div className="flex items-center gap-3.5">
-                      <img
-                        src={selectedFilm.poster}
-                        alt={selectedFilm.title}
-                        className="w-12 h-16 rounded-xl object-cover border border-slate-700 shrink-0"
-                      />
+                      {selectedFilm.poster?.trim() ? (
+                        <img
+                          src={selectedFilm.poster.trim()}
+                          alt={selectedFilm.title}
+                          className="w-12 h-16 rounded-xl object-cover border border-slate-700 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-12 h-16 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 text-slate-500">
+                          <Film className="w-5 h-5" />
+                        </div>
+                      )}
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-400 px-2 py-0.5 rounded border border-cyan-500/30">
@@ -1009,11 +1031,17 @@ export const WriteArticlePage: React.FC = () => {
                               className="p-3 hover:bg-cyan-500/10 cursor-pointer flex items-center justify-between transition-colors group"
                             >
                               <div className="flex items-center gap-3">
-                                <img
-                                  src={film.poster}
-                                  alt={film.title}
-                                  className="w-10 h-14 rounded-lg object-cover bg-slate-800 shrink-0"
-                                />
+                                {film.poster?.trim() ? (
+                                  <img
+                                    src={film.poster.trim()}
+                                    alt={film.title}
+                                    className="w-10 h-14 rounded-lg object-cover bg-slate-800 shrink-0"
+                                  />
+                                ) : (
+                                  <div className="w-10 h-14 rounded-lg bg-slate-800 flex items-center justify-center text-slate-500 shrink-0">
+                                    <Film className="w-4 h-4" />
+                                  </div>
+                                )}
                                 <div>
                                   <div className="text-xs font-bold text-white group-hover:text-cyan-400 transition-colors">
                                     {film.title} <span className="text-slate-400 font-normal">({film.year})</span>
@@ -1224,11 +1252,18 @@ export const WriteArticlePage: React.FC = () => {
                     {/* Card Preview Box */}
                     <div className="rounded-2xl overflow-hidden border border-slate-700/80 bg-[#171A1F] shadow-2xl">
                       <div className="relative h-36 bg-slate-800 overflow-hidden">
-                        <img
-                          src={ogImage || coverImage}
-                          alt="OG Card Preview"
-                          className="w-full h-full object-cover"
-                        />
+                        {(ogImage?.trim() || coverImage?.trim()) ? (
+                          <img
+                            src={ogImage?.trim() || coverImage?.trim() || DEFAULT_COVER}
+                            alt="OG Card Preview"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 gap-1 bg-slate-900">
+                            <Sparkles className="w-5 h-5 text-slate-600" />
+                            <span className="text-[10px]">Gambar pratinjau belum diatur</span>
+                          </div>
+                        )}
                         <span className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-md text-[10px] text-white px-2 py-0.5 rounded-md font-mono">
                           sotoyfilm.com
                         </span>
@@ -1501,9 +1536,9 @@ export const WriteArticlePage: React.FC = () => {
 
             {/* Rendered Live Article */}
             <div className="space-y-5">
-              {coverImage && (
+              {coverImage?.trim() ? (
                 <div className="relative rounded-2xl overflow-hidden aspect-video border border-slate-800 shadow-xl">
-                  <img src={coverImage} alt={title || 'Cover'} className="w-full h-full object-cover" />
+                  <img src={coverImage.trim()} alt={title || 'Cover'} className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                   <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2">
                     <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-[#FF2E7E] text-white">
@@ -1514,14 +1549,14 @@ export const WriteArticlePage: React.FC = () => {
                     </span>
                   </div>
                 </div>
-              )}
+              ) : null}
 
               <div>
                 <h2 className="text-xl sm:text-2xl font-black text-white leading-snug">
                   {title || 'Judul Artikel Anda...'}
                 </h2>
                 <div className="flex items-center gap-3 mt-3 text-xs text-slate-400">
-                  <img src={currentUser.avatar} alt={currentUser.name} className="w-8 h-8 rounded-full object-cover ring-2 ring-[#FF2E7E]" />
+                  <img src={currentUser.avatar?.trim() || DEFAULT_AVATAR} alt={currentUser.name} className="w-8 h-8 rounded-full object-cover ring-2 ring-[#FF2E7E]" />
                   <div>
                     <div className="font-bold text-white">{currentUser.name}</div>
                     <div className="text-[11px] text-slate-500">
@@ -1540,7 +1575,13 @@ export const WriteArticlePage: React.FC = () => {
               {/* Tagged Film Card */}
               {selectedFilm && (
                 <div className="p-3 bg-slate-900/90 rounded-2xl border border-slate-800 flex items-center gap-3.5">
-                  <img src={selectedFilm.poster} alt={selectedFilm.title} className="w-12 h-16 rounded-xl object-cover shrink-0" />
+                  {selectedFilm.poster?.trim() ? (
+                    <img src={selectedFilm.poster.trim()} alt={selectedFilm.title} className="w-12 h-16 rounded-xl object-cover shrink-0" />
+                  ) : (
+                    <div className="w-12 h-16 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 text-slate-500">
+                      <Film className="w-5 h-5" />
+                    </div>
+                  )}
                   <div>
                     <div className="text-xs font-black text-white">{selectedFilm.title} ({selectedFilm.year})</div>
                     <div className="text-[11px] text-slate-400 mt-0.5">{selectedFilm.director} • {selectedFilm.genres.slice(0, 2).join(', ')}</div>

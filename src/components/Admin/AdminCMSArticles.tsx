@@ -285,13 +285,12 @@ export const AdminCMSArticles: React.FC = () => {
       role: TARGET_MIGRATION_AUTHOR.role,
     };
 
-    const success = await updateArticle(id, {
+    const articleUpdates: Partial<Article> = {
       title: quickForm.title.trim(),
       slug: cleanSlug,
       category: quickForm.category,
       subCategory: quickForm.subCategory,
       status: quickForm.status,
-      scheduledAt: quickForm.status === 'scheduled' ? quickForm.scheduledAt : undefined,
       authorId: foundAuthor.id,
       author: {
         id: foundAuthor.id,
@@ -300,7 +299,12 @@ export const AdminCMSArticles: React.FC = () => {
         role: foundAuthor.role,
       },
       tags: parsedTags,
-    });
+    };
+    if (quickForm.status === 'scheduled' && quickForm.scheduledAt) {
+      articleUpdates.scheduledAt = quickForm.scheduledAt;
+    }
+
+    const success = await updateArticle(id, articleUpdates);
 
     if (success !== false) {
       setQuickEditingId(null);

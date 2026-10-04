@@ -37,6 +37,7 @@ import {
   Tooltip,
 } from 'recharts';
 import { useApp } from '../../context/AppContext';
+import { DEFAULT_AVATAR } from '../../data/mockData';
 import { UserRating, FilmItem } from '../../types';
 import { NotificationBell } from '../Common/NotificationBell';
 
@@ -192,7 +193,7 @@ export const CriticDashboard: React.FC = () => {
             <div className="flex items-start sm:items-center gap-4 sm:gap-5">
               <div className="relative">
                 <img
-                  src={currentUser.avatar}
+                  src={currentUser.avatar?.trim() || DEFAULT_AVATAR}
                   alt={currentUser.name}
                   className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover ring-2 ring-white/10 shadow-sm"
                 />

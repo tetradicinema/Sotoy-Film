@@ -28,6 +28,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
 import { RoleBadge } from '../Common/RoleBadge';
+import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { QuickReactionBar } from '../Common/QuickReactionBar';
 import { MentionText } from '../Common/MentionText';
@@ -278,7 +279,7 @@ export const BuzzDetailPage: React.FC = () => {
                   title={`Lihat profil ${buzz.author.name}`}
                 >
                   <img
-                    src={buzz.author.avatar}
+                    src={buzz.author.avatar?.trim() || DEFAULT_AVATAR}
                     alt={buzz.author.name}
                     className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl object-cover ring-2 ring-[#FF2E7E]/40 group-hover:ring-[#FF2E7E] transition-all shadow-lg shrink-0"
                   />
@@ -415,7 +416,7 @@ export const BuzzDetailPage: React.FC = () => {
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   <img
-                    src={'poster' in postFilm ? (postFilm as any).poster : 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=300&q=80'}
+                    src={('poster' in postFilm && (postFilm as any).poster?.trim()) ? (postFilm as any).poster.trim() : DEFAULT_POSTER}
                     alt={postFilm.title}
                     className="w-16 h-22 sm:w-20 sm:h-28 rounded-xl object-cover shrink-0 shadow-lg border border-white/10 group-hover:scale-105 transition-transform"
                   />
@@ -462,7 +463,7 @@ export const BuzzDetailPage: React.FC = () => {
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   <img
-                    src={'coverImage' in postArticle ? (postArticle as any).coverImage : 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=400&q=80'}
+                    src={('coverImage' in postArticle && (postArticle as any).coverImage?.trim()) ? (postArticle as any).coverImage.trim() : DEFAULT_COVER}
                     alt={postArticle.title}
                     className="w-20 sm:w-24 h-16 sm:h-20 rounded-xl object-cover shrink-0 shadow-lg border border-white/10 group-hover:scale-105 transition-transform"
                   />
@@ -510,8 +511,8 @@ export const BuzzDetailPage: React.FC = () => {
                   {/* Collage Preview */}
                   <div className="w-14 sm:w-16 h-14 sm:h-16 rounded-xl bg-slate-900 border border-white/10 overflow-hidden grid grid-cols-2 grid-rows-2 gap-0.5 shrink-0 shadow-lg relative group-hover:scale-105 transition-transform">
                     {buzz.sharedCollection.previewImages && buzz.sharedCollection.previewImages.length > 0 ? (
-                      buzz.sharedCollection.previewImages.slice(0, 4).map((imgUrl, idx) => (
-                        <img key={idx} src={imgUrl} alt="" className="w-full h-full object-cover" />
+                      buzz.sharedCollection.previewImages.filter((img): img is string => Boolean(img && img.trim())).slice(0, 4).map((imgUrl, idx) => (
+                        <img key={idx} src={imgUrl.trim()} alt="" className="w-full h-full object-cover" />
                       ))
                     ) : (
                       <div className="col-span-2 row-span-2 flex items-center justify-center bg-slate-950">
@@ -653,7 +654,7 @@ export const BuzzDetailPage: React.FC = () => {
                 <div className="flex items-center gap-3">
                   {isLoggedIn ? (
                     <img
-                      src={currentUser.avatar}
+                      src={currentUser.avatar?.trim() || DEFAULT_AVATAR}
                       alt={currentUser.name}
                       className="w-9 h-9 rounded-xl object-cover ring-2 ring-white/10 shrink-0"
                     />
@@ -872,7 +873,7 @@ export const BuzzDetailPage: React.FC = () => {
                                   title={`Lihat profil ${reply.author.name}`}
                                 >
                                   <img
-                                    src={reply.author.avatar}
+                                    src={reply.author.avatar?.trim() || DEFAULT_AVATAR}
                                     alt={reply.author.name}
                                     className={`${avatarSize} rounded-xl object-cover ring-2 ring-white/10 group-hover/avatar:ring-[#FF2E7E] transition-all shadow-md`}
                                   />
@@ -1058,7 +1059,7 @@ export const BuzzDetailPage: React.FC = () => {
                 >
                   <div className="flex items-center gap-2">
                     <img
-                      src={item.author.avatar}
+                      src={item.author.avatar?.trim() || DEFAULT_AVATAR}
                       alt={item.author.name}
                       className="w-6 h-6 rounded-full object-cover"
                     />

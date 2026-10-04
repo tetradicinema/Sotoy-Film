@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Star, Send, Sparkles, CheckCircle2, Lock, LogIn, Share2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { FilmItem } from '../../types';
+import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 
 interface RateFilmModalProps {
   film: FilmItem;
@@ -83,7 +84,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
         {/* Header with film backdrop */}
         <div className="relative h-28 w-full overflow-hidden bg-slate-900">
           <img
-            src={film.backdrop || film.poster}
+            src={film.backdrop?.trim() || film.poster?.trim() || DEFAULT_COVER}
             alt={film.title}
             className="w-full h-full object-cover opacity-30"
           />
@@ -99,7 +100,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
 
           <div className="absolute bottom-3 left-5 right-5 flex items-center gap-3">
             <img
-              src={film.poster}
+              src={film.poster?.trim() || DEFAULT_POSTER}
               alt={film.title}
               className="w-12 h-16 object-cover rounded-lg border-2 border-white/20 shadow-lg -mb-2"
             />
@@ -164,7 +165,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
             <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex items-center justify-between text-left">
               <div className="flex items-center gap-3">
                 <img
-                  src={film.poster}
+                  src={film.poster?.trim() || DEFAULT_POSTER}
                   alt={film.title}
                   className="w-10 h-14 object-cover rounded-lg border border-slate-700"
                 />
@@ -295,7 +296,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
             <div className="flex items-center justify-between text-[11px] text-slate-400 bg-slate-900/50 p-2.5 rounded-xl border border-slate-800">
               <div className="flex items-center gap-2">
                 <img
-                  src={currentUser.avatar}
+                  src={currentUser.avatar?.trim() || DEFAULT_AVATAR}
                   alt={currentUser.name}
                   className="w-5 h-5 rounded-full object-cover"
                 />

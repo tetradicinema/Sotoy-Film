@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { Camera, User as UserIcon, AtSign, FileText, Sparkles, ArrowRight, Loader2, Film, Check, Compass } from 'lucide-react';
 import { motion } from 'motion/react';
 import { ProfilePhotoCropModal } from '../Common/ProfilePhotoCropModal';
+import { DEFAULT_AVATAR } from '../../data/mockData';
 
 export const OnboardingPage: React.FC = () => {
   const { currentUser, finishOnboarding, uploadProfilePhoto, showToast } = useApp();
@@ -143,7 +144,7 @@ export const OnboardingPage: React.FC = () => {
                 <div className="relative group">
                   <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl sm:rounded-3xl overflow-hidden border-2 border-[#FF2E7E]/40 shadow-xl bg-slate-950">
                     <img 
-                      src={selectedAvatar} 
+                      src={selectedAvatar?.trim() || DEFAULT_AVATAR} 
                       alt="Profile Preview" 
                       className="w-full h-full object-cover transition-transform group-hover:scale-105"
                       referrerPolicy="no-referrer"

@@ -41,6 +41,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
 import { RoleBadge } from '../Common/RoleBadge';
+import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 import { BuzzPost, User, RecommendationSignal } from '../../types';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { QuickReactionBar } from '../Common/QuickReactionBar';
@@ -787,7 +788,7 @@ export const CommunityFeedPage: React.FC = () => {
           <div className="flex items-start gap-3">
             {isLoggedIn ? (
               <img
-                src={currentUser.avatar}
+                src={currentUser.avatar?.trim() || DEFAULT_AVATAR}
                 alt={currentUser.name}
                 className="w-10 h-10 rounded-xl object-cover ring-2 ring-[#FF2E7E]/50 shrink-0"
               />
@@ -811,7 +812,7 @@ export const CommunityFeedPage: React.FC = () => {
                 <div className="flex items-center justify-between p-2.5 bg-[#0E1013] border border-[#FF2E7E]/40 rounded-2xl">
                   <div className="flex items-center gap-3 min-w-0">
                     <img
-                      src={selectedFilm.poster}
+                      src={selectedFilm.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=120&q=80'}
                       alt={selectedFilm.title}
                       className="w-9 h-12 rounded-lg object-cover shrink-0"
                     />
@@ -843,7 +844,7 @@ export const CommunityFeedPage: React.FC = () => {
                 <div className="flex items-center justify-between p-2.5 bg-[#0E1013] border border-[#FF2E7E]/40 rounded-2xl">
                   <div className="flex items-center gap-3 min-w-0">
                     <img
-                      src={selectedArticle.coverImage}
+                      src={selectedArticle.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=200&q=80'}
                       alt={selectedArticle.title}
                       className="w-14 h-10 rounded-lg object-cover shrink-0"
                     />
@@ -1020,7 +1021,7 @@ export const CommunityFeedPage: React.FC = () => {
                                 }`}
                               >
                                 <img
-                                  src={f.poster}
+                                  src={f.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=120&q=80'}
                                   alt={f.title}
                                   className="w-9 h-12 rounded-lg object-cover shrink-0"
                                 />
@@ -1051,7 +1052,7 @@ export const CommunityFeedPage: React.FC = () => {
                                 }`}
                               >
                                 <img
-                                  src={a.coverImage}
+                                  src={a.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=200&q=80'}
                                   alt={a.title}
                                   className="w-12 h-9 rounded-lg object-cover shrink-0"
                                 />
@@ -1209,7 +1210,7 @@ export const CommunityFeedPage: React.FC = () => {
                     title={`Kunjungi profil ${post.author.name}`}
                   >
                     <img
-                      src={post.author.avatar}
+                      src={post.author.avatar?.trim() || DEFAULT_AVATAR}
                       alt={post.author.name}
                       className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover ring-1 ring-white/10 group-hover:ring-[#FF2E7E] transition-all shrink-0"
                     />
@@ -1365,7 +1366,7 @@ export const CommunityFeedPage: React.FC = () => {
                     <div className="flex items-center gap-3.5 min-w-0">
                       {/* Film Poster */}
                       <img
-                        src={'poster' in postFilm ? (postFilm as any).poster : 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=300&q=80'}
+                        src={('poster' in postFilm && (postFilm as any).poster?.trim()) ? (postFilm as any).poster.trim() : DEFAULT_POSTER}
                         alt={postFilm.title}
                         className="w-14 sm:w-16 h-20 sm:h-24 rounded-xl object-cover shrink-0 shadow-lg border border-white/10 group-hover:scale-105 transition-transform"
                       />
@@ -1423,7 +1424,7 @@ export const CommunityFeedPage: React.FC = () => {
                     <div className="flex items-center gap-3.5 min-w-0">
                       {/* Article Cover Thumbnail */}
                       <img
-                        src={'coverImage' in postArticle ? (postArticle as any).coverImage : 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=400&q=80'}
+                        src={('coverImage' in postArticle && (postArticle as any).coverImage?.trim()) ? (postArticle as any).coverImage.trim() : DEFAULT_COVER}
                         alt={postArticle.title}
                         className="w-20 sm:w-24 h-16 sm:h-20 rounded-xl object-cover shrink-0 shadow-lg border border-white/10 group-hover:scale-105 transition-transform"
                       />
@@ -1489,8 +1490,8 @@ export const CommunityFeedPage: React.FC = () => {
                       {/* Collage Preview */}
                       <div className="w-14 sm:w-16 h-14 sm:h-16 rounded-xl bg-slate-900 border border-white/10 overflow-hidden grid grid-cols-2 grid-rows-2 gap-0.5 shrink-0 shadow-lg relative group-hover:scale-105 transition-transform">
                         {post.sharedCollection.previewImages && post.sharedCollection.previewImages.length > 0 ? (
-                          post.sharedCollection.previewImages.slice(0, 4).map((imgUrl: string, idx: number) => (
-                            <img key={idx} src={imgUrl} alt="" className="w-full h-full object-cover" />
+                          post.sharedCollection.previewImages.filter((img: string) => Boolean(img && img.trim())).slice(0, 4).map((imgUrl: string, idx: number) => (
+                            <img key={idx} src={imgUrl.trim()} alt="" className="w-full h-full object-cover" />
                           ))
                         ) : (
                           <div className="col-span-2 row-span-2 flex items-center justify-center bg-slate-950">
@@ -1650,7 +1651,7 @@ export const CommunityFeedPage: React.FC = () => {
                   {allUsers.filter(u => u.id !== currentUser.id).slice(0, 3).map(u => (
                     <div key={u.id} className="flex items-center justify-between p-2 rounded-xl bg-slate-900 border border-slate-800">
                       <div className="flex items-center gap-2 min-w-0">
-                        <img src={u.avatar} alt={u.name} className="w-8 h-8 rounded-lg object-cover" />
+                        <img src={u.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'} alt={u.name} className="w-8 h-8 rounded-lg object-cover" />
                         <div className="text-left text-xs min-w-0">
                           <div className="font-bold text-white truncate">{u.name}</div>
                           <div className="text-[10px] text-slate-400 truncate">@{u.handle}</div>
@@ -1809,7 +1810,7 @@ export const CommunityFeedPage: React.FC = () => {
                       className="flex items-center gap-2 min-w-0 cursor-pointer group"
                     >
                       <img
-                        src={u.avatar}
+                        src={u.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}
                         alt={u.name}
                         className="w-8 h-8 rounded-full object-cover ring-1 ring-white/10 group-hover:ring-[#FF2E7E] transition-all shrink-0"
                       />

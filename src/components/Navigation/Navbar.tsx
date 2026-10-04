@@ -23,6 +23,7 @@ import { MainCategory, SubCategory } from '../../types';
 import { useTranslation } from '../../i18n';
 import { GlobalSearchBar } from './GlobalSearchBar';
 import { NotificationBell } from '../Common/NotificationBell';
+import { DEFAULT_AVATAR } from '../../data/mockData';
 
 export const Navbar: React.FC = () => {
   const { t } = useTranslation();
@@ -353,7 +354,7 @@ export const Navbar: React.FC = () => {
               >
                 {isLoggedIn ? (
                   <img
-                    src={currentUser.avatar}
+                    src={currentUser.avatar?.trim() || DEFAULT_AVATAR}
                     alt={currentUser.name}
                     className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover ring-1 ring-white/20"
                   />
@@ -374,7 +375,7 @@ export const Navbar: React.FC = () => {
                   {isLoggedIn ? (
                     <div className="flex items-center gap-3 pb-3 border-b border-white/[0.08]">
                       <img
-                        src={currentUser.avatar}
+                        src={currentUser.avatar?.trim() || DEFAULT_AVATAR}
                         alt={currentUser.name}
                         className="w-11 h-11 rounded-xl object-cover ring-1 ring-white/20 shrink-0"
                       />

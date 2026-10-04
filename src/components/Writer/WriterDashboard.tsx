@@ -28,6 +28,7 @@ import { Article, MainCategory } from '../../types';
 import { NotificationBell } from '../Common/NotificationBell';
 import { CMSArticleWorkspace } from '../Pages/CMSArticleWorkspace';
 import { CMSAnalyticsCard } from '../CMS/CMSAnalyticsCard';
+import { DEFAULT_AVATAR } from '../../data/mockData';
 
 export const WriterDashboard: React.FC = () => {
   const {
@@ -216,7 +217,7 @@ export const WriterDashboard: React.FC = () => {
             <div className="flex items-start sm:items-center gap-4 sm:gap-5">
               <div className="relative">
                 <img
-                  src={currentUser.avatar}
+                  src={currentUser.avatar?.trim() || DEFAULT_AVATAR}
                   alt={currentUser.name}
                   className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover ring-2 ring-white/10"
                 />

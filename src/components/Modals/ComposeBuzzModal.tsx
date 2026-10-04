@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Film, FileText, Send, Sparkles, Star, Tag, Search, Check, User as UserIcon, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { MentionInput } from '../Common/MentionInput';
+import { DEFAULT_AVATAR, DEFAULT_POSTER } from '../../data/mockData';
 import { isAllowedImageType, compressBuzzImage } from '../../utils/imageCompression';
 
 export const ComposeBuzzModal: React.FC = () => {
@@ -172,7 +173,7 @@ export const ComposeBuzzModal: React.FC = () => {
           <div className="flex items-start gap-3">
             {isLoggedIn ? (
               <img
-                src={currentUser.avatar}
+                src={currentUser.avatar?.trim() || DEFAULT_AVATAR}
                 alt={currentUser.name}
                 className="w-10 h-10 rounded-full object-cover ring-2 ring-[#FF2E7E]/30 shrink-0 mt-1"
               />
@@ -381,7 +382,7 @@ export const ComposeBuzzModal: React.FC = () => {
                               >
                                 <div className="flex items-center gap-2 min-w-0">
                                   <img
-                                    src={f.poster}
+                                    src={f.poster?.trim() || DEFAULT_POSTER}
                                     alt={f.title}
                                     className="w-6 h-8 rounded object-cover"
                                   />

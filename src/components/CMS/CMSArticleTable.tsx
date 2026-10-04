@@ -254,11 +254,13 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
       category: quickForm.category,
       subCategory: quickForm.subCategory,
       status: quickForm.status,
-      scheduledAt: quickForm.status === 'scheduled' ? quickForm.scheduledAt : undefined,
       tags: parsedTags,
       featured: quickForm.isFeatured,
       content: quickForm.content,
     };
+    if (quickForm.status === 'scheduled' && quickForm.scheduledAt) {
+      updates.scheduledAt = quickForm.scheduledAt;
+    }
 
     if (isAdminView) {
       updates.authorId = foundAuthor.id;
@@ -853,8 +855,8 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
                             )}
                           </div>
 
-                          {/* Action Links (Visible on Hover) */}
-                          <div className="flex items-center gap-2 pt-1 text-[10px] opacity-0 group-hover:opacity-100 transition-all transform translate-y-1 group-hover:translate-y-0 text-slate-500">
+                          {/* Action Links (Visible on Hover on desktop, always visible on mobile/touch) */}
+                          <div className="flex items-center gap-2 pt-1 text-[10px] opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all transform translate-y-0 md:translate-y-1 md:group-hover:translate-y-0 text-slate-500 flex-wrap">
                             <button
                               onClick={() => startQuickEdit(article)}
                               className="text-pink-400 hover:text-pink-300 font-bold flex items-center gap-0.5 cursor-pointer"

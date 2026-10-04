@@ -22,7 +22,7 @@ const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo
       {/* Editorial Card Cover Image */}
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-900">
         <img
-          src={article.coverImage}
+          src={article.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80'}
           alt={article.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
         />
@@ -75,7 +75,7 @@ const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo
               title={`Kunjungi profil ${author.displayName || author.name}`}
             >
               <img
-                src={author.avatarURL || author.avatar}
+                src={author.avatarURL || author.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}
                 alt={author.displayName || author.name}
                 className="w-6 h-6 rounded-full object-cover ring-1 ring-white/10 group-hover/author:ring-[#FF2E7E] transition-all"
               />

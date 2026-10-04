@@ -1122,9 +1122,9 @@ export const AdminCatalogManager: React.FC = () => {
                           className="bg-slate-900/95 hover:bg-slate-800/90 border border-slate-750 hover:border-cyan-500/60 rounded-xl p-2.5 flex items-center justify-between gap-3 cursor-pointer transition-all group"
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            {posterUrl ? (
+                            {posterUrl?.trim() ? (
                               <img
-                                src={posterUrl}
+                                src={posterUrl.trim()}
                                 alt={itemTitle}
                                 className="w-9 h-13 rounded-lg object-cover ring-1 ring-slate-700 group-hover:ring-cyan-400 shrink-0"
                               />

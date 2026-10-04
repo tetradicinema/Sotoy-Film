@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
+import { DEFAULT_POSTER } from '../../data/mockData';
 
 export const FilmRecommendationsPage: React.FC = () => {
   const { films, navigateTo } = useApp();
@@ -127,7 +128,7 @@ export const FilmRecommendationsPage: React.FC = () => {
               className="bg-[#171A1F] border border-slate-800 hover:border-[#FF2E7E]/60 rounded-3xl p-5 flex flex-col sm:flex-row gap-5 group transition-all duration-300 shadow-xl"
             >
               <img
-                src={film.poster}
+                src={film.poster?.trim() || DEFAULT_POSTER}
                 alt={film.title}
                 className="sm:w-36 h-52 object-cover rounded-2xl shrink-0 border border-white/10 group-hover:scale-105 transition-transform"
               />

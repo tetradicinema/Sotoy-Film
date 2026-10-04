@@ -34,7 +34,7 @@ const HomeCategoryArticleItem: React.FC<HomeCategoryArticleItemProps> = ({ artic
       {/* Article Thumbnail */}
       <div className="sm:w-56 h-44 sm:h-auto rounded-2xl overflow-hidden shrink-0 relative bg-slate-900">
         <img
-          src={article.coverImage}
+          src={article.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80'}
           alt={article.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
@@ -85,7 +85,7 @@ const HomeCategoryArticleItem: React.FC<HomeCategoryArticleItemProps> = ({ artic
               title={`Kunjungi profil ${author.displayName || author.name}`}
             >
               <img
-                src={author.avatarURL || author.avatar}
+                src={author.avatarURL || author.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}
                 alt={author.displayName || author.name}
                 className="w-6 h-6 rounded-full object-cover ring-1 ring-white/10 group-hover/author:ring-[#FF2E7E] transition-all"
               />

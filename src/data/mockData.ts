@@ -1,5 +1,9 @@
 import { Article, FilmItem, BuzzPost, UserRating, AdBanner, User, UserRole } from '../types';
 
+export const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80';
+export const DEFAULT_POSTER = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80';
+export const DEFAULT_COVER = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80';
+
 export const DEFAULT_FALLBACK_AUTHOR = {
   id: 'system-redaksi',
   name: 'Tim Redaksi',

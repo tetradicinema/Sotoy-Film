@@ -34,7 +34,7 @@ import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
 import { SEOHead } from '../SEO/SEOHead';
 import { createMovieSchemaFromFilm, generateBreadcrumbSchema } from '../../utils/schemaHelpers';
 import { slugify } from '../../utils/slugify';
-import { INITIAL_FILMS } from '../../data/mockData';
+import { INITIAL_FILMS, DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
 import { RoleBadge } from '../Common/RoleBadge';
@@ -72,7 +72,7 @@ const RelatedArticleAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: a
       title={`Kunjungi profil ${author.displayName || author.name}`}
     >
       <img
-        src={author.avatarURL || author.avatar}
+        src={author.avatarURL || author.avatar || DEFAULT_AVATAR}
         alt={author.displayName || author.name}
         className="w-5 h-5 rounded-full object-cover border border-slate-700 group-hover/author:border-[#FF2E7E] transition-colors"
       />
@@ -439,7 +439,7 @@ export const FilmDetailPage: React.FC = () => {
           {/* Backdrop Banner with Vignette */}
           <div className="h-52 sm:h-80 md:h-96 w-full relative">
             <img
-              src={film.backdrop || film.poster}
+              src={film.backdrop || film.poster || DEFAULT_COVER}
               alt={film.title}
               className="w-full h-full object-cover object-center"
             />
@@ -467,7 +467,7 @@ export const FilmDetailPage: React.FC = () => {
             {/* High-res Vertical Poster with Badge */}
             <div className="relative shrink-0 group mx-auto md:mx-0">
               <img
-                src={film.poster}
+                src={film.poster || DEFAULT_POSTER}
                 alt={film.title}
                 className="w-32 sm:w-52 md:w-60 rounded-2xl shadow-2xl border-2 border-white/20 group-hover:scale-105 transition-transform duration-300"
               />
@@ -730,7 +730,7 @@ export const FilmDetailPage: React.FC = () => {
 
               {/* Video Container 16:9 */}
               <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black border border-slate-800 shadow-2xl">
-                {isPlayingTrailer ? (
+                {isPlayingTrailer && trailerEmbed?.trim() ? (
                   <iframe
                     src={trailerEmbed}
                     title={`Trailer ${film.title}`}
@@ -744,7 +744,7 @@ export const FilmDetailPage: React.FC = () => {
                     className="w-full h-full relative cursor-pointer group"
                   >
                     <img
-                      src={film.backdrop || film.poster}
+                      src={film.backdrop || film.poster || DEFAULT_COVER}
                       alt={film.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-70"
                     />
@@ -925,7 +925,7 @@ export const FilmDetailPage: React.FC = () => {
                     >
                       <div className="h-40 w-full overflow-hidden relative">
                         <img
-                          src={art.coverImage}
+                          src={art.coverImage || DEFAULT_COVER}
                           alt={art.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
@@ -1073,7 +1073,7 @@ export const FilmDetailPage: React.FC = () => {
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
                           <img
-                            src={rev.userAvatar}
+                            src={rev.userAvatar || DEFAULT_AVATAR}
                             alt={rev.userName}
                             className="w-10 h-10 rounded-xl object-cover"
                           />
@@ -1296,7 +1296,7 @@ export const FilmDetailPage: React.FC = () => {
         </div>
 
         {/* Modal enlarged Still Viewer */}
-        {selectedStill && (
+        {selectedStill?.trim() && (
           <div
             onClick={() => setSelectedStill(null)}
             className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4"
@@ -1309,7 +1309,7 @@ export const FilmDetailPage: React.FC = () => {
                 <X className="w-6 h-6" />
               </button>
               <img
-                src={selectedStill}
+                src={selectedStill.trim()}
                 alt="Enlarged Still"
                 className="w-full rounded-2xl shadow-2xl border border-white/20 max-h-[80vh] object-contain mx-auto"
               />

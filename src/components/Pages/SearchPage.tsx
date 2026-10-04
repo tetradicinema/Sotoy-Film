@@ -28,6 +28,7 @@ import { useApp } from '../../context/AppContext';
 import { FilmItem, Article, BuzzPost, User } from '../../types';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
 import { searchTmdbFilms, TmdbSearchResultItem } from '../../utils/tmdbHelper';
+import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 
 type SearchTab = 'all' | 'film' | 'article' | 'buzz' | 'user';
 
@@ -559,7 +560,7 @@ export const SearchPage: React.FC = () => {
                           className="group bg-[#171A1F] hover:bg-slate-850 border border-slate-800 hover:border-[#FF2E7E]/50 rounded-2xl p-3 sm:p-4 flex gap-3.5 cursor-pointer transition-all shadow-md hover:shadow-xl"
                         >
                           <img
-                            src={film.poster}
+                            src={film.poster?.trim() || DEFAULT_POSTER}
                             alt={film.title}
                             className="w-20 h-28 sm:w-24 sm:h-32 rounded-xl object-cover ring-1 ring-white/10 shrink-0 group-hover:scale-105 transition-transform"
                           />
@@ -636,7 +637,7 @@ export const SearchPage: React.FC = () => {
                             className="group bg-[#171A1F] hover:bg-slate-850 border border-cyan-900/40 hover:border-cyan-500/60 rounded-2xl p-3 sm:p-4 flex gap-3.5 cursor-pointer transition-all shadow-md hover:shadow-xl relative overflow-hidden"
                           >
                             <img
-                              src={poster}
+                              src={poster?.trim() || DEFAULT_POSTER}
                               alt={title}
                               className="w-20 h-28 sm:w-24 sm:h-32 rounded-xl object-cover ring-1 ring-cyan-500/30 shrink-0 group-hover:scale-105 transition-transform"
                             />
@@ -706,7 +707,7 @@ export const SearchPage: React.FC = () => {
                           className="group bg-[#171A1F] hover:bg-slate-850 border border-slate-800 hover:border-[#FF2E7E]/50 rounded-2xl p-4 flex gap-4 cursor-pointer transition-all shadow-md hover:shadow-xl"
                         >
                           <img
-                            src={art.coverImage}
+                            src={art.coverImage?.trim() || DEFAULT_COVER}
                             alt={art.title}
                             className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl object-cover ring-1 ring-white/10 shrink-0 group-hover:scale-105 transition-transform"
                           />
@@ -724,7 +725,7 @@ export const SearchPage: React.FC = () => {
                             </div>
                             <div className="flex items-center gap-2 pt-2 border-t border-slate-800/60 mt-2">
                               <img
-                                src={art.author.avatar}
+                                src={art.author.avatar?.trim() || DEFAULT_AVATAR}
                                 alt={art.author.name}
                                 className="w-5 h-5 rounded-full object-cover"
                               />
@@ -764,7 +765,7 @@ export const SearchPage: React.FC = () => {
                         >
                           <div className="flex items-start gap-3">
                             <img
-                              src={buzz.author.avatar}
+                              src={buzz.author.avatar?.trim() || DEFAULT_AVATAR}
                               alt={buzz.author.name}
                               className="w-10 h-10 rounded-full object-cover ring-1 ring-white/10 shrink-0"
                             />
@@ -836,7 +837,7 @@ export const SearchPage: React.FC = () => {
                               className="flex items-center gap-3 min-w-0 cursor-pointer group flex-1"
                             >
                               <img
-                                src={user.avatar}
+                                src={user.avatar?.trim() || DEFAULT_AVATAR}
                                 alt={user.name}
                                 className="w-12 h-12 rounded-full object-cover ring-2 ring-white/10 group-hover:ring-[#FF2E7E] transition-all shrink-0"
                               />

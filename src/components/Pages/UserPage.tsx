@@ -57,7 +57,7 @@ import {
   CheckCheck,
 } from 'lucide-react';
 import { useApp, GUEST_USER } from '../../context/AppContext';
-import { INITIAL_FILMS, INITIAL_ARTICLES } from '../../data/mockData';
+import { INITIAL_FILMS, INITIAL_ARTICLES, DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
 import { RoleBadge } from '../Common/RoleBadge';
 import { QuickReactionBar } from '../Common/QuickReactionBar';
@@ -803,7 +803,7 @@ export const UserPage: React.FC = () => {
               <div className="flex flex-col sm:flex-row sm:items-end gap-3.5 sm:gap-4">
                 <div className="relative group self-start">
                   <img
-                    src={targetUser.avatar}
+                    src={targetUser.avatar?.trim() || DEFAULT_AVATAR}
                     alt={targetUser.name}
                     className="w-20 h-20 sm:w-28 sm:h-28 rounded-3xl object-cover ring-4 ring-[#171A1F] border-2 border-white/20 shadow-2xl bg-slate-900"
                   />
@@ -1146,7 +1146,7 @@ export const UserPage: React.FC = () => {
               >
                 <div className="flex items-center gap-3">
                   <img
-                    src={currentUser.avatar}
+                    src={currentUser.avatar?.trim() || DEFAULT_AVATAR}
                     alt={currentUser.name}
                     className="w-9 h-9 rounded-xl object-cover ring-1 ring-slate-700"
                   />
@@ -1239,7 +1239,7 @@ export const UserPage: React.FC = () => {
                           className="flex items-center gap-2.5 cursor-pointer group"
                         >
                           <img
-                            src={authorAvatar}
+                            src={authorAvatar?.trim() || DEFAULT_AVATAR}
                             alt={authorName}
                             className="w-8 h-8 rounded-xl object-cover ring-1 ring-slate-700 group-hover:ring-[#FF2E7E] transition-all"
                           />
@@ -1411,7 +1411,7 @@ export const UserPage: React.FC = () => {
                       <div className="space-y-2">
                         <div className="flex items-center gap-2.5">
                           <img
-                            src={replyAuthorAvatar}
+                            src={replyAuthorAvatar?.trim() || DEFAULT_AVATAR}
                             alt={replyAuthorName}
                             className="w-7 h-7 rounded-lg object-cover ring-1 ring-slate-700"
                           />
@@ -1509,7 +1509,7 @@ export const UserPage: React.FC = () => {
                           className="flex items-center gap-2.5 cursor-pointer group"
                         >
                           <img
-                            src={authorAvatar}
+                            src={authorAvatar?.trim() || DEFAULT_AVATAR}
                             alt={authorName}
                             className="w-8 h-8 rounded-xl object-cover ring-1 ring-slate-700 group-hover:ring-[#FF2E7E] transition-all"
                           />
@@ -1792,11 +1792,17 @@ export const UserPage: React.FC = () => {
                       >
                         {/* Poster */}
                         <div className="relative aspect-[2/3] w-full overflow-hidden bg-[#0E1013]">
-                          <img
-                            src={film.poster}
-                            alt={film.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
+                          {film.poster?.trim() ? (
+                            <img
+                              src={film.poster.trim()}
+                              alt={film.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-700">
+                              <Film className="w-10 h-10" />
+                            </div>
+                          )}
                           <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent opacity-80" />
 
                           {/* Skor Sotoy Badge */}
@@ -1910,11 +1916,17 @@ export const UserPage: React.FC = () => {
                       >
                         {/* Cover Image */}
                         <div className="relative aspect-[16/9] w-full overflow-hidden bg-[#0E1013]">
-                          <img
-                            src={article.coverImage}
-                            alt={article.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
+                          {article.coverImage?.trim() ? (
+                            <img
+                              src={article.coverImage.trim()}
+                              alt={article.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-700">
+                              <FileText className="w-10 h-10" />
+                            </div>
+                          )}
                           <div className="absolute top-2.5 left-2.5 bg-black/80 backdrop-blur-md px-2 py-0.5 rounded-lg text-[10px] font-bold text-[#FF2E7E] border border-[#FF2E7E]/30 uppercase">
                             {article.category}
                           </div>
@@ -2094,10 +2106,10 @@ export const UserPage: React.FC = () => {
                     col.items.slice(0, 4).forEach((item) => {
                       if (item.itemType === 'film') {
                         const f = films.find(x => x.id === item.itemId) || INITIAL_FILMS.find(x => x.id === item.itemId);
-                        if (f?.poster) imageUrls.push(f.poster);
+                        if (f?.poster?.trim()) imageUrls.push(f.poster.trim());
                       } else {
                         const a = articles.find(x => x.id === item.itemId) || INITIAL_ARTICLES.find(x => x.id === item.itemId);
-                        if (a?.coverImage) imageUrls.push(a.coverImage);
+                        if (a?.coverImage?.trim()) imageUrls.push(a.coverImage.trim());
                       }
                     });
 
@@ -2278,13 +2290,13 @@ export const UserPage: React.FC = () => {
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
-                          {targetFilm?.poster && (
+                          {targetFilm?.poster?.trim() ? (
                             <img
-                              src={targetFilm.poster}
+                              src={targetFilm.poster.trim()}
                               alt={targetFilm.title}
                               className="w-10 h-14 object-cover rounded-lg border border-slate-700"
                             />
-                          )}
+                          ) : null}
                           <div>
                             <h4
                               onClick={() => targetFilm && navigateTo('film-detail', { filmId: targetFilm.id })}
@@ -2426,11 +2438,17 @@ export const UserPage: React.FC = () => {
                     className="group bg-slate-900/80 hover:bg-slate-900 border border-slate-800/90 hover:border-pink-500/50 rounded-2xl overflow-hidden cursor-pointer transition-all flex flex-col shadow-lg"
                   >
                     <div className="relative aspect-video overflow-hidden bg-slate-950">
-                      <img
-                        src={art.coverImage}
-                        alt={art.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
+                      {art.coverImage?.trim() ? (
+                        <img
+                          src={art.coverImage.trim()}
+                          alt={art.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-700">
+                          <FileText className="w-12 h-12" />
+                        </div>
+                      )}
                       <div className="absolute top-2.5 left-2.5 bg-black/70 backdrop-blur-sm text-[10px] uppercase font-black text-[#FF2E7E] px-2.5 py-0.5 rounded-md border border-[#FF2E7E]/30">
                         {art.category}
                       </div>
@@ -2574,7 +2592,7 @@ export const UserPage: React.FC = () => {
                       >
                         <div className="flex items-center gap-3">
                           <img
-                            src={u.avatar}
+                            src={u.avatar?.trim() || DEFAULT_AVATAR}
                             alt={u.name}
                             className="w-10 h-10 rounded-xl object-cover ring-2 ring-slate-800"
                           />

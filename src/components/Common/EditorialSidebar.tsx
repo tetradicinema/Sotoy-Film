@@ -22,6 +22,7 @@ import { QuickReactionBar } from './QuickReactionBar';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
 import { getCombinedLeaderboard, LeaderboardPeriod } from '../../utils/leaderboard';
 import { LeaderboardCard, LeaderboardPeriodTabs } from './LeaderboardCard';
+import { DEFAULT_AVATAR, DEFAULT_COVER } from '../../data/mockData';
 
 interface EditorialSidebarProps {
   currentArticleId?: string;
@@ -110,7 +111,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
             {isLoggedIn ? (
               <>
                 <img
-                  src={currentUser.avatar}
+                  src={currentUser.avatar?.trim() || DEFAULT_AVATAR}
                   alt={currentUser.name}
                   className="w-6 h-6 rounded-full object-cover ring-1 ring-white/10"
                 />
@@ -171,7 +172,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                   className="flex items-center gap-2 cursor-pointer group"
                 >
                   <img
-                    src={post.author.avatar}
+                    src={post.author.avatar?.trim() || DEFAULT_AVATAR}
                     alt={post.author.name}
                     className="w-6 h-6 rounded-full object-cover ring-1 ring-white/10 group-hover:ring-[#FF2E7E] transition-all"
                   />
@@ -329,7 +330,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                 {String(i + 1).padStart(2, '0')}
               </span>
               <img
-                src={rec.coverImage}
+                src={rec.coverImage?.trim() || DEFAULT_COVER}
                 alt={rec.title}
                 className="w-12 h-12 object-cover rounded-xl shrink-0 border border-white/10"
               />

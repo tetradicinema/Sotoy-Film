@@ -223,8 +223,8 @@ export const AdminStorageFiles: React.FC = () => {
                     {filteredUserFiles.map(file => (
                       <div key={file.id} className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm flex flex-col group">
                         <div className="aspect-video bg-slate-950 relative flex items-center justify-center overflow-hidden">
-                          {file.type.startsWith('image/') ? (
-                            <img src={file.url} alt={file.name} className="w-full h-full object-cover" />
+                          {file.type.startsWith('image/') && file.url?.trim() ? (
+                            <img src={file.url.trim()} alt={file.name} className="w-full h-full object-cover" />
                           ) : (
                             <FileText className="w-6 h-6 text-cyan-400" />
                           )}
@@ -290,7 +290,9 @@ export const AdminStorageFiles: React.FC = () => {
               ✕
             </button>
             <div className="p-2 flex items-center justify-center bg-slate-950">
-              <img src={activeLightboxFile.url} alt={activeLightboxFile.name} className="max-w-full max-h-[65vh] object-contain" />
+              {activeLightboxFile.url?.trim() ? (
+                <img src={activeLightboxFile.url.trim()} alt={activeLightboxFile.name} className="max-w-full max-h-[65vh] object-contain" />
+              ) : null}
             </div>
             <div className="p-3 bg-slate-900 border-t border-slate-800 text-xs text-white">
               <p className="font-bold">{activeLightboxFile.name}</p>

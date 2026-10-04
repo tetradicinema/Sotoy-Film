@@ -216,9 +216,9 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({
                     onClick={() => navigateTo('user-profile', { userId: entry.user.id })}
                     className="shrink-0 cursor-pointer"
                   >
-                    {entry.user.avatar ? (
+                    {entry.user.avatar?.trim() ? (
                       <img
-                        src={entry.user.avatar}
+                        src={entry.user.avatar.trim()}
                         alt={entry.user.name}
                         className="w-8 h-8 rounded-full object-cover border border-slate-700/80 group-hover:border-[#FF2E7E] transition-colors"
                       />

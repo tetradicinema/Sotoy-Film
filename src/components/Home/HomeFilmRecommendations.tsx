@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { FilmItem } from '../../types';
+import { DEFAULT_POSTER } from '../../data/mockData';
 import { RateFilmModal } from '../Modals/RateFilmModal';
 import { AddToCollectionModal } from '../Modals/AddToCollectionModal';
 
@@ -118,7 +119,7 @@ export const HomeFilmRecommendations: React.FC = () => {
                   className="relative aspect-[2/3] w-full overflow-hidden cursor-pointer bg-slate-950"
                 >
                   <img
-                    src={film.poster}
+                    src={film.poster?.trim() || DEFAULT_POSTER}
                     alt={film.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />

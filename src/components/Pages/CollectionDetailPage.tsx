@@ -279,7 +279,7 @@ export const CollectionDetailPage: React.FC = () => {
                       {/* Image container */}
                       <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-950">
                         <img
-                          src={film.poster}
+                          src={film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80'}
                           alt={film.title}
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                           loading="lazy"
@@ -342,7 +342,7 @@ export const CollectionDetailPage: React.FC = () => {
                     >
                       <div className="relative h-48 w-full overflow-hidden">
                         <img
-                          src={article.coverImage}
+                          src={article.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80'}
                           alt={article.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />

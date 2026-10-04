@@ -25,6 +25,7 @@ import { getRoleBadgeStyle } from '../../utils/roleStyles';
 import { RoleBadge } from '../Common/RoleBadge';
 import { FilmItem, Article, BuzzPost, User } from '../../types';
 import { searchTmdbFilms, TmdbSearchResultItem } from '../../utils/tmdbHelper';
+import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 
 interface GlobalSearchBarProps {
   isMobile?: boolean;
@@ -112,7 +113,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
   className = '',
   placeholder = 'Cari film, artikel, buzz, atau kritikus...',
 }) => {
-  const { films, articles, buzzList, allUsers, navigateTo, searchQuery, setSearchQuery, importAndNavigateToTmdbFilm } = useApp();
+  const { films, publishedArticles, buzzList, allUsers, navigateTo, searchQuery, setSearchQuery, importAndNavigateToTmdbFilm } = useApp();
 
   const [isOpen, setIsOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<SearchCategory>('all');
@@ -242,7 +243,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
       });
 
     // Filter matching articles from in-memory catalog
-    articles
+    publishedArticles
       .filter(a =>
         a.title?.toLowerCase().includes(q) ||
         a.category?.toLowerCase().includes(q) ||
@@ -261,7 +262,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
 
     setFirestoreSuggestions(suggestions.slice(0, 6));
     setIsSearchingFirestore(false);
-  }, [searchQuery, films, articles]);
+  }, [searchQuery, films, publishedArticles]);
 
   // Real-time Search to TMDB API for global film dataset
   useEffect(() => {
@@ -352,7 +353,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
       });
 
     // 2. Filter Articles
-    const articleResults = articles
+    const articleResults = publishedArticles
       .filter(art => {
         const matchTitle = art.title.toLowerCase().includes(q);
         const matchExcerpt = art.excerpt.toLowerCase().includes(q);
@@ -417,7 +418,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
       matchingBuzz: buzzResults,
       matchingUsers: userResults,
     };
-  }, [searchQuery, films, articles, buzzList, allUsers]);
+  }, [searchQuery, films, publishedArticles, buzzList, allUsers]);
 
   const totalResultsCount =
     matchingFilms.length + filteredTmdbResults.length + matchingArticles.length + matchingBuzz.length + matchingUsers.length;
@@ -712,14 +713,6 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                   )}
                 </button>
               </div>
-
-              {/* Status Indicator */}
-              <div className="text-[11px] text-slate-400 shrink-0 hidden sm:flex items-center gap-1.5">
-                <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-mono bg-emerald-950/40 border border-emerald-800/40 px-1.5 py-0.5 rounded">
-                  <Database className="w-2.5 h-2.5" />
-                  <span>Firestore DB</span>
-                </span>
-              </div>
             </div>
 
             {/* REAL-TIME AUTOCOMPLETE DROPDOWN SUGGESTIONS (Films & Articles as user types) */}
@@ -728,11 +721,8 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="text-slate-400 font-bold flex items-center gap-1">
                     <Sparkles className="w-3 h-3 text-[#FF2E7E]" />
-                    <span>Saran Cepat Autocomplete (Firestore)</span>
+                    <span>Saran Cepat Autocomplete</span>
                   </span>
-                  {isSearchingFirestore && (
-                    <span className="text-[10px] text-slate-500 animate-pulse">Menghubungi DB...</span>
-                  )}
                 </div>
 
                 <div className="flex flex-wrap gap-1.5">
@@ -968,7 +958,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                             {/* Film Thumbnail Poster */}
                             <div className="w-10 h-14 rounded-lg overflow-hidden bg-slate-800 shrink-0 relative border border-white/10">
                               <img
-                                src={film.poster}
+                                src={film.poster?.trim() || DEFAULT_POSTER}
                                 alt={film.title}
                                 className="w-full h-full object-cover"
                                 loading="lazy"
@@ -1050,7 +1040,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                           >
                             <div className="w-10 h-14 rounded-lg overflow-hidden bg-slate-800 shrink-0 relative border border-cyan-500/30">
                               <img
-                                src={poster}
+                                src={poster?.trim() || DEFAULT_POSTER}
                                 alt={title}
                                 className="w-full h-full object-cover"
                                 loading="lazy"
@@ -1126,7 +1116,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                             {/* Article Image Thumbnail */}
                             <div className="w-14 h-11 rounded-lg overflow-hidden bg-slate-800 shrink-0 relative border border-white/10">
                               <img
-                                src={art.coverImage}
+                                src={art.coverImage?.trim() || DEFAULT_COVER}
                                 alt={art.title}
                                 className="w-full h-full object-cover"
                                 loading="lazy"
@@ -1196,7 +1186,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                           >
                             {/* Author Avatar */}
                             <img
-                              src={buzz.author.avatar}
+                              src={buzz.author.avatar?.trim() || DEFAULT_AVATAR}
                               alt={buzz.author.name}
                               className="w-8 h-8 rounded-full object-cover ring-1 ring-[#FF2E7E]/40 shrink-0 mt-0.5"
                             />
@@ -1275,7 +1265,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                           >
                             {/* User Avatar */}
                             <img
-                              src={user.avatar}
+                              src={user.avatar?.trim() || DEFAULT_AVATAR}
                               alt={user.name}
                               className="w-10 h-10 rounded-full object-cover ring-2 ring-purple-500/40 shrink-0"
                             />

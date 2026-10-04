@@ -2,6 +2,7 @@ import React from 'react';
 import { Home, Film, MessageSquare, LogIn, Plus } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useApp } from '../../context/AppContext';
+import { DEFAULT_AVATAR } from '../../data/mockData';
 
 export const MobileBottomNav: React.FC = () => {
   const {
@@ -161,7 +162,7 @@ export const MobileBottomNav: React.FC = () => {
           >
             <div className="relative">
               <img
-                src={currentUser.avatar}
+                src={currentUser.avatar?.trim() || DEFAULT_AVATAR}
                 alt={currentUser.name}
                 className={`w-5 h-5 md:w-6 md:h-6 rounded-full object-cover transition-all ${
                   isProfileActive
