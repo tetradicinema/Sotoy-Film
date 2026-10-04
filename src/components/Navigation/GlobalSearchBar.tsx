@@ -1000,16 +1000,16 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                   </div>
                 )}
 
-                {/* TMDB GLOBAL FILM RESULTS (Real-time TMDB API) */}
+                {/* FILM & SERIES TERKAIT (Real-time Global Results) */}
                 {(activeCategory === 'all' || activeCategory === 'film') && filteredTmdbResults.length > 0 && (
                   <div className="space-y-2 pt-1 border-t border-slate-800/60">
                     <div className="flex items-center justify-between pb-1 border-b border-slate-800/80">
                       <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-cyan-400">
                         <Globe className="w-3.5 h-3.5 text-cyan-400" />
-                        <span>Katalog Global TMDB ({filteredTmdbResults.length})</span>
+                        <span>Film & Series Terkait ({filteredTmdbResults.length})</span>
                       </div>
                       {isSearchingTmdb && (
-                        <span className="text-[10px] text-slate-400 animate-pulse">Memuat TMDB...</span>
+                        <span className="text-[10px] text-slate-400 animate-pulse">Mencari...</span>
                       )}
                     </div>
 
@@ -1053,7 +1053,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                                   <HighlightText text={title} query={searchQuery} />
                                 </h5>
                                 <span className="text-[8px] uppercase font-black px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 shrink-0">
-                                  TMDB GLOBAL
+                                  Film Terkait
                                 </span>
                               </div>
 
@@ -1065,7 +1065,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                                 <div className="flex items-center gap-1 mt-1 text-[10px] text-amber-400 font-bold">
                                   <Star className="w-3 h-3 fill-current text-amber-400" />
                                   <span>{tmdbItem.vote_average.toFixed(1)}</span>
-                                  <span className="text-[9px] text-slate-400 font-normal">(TMDB)</span>
+                                  <span className="text-[9px] text-slate-400 font-normal">(Rating Global)</span>
                                 </div>
                               ) : null}
                             </div>

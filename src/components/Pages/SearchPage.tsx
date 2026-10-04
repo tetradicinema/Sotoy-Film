@@ -599,18 +599,18 @@ export const SearchPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* TMDB GLOBAL FILM RESULTS (Real-time TMDB API) */}
+                {/* FILM & SERIES TERKAIT (Real-time Global API) */}
                 {(activeTab === 'all' || activeTab === 'film') && filteredTmdbResults.length > 0 && (
                   <div className="space-y-4 pt-2">
                     <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                       <h2 className="text-base sm:text-lg font-bold text-cyan-400 flex items-center gap-2">
                         <Globe className="w-5 h-5 text-cyan-400" />
-                        <span>Pencarian Film Global TMDB API ({filteredTmdbResults.length})</span>
+                        <span>Film & Series Terkait ({filteredTmdbResults.length})</span>
                       </h2>
                       {isSearchingTmdb && (
                         <div className="flex items-center gap-1.5 text-xs text-slate-400">
                           <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
-                          <span>Sinkronisasi TMDB...</span>
+                          <span>Mencari film terkait...</span>
                         </div>
                       )}
                     </div>
@@ -645,7 +645,7 @@ export const SearchPage: React.FC = () => {
                               <div>
                                 <div className="flex items-center justify-between gap-1 mb-1">
                                   <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800">
-                                    TMDB GLOBAL
+                                    Film Terkait
                                   </span>
                                   {year && <span className="text-[11px] font-bold text-slate-400">{year}</span>}
                                 </div>
@@ -655,7 +655,7 @@ export const SearchPage: React.FC = () => {
                                 </h3>
 
                                 <p className="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">
-                                  {tmdbItem.overview || (tmdbItem.media_type === 'tv' ? 'Series TV dari TMDB Database' : 'Film layar lebar dari TMDB Database')}
+                                  {tmdbItem.overview || (tmdbItem.media_type === 'tv' ? 'Serial televisi' : 'Film layar lebar')}
                                 </p>
                               </div>
 
@@ -666,7 +666,7 @@ export const SearchPage: React.FC = () => {
                                     <span>{tmdbItem.vote_average.toFixed(1)}</span>
                                   </div>
                                 ) : (
-                                  <span className="text-[10px] text-slate-500">Katalog TMDB</span>
+                                  <span className="text-[10px] text-slate-500">Katalog Sinema</span>
                                 )}
                                 <span className="text-[10px] font-bold text-cyan-400 group-hover:underline flex items-center gap-0.5">
                                   <span>Lihat Detail</span>

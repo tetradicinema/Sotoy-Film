@@ -777,7 +777,7 @@ export const FilmDetailPage: React.FC = () => {
                     {isLoadingCredits && (
                       <span className="text-[10px] text-slate-400 flex items-center gap-1 animate-pulse">
                         <Sparkles className="w-3 h-3 text-[#FF2E7E]" />
-                        Sinkronisasi TMDB...
+                        Memuat data kredit...
                       </span>
                     )}
                   </div>
