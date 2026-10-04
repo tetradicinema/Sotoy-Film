@@ -22,33 +22,55 @@ function slugify(text: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-function formatDateToYMD(val: any, fallbackYear?: number): string {
-  if (fallbackYear && (!val || val === '')) {
-    return `${fallbackYear}-01-01`;
-  }
+function escapeXml(unsafe: string): string {
+  if (!unsafe) return '';
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function formatDateToYMD(val: any, fallbackDate?: string): string {
+  const defaultToday = fallbackDate || new Date().toISOString().split('T')[0];
   if (!val) {
-    return new Date().toISOString().split('T')[0];
+    return defaultToday;
   }
   if (typeof val === 'string') {
     if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
-      return val;
+      // Validate year is not ancient (e.g. >= 2020 for website lastmod)
+      const year = parseInt(val.slice(0, 4), 10);
+      if (year >= 2020) return val;
+      return defaultToday;
     }
     const parsed = new Date(val);
     if (!isNaN(parsed.getTime())) {
-      return parsed.toISOString().split('T')[0];
+      const formatted = parsed.toISOString().split('T')[0];
+      const year = parsed.getFullYear();
+      if (year >= 2020) return formatted;
+      return defaultToday;
     }
   }
   if (val && typeof val.toDate === 'function') {
     try {
-      return val.toDate().toISOString().split('T')[0];
+      const parsed = val.toDate();
+      const formatted = parsed.toISOString().split('T')[0];
+      const year = parsed.getFullYear();
+      if (year >= 2020) return formatted;
+      return defaultToday;
     } catch {
       // ignore
     }
   }
   if (val && typeof val.seconds === 'number') {
-    return new Date(val.seconds * 1000).toISOString().split('T')[0];
+    const parsed = new Date(val.seconds * 1000);
+    const formatted = parsed.toISOString().split('T')[0];
+    const year = parsed.getFullYear();
+    if (year >= 2020) return formatted;
+    return defaultToday;
   }
-  return new Date().toISOString().split('T')[0];
+  return defaultToday;
 }
 
 interface SitemapEntry {
@@ -62,6 +84,7 @@ async function run() {
   console.log('[Sitemap Builder] Starting build-time static sitemap generation...');
   const baseUrl = 'https://www.sotoyfilm.my.id';
   const today = new Date().toISOString().split('T')[0];
+  const nowMs = Date.now();
 
   // 1. Static Core Routes
   const entries: SitemapEntry[] = [
@@ -69,6 +92,7 @@ async function run() {
     { loc: `${baseUrl}/film-database`, lastmod: today, changefreq: 'daily', priority: '0.9' },
     { loc: `${baseUrl}/rekomendasi-film`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
     { loc: `${baseUrl}/komunitas`, lastmod: today, changefreq: 'daily', priority: '0.8' },
+    { loc: `${baseUrl}/panduan-leaderboard`, lastmod: today, changefreq: 'monthly', priority: '0.6' },
     { loc: `${baseUrl}/tentang-kami`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
     { loc: `${baseUrl}/kebijakan-privasi`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
     { loc: `${baseUrl}/syarat-ketentuan`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
@@ -113,11 +137,17 @@ async function run() {
     articlesSnap.forEach(docSnap => {
       const article = docSnap.data();
       if (article.status === 'trash' || article.status === 'draft') return;
+      if (article.status === 'scheduled') {
+        if (!article.scheduledAt) return;
+        const schedTime = new Date(article.scheduledAt).getTime();
+        if (isNaN(schedTime) || schedTime > nowMs) return;
+      }
+
       const slug = article.slug || slugify(article.title) || docSnap.id;
       if (!slug || seenArticleSlugs.has(slug)) return;
 
       seenArticleSlugs.add(slug);
-      const lastmod = formatDateToYMD(article.updatedAt || article.publishedAt);
+      const lastmod = formatDateToYMD(article.updatedAt || article.publishedAt, today);
       entries.push({
         loc: `${baseUrl}/artikel/${encodeURIComponent(slug)}`,
         lastmod,
@@ -130,11 +160,16 @@ async function run() {
     // Also include published articles from INITIAL_ARTICLES if not yet written to Firestore
     for (const item of INITIAL_ARTICLES) {
       if (item.status === 'trash' || item.status === 'draft') continue;
+      if (item.status === 'scheduled') {
+        if (!item.scheduledAt) continue;
+        const schedTime = new Date(item.scheduledAt).getTime();
+        if (isNaN(schedTime) || schedTime > nowMs) continue;
+      }
       const slug = item.slug || slugify(item.title) || item.id;
       if (!slug || seenArticleSlugs.has(slug)) continue;
 
       seenArticleSlugs.add(slug);
-      const lastmod = formatDateToYMD(item.publishedAt);
+      const lastmod = formatDateToYMD(item.publishedAt, today);
       entries.push({
         loc: `${baseUrl}/artikel/${encodeURIComponent(slug)}`,
         lastmod,
@@ -182,7 +217,7 @@ async function run() {
       if (!slug || seenFilmSlugs.has(slug)) return;
 
       seenFilmSlugs.add(slug);
-      const lastmod = formatDateToYMD(film.updatedAt || film.createdAt, film.year);
+      const lastmod = formatDateToYMD(film.updatedAt || film.createdAt, today);
       entries.push({
         loc: `${baseUrl}/film/${encodeURIComponent(slug)}`,
         lastmod,
@@ -208,7 +243,7 @@ async function run() {
       if (!slug || seenFilmSlugs.has(slug)) continue;
 
       seenFilmSlugs.add(slug);
-      const lastmod = formatDateToYMD(film.year ? `${film.year}-01-01` : null, film.year);
+      const lastmod = formatDateToYMD(null, today);
       entries.push({
         loc: `${baseUrl}/film/${encodeURIComponent(slug)}`,
         lastmod,
@@ -232,6 +267,11 @@ async function run() {
     // Graceful offline fallback
     for (const item of INITIAL_ARTICLES) {
       if (item.status === 'trash' || item.status === 'draft') continue;
+      if (item.status === 'scheduled') {
+        if (!item.scheduledAt) continue;
+        const schedTime = new Date(item.scheduledAt).getTime();
+        if (isNaN(schedTime) || schedTime > nowMs) continue;
+      }
       const slug = item.slug || slugify(item.title) || item.id;
       if (!slug || seenArticleSlugs.has(slug)) continue;
       seenArticleSlugs.add(slug);
@@ -272,16 +312,16 @@ async function run() {
     }
   }
 
-  // 5. Construct XML string
+  // 5. Construct XML string with standard compliant tags & XML entity escaping
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
   xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
 
   for (const item of entries) {
     xml += '  <url>\n';
-    xml += `    <loc>${item.loc}</loc>\n`;
-    xml += `    <lastmod>${item.lastmod}</lastmod>\n`;
-    xml += `    <changefreq>${item.changefreq}</changefreq>\n`;
-    xml += `    <priority>${item.priority}</priority>\n`;
+    xml += `    <loc>${escapeXml(item.loc)}</loc>\n`;
+    xml += `    <lastmod>${escapeXml(item.lastmod)}</lastmod>\n`;
+    xml += `    <changefreq>${escapeXml(item.changefreq)}</changefreq>\n`;
+    xml += `    <priority>${escapeXml(item.priority)}</priority>\n`;
     xml += '  </url>\n';
   }
   xml += '</urlset>\n';

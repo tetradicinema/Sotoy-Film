@@ -39,7 +39,8 @@ import { BreadcrumbNavigation } from '../Navigation/BreadcrumbNavigation';
 import { EditorialSidebar } from '../Common/EditorialSidebar';
 import { RateFilmModal } from '../Modals/RateFilmModal';
 import { ArticleDetailSkeleton } from '../Skeletons';
-import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
+import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER, INITIAL_ARTICLES } from '../../data/mockData';
+import { slugify } from '../../utils/slugify';
 
 export const ArticleDetailPage: React.FC = () => {
   const {
@@ -67,8 +68,9 @@ export const ArticleDetailPage: React.FC = () => {
 
   const { slug } = useParams<{ slug?: string }>();
 
-  const article = (slug ? (articles.find(a => a.slug === slug || a.id === slug)) : null)
+  const article = (slug ? (articles.find(a => (a.slug && a.slug === slug) || a.id === slug || slugify(a.title) === slug) || INITIAL_ARTICLES.find(a => (a.slug && a.slug === slug) || a.id === slug || slugify(a.title) === slug)) : null)
     || articles.find(a => a.id === selectedArticleId)
+    || INITIAL_ARTICLES.find(a => a.id === selectedArticleId)
     || articles[0];
   const author = useDynamicArticleAuthor(article?.authorId || article?.author?.id, article?.author);
   const [commentText, setCommentText] = useState('');

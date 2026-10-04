@@ -27,8 +27,32 @@ async function startServer() {
     return handleImageProxy(req, res);
   });
 
-  // Note: /sitemap.xml is statically generated at build-time into public/sitemap.xml
-  // and served directly by express.static(distPath) in production or Vite in development.
+  // Explicit XML Sitemap & robots.txt routes with correct MIME types
+  app.get("/sitemap.xml", (req, res) => {
+    const candidatePaths = [
+      path.join(process.cwd(), "dist", "sitemap.xml"),
+      path.join(process.cwd(), "public", "sitemap.xml"),
+    ];
+    for (const p of candidatePaths) {
+      if (fs.existsSync(p)) {
+        return res.status(200).type("application/xml; charset=utf-8").sendFile(p);
+      }
+    }
+    return res.status(404).type("text/plain").send("sitemap.xml not found");
+  });
+
+  app.get("/robots.txt", (req, res) => {
+    const candidatePaths = [
+      path.join(process.cwd(), "dist", "robots.txt"),
+      path.join(process.cwd(), "public", "robots.txt"),
+    ];
+    for (const p of candidatePaths) {
+      if (fs.existsSync(p)) {
+        return res.status(200).type("text/plain; charset=utf-8").sendFile(p);
+      }
+    }
+    return res.status(404).type("text/plain").send("robots.txt not found");
+  });
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
