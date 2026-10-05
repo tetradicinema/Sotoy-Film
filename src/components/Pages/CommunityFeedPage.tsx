@@ -588,7 +588,7 @@ export const CommunityFeedPage: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#0A0A0E] text-white py-4 sm:py-6">
+    <div className="min-h-screen bg-[#0A0A0A] text-white py-4 sm:py-6">
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 flex justify-center items-start gap-4 xl:gap-8">
         
         {/* ========================================================================= */}
@@ -597,7 +597,7 @@ export const CommunityFeedPage: React.FC = () => {
         <div className="w-full max-w-4xl flex-1 min-w-0 space-y-4">
           
           {/* Header Sticky Feed Tabs switcher (Untukmu & Mengikuti prominent) */}
-          <div className="sticky top-14 sm:top-16 z-20 pb-2.5 pt-1.5 bg-[#0A0A0E]/95 backdrop-blur-md border-b border-slate-800/80 flex items-center justify-between gap-3">
+          <div className="sticky top-14 sm:top-16 z-20 pb-2.5 pt-1.5 bg-[#0A0A0A]/95 backdrop-blur-md border-b border-slate-800/80 flex items-center justify-between gap-3">
             <div className="flex items-center gap-1.5 p-1 bg-slate-900/90 border border-slate-800/90 rounded-2xl overflow-x-auto scrollbar-none">
               <button
                 id="buzz-tab-foryou"
@@ -653,7 +653,7 @@ export const CommunityFeedPage: React.FC = () => {
           {/* ========================================================================= */}
           {/* MOBILE & TABLET COLLAPSIBLE SOTOY LEADERBOARD */}
           {/* ========================================================================= */}
-          <div className="xl:hidden bg-[#171A1F] border border-slate-800/80 rounded-2xl p-4 shadow-xl space-y-3">
+          <div className="xl:hidden bg-[#171717] border border-slate-800/80 rounded-2xl p-4 shadow-xl space-y-3">
             <div className="flex items-center justify-between pb-1.5 border-b border-slate-800/60">
               <div className="flex items-center gap-1.5">
                 <Trophy className="w-4 h-4 text-[#FF2E7E] shrink-0" />
@@ -706,7 +706,7 @@ export const CommunityFeedPage: React.FC = () => {
         {/* ========================================================================= */}
         {/* POST COMPOSER CARD WITH SEARCHABLE FILM/ARTICLE TAGGING */}
         {/* ========================================================================= */}
-        <div id="buzz-composer-card" className="bg-[#171A1F] border border-white/10 rounded-3xl p-5 shadow-2xl space-y-4">
+        <div id="buzz-composer-card" className="bg-[#171717] border border-white/10 rounded-3xl p-5 shadow-2xl space-y-4">
           <div className="flex items-start gap-3">
             {isLoggedIn ? (
               <img
@@ -726,12 +726,12 @@ export const CommunityFeedPage: React.FC = () => {
                 onChange={setPostContent}
                 placeholder="Apa yang lagi kamu tonton atau pikirkan seputar film hari ini? Ketik '@' untuk mention warga lain..."
                 rows={3}
-                className="w-full bg-[#0E1013] border border-white/10 rounded-2xl p-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] resize-none"
+                className="w-full bg-[#0A0A0A] border border-white/10 rounded-2xl p-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] resize-none"
               />
 
               {/* Tagged Item Preview In Composer */}
               {selectedFilm && (
-                <div className="flex items-center justify-between p-2.5 bg-[#0E1013] border border-[#FF2E7E]/40 rounded-2xl">
+                <div className="flex items-center justify-between p-2.5 bg-[#0A0A0A] border border-[#FF2E7E]/40 rounded-2xl">
                   <div className="flex items-center gap-3 min-w-0">
                     <img
                       src={selectedFilm.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=120&q=80'}
@@ -763,7 +763,7 @@ export const CommunityFeedPage: React.FC = () => {
               )}
 
               {selectedArticle && (
-                <div className="flex items-center justify-between p-2.5 bg-[#0E1013] border border-[#FF2E7E]/40 rounded-2xl">
+                <div className="flex items-center justify-between p-2.5 bg-[#0A0A0A] border border-[#FF2E7E]/40 rounded-2xl">
                   <div className="flex items-center gap-3 min-w-0">
                     <img
                       src={selectedArticle.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=200&q=80'}
@@ -793,7 +793,7 @@ export const CommunityFeedPage: React.FC = () => {
 
               {/* Photo Attachment Preview / Compressing indicator */}
               {isCompressingImage ? (
-                <div className="flex items-center gap-3 p-3 bg-[#0E1013] border border-white/10 rounded-2xl animate-pulse">
+                <div className="flex items-center gap-3 p-3 bg-[#0A0A0A] border border-white/10 rounded-2xl animate-pulse">
                   <div className="w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center shrink-0">
                     <Loader2 className="w-5 h-5 text-[#FF2E7E] animate-spin" />
                   </div>
@@ -803,7 +803,7 @@ export const CommunityFeedPage: React.FC = () => {
                   </div>
                 </div>
               ) : attachedImagePreview ? (
-                <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-[#0E1013] group max-w-sm shadow-md">
+                <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-[#0A0A0A] group max-w-sm shadow-md">
                   <img
                     src={attachedImagePreview}
                     alt="Preview foto lampiran"
@@ -874,7 +874,7 @@ export const CommunityFeedPage: React.FC = () => {
 
                   {/* Popover / Dropdown Menu with Live Search */}
                   {dropdownOpen && (
-                    <div className="absolute top-full left-0 mt-2 w-[calc(100vw-3rem)] max-w-sm sm:w-96 bg-[#171A1F] border border-white/10 rounded-2xl shadow-2xl z-30 p-3 space-y-3">
+                    <div className="absolute top-full left-0 mt-2 w-[calc(100vw-3rem)] max-w-sm sm:w-96 bg-[#171717] border border-white/10 rounded-2xl shadow-2xl z-30 p-3 space-y-3">
                       {/* Mode Toggle: Film vs Artikel */}
                       <div className="flex p-1 bg-white/[0.04] border border-white/10 rounded-xl text-xs font-bold">
                         <button
@@ -917,7 +917,7 @@ export const CommunityFeedPage: React.FC = () => {
                           value={searchQuery}
                           onChange={e => setSearchQuery(e.target.value)}
                           placeholder={tagMode === 'film' ? "Cari judul film, sutradara..." : "Cari judul artikel, topik..."}
-                          className="w-full bg-[#0E1013] border border-white/10 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
+                          className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
                           autoFocus
                         />
                       </div>
@@ -1000,13 +1000,13 @@ export const CommunityFeedPage: React.FC = () => {
                       onChange={e => setSkorMention(e.target.value ? parseFloat(e.target.value) : undefined)}
                       className="bg-transparent text-slate-300 text-xs focus:outline-none cursor-pointer"
                     >
-                      <option value="" className="bg-[#171A1F] text-slate-300">Beri Skor Film?</option>
-                      <option value="5.0" className="bg-[#171A1F] text-slate-300">5.0 (Masterpiece)</option>
-                      <option value="4.5" className="bg-[#171A1F] text-slate-300">4.5 (Keren Banget)</option>
-                      <option value="4.0" className="bg-[#171A1F] text-slate-300">4.0 (Bagus)</option>
-                      <option value="3.5" className="bg-[#171A1F] text-slate-300">3.5 (Lumayan)</option>
-                      <option value="3.0" className="bg-[#171A1F] text-slate-300">3.0 (Biasa Aja)</option>
-                      <option value="2.0" className="bg-[#171A1F] text-slate-300">2.0 (Kurang)</option>
+                      <option value="" className="bg-[#171717] text-slate-300">Beri Skor Film?</option>
+                      <option value="5.0" className="bg-[#171717] text-slate-300">5.0 (Masterpiece)</option>
+                      <option value="4.5" className="bg-[#171717] text-slate-300">4.5 (Keren Banget)</option>
+                      <option value="4.0" className="bg-[#171717] text-slate-300">4.0 (Bagus)</option>
+                      <option value="3.5" className="bg-[#171717] text-slate-300">3.5 (Lumayan)</option>
+                      <option value="3.0" className="bg-[#171717] text-slate-300">3.0 (Biasa Aja)</option>
+                      <option value="2.0" className="bg-[#171717] text-slate-300">2.0 (Kurang)</option>
                     </select>
                   </div>
                 )}
@@ -1221,7 +1221,7 @@ export const CommunityFeedPage: React.FC = () => {
 
                         {openMenuPostId === post.id && (
                           <div
-                            className="absolute right-0 top-full mt-1 w-32 bg-[#171A1F] border border-white/10 rounded-xl p-1 shadow-2xl z-30 animate-in fade-in zoom-in-95 duration-100"
+                            className="absolute right-0 top-full mt-1 w-32 bg-[#171717] border border-white/10 rounded-xl p-1 shadow-2xl z-30 animate-in fade-in zoom-in-95 duration-100"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <button
@@ -1283,7 +1283,7 @@ export const CommunityFeedPage: React.FC = () => {
                   <div
                     id={`buzz-tagged-film-${postFilm.id}`}
                     onClick={() => navigateTo('film-detail', { filmId: postFilm.id })}
-                    className="p-3.5 sm:p-4 rounded-2xl bg-[#0E1013] border border-white/10 hover:border-[#FF2E7E]/50 transition-all cursor-pointer group flex items-center justify-between gap-4 shadow-md"
+                    className="p-3.5 sm:p-4 rounded-2xl bg-[#0A0A0A] border border-white/10 hover:border-[#FF2E7E]/50 transition-all cursor-pointer group flex items-center justify-between gap-4 shadow-md"
                   >
                     <div className="flex items-center gap-3.5 min-w-0">
                       {/* Film Poster */}
@@ -1341,7 +1341,7 @@ export const CommunityFeedPage: React.FC = () => {
                   <div
                     id={`buzz-tagged-article-${postArticle.id}`}
                     onClick={() => navigateTo('article-detail', { articleId: postArticle.id })}
-                    className="p-3.5 sm:p-4 rounded-2xl bg-[#0E1013] border border-white/10 hover:border-[#FF2E7E]/50 transition-all cursor-pointer group flex items-center justify-between gap-4 shadow-md"
+                    className="p-3.5 sm:p-4 rounded-2xl bg-[#0A0A0A] border border-white/10 hover:border-[#FF2E7E]/50 transition-all cursor-pointer group flex items-center justify-between gap-4 shadow-md"
                   >
                     <div className="flex items-center gap-3.5 min-w-0">
                       {/* Article Cover Thumbnail */}
@@ -1406,7 +1406,7 @@ export const CommunityFeedPage: React.FC = () => {
                         navigateTo('collection-detail', { userId: post.sharedCollection.ownerId, collectionId: post.sharedCollection.collectionId });
                       }
                     }}
-                    className="p-3.5 sm:p-4 rounded-2xl bg-[#0E1013] border border-white/10 hover:border-[#FF2E7E]/50 transition-all cursor-pointer group flex items-center justify-between gap-4 shadow-md text-left"
+                    className="p-3.5 sm:p-4 rounded-2xl bg-[#0A0A0A] border border-white/10 hover:border-[#FF2E7E]/50 transition-all cursor-pointer group flex items-center justify-between gap-4 shadow-md text-left"
                   >
                     <div className="flex items-center gap-3.5 min-w-0">
                       {/* Collage Preview */}
@@ -1535,7 +1535,7 @@ export const CommunityFeedPage: React.FC = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: -12 }}
               transition={{ duration: 0.22, ease: 'easeOut' }}
-              className="bg-[#171A1F] border border-slate-800 rounded-3xl p-8 text-center space-y-4 shadow-xl"
+              className="bg-[#171717] border border-slate-800 rounded-3xl p-8 text-center space-y-4 shadow-xl"
             >
             <div className="w-14 h-14 rounded-2xl bg-white/10 mx-auto flex items-center justify-center text-slate-200">
               {buzzFeedTab === 'following' ? (
@@ -1619,7 +1619,7 @@ export const CommunityFeedPage: React.FC = () => {
       {/* ========================================================================= */}
       <div className="hidden xl:flex flex-col gap-4 w-72 shrink-0 sticky top-20 select-none">
         {/* Sotoy Leaderboard (DESKTOP) */}
-        <div className="bg-[#171A1F]/90 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 shadow-xl space-y-3.5">
+        <div className="bg-[#171717]/90 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 shadow-xl space-y-3.5">
           {/* Plain Heading */}
           <div className="flex items-center justify-between pb-2 border-b border-slate-800/60">
             <div className="flex items-center gap-2">
@@ -1664,7 +1664,7 @@ export const CommunityFeedPage: React.FC = () => {
         </div>
 
         {/* Trending Tags & Topics */}
-        <div className="bg-[#171A1F]/90 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 shadow-xl space-y-3">
+        <div className="bg-[#171717]/90 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 shadow-xl space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-slate-800/60">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-[#FF2E7E]" />
@@ -1705,7 +1705,7 @@ export const CommunityFeedPage: React.FC = () => {
         </div>
 
         {/* Recommended Reviewers to Follow */}
-        <div className="bg-[#171A1F]/90 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 shadow-xl space-y-3">
+        <div className="bg-[#171717]/90 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 shadow-xl space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-slate-800/60">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
               <Users className="w-3.5 h-3.5 text-cyan-400" />
@@ -1761,7 +1761,7 @@ export const CommunityFeedPage: React.FC = () => {
         </div>
 
         {/* Community Guidelines Glass Card */}
-        <div className="bg-[#171A1F]/60 border border-slate-800/60 rounded-2xl p-3.5 text-[11px] text-slate-400 space-y-1.5 leading-relaxed">
+        <div className="bg-[#171717]/60 border border-slate-800/60 rounded-2xl p-3.5 text-[11px] text-slate-400 space-y-1.5 leading-relaxed">
           <p className="font-bold text-slate-300">💡 Etika Berdiskusi di Sotoy Buzz:</p>
           <ul className="list-disc list-inside space-y-0.5 text-slate-400">
             <li>Sertakan tagar <span className="text-[#FF2E7E] font-semibold">#spoiler</span> jika membahas plot twist.</li>

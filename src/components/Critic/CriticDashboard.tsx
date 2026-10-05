@@ -182,11 +182,11 @@ export const CriticDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0E1013] text-slate-100 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#0A0A0A] text-slate-100 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-8 pb-20 lg:pb-8">
         
         {/* Header & Critic Profile Banner */}
-        <div className="relative overflow-hidden rounded-3xl bg-[#171A1F] border border-white/10 p-6 sm:p-8 shadow-xl">
+        <div className="relative overflow-hidden rounded-3xl bg-[#171717] border border-white/10 p-6 sm:p-8 shadow-xl">
           <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-[#FF2E7E]/5 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -226,7 +226,7 @@ export const CriticDashboard: React.FC = () => {
 
             {/* Quick Actions & Notifications */}
             <div className="flex flex-wrap items-center gap-3 shrink-0">
-              <div className="bg-[#0E1013] p-1.5 rounded-2xl border border-white/10 shadow-sm">
+              <div className="bg-[#0A0A0A] p-1.5 rounded-2xl border border-white/10 shadow-sm">
                 <NotificationBell mode="critic" />
               </div>
 
@@ -251,7 +251,7 @@ export const CriticDashboard: React.FC = () => {
 
         {/* Critic Stats Summary */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          <div className="p-5 sm:p-6 rounded-2xl bg-[#171A1F] border border-white/10 hover:border-[#FF2E7E]/40 transition-all shadow-lg group">
+          <div className="p-5 sm:p-6 rounded-2xl bg-[#171717] border border-white/10 hover:border-[#FF2E7E]/40 transition-all shadow-lg group">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider group-hover:text-[#FF2E7E] transition-colors">Total Ulasan</span>
               <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-[#FF2E7E]">
@@ -268,7 +268,7 @@ export const CriticDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-5 sm:p-6 rounded-2xl bg-[#171A1F] border border-white/10 hover:border-[#FF2E7E]/40 transition-all shadow-lg group">
+          <div className="p-5 sm:p-6 rounded-2xl bg-[#171717] border border-white/10 hover:border-[#FF2E7E]/40 transition-all shadow-lg group">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider group-hover:text-[#FF2E7E] transition-colors">Rata-rata Skor</span>
               <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-[#FF2E7E]">
@@ -285,7 +285,7 @@ export const CriticDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-5 sm:p-6 rounded-2xl bg-[#171A1F] border border-white/10 hover:border-[#FF2E7E]/40 transition-all shadow-lg group">
+          <div className="p-5 sm:p-6 rounded-2xl bg-[#171717] border border-white/10 hover:border-[#FF2E7E]/40 transition-all shadow-lg group">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider group-hover:text-[#FF2E7E] transition-colors">Apresiasi (Likes)</span>
               <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-[#FF2E7E]">
@@ -302,7 +302,7 @@ export const CriticDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-5 sm:p-6 rounded-2xl bg-[#171A1F] border border-white/10 hover:border-[#FF2E7E]/40 transition-all shadow-lg group">
+          <div className="p-5 sm:p-6 rounded-2xl bg-[#171717] border border-white/10 hover:border-[#FF2E7E]/40 transition-all shadow-lg group">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider group-hover:text-[#FF2E7E] transition-colors">Engagement</span>
               <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-[#FF2E7E]">
@@ -321,7 +321,7 @@ export const CriticDashboard: React.FC = () => {
         </div>
 
         {/* Analytics Chart */}
-        <div className="p-6 rounded-3xl bg-[#171A1F] border border-white/10 shadow-xl space-y-4">
+        <div className="p-6 rounded-3xl bg-[#171717] border border-white/10 shadow-xl space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
             <div>
               <h2 className="text-base sm:text-lg font-black text-white tracking-tight flex items-center gap-2.5">
@@ -347,14 +347,14 @@ export const CriticDashboard: React.FC = () => {
                     <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1E2035" vertical={false} />
-                <XAxis dataKey="date" stroke="#64748B" fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke="#64748B" fontSize={10} tickLine={false} axisLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#171717" vertical={false} />
+                <XAxis dataKey="date" stroke="#737373" fontSize={10} tickLine={false} axisLine={false} />
+                <YAxis stroke="#737373" fontSize={10} tickLine={false} axisLine={false} />
                 <Tooltip
                   content={({ active, payload, label }) => {
                     if (active && payload && payload.length) {
                       return (
-                        <div className="bg-[#0A0B10] border border-slate-700 p-3 rounded-xl shadow-xl space-y-1">
+                        <div className="bg-[#0A0A0A] border border-slate-700 p-3 rounded-xl shadow-xl space-y-1">
                           <p className="text-xs font-bold text-slate-300">{label}</p>
                           <p className="text-xs font-black text-cyan-400">
                             {(payload[0].value as number).toLocaleString('id-ID')} Pembaca
@@ -379,7 +379,7 @@ export const CriticDashboard: React.FC = () => {
         </div>
 
         {/* Review Management List */}
-        <div className="rounded-3xl bg-[#171A1F] border border-white/10 p-6 sm:p-8 shadow-xl space-y-6">
+        <div className="rounded-3xl bg-[#171717] border border-white/10 p-6 sm:p-8 shadow-xl space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2.5">
@@ -402,25 +402,25 @@ export const CriticDashboard: React.FC = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Cari ulasan film..."
-                  className="w-full pl-9 pr-3 py-2 bg-[#0E1013] border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
+                  className="w-full pl-9 pr-3 py-2 bg-[#0A0A0A] border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
                 />
               </div>
 
               <select
                 value={selectedFilmType}
                 onChange={(e) => setSelectedFilmType(e.target.value as any)}
-                className="bg-[#0E1013] border border-white/10 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-[#FF2E7E] cursor-pointer"
+                className="bg-[#0A0A0A] border border-white/10 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-[#FF2E7E] cursor-pointer"
               >
-                <option value="all" className="bg-[#171A1F]">Semua Tipe</option>
-                <option value="movie" className="bg-[#171A1F]">Movie</option>
-                <option value="series" className="bg-[#171A1F]">Series</option>
-                <option value="anime" className="bg-[#171A1F]">Anime</option>
+                <option value="all" className="bg-[#171717]">Semua Tipe</option>
+                <option value="movie" className="bg-[#171717]">Movie</option>
+                <option value="series" className="bg-[#171717]">Series</option>
+                <option value="anime" className="bg-[#171717]">Anime</option>
               </select>
 
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-[#0A0B10] border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-cyan-500 cursor-pointer"
+                className="bg-[#0A0A0A] border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-cyan-500 cursor-pointer"
               >
                 <option value="date-desc">Terbaru</option>
                 <option value="score-desc">Skor Tertinggi</option>
@@ -435,7 +435,7 @@ export const CriticDashboard: React.FC = () => {
               {displayedRatings.map((rating) => (
                 <div 
                   key={rating.id}
-                  className="group relative overflow-hidden bg-[#0D0E15] border border-slate-800 rounded-2xl hover:border-cyan-500/40 transition-all p-4 sm:p-5 flex flex-col sm:flex-row gap-4 sm:items-center"
+                  className="group relative overflow-hidden bg-[#0A0A0A] border border-slate-800 rounded-2xl hover:border-cyan-500/40 transition-all p-4 sm:p-5 flex flex-col sm:flex-row gap-4 sm:items-center"
                 >
                   {/* Film Thumbnail */}
                   <div className="relative w-20 h-28 sm:w-16 sm:h-20 shrink-0">
@@ -533,7 +533,7 @@ export const CriticDashboard: React.FC = () => {
               ))}
             </div>
           ) : (
-            <div className="text-center py-16 px-4 rounded-2xl border border-dashed border-slate-800 bg-[#0A0B10]/50 space-y-4">
+            <div className="text-center py-16 px-4 rounded-2xl border border-dashed border-slate-800 bg-[#0A0A0A]/50 space-y-4">
               <div className="w-16 h-16 mx-auto rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
                 <Star className="w-8 h-8" />
               </div>
@@ -564,7 +564,7 @@ export const CriticDashboard: React.FC = () => {
       {/* Delete Confirmation Modal */}
       {ratingToDelete && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-[#171A1F] border border-white/10 rounded-3xl p-6 shadow-2xl space-y-5">
+          <div className="w-full max-w-md bg-[#171717] border border-white/10 rounded-3xl p-6 shadow-2xl space-y-5">
             <div className="flex items-center gap-3 text-rose-400">
               <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-6 h-6 text-rose-400" />
@@ -575,7 +575,7 @@ export const CriticDashboard: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-3.5 bg-[#0E1013] rounded-2xl border border-white/10">
+            <div className="p-3.5 bg-[#0A0A0A] rounded-2xl border border-white/10">
               <div className="text-xs font-bold text-white line-clamp-1">
                 {ratingToDelete.filmId}
               </div>

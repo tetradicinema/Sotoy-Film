@@ -42,7 +42,7 @@ export const PrivacyPolicyPage: React.FC = () => {
         <AdBannerSlot variant="leaderboard" />
 
         {/* Quick Highlights Callout */}
-        <div className="bg-[#171A1F] border border-[#FF2E7E]/30 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xl">
+        <div className="bg-[#171717] border border-[#FF2E7E]/30 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xl">
           <h2 className="font-display font-black text-lg text-white flex items-center gap-2">
             <Lock className="w-5 h-5 text-[#FF2E7E]" />
             <span>Ringkasan Komitmen Privasi Kami</span>
@@ -70,7 +70,7 @@ export const PrivacyPolicyPage: React.FC = () => {
         <div className="space-y-8 text-slate-300 text-xs sm:text-sm leading-relaxed">
           
           {/* Section 1 */}
-          <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+          <section className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
             <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
               <Database className="w-5 h-5 text-[#FF2E7E]" />
               <span>1. Informasi yang Kami Kumpulkan</span>
@@ -95,7 +95,7 @@ export const PrivacyPolicyPage: React.FC = () => {
           </section>
 
           {/* Section 2 */}
-          <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+          <section className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
             <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
               <Eye className="w-5 h-5 text-[#FF2E7E]" />
               <span>2. Bagaimana Kami Menggunakan Informasi Anda</span>
@@ -110,7 +110,7 @@ export const PrivacyPolicyPage: React.FC = () => {
           </section>
 
           {/* Section 3 */}
-          <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+          <section className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
             <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
               <UserCheck className="w-5 h-5 text-purple-400" />
               <span>3. Kontrol dan Hak Privasi Anda</span>
@@ -132,7 +132,7 @@ export const PrivacyPolicyPage: React.FC = () => {
           </section>
 
           {/* Section 4 */}
-          <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+          <section className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
             <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
               <FileText className="w-5 h-5 text-emerald-400" />
               <span>4. Penyimpanan Lokal Browser (Local Storage & Cache)</span>
@@ -143,7 +143,7 @@ export const PrivacyPolicyPage: React.FC = () => {
           </section>
 
           {/* Section 5 */}
-          <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+          <section className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
             <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
               <Mail className="w-5 h-5 text-[#FF2E7E]" />
               <span>5. Hubungi Petugas Perlindungan Data</span>

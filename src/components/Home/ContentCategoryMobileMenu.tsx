@@ -145,7 +145,7 @@ export const ContentCategoryMobileMenu: React.FC<ContentCategoryMobileMenuProps>
                 className={`w-full flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all ${
                   isSelected
                     ? 'bg-white/[0.10] border-[#FF2E7E] text-white shadow-md'
-                    : 'bg-[#171A1F]/60 border-white/[0.06] text-slate-300 hover:bg-white/[0.06] hover:text-white'
+                    : 'bg-[#171717]/60 border-white/[0.06] text-slate-300 hover:bg-white/[0.06] hover:text-white'
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">

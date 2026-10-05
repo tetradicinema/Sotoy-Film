@@ -70,7 +70,7 @@ export const BusinessInquiriesPage: React.FC = () => {
 
         {/* Media Kit Snapshot / Metrics */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-5 text-center space-y-1 shadow-lg">
+          <div className="bg-[#171717] border border-slate-800 rounded-3xl p-5 text-center space-y-1 shadow-lg">
             <div className="font-display font-black text-3xl sm:text-4xl text-[#FF2E7E]">
               450K+
             </div>
@@ -78,7 +78,7 @@ export const BusinessInquiriesPage: React.FC = () => {
             <div className="text-[11px] text-slate-400">Film Enthusiasts & Penonton</div>
           </div>
 
-          <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-5 text-center space-y-1 shadow-lg">
+          <div className="bg-[#171717] border border-slate-800 rounded-3xl p-5 text-center space-y-1 shadow-lg">
             <div className="font-display font-black text-3xl sm:text-4xl text-[#FF2E7E]">
               85K+
             </div>
@@ -86,7 +86,7 @@ export const BusinessInquiriesPage: React.FC = () => {
             <div className="text-[11px] text-slate-400">Tingkat Retensi Sosial Tinggi</div>
           </div>
 
-          <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-5 text-center space-y-1 shadow-lg">
+          <div className="bg-[#171717] border border-slate-800 rounded-3xl p-5 text-center space-y-1 shadow-lg">
             <div className="font-display font-black text-3xl sm:text-4xl text-[#FF2E7E]">
               72%
             </div>
@@ -94,7 +94,7 @@ export const BusinessInquiriesPage: React.FC = () => {
             <div className="text-[11px] text-slate-400">Gen-Z & Urban Moviegoers</div>
           </div>
 
-          <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-5 text-center space-y-1 shadow-lg">
+          <div className="bg-[#171717] border border-slate-800 rounded-3xl p-5 text-center space-y-1 shadow-lg">
             <div className="font-display font-black text-3xl sm:text-4xl text-purple-400">
               94%
             </div>
@@ -115,7 +115,7 @@ export const BusinessInquiriesPage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 space-y-3 hover:border-[#FF2E7E]/50 transition-colors shadow-lg">
+            <div className="bg-[#171717] border border-slate-800 rounded-3xl p-6 space-y-3 hover:border-[#FF2E7E]/50 transition-colors shadow-lg">
               <div className="w-10 h-10 rounded-2xl bg-[#FF2E7E]/10 text-[#FF2E7E] flex items-center justify-center">
                 <Film className="w-5 h-5" />
               </div>
@@ -127,7 +127,7 @@ export const BusinessInquiriesPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 space-y-3 hover:border-[#FF2E7E]/50 transition-colors shadow-lg">
+            <div className="bg-[#171717] border border-slate-800 rounded-3xl p-6 space-y-3 hover:border-[#FF2E7E]/50 transition-colors shadow-lg">
               <div className="w-10 h-10 rounded-2xl bg-[#FF2E7E]/10 text-[#FF2E7E] flex items-center justify-center">
                 <Award className="w-5 h-5" />
               </div>
@@ -139,7 +139,7 @@ export const BusinessInquiriesPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 space-y-3 hover:border-[#FF2E7E]/50 transition-colors shadow-lg">
+            <div className="bg-[#171717] border border-slate-800 rounded-3xl p-6 space-y-3 hover:border-[#FF2E7E]/50 transition-colors shadow-lg">
               <div className="w-10 h-10 rounded-2xl bg-[#FF2E7E]/10 text-[#FF2E7E] flex items-center justify-center">
                 <TrendingUp className="w-5 h-5" />
               </div>
@@ -151,7 +151,7 @@ export const BusinessInquiriesPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 space-y-3 hover:border-purple-400/50 transition-colors shadow-lg">
+            <div className="bg-[#171717] border border-slate-800 rounded-3xl p-6 space-y-3 hover:border-purple-400/50 transition-colors shadow-lg">
               <div className="w-10 h-10 rounded-2xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
                 <Camera className="w-5 h-5" />
               </div>
@@ -166,7 +166,7 @@ export const BusinessInquiriesPage: React.FC = () => {
         </div>
 
         {/* Business Inquiry Form */}
-        <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden">
+        <div className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-80 h-80 bg-[#FF2E7E]/10 rounded-full blur-3xl pointer-events-none" />
 
           <div className="max-w-2xl mb-8 space-y-2">

@@ -108,7 +108,7 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({
       className={
         flat
           ? `flex flex-col justify-start space-y-3 ${className}`
-          : `bg-[#171A1F] border border-slate-800/80 rounded-3xl p-4 sm:p-5 shadow-xl flex flex-col justify-start space-y-4 ${className}`
+          : `bg-[#171717] border border-slate-800/80 rounded-3xl p-4 sm:p-5 shadow-xl flex flex-col justify-start space-y-4 ${className}`
       }
     >
       {/* Card Header */}

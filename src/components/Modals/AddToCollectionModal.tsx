@@ -68,14 +68,14 @@ export const AddToCollectionModal: React.FC<AddToCollectionModalProps> = ({
   return (
     <div
       id="add-to-collection-modal-backdrop"
-      className="fixed inset-0 z-50 bg-[#0E1013]/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 bg-[#0A0A0A]/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
     >
       <div
         id="add-to-collection-modal-container"
-        className="bg-[#171A1F] border border-white/10 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-200"
+        className="bg-[#171717] border border-white/10 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-200"
       >
         {/* Modal Header */}
-        <div className="bg-[#171A1F] p-5 border-b border-white/[0.08] flex items-center justify-between">
+        <div className="bg-[#171717] p-5 border-b border-white/[0.08] flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/10 flex items-center justify-center text-[#FF2E7E]">
               <FolderHeart className="w-5 h-5 text-[#FF2E7E]" />

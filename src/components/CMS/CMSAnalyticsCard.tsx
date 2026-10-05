@@ -105,7 +105,7 @@ export const CMSAnalyticsCard: React.FC<CMSAnalyticsCardProps> = ({ mode }) => {
   }[timeRange];
 
   return (
-    <div className="p-6 rounded-2xl bg-[#171A1F] border border-white/[0.08] relative overflow-hidden space-y-6">
+    <div className="p-6 rounded-2xl bg-[#171717] border border-white/[0.08] relative overflow-hidden space-y-6">
       
       {/* Card Header & Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.08] pb-4">
@@ -127,7 +127,7 @@ export const CMSAnalyticsCard: React.FC<CMSAnalyticsCardProps> = ({ mode }) => {
         </div>
 
         {/* Time Filter Toggles */}
-        <div className="bg-[#0E1013] p-0.5 rounded-xl border border-white/10 flex items-center self-start sm:self-auto">
+        <div className="bg-[#0A0A0A] p-0.5 rounded-xl border border-white/10 flex items-center self-start sm:self-auto">
           {(['7days', '30days', 'alltime'] as TimeRange[]).map((range) => (
             <button
               key={range}

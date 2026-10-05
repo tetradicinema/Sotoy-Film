@@ -42,7 +42,7 @@ export const CMSPage: React.FC = () => {
           title="Akses CMS Terbatas - Sotoy Film" 
           description="Halaman CMS editorial artikel hanya dapat diakses oleh tim redaksi dan admin." 
         />
-        <div className="max-w-lg w-full bg-[#171A1F] border border-purple-500/30 rounded-3xl p-8 text-center space-y-6 shadow-2xl shadow-purple-950/40">
+        <div className="max-w-lg w-full bg-[#171717] border border-purple-500/30 rounded-3xl p-8 text-center space-y-6 shadow-2xl shadow-purple-950/40">
           <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center mx-auto text-purple-400">
             <ShieldAlert className="w-8 h-8" />
           </div>
@@ -159,7 +159,7 @@ export const CMSPage: React.FC = () => {
         </div>
 
         {/* Dedicated Page Hero Banner */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-[#170e2b] via-[#171A1F] to-[#1a0f2e] border-2 border-[#FF2E7E]/60 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-purple-950/40">
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#170e2b] via-[#171717] to-[#1a0f2e] border-2 border-[#FF2E7E]/60 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-purple-950/40">
           <div className="absolute top-0 right-1/4 w-80 h-80 bg-[#FF2E7E]/15 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -bottom-10 -left-10 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -231,7 +231,7 @@ export const CMSPage: React.FC = () => {
         </div>
 
         {/* The Full Featured CMS Article Workspace */}
-        <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-6">
+        <div className="bg-[#171717] border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-6">
           <CMSArticleWorkspace 
             mode={effectiveMode}
             title={isUserAdmin && adminScope === 'all' ? 'Katalog Seluruh Artikel Editorial' : 'Artikel & Draf Tulisan'}

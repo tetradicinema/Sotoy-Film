@@ -173,16 +173,18 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ mode = 'glob
   const formatNotificationTime = (dateStr: string) => {
     try {
       const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return dateStr || 'Baru saja';
+      if (isNaN(d.getTime())) return dateStr || 'Baru saja diposting';
       const now = new Date();
       const diffMs = now.getTime() - d.getTime();
       const diffMins = Math.floor(diffMs / 60000);
-      if (diffMins < 1) return 'Baru saja';
-      if (diffMins < 60) return `${diffMins}m yang lalu`;
+      if (diffMins < 1) return 'Baru saja diposting';
+      if (diffMins < 60) return `${diffMins} menit yang lalu`;
       const diffHours = Math.floor(diffMins / 60);
-      if (diffHours < 24) return `${diffHours}j yang lalu`;
+      if (diffHours < 24) return `${diffHours} jam yang lalu`;
       const diffDays = Math.floor(diffHours / 24);
-      if (diffDays < 7) return `${diffDays}h yang lalu`;
+      if (diffDays < 7) return `${diffDays} hari yang lalu`;
+      const diffWeeks = Math.floor(diffDays / 7);
+      if (diffWeeks < 4) return `${diffWeeks} minggu yang lalu`;
       return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
     } catch {
       return dateStr;
@@ -208,9 +210,9 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ mode = 'glob
 
       {/* Popover Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 max-w-[calc(100vw-2rem)] bg-[#171A1F] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden backdrop-blur-md">
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 max-w-[calc(100vw-2rem)] bg-[#171717] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden backdrop-blur-md">
           {/* Dropdown Header */}
-          <div className="p-3 sm:p-4 border-b border-white/10 flex items-center justify-between bg-[#171A1F]/90">
+          <div className="p-3 sm:p-4 border-b border-white/10 flex items-center justify-between bg-[#171717]/90">
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-white text-sm sm:text-base flex items-center gap-2">
                 <Bell className="w-4 h-4 text-[#FF2E7E]" />
@@ -297,7 +299,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ mode = 'glob
                       alt={senderName}
                       className="w-9 h-9 rounded-full object-cover border border-zinc-700"
                     />
-                    <div className="absolute -bottom-1 -right-1 p-0.5 rounded-full bg-[#171A1F] border border-white/10">
+                    <div className="absolute -bottom-1 -right-1 p-0.5 rounded-full bg-[#171717] border border-white/10">
                       {getIconForType(item.type)}
                     </div>
                   </div>

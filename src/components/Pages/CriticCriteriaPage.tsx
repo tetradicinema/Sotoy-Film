@@ -22,7 +22,7 @@ export const CriticCriteriaPage: React.FC = () => {
 
       <div className="space-y-12">
         {/* Section 1 */}
-        <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-10">
+        <section className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-10">
           <div className="flex items-start gap-4 mb-6">
             <div className="w-12 h-12 bg-cyan-500/10 text-cyan-400 rounded-xl flex items-center justify-center shrink-0">
               <ScrollText className="w-6 h-6" />
@@ -50,7 +50,7 @@ export const CriticCriteriaPage: React.FC = () => {
         </section>
 
         {/* Section 2 */}
-        <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-10">
+        <section className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-10">
           <div className="flex items-start gap-4 mb-6">
             <div className="w-12 h-12 bg-[#FF2E7E]/10 text-[#FF2E7E] rounded-xl flex items-center justify-center shrink-0">
               <Search className="w-6 h-6" />
@@ -78,7 +78,7 @@ export const CriticCriteriaPage: React.FC = () => {
         </section>
 
         {/* Section 3 */}
-        <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-10">
+        <section className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-10">
           <div className="flex items-start gap-4 mb-6">
             <div className="w-12 h-12 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center shrink-0">
               <ShieldCheck className="w-6 h-6" />

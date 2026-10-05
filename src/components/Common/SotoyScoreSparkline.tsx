@@ -136,7 +136,7 @@ export const SotoyScoreSparkline: React.FC<SotoyScoreSparklineProps> = ({
   };
 
   return (
-    <div className={`bg-[#171A1F] border border-slate-800 rounded-3xl p-5 shadow-xl relative overflow-hidden ${className}`}>
+    <div className={`bg-[#171717] border border-slate-800 rounded-3xl p-5 shadow-xl relative overflow-hidden ${className}`}>
       {/* Background glow accent */}
       <div className="absolute top-0 right-0 w-36 h-36 bg-[#FF2E7E]/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -192,14 +192,14 @@ export const SotoyScoreSparkline: React.FC<SotoyScoreSparklineProps> = ({
               dataKey="month"
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 700 }}
+              tick={{ fill: '#A3A3A3', fontSize: 11, fontWeight: 700 }}
               dy={5}
             />
 
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#64748b', fontSize: 10 }}
+              tick={{ fill: '#737373', fontSize: 10 }}
               domain={['dataMin - 5', 'dataMax + 5']}
               hide={true}
             />

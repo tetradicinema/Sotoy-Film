@@ -93,14 +93,14 @@ export const AdminDashboard: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-in fade-in duration-300">
       
       {/* 1. TAMPILAN KHUSUS ADMIN (ADMIN VIEW OVERRIDE HEADER) */}
-      <div className="relative overflow-hidden bg-[#171A1F] border border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl">
+      <div className="relative overflow-hidden bg-[#171717] border border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl">
         {/* Subtle background glow */}
         <div className="absolute top-0 right-1/4 w-80 h-80 bg-[#FF2E7E]/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           {/* Title & Badge */}
           <div className="flex items-start sm:items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-[#0E1013] border border-white/10 p-0.5 shrink-0 flex items-center justify-center">
+            <div className="w-16 h-16 rounded-2xl bg-[#0A0A0A] border border-white/10 p-0.5 shrink-0 flex items-center justify-center">
               <ShieldCheck className="w-8 h-8 text-[#FF2E7E]" />
             </div>
 
@@ -130,7 +130,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
 
           {/* Connected Admin Details & Public Switcher */}
-          <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end justify-between gap-4 shrink-0 bg-[#0E1013] border border-white/10 p-4 rounded-2xl">
+          <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end justify-between gap-4 shrink-0 bg-[#0A0A0A] border border-white/10 p-4 rounded-2xl">
             <div className="text-left sm:text-right">
               <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-slate-300">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
@@ -168,15 +168,15 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Authorized Admin UIDs List Banner */}
-        <div className="mt-6 pt-4 border-t border-purple-500/20 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="mt-6 pt-4 border-t border-[#FF2E7E]/20 flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-bold text-purple-300 uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-[#FF2E7E] uppercase tracking-wider">
               Otoritas UID Admin Utama:
             </span>
-            <code className="bg-purple-950/60 border border-purple-500/30 px-2 py-0.5 rounded text-[11px] text-purple-200 font-mono">
+            <code className="bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 px-2 py-0.5 rounded text-[11px] text-white font-mono">
               CsG2CY2TaIZmG7yuPfzAxmRYrlY2
             </code>
-            <code className="bg-purple-950/60 border border-purple-500/30 px-2 py-0.5 rounded text-[11px] text-purple-200 font-mono">
+            <code className="bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 px-2 py-0.5 rounded text-[11px] text-white font-mono">
               QkNGf1ZfhsMyUEk90a6Iz8ZplZS2
             </code>
           </div>
@@ -321,7 +321,7 @@ export const AdminDashboard: React.FC = () => {
             </Link>
           </nav>
           {/* Subtle Right Shadow/Gradient indicator to show there is overflow */}
-          <div className="absolute right-0 top-0 bottom-3 w-10 bg-gradient-to-l from-[#0E1013] to-transparent pointer-events-none opacity-80" />
+          <div className="absolute right-0 top-0 bottom-3 w-10 bg-gradient-to-l from-[#0A0A0A] to-transparent pointer-events-none opacity-80" />
         </div>
 
         {/* Section Contents Rendered based on Standalone URL */}

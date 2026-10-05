@@ -302,7 +302,7 @@ export const ArticleDetailPage: React.FC = () => {
           {/* MAIN ARTICLE COLUMN (8 Columns) */}
           <div className="lg:col-span-8 space-y-8">
             {/* Article Container */}
-            <article className="bg-[#171A1F] border border-slate-800 rounded-3xl overflow-hidden shadow-2xl p-6 sm:p-10 space-y-6">
+            <article className="bg-[#171717] border border-slate-800 rounded-3xl overflow-hidden shadow-2xl p-6 sm:p-10 space-y-6">
           
           {/* Category & Tags Header */}
           <div className="flex items-center justify-between flex-wrap gap-2">
@@ -529,7 +529,7 @@ export const ArticleDetailPage: React.FC = () => {
         {discussedFilm && (
           <section
             id="article-discussed-film-box"
-            className="bg-[#171A1F] border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden"
+            className="bg-[#171717] border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden"
           >
             <div className="flex items-center justify-between pb-4 mb-6 border-b border-white/10 flex-wrap gap-2">
               <div className="flex items-center gap-2">
@@ -666,7 +666,7 @@ export const ArticleDetailPage: React.FC = () => {
         <AdBannerSlot variant="infeed" />
 
         {/* Comments Section */}
-        <div id="article-comments" className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6">
+        <div id="article-comments" className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-800">
             <MessageCircle className="w-5 h-5 text-[#FF2E7E]" />
             <h3 className="font-display font-black text-lg text-white">
@@ -754,7 +754,7 @@ export const ArticleDetailPage: React.FC = () => {
                 <div
                   key={rel.id}
                   onClick={() => navigateTo('article-detail', { articleId: rel.id })}
-                  className="bg-[#171A1F] border border-slate-800 rounded-2xl overflow-hidden p-3 hover:border-[#FF2E7E] cursor-pointer group transition-all"
+                  className="bg-[#171717] border border-slate-800 rounded-2xl overflow-hidden p-3 hover:border-[#FF2E7E] cursor-pointer group transition-all"
                 >
                   {rel.coverImage?.trim() ? (
                     <img

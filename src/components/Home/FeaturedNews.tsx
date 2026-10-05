@@ -17,7 +17,7 @@ const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo
     <article
       id={`featured-news-card-${article.id}`}
       onClick={() => navigateTo('article-detail', { articleId: article.id })}
-      className="bg-[#171A1F] border border-white/[0.08] hover:border-white/20 rounded-3xl overflow-hidden group transition-all duration-300 flex flex-col cursor-pointer shadow-lg hover:shadow-2xl hover:shadow-black/50"
+      className="bg-[#171717] border border-white/[0.08] hover:border-white/20 rounded-3xl overflow-hidden group transition-all duration-300 flex flex-col cursor-pointer shadow-lg hover:shadow-2xl hover:shadow-black/50"
     >
       {/* Editorial Card Cover Image */}
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-900">
@@ -26,7 +26,7 @@ const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo
           alt={article.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent opacity-60" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#171717] via-transparent to-transparent opacity-60" />
       </div>
 
       {/* Editorial Card Body */}

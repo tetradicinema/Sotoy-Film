@@ -28,7 +28,7 @@ export const ROLES_CONFIG: Record<UserRole, RoleConfigItem> = {
     shortLabel: 'Warga',
     fullTitle: 'Warga Sotoy (Penonton Santai)',
     description: 'Anggota komunitas & penonton sinema santai',
-    color: '#94A3B8',
+    color: '#A3A3A3',
     text: 'text-slate-400',
     bg: 'bg-white/[0.04]',
     border: 'border-white/[0.08]',

@@ -535,7 +535,7 @@ export const WriteArticlePage: React.FC = () => {
   if (!isAuthorized) {
     return (
       <div className="min-h-screen py-16 px-4 flex items-center justify-center">
-        <div className="max-w-md w-full bg-[#171A1F] border border-slate-800 rounded-3xl p-8 text-center shadow-2xl space-y-5">
+        <div className="max-w-md w-full bg-[#171717] border border-slate-800 rounded-3xl p-8 text-center shadow-2xl space-y-5">
           <div className="w-16 h-16 rounded-3xl bg-[#FF2E7E]/20 text-[#FF2E7E] flex items-center justify-center mx-auto border border-[#FF2E7E]/40">
             <Lock className="w-8 h-8" />
           </div>
@@ -585,11 +585,11 @@ export const WriteArticlePage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen py-8 bg-[#0A0B10]">
+    <div className="min-h-screen py-8 bg-[#0A0A0A]">
       <div className={`${splitPreview ? 'max-w-[92rem]' : 'max-w-4xl'} mx-auto px-4 sm:px-6 lg:px-8 space-y-6 transition-all duration-300`}>
         
         {/* Header Navigation */}
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#171A1F]/80 backdrop-blur-md p-4 rounded-2xl border border-slate-800 shadow-xl">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#171717]/80 backdrop-blur-md p-4 rounded-2xl border border-slate-800 shadow-xl">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigateTo('writer-dashboard')}
@@ -661,7 +661,7 @@ export const WriteArticlePage: React.FC = () => {
 
         {/* Main Editor & Split Preview Container */}
         <div className={splitPreview ? 'grid grid-cols-1 lg:grid-cols-2 gap-8 items-start' : 'space-y-6'}>
-          <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-6">
+          <div className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-6">
             <div className="flex items-center gap-3 pb-4 border-b border-slate-800">
             <div className="w-10 h-10 rounded-2xl bg-[#FF2E7E]/20 text-[#FF2E7E] flex items-center justify-center">
               <PenSquare className="w-5 h-5" />
@@ -954,7 +954,7 @@ export const WriteArticlePage: React.FC = () => {
 
                 {/* Currently Linked Film Card or Search Input */}
                 {selectedFilm ? (
-                  <div className="p-4 rounded-2xl bg-[#0E1013] border border-cyan-500/40 flex items-center justify-between gap-4 shadow-lg">
+                  <div className="p-4 rounded-2xl bg-[#0A0A0A] border border-cyan-500/40 flex items-center justify-between gap-4 shadow-lg">
                     <div className="flex items-center gap-3.5">
                       {selectedFilm.poster?.trim() ? (
                         <img
@@ -1017,7 +1017,7 @@ export const WriteArticlePage: React.FC = () => {
 
                     {/* Auto-complete Search Results Dropdown */}
                     {isFilmSearchOpen && filmSearchQuery.trim().length > 0 && (
-                      <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#171A1F] border border-slate-700 rounded-2xl shadow-2xl max-h-64 overflow-y-auto divide-y divide-slate-800">
+                      <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#171717] border border-slate-700 rounded-2xl shadow-2xl max-h-64 overflow-y-auto divide-y divide-slate-800">
                         {filteredFilms.length > 0 ? (
                           filteredFilms.map(film => (
                             <div
@@ -1123,7 +1123,7 @@ export const WriteArticlePage: React.FC = () => {
               </div>
 
               {/* Dedicated SEO Metadata & OpenGraph Social Section */}
-              <div className="p-6 rounded-2xl bg-[#0E1013] border border-slate-800 space-y-5 shadow-xl">
+              <div className="p-6 rounded-2xl bg-[#0A0A0A] border border-slate-800 space-y-5 shadow-xl">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-[#FF2E7E]">
@@ -1250,7 +1250,7 @@ export const WriteArticlePage: React.FC = () => {
                     </div>
 
                     {/* Card Preview Box */}
-                    <div className="rounded-2xl overflow-hidden border border-slate-700/80 bg-[#171A1F] shadow-2xl">
+                    <div className="rounded-2xl overflow-hidden border border-slate-700/80 bg-[#171717] shadow-2xl">
                       <div className="relative h-36 bg-slate-800 overflow-hidden">
                         {(ogImage?.trim() || coverImage?.trim()) ? (
                           <img
@@ -1290,7 +1290,7 @@ export const WriteArticlePage: React.FC = () => {
               </div>
 
               {/* Dedicated Publishing Schedule & Status Section */}
-              <div className="p-6 rounded-2xl bg-[#0E1013] border border-slate-800 space-y-5 shadow-xl">
+              <div className="p-6 rounded-2xl bg-[#0A0A0A] border border-slate-800 space-y-5 shadow-xl">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
@@ -1319,7 +1319,7 @@ export const WriteArticlePage: React.FC = () => {
                     className={`p-4 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
                       publishOption === 'now'
                         ? 'bg-emerald-500/10 border-emerald-500 text-white shadow-lg shadow-emerald-950/40'
-                        : 'bg-[#171A1F] border-slate-800 text-slate-400 hover:border-slate-700'
+                        : 'bg-[#171717] border-slate-800 text-slate-400 hover:border-slate-700'
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -1344,7 +1344,7 @@ export const WriteArticlePage: React.FC = () => {
                     className={`p-4 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
                       publishOption === 'scheduled'
                         ? 'bg-purple-500/10 border-purple-500 text-white shadow-lg shadow-purple-950/40'
-                        : 'bg-[#171A1F] border-slate-800 text-slate-400 hover:border-slate-700'
+                        : 'bg-[#171717] border-slate-800 text-slate-400 hover:border-slate-700'
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -1366,7 +1366,7 @@ export const WriteArticlePage: React.FC = () => {
                     className={`p-4 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
                       publishOption === 'draft'
                         ? 'bg-amber-500/10 border-amber-500 text-white shadow-lg shadow-amber-950/40'
-                        : 'bg-[#171A1F] border-slate-800 text-slate-400 hover:border-slate-700'
+                        : 'bg-[#171717] border-slate-800 text-slate-400 hover:border-slate-700'
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -1384,7 +1384,7 @@ export const WriteArticlePage: React.FC = () => {
 
                 {/* Date & Time Picker Controls (Visible when 'scheduled' option active) */}
                 {publishOption === 'scheduled' && (
-                  <div className="p-4 bg-[#171A1F] border border-purple-500/30 rounded-2xl space-y-4 animate-in fade-in duration-200">
+                  <div className="p-4 bg-[#171717] border border-purple-500/30 rounded-2xl space-y-4 animate-in fade-in duration-200">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
                         <label className="block text-xs font-bold text-slate-200 mb-1 flex items-center gap-1.5">
@@ -1430,7 +1430,7 @@ export const WriteArticlePage: React.FC = () => {
                           type="datetime-local"
                           value={scheduledAtDate}
                           onChange={(e) => setScheduledAtDate(e.target.value)}
-                          className="w-full bg-[#0A0B10] border border-purple-500/50 rounded-xl px-4 py-2.5 text-xs font-mono text-purple-200 focus:outline-none focus:border-purple-400 cursor-pointer"
+                          className="w-full bg-[#0A0A0A] border border-purple-500/50 rounded-xl px-4 py-2.5 text-xs font-mono text-purple-200 focus:outline-none focus:border-purple-400 cursor-pointer"
                         />
                       </div>
 
@@ -1523,7 +1523,7 @@ export const WriteArticlePage: React.FC = () => {
 
         {/* Right Split Live Preview Panel */}
         {splitPreview && (
-          <div className="sticky top-20 bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto custom-scrollbar">
+          <div className="sticky top-20 bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <div className="flex items-center gap-2 text-xs font-black text-white uppercase tracking-wider">
                 <Eye className="w-4 h-4 text-[#FF2E7E]" />

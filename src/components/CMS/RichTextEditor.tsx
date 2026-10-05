@@ -304,12 +304,12 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
-            className="w-full h-full min-h-[220px] bg-[#171A1F] text-slate-100 p-4 font-sans text-sm placeholder-slate-500 focus:outline-none resize-y"
+            className="w-full h-full min-h-[220px] bg-[#171717] text-slate-100 p-4 font-sans text-sm placeholder-slate-500 focus:outline-none resize-y"
             style={{ minHeight: isFullscreen ? 'calc(100vh - 150px)' : '240px' }}
           />
         ) : (
           <div
-            className="w-full h-full overflow-y-auto p-4 bg-[#171A1F] text-slate-100 markdown-body prose prose-invert max-w-none text-sm leading-relaxed"
+            className="w-full h-full overflow-y-auto p-4 bg-[#171717] text-slate-100 markdown-body prose prose-invert max-w-none text-sm leading-relaxed"
             style={{ height: isFullscreen ? 'calc(100vh - 150px)' : '240px', minHeight: '240px' }}
             dangerouslySetInnerHTML={{ __html: parseMarkdown(value) }}
           />
@@ -317,7 +317,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       </div>
 
       {/* 4. METRICS / STATS FOOTER */}
-      <div className="flex items-center justify-between px-4 py-2 bg-[#171A1F] border-t border-white/[0.08] text-[10px] font-mono text-slate-400">
+      <div className="flex items-center justify-between px-4 py-2 bg-[#171717] border-t border-white/[0.08] text-[10px] font-mono text-slate-400">
         <div className="flex items-center gap-3">
           <span className="tabular-nums">{wordCount} Kata</span>
           <span>•</span>

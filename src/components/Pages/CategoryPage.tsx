@@ -151,7 +151,7 @@ export const CategoryPage: React.FC = () => {
         {/* Category Hero Banner */}
         <div
           id="category-header-banner"
-          className="relative rounded-3xl p-6 sm:p-10 overflow-hidden border border-slate-800 shadow-2xl bg-[#171A1F] flex flex-col items-start gap-5"
+          className="relative rounded-3xl p-6 sm:p-10 overflow-hidden border border-slate-800 shadow-2xl bg-[#171717] flex flex-col items-start gap-5"
         >
           <div
             className="absolute -right-16 -top-16 w-80 h-80 rounded-full blur-3xl opacity-20 pointer-events-none"
@@ -217,7 +217,7 @@ export const CategoryPage: React.FC = () => {
         {isLoadingArticles && publishedArticles.length === 0 ? (
           <ArticleListSkeleton count={6} showHeroBanner={false} />
         ) : filteredArticles.length === 0 ? (
-          <div className="text-center py-16 bg-[#171A1F] rounded-3xl border border-slate-800">
+          <div className="text-center py-16 bg-[#171717] rounded-3xl border border-slate-800">
             <p className="text-slate-400 text-sm">Belum ada artikel untuk sub-kategori ini saat ini.</p>
           </div>
         ) : (
@@ -227,7 +227,7 @@ export const CategoryPage: React.FC = () => {
                 key={article.id}
                 id={`category-article-${article.id}`}
                 onClick={() => navigateTo('article-detail', { articleId: article.id })}
-                className="bg-[#171A1F] border border-slate-800 rounded-3xl overflow-hidden hover:border-[#FF2E7E]/60 transition-all duration-300 flex flex-col cursor-pointer group shadow-lg"
+                className="bg-[#171717] border border-slate-800 rounded-3xl overflow-hidden hover:border-[#FF2E7E]/60 transition-all duration-300 flex flex-col cursor-pointer group shadow-lg"
               >
                 <div className="relative h-48 w-full overflow-hidden">
                   <img
@@ -235,7 +235,7 @@ export const CategoryPage: React.FC = () => {
                     alt={article.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#171717] via-transparent to-transparent" />
                   <span className="absolute top-3 left-3 bg-[#FF2E7E] text-white text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
                     {article.subCategory}
                   </span>

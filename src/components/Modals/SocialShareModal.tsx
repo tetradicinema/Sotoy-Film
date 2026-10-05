@@ -290,7 +290,7 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
 
   return (
     <div
-      className="relative w-[1080px] h-[1920px] bg-[#0E1013] overflow-hidden flex flex-col justify-between text-left select-none"
+      className="relative w-[1080px] h-[1920px] bg-[#0A0A0A] overflow-hidden flex flex-col justify-between text-left select-none"
       style={{ width: '1080px', height: '1920px' }}
     >
       {/* 1. Full-Bleed Film Poster (Full 100% height, edge-to-edge x=0, y=0) */}
@@ -302,16 +302,16 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
             className="w-full h-full object-cover"
           />
           {/* Subtle top vignette for watermark contrast on bright posters */}
-          <div className="absolute inset-x-0 top-0 h-[320px] bg-gradient-to-b from-[#0E1013]/95 via-[#0E1013]/50 to-transparent pointer-events-none" />
+          <div className="absolute inset-x-0 top-0 h-[320px] bg-gradient-to-b from-[#0A0A0A]/95 via-[#0A0A0A]/50 to-transparent pointer-events-none" />
         </div>
       )}
 
-      {/* 2. Single Continuous Dark Scrim fading poster smoothly into solid dark #0E1013 background */}
+      {/* 2. Single Continuous Dark Scrim fading poster smoothly into solid dark #0A0A0A background */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            'linear-gradient(to bottom, transparent 0%, rgba(14, 16, 19, 0.05) 20%, rgba(14, 16, 19, 0.2) 32%, rgba(14, 16, 19, 0.45) 42%, rgba(14, 16, 19, 0.72) 52%, rgba(14, 16, 19, 0.88) 60%, rgba(14, 16, 19, 0.96) 68%, #0E1013 75%, #0E1013 100%)',
+            'linear-gradient(to bottom, transparent 0%, rgba(14, 16, 19, 0.05) 20%, rgba(14, 16, 19, 0.2) 32%, rgba(14, 16, 19, 0.45) 42%, rgba(14, 16, 19, 0.72) 52%, rgba(14, 16, 19, 0.88) 60%, rgba(14, 16, 19, 0.96) 68%, #0A0A0A 75%, #0A0A0A 100%)',
         }}
       />
 
@@ -322,7 +322,7 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
           alt="Sotoy Film"
           className="w-[380px] h-auto object-contain drop-shadow-lg"
         />
-        <div className="px-7 py-3.5 rounded-full font-black text-[28px] tracking-wider text-[#FF2E7E] bg-[#0E1013]/90 border-2 border-[#FF2E7E]/40 backdrop-blur-md shadow-lg whitespace-nowrap uppercase">
+        <div className="px-7 py-3.5 rounded-full font-black text-[28px] tracking-wider text-[#FF2E7E] bg-[#0A0A0A]/90 border-2 border-[#FF2E7E]/40 backdrop-blur-md shadow-lg whitespace-nowrap uppercase">
           SKOR & ULASAN
         </div>
       </div>
@@ -898,8 +898,8 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           return;
         }
 
-        // Base solid background (#0E1013)
-        ctx.fillStyle = '#0E1013';
+        // Base solid background (#0A0A0A)
+        ctx.fillStyle = '#0A0A0A';
         ctx.fillRect(0, 0, width, height);
 
         // 1. Background + Cover: Draw article cover over roughly top 60% (1150px) using cover-fit
@@ -935,9 +935,9 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
 
         if (!coverLoaded) {
           const fallbackGrad = ctx.createLinearGradient(0, 0, 0, coverH);
-          fallbackGrad.addColorStop(0, '#171A21');
-          fallbackGrad.addColorStop(0.5, '#0E1013');
-          fallbackGrad.addColorStop(1, '#08090C');
+          fallbackGrad.addColorStop(0, '#262626');
+          fallbackGrad.addColorStop(0.5, '#0A0A0A');
+          fallbackGrad.addColorStop(1, '#0A0A0A');
           ctx.fillStyle = fallbackGrad;
           ctx.fillRect(0, 0, width, coverH);
 
@@ -948,15 +948,15 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           ctx.fillRect(0, 0, width, coverH);
         }
 
-        // 2. Single Continuous Gradient: No seam, reaches opaque #0E1013 at bottom edge of cover (~58-60%)
+        // 2. Single Continuous Gradient: No seam, reaches opaque #0A0A0A at bottom edge of cover (~58-60%)
         const scrim = ctx.createLinearGradient(0, 0, 0, height);
         scrim.addColorStop(0, 'rgba(14, 16, 19, 0.90)');
         scrim.addColorStop(0.10, 'rgba(14, 16, 19, 0.50)');
         scrim.addColorStop(0.22, 'rgba(14, 16, 19, 0.25)');
         scrim.addColorStop(0.35, 'rgba(14, 16, 19, 0.55)');
         scrim.addColorStop(0.48, 'rgba(14, 16, 19, 0.85)');
-        scrim.addColorStop(0.58, '#0E1013');
-        scrim.addColorStop(1, '#0E1013');
+        scrim.addColorStop(0.58, '#0A0A0A');
+        scrim.addColorStop(1, '#0A0A0A');
         ctx.fillStyle = scrim;
         ctx.fillRect(0, 0, width, height);
 
@@ -1126,7 +1126,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         if (excerptLines.length > 0) {
           yCursor += excerptGap;
           ctx.font = excerptFont;
-          ctx.fillStyle = '#CBD5E1';
+          ctx.fillStyle = '#D4D4D4';
           ctx.textAlign = 'left';
           for (const line of excerptLines) {
             ctx.fillText(line, sidePad, yCursor);
@@ -1162,7 +1162,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           }
 
           if (bylineStr) {
-            ctx.fillStyle = '#E2E8F0';
+            ctx.fillStyle = '#E5E5E5';
             ctx.font = "bold 24px 'Geist', 'Plus Jakarta Sans', sans-serif";
             ctx.textAlign = 'left';
             const textOffsetY = authorAvatarImg ? yCursor + (avatarSize - 24) / 2 : yCursor + 10;
@@ -1271,8 +1271,8 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           return;
         }
 
-        // Base solid background (#0E1013)
-        ctx.fillStyle = '#0E1013';
+        // Base solid background (#0A0A0A)
+        ctx.fillStyle = '#0A0A0A';
         ctx.fillRect(0, 0, width, height);
 
         // 1. Full-Bleed Film Poster (Full 1080x1920 edge-to-edge cover-fit)
@@ -1303,9 +1303,9 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
 
         if (!posterLoaded) {
           const fallbackGrad = ctx.createLinearGradient(0, 0, 0, height);
-          fallbackGrad.addColorStop(0, '#171A21');
-          fallbackGrad.addColorStop(0.5, '#0E1013');
-          fallbackGrad.addColorStop(1, '#08090C');
+          fallbackGrad.addColorStop(0, '#262626');
+          fallbackGrad.addColorStop(0.5, '#0A0A0A');
+          fallbackGrad.addColorStop(1, '#0A0A0A');
           ctx.fillStyle = fallbackGrad;
           ctx.fillRect(0, 0, width, height);
         }
@@ -1319,7 +1319,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         ctx.fillStyle = topVignette;
         ctx.fillRect(0, 0, width, 320);
 
-        // Lower scrim fading poster smoothly into solid dark #0E1013 background (no hard seam)
+        // Lower scrim fading poster smoothly into solid dark #0A0A0A background (no hard seam)
         const mainScrim = ctx.createLinearGradient(0, 0, 0, height);
         mainScrim.addColorStop(0, 'rgba(14, 16, 19, 0)');
         mainScrim.addColorStop(0.20, 'rgba(14, 16, 19, 0.05)');
@@ -1328,8 +1328,8 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         mainScrim.addColorStop(0.52, 'rgba(14, 16, 19, 0.72)');
         mainScrim.addColorStop(0.60, 'rgba(14, 16, 19, 0.88)');
         mainScrim.addColorStop(0.68, 'rgba(14, 16, 19, 0.96)');
-        mainScrim.addColorStop(0.75, '#0E1013');
-        mainScrim.addColorStop(1, '#0E1013');
+        mainScrim.addColorStop(0.75, '#0A0A0A');
+        mainScrim.addColorStop(1, '#0A0A0A');
         ctx.fillStyle = mainScrim;
         ctx.fillRect(0, 0, width, height);
 
@@ -1564,7 +1564,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         ctx.fillText(scoreStr, startRatingX + starW + 14, yCursor);
 
         // Draw Denominator "/ 10.0"
-        ctx.fillStyle = '#94A3B8';
+        ctx.fillStyle = '#A3A3A3';
         ctx.font = "bold 26px 'Geist', 'Plus Jakarta Sans', sans-serif";
         ctx.fillText('/ 10.0', startRatingX + starW + 14 + scoreW + 12, yCursor + 52);
 
@@ -1617,11 +1617,11 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
             ctx.stroke();
             ctx.restore();
 
-            ctx.fillStyle = '#E2E8F0';
+            ctx.fillStyle = '#E5E5E5';
             ctx.textAlign = 'left';
             ctx.fillText(reviewerText, startX + avatarSize + gap, yCursor + (avatarSize - 20) / 2);
           } else {
-            ctx.fillStyle = '#E2E8F0';
+            ctx.fillStyle = '#E5E5E5';
             ctx.textAlign = 'center';
             ctx.fillText(reviewerText, width / 2, yCursor + 8);
           }
@@ -1645,7 +1645,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         if (reviewLines.length > 0) {
           yCursor += reviewGap;
           ctx.font = reviewFont;
-          ctx.fillStyle = '#CBD5E1';
+          ctx.fillStyle = '#D4D4D4';
           ctx.textAlign = 'center';
           for (const line of reviewLines) {
             ctx.fillText(line, width / 2, yCursor);
@@ -1786,7 +1786,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
 
       // 3. Outer border accent
       if (!isFilmRating || format !== 'story') {
-        ctx.strokeStyle = '#222538';
+        ctx.strokeStyle = '#171717';
         ctx.lineWidth = 4;
         ctx.strokeRect(36, 36, width - 72, height - 72);
       }
@@ -1797,7 +1797,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         ctx.font = '900 36px sans-serif';
         ctx.fillText('SOTOY FILM', 70, format === 'story' ? 130 : 100);
 
-        ctx.fillStyle = '#94A3B8';
+        ctx.fillStyle = '#A3A3A3';
         ctx.font = 'bold 20px sans-serif';
         const badgeText = isFilmRating
           ? '• SKOR SOTOY & ULASAN FILM'
@@ -1949,7 +1949,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
 
         // Article Excerpt
         if (data.text) {
-          ctx.fillStyle = '#94A3B8';
+          ctx.fillStyle = '#A3A3A3';
           ctx.font = format === 'story' ? '28px sans-serif' : '24px sans-serif';
           currentContentY = wrapText(
             data.text,
@@ -2068,7 +2068,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           ctx.font = '500 42px sans-serif';
           ctx.fillText(`★ ${displayScore.toFixed(1)}`, rightX + 25, rY + 54);
 
-          ctx.fillStyle = '#94A3B8';
+          ctx.fillStyle = '#A3A3A3';
           ctx.font = 'bold 20px sans-serif';
           ctx.fillText('/ 10.0', rightX + 175, rY + 54);
 
@@ -2103,7 +2103,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
             bottomRevY += 6;
           }
 
-          ctx.fillStyle = '#CBD5E1';
+          ctx.fillStyle = '#D4D4D4';
           ctx.font = 'italic 20px sans-serif';
           const rText = data.reviewText || data.text || 'Simak ulasan lengkap dan skor sinema di platform Sotoy Film.';
           wrapText(`"${rText}"`, cardX + 70, bottomRevY, cardW - 140, 28, 3);
@@ -2121,7 +2121,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         ctx.fillText(bottomMeta, cardX + 45, cardY + cardH - 45);
 
         // 7. Outer Canvas Footer
-        ctx.fillStyle = '#64748B';
+        ctx.fillStyle = '#737373';
         ctx.font = 'bold 22px sans-serif';
         ctx.fillText('sotoyfilm.my.id', 70, height - 70);
       }
@@ -2252,13 +2252,13 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
     >
       <div
         id="social-share-modal"
-        className="relative w-full max-w-lg bg-[#171A1F] border border-slate-700/80 rounded-3xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
+        className="relative w-full max-w-lg bg-[#171717] border border-slate-700/80 rounded-3xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto"
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#FF2E7E] via-[#e0266e] to-[#FF2E7E] p-0.5 shadow-md shadow-sm">
-              <div className="w-full h-full bg-[#171A1F] rounded-[10px] flex items-center justify-center text-[#FF2E7E]">
+              <div className="w-full h-full bg-[#171717] rounded-[10px] flex items-center justify-center text-[#FF2E7E]">
                 <Share2 className="w-4 h-4" />
               </div>
             </div>
@@ -2429,7 +2429,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           <div className="space-y-4 animate-in fade-in duration-150">
             {/* Visual Story Card Preview */}
             {isFilmRating ? (
-              <div className="relative mx-auto w-[270px] h-[480px] overflow-hidden shadow-2xl rounded-2xl bg-[#0E1013] select-none">
+              <div className="relative mx-auto w-[270px] h-[480px] overflow-hidden shadow-2xl rounded-2xl bg-[#0A0A0A] select-none">
                 <div
                   style={{
                     width: '1080px',
@@ -2463,7 +2463,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                 )}
               </div>
             ) : isArticle ? (
-              <div className="relative mx-auto w-[240px] aspect-[9/16] rounded-2xl overflow-hidden bg-[#0E1013] shadow-2xl flex flex-col justify-between text-left select-none">
+              <div className="relative mx-auto w-[240px] aspect-[9/16] rounded-2xl overflow-hidden bg-[#0A0A0A] shadow-2xl flex flex-col justify-between text-left select-none">
                 {/* 1. Full-bleed Article Cover in top ~60% */}
                 <div className="absolute top-0 left-0 right-0 h-[60%] overflow-hidden pointer-events-none">
                   {data.image || data.imageUrl ? (
@@ -2473,16 +2473,16 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-b from-[#171A21] via-[#0E1013] to-[#08090C]" />
+                    <div className="w-full h-full bg-gradient-to-b from-[#262626] via-[#0A0A0A] to-[#0A0A0A]" />
                   )}
                 </div>
 
-                {/* 2. Single Continuous Gradient Overlay (Seamless to solid #0E1013 at ~60%) */}
+                {/* 2. Single Continuous Gradient Overlay (Seamless to solid #0A0A0A at ~60%) */}
                 <div
                   className="absolute inset-0 pointer-events-none"
                   style={{
                     background:
-                      'linear-gradient(to bottom, rgba(14, 16, 19, 0.75) 0%, rgba(14, 16, 19, 0.35) 10%, rgba(14, 16, 19, 0.15) 22%, rgba(14, 16, 19, 0.35) 35%, rgba(14, 16, 19, 0.65) 45%, rgba(14, 16, 19, 0.90) 54%, #0E1013 60%, #0E1013 100%)',
+                      'linear-gradient(to bottom, rgba(14, 16, 19, 0.75) 0%, rgba(14, 16, 19, 0.35) 10%, rgba(14, 16, 19, 0.15) 22%, rgba(14, 16, 19, 0.35) 35%, rgba(14, 16, 19, 0.65) 45%, rgba(14, 16, 19, 0.90) 54%, #0A0A0A 60%, #0A0A0A 100%)',
                   }}
                 />
 
@@ -2493,7 +2493,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                     alt="Sotoy Film"
                     className="w-[84px] h-auto object-contain drop-shadow"
                   />
-                  <div className="px-2.5 py-0.5 rounded-full font-black text-[7.5px] tracking-wider text-[#FF2E7E] bg-[#0E1013]/90 border border-[#FF2E7E]/40 backdrop-blur-md shadow whitespace-nowrap uppercase">
+                  <div className="px-2.5 py-0.5 rounded-full font-black text-[7.5px] tracking-wider text-[#FF2E7E] bg-[#0A0A0A]/90 border border-[#FF2E7E]/40 backdrop-blur-md shadow whitespace-nowrap uppercase">
                     {data.category || 'ARTIKEL'}
                   </div>
                 </div>

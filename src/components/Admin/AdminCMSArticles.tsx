@@ -489,7 +489,7 @@ export const AdminCMSArticles: React.FC = () => {
         {/* 4 WORDPRESS STATS CARDS */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
           {/* Total Articles */}
-          <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-4 flex items-center justify-between shadow-sm">
+          <div className="bg-[#171717] border border-white/10 rounded-2xl p-4 flex items-center justify-between shadow-sm">
             <div>
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 Total Artikel
@@ -507,7 +507,7 @@ export const AdminCMSArticles: React.FC = () => {
           </div>
 
           {/* Total Views */}
-          <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-4 flex items-center justify-between shadow-sm">
+          <div className="bg-[#171717] border border-white/10 rounded-2xl p-4 flex items-center justify-between shadow-sm">
             <div>
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 Total Views
@@ -525,7 +525,7 @@ export const AdminCMSArticles: React.FC = () => {
           </div>
 
           {/* Total Drafts */}
-          <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-4 flex items-center justify-between shadow-sm">
+          <div className="bg-[#171717] border border-white/10 rounded-2xl p-4 flex items-center justify-between shadow-sm">
             <div>
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 Total Draf
@@ -543,7 +543,7 @@ export const AdminCMSArticles: React.FC = () => {
           </div>
 
           {/* Scheduled Articles */}
-          <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-4 flex items-center justify-between shadow-sm">
+          <div className="bg-[#171717] border border-white/10 rounded-2xl p-4 flex items-center justify-between shadow-sm">
             <div>
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 Artikel Terjadwal
@@ -563,7 +563,7 @@ export const AdminCMSArticles: React.FC = () => {
       </div>
 
       {/* 2. WORDPRESS STATUS TABS (ALL | PUBLISHED | DRAFTS | SCHEDULED | TRASH) */}
-      <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm">
+      <div className="bg-[#171717] border border-white/10 rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm">
         
         {/* Status Filter Row */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-3.5">
@@ -768,7 +768,7 @@ export const AdminCMSArticles: React.FC = () => {
         <div className="overflow-x-auto rounded-xl border border-slate-850">
           <table className="w-full text-left text-xs">
             {/* Table Header */}
-            <thead className="bg-[#17182b] text-slate-400 text-[11px] font-bold uppercase tracking-wider border-b border-slate-800">
+            <thead className="bg-[#171717] text-slate-400 text-[11px] font-bold uppercase tracking-wider border-b border-slate-800">
               <tr>
                 <th className="p-3.5 w-10 text-center">
                   <button 
@@ -794,7 +794,7 @@ export const AdminCMSArticles: React.FC = () => {
             </thead>
 
             {/* Table Body */}
-            <tbody className="divide-y divide-slate-850/80 bg-[#111220]">
+            <tbody className="divide-y divide-slate-850/80 bg-[#171717]">
               {filteredArticles.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="p-10 text-center text-slate-500 text-xs">
@@ -1230,7 +1230,7 @@ export const AdminCMSArticles: React.FC = () => {
       {/* 5. DEDICATED ONE-CLICK MIGRATION MODAL */}
       {isMigrationModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-[#171A1F] border border-white/10 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl space-y-6 relative overflow-hidden">
+          <div className="bg-[#171717] border border-white/10 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl space-y-6 relative overflow-hidden">
             <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-4 relative z-10">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-2xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-[#FF2E7E]">
@@ -1256,7 +1256,7 @@ export const AdminCMSArticles: React.FC = () => {
             </div>
 
             {/* Target Account Summary Card */}
-            <div className="bg-[#0E1013] border border-white/10 rounded-2xl p-4 space-y-3 relative z-10">
+            <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-4 space-y-3 relative z-10">
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                 <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Akun Penulis Tujuan (Target Author)</span>
@@ -1284,19 +1284,19 @@ export const AdminCMSArticles: React.FC = () => {
 
             {/* Migration Scope Details */}
             <div className="space-y-2 text-xs text-slate-300 leading-relaxed relative z-10">
-              <div className="flex items-center justify-between p-3 rounded-xl bg-[#0E1013] border border-white/10">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-[#0A0A0A] border border-white/10">
                 <span className="text-slate-400">Total Artikel di Sistem:</span>
                 <span className="font-bold text-white font-mono tabular-nums">{articles.length} artikel</span>
               </div>
 
-              <div className="flex items-center justify-between p-3 rounded-xl bg-[#0E1013] border border-white/10">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-[#0A0A0A] border border-white/10">
                 <span className="text-slate-400">Artikel yang Perlu Dimigrasikan:</span>
                 <span className="font-bold text-white font-mono tabular-nums">
                   {unmigratedArticles.length} artikel
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-3 rounded-xl bg-[#0E1013] border border-white/10">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-[#0A0A0A] border border-white/10">
                 <span className="text-slate-400">Database Target:</span>
                 <span className="font-bold text-slate-200">Cloud Firestore + Local State Sync</span>
               </div>
@@ -1312,7 +1312,7 @@ export const AdminCMSArticles: React.FC = () => {
                   </span>
                   <span className="font-mono tabular-nums">{migrationProgress}%</span>
                 </div>
-                <div className="w-full bg-[#0E1013] rounded-full h-2.5 overflow-hidden border border-white/10">
+                <div className="w-full bg-[#0A0A0A] rounded-full h-2.5 overflow-hidden border border-white/10">
                   <div 
                     className="bg-[#FF2E7E] h-2.5 rounded-full transition-all duration-300"
                     style={{ width: `${migrationProgress}%` }}
@@ -1351,7 +1351,7 @@ export const AdminCMSArticles: React.FC = () => {
       {/* 6. MODAL PILIH AKUN PEMINDAHAN PENULIS MASSAL */}
       {isBulkAuthorModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-[#171A1F] border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5">
+          <div className="bg-[#171717] border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2 text-purple-400 font-bold text-sm">
                 <UserCheck className="w-4 h-4" />

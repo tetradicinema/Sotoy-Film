@@ -43,7 +43,7 @@ export const AboutUsPage: React.FC = () => {
         <AdBannerSlot variant="leaderboard" />
 
         {/* Kisah Awal & Misi */}
-        <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-10 space-y-6 shadow-xl relative overflow-hidden">
+        <div className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-10 space-y-6 shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-72 h-72 bg-[#FF2E7E]/10 rounded-full blur-3xl pointer-events-none" />
           
           <h2 className="font-display font-black text-2xl text-white flex items-center gap-3">
@@ -82,7 +82,7 @@ export const AboutUsPage: React.FC = () => {
             ].map((tier, idx) => (
               <div
                 key={idx}
-                className={`bg-[#171A1F] border ${tier.color} rounded-2xl p-4 flex flex-col justify-between space-y-3`}
+                className={`bg-[#171717] border ${tier.color} rounded-2xl p-4 flex flex-col justify-between space-y-3`}
               >
                 <div>
                   <div className="font-display font-black text-lg mb-1">{tier.score}</div>
@@ -95,7 +95,7 @@ export const AboutUsPage: React.FC = () => {
         </div>
 
         {/* 4 Pilar Ekosistem Peran */}
-        <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-10 space-y-8 shadow-xl">
+        <div className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-10 space-y-8 shadow-xl">
           <div className="max-w-2xl">
             <h2 className="font-display font-black text-2xl text-white mb-2">
               Struktur Peran Komunitas Kami
@@ -149,7 +149,7 @@ export const AboutUsPage: React.FC = () => {
         </div>
 
         {/* CTA Bottom Box */}
-        <div className="p-8 rounded-3xl bg-gradient-to-r from-[#FF2E7E]/20 via-[#171A1F] to-[#FF2E7E]/20 border border-slate-800 text-center space-y-4">
+        <div className="p-8 rounded-3xl bg-gradient-to-r from-[#FF2E7E]/20 via-[#171717] to-[#FF2E7E]/20 border border-slate-800 text-center space-y-4">
           <h3 className="font-display font-black text-2xl text-white">
             Ingin Berkolaborasi atau Bergabung Menjadi Penulis?
           </h3>

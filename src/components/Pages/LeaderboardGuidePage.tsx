@@ -23,7 +23,7 @@ export const LeaderboardGuidePage: React.FC = () => {
 
       <div className="space-y-10">
         {/* Section 1: Dua Kategori Leaderboard Terpisah */}
-        <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-xl space-y-6">
+        <section className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-xl space-y-6">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 bg-[#FF2E7E]/10 text-[#FF2E7E] rounded-2xl flex items-center justify-center shrink-0 border border-[#FF2E7E]/20">
               <Users className="w-6 h-6" />
@@ -74,7 +74,7 @@ export const LeaderboardGuidePage: React.FC = () => {
         </section>
 
         {/* Section 2: Aturan Resmi & Formula Poin */}
-        <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-xl space-y-6">
+        <section className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-xl space-y-6">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 bg-cyan-500/10 text-cyan-400 rounded-2xl flex items-center justify-center shrink-0 border border-cyan-500/20">
               <Sparkles className="w-6 h-6" />
@@ -231,7 +231,7 @@ export const LeaderboardGuidePage: React.FC = () => {
         </section>
 
         {/* Section 3: Jalur Menjadi Kritikus Terverifikasi */}
-        <section className="bg-gradient-to-br from-[#1c1426] via-[#171A1F] to-[#12131a] border border-[#FF2E7E]/40 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-6">
+        <section className="bg-gradient-to-br from-[#1c1426] via-[#171717] to-[#12131a] border border-[#FF2E7E]/40 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-6">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 bg-[#FF2E7E]/10 text-[#FF2E7E] rounded-2xl flex items-center justify-center shrink-0 border border-[#FF2E7E]/30">
               <ShieldCheck className="w-6 h-6" />

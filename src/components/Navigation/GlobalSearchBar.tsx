@@ -562,9 +562,9 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
           aria-expanded={isOpen}
           aria-autocomplete="list"
           aria-controls="global-search-dropdown"
-          className={`w-full bg-[#171A1F] border text-xs text-white placeholder-slate-400 rounded-full pl-9 pr-14 py-2 transition-all shadow-inner focus:outline-none ${
+          className={`w-full bg-[#171717] border text-xs text-white placeholder-slate-400 rounded-full pl-9 pr-14 py-2 transition-all shadow-inner focus:outline-none ${
             isOpen
-              ? 'border-[#FF2E7E] ring-2 ring-[#FF2E7E]/20 bg-[#171A1F]'
+              ? 'border-[#FF2E7E] ring-2 ring-[#FF2E7E]/20 bg-[#171717]'
               : 'border-slate-800 hover:border-slate-700'
           }`}
         />
@@ -602,14 +602,14 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
       {isOpen && (
         <div
           id="global-search-dropdown"
-          className={`bg-[#171A1F] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150 ${
+          className={`bg-[#171717] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150 ${
             isMobile
               ? 'mt-2 w-full max-h-[75vh] flex flex-col'
               : 'absolute left-0 lg:left-auto lg:right-0 top-full mt-2 w-[340px] sm:w-[460px] md:w-[540px] lg:w-[620px] max-h-[80vh] flex flex-col'
           }`}
         >
           {/* Header Bar with Category Filters (Film, Article, Buzz, User, Semua) */}
-          <div className="p-3 bg-[#171A1F] border-b border-slate-800/90 space-y-2.5">
+          <div className="p-3 bg-[#171717] border-b border-slate-800/90 space-y-2.5">
             {/* Category Filter Scope Toggles */}
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-nowrap py-0.5">
@@ -699,7 +699,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                   onClick={() => setActiveCategory('user')}
                   className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
                     activeCategory === 'user'
-                      ? 'bg-purple-500 text-white shadow'
+                      ? 'bg-[#FF2E7E] text-white shadow'
                       : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                   }`}
                   title="Filter profil Kritikus & Pengguna"
@@ -1232,14 +1232,14 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                 {(activeCategory === 'all' || activeCategory === 'user') && matchingUsers.length > 0 && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between pb-1 border-b border-slate-800">
-                      <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-purple-400">
+                      <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-[#FF2E7E]">
                         <Users className="w-3.5 h-3.5" />
                         <span>Kritikus & Pengguna ({matchingUsers.length})</span>
                       </div>
                       {activeCategory === 'all' && matchingUsers.length > 2 && (
                         <button
                           onClick={() => setActiveCategory('user')}
-                          className="text-[11px] font-bold text-purple-400 hover:underline"
+                          className="text-[11px] font-bold text-[#FF2E7E] hover:underline"
                         >
                           Lihat semua ({matchingUsers.length}) →
                         </button>
@@ -1259,7 +1259,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                             onClick={() => handleSelectResult({ id: `user-${user.id}`, type: 'user', data: user })}
                             className={`p-2.5 rounded-xl flex items-center gap-3 cursor-pointer transition-all ${
                               isSelected
-                                ? 'bg-gradient-to-r from-purple-500/15 to-transparent border border-purple-500 shadow-md'
+                                ? 'bg-gradient-to-r from-[#FF2E7E]/15 to-transparent border border-[#FF2E7E] shadow-md'
                                 : 'bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800/80 hover:border-slate-700'
                             }`}
                           >
@@ -1267,7 +1267,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                             <img
                               src={user.avatar?.trim() || DEFAULT_AVATAR}
                               alt={user.name}
-                              className="w-10 h-10 rounded-full object-cover ring-2 ring-purple-500/40 shrink-0"
+                              className="w-10 h-10 rounded-full object-cover ring-2 ring-[#FF2E7E]/40 shrink-0"
                             />
 
                             {/* User Info */}
@@ -1309,7 +1309,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
           </div>
 
           {/* Bottom Action Footer */}
-          <div className="p-2.5 bg-[#171A1F] border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+          <div className="p-2.5 bg-[#171717] border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1">
                 <CornerDownLeft className="w-3 h-3 text-slate-400" />

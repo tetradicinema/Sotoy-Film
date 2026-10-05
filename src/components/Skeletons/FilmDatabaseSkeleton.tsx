@@ -9,7 +9,7 @@ export const FilmDatabaseSkeleton: React.FC<FilmDatabaseSkeletonProps> = ({ card
   return (
     <div className="space-y-8 animate-pulse" aria-busy="true" aria-label="Memuat database film...">
       {/* Top Search & Filter Bar Skeleton */}
-      <div className="bg-[#171A1F] border border-white/[0.08] rounded-3xl p-5 sm:p-6 space-y-4">
+      <div className="bg-[#171717] border border-white/[0.08] rounded-3xl p-5 sm:p-6 space-y-4">
         <div className="flex flex-col md:flex-row gap-3">
           <div className="h-12 flex-1 rounded-2xl bg-slate-800/80" />
           <div className="h-12 w-full md:w-48 rounded-2xl bg-slate-800/60" />

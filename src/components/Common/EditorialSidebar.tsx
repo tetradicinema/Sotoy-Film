@@ -89,7 +89,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
     <aside id="editorial-home-sidebar" className="space-y-6">
       
       {/* SIDEBAR WIDGET 1: LIVE BUZZ & OPINI KOMUNITAS */}
-      <div id="sidebar-live-buzz" className="bg-[#171A1F] border border-white/[0.08] rounded-3xl p-5 shadow-xl">
+      <div id="sidebar-live-buzz" className="bg-[#171717] border border-white/[0.08] rounded-3xl p-5 shadow-xl">
         <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.08]">
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-3.5 bg-[#FF2E7E] rounded-full inline-block" />
@@ -266,7 +266,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
       </div>
 
       {/* SOTOY LEADERBOARD WIDGET */}
-      <div id="sidebar-sotoy-leaderboard" className="bg-[#171A1F] border border-white/[0.08] rounded-3xl p-5 shadow-xl space-y-3.5">
+      <div id="sidebar-sotoy-leaderboard" className="bg-[#171717] border border-white/[0.08] rounded-3xl p-5 shadow-xl space-y-3.5">
         {/* Plain Heading */}
         <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
           <div className="flex items-center gap-2">
@@ -311,7 +311,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
       </div>
 
       {/* SIDEBAR WIDGET 2: RECOMMENDED ARTICLES */}
-      <div id="sidebar-recommended-articles" className="bg-[#171A1F] border border-white/[0.08] rounded-3xl p-5 shadow-xl">
+      <div id="sidebar-recommended-articles" className="bg-[#171717] border border-white/[0.08] rounded-3xl p-5 shadow-xl">
         <div className="flex items-center gap-2 pb-3 mb-4 border-b border-white/[0.08]">
           <span className="w-1.5 h-3.5 bg-slate-300 rounded-full inline-block" />
           <h3 className="font-display font-bold text-sm text-white">
@@ -375,7 +375,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
       {/* SIDEBAR WIDGET 3: CTA BOX */}
       <div
         id="sidebar-community-cta"
-        className="bg-[#171A1F] border border-[#FF2E7E]/30 rounded-3xl p-5 shadow-xl relative overflow-hidden"
+        className="bg-[#171717] border border-[#FF2E7E]/30 rounded-3xl p-5 shadow-xl relative overflow-hidden"
       >
         <div className="text-[#FF2E7E] font-semibold text-xs uppercase tracking-wider mb-1">
           Warga Sotoy Club

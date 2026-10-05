@@ -107,7 +107,7 @@ export const CriticSubmissionPage: React.FC = () => {
 
         {/* Application Form */}
         <div className="lg:col-span-3">
-          <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8">
+          <div className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-8">
             <h2 className="text-xl font-black text-white mb-6">Formulir Pendaftaran</h2>
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-1.5">

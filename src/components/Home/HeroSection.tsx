@@ -93,7 +93,7 @@ export const HeroSection: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
             <div className="lg:col-span-8">
-              <div className="animate-pulse w-full min-h-[480px] rounded-3xl border border-white/[0.06] bg-[#171A1F] flex items-center justify-center">
+              <div className="animate-pulse w-full min-h-[480px] rounded-3xl border border-white/[0.06] bg-[#171717] flex items-center justify-center">
                 <div className="text-center space-y-3">
                   <div className="w-8 h-8 border-2 border-[#FF2E7E] border-t-transparent rounded-full animate-spin mx-auto" />
                   <span className="text-slate-400 text-xs font-medium">Memuat Ulasan Headline...</span>
@@ -101,7 +101,7 @@ export const HeroSection: React.FC = () => {
               </div>
             </div>
             <div className="lg:col-span-4">
-              <div className="animate-pulse w-full h-full min-h-[480px] rounded-3xl border border-white/[0.06] bg-[#171A1F]" />
+              <div className="animate-pulse w-full h-full min-h-[480px] rounded-3xl border border-white/[0.06] bg-[#171717]" />
             </div>
           </div>
         </div>
@@ -128,7 +128,7 @@ export const HeroSection: React.FC = () => {
         {isLoggedIn && (currentUser.role === 'penulis_sotoy' || currentUser.role === 'admin') && (
           <div
             id="author-editorial-quick-banner"
-            className="mb-5 sm:mb-6 bg-[#171A1F]/90 border border-white/[0.08] rounded-2xl p-3.5 sm:p-4 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 backdrop-blur-md"
+            className="mb-5 sm:mb-6 bg-[#171717]/90 border border-white/[0.08] rounded-2xl p-3.5 sm:p-4 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 backdrop-blur-md"
           >
             <div className="flex items-center gap-3">
               <img
@@ -168,7 +168,7 @@ export const HeroSection: React.FC = () => {
           
           {/* LEFT: CINEMATIC COVER SLIDER (8 Columns - Trending Articles) */}
           <div className="lg:col-span-8 flex flex-col">
-            <div className="relative w-full flex-1 min-h-[460px] sm:min-h-[540px] rounded-3xl overflow-hidden border border-white/[0.08] shadow-2xl bg-[#0E1013] group">
+            <div className="relative w-full flex-1 min-h-[460px] sm:min-h-[540px] rounded-3xl overflow-hidden border border-white/[0.08] shadow-2xl bg-[#0A0A0A] group">
               {/* Background Cover Image with cinematic pan/zoom */}
               <img
                 src={activeArticle.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80'}
@@ -177,8 +177,8 @@ export const HeroSection: React.FC = () => {
               />
 
               {/* Measured contrast scrim: at least 4.5:1 text contrast across entire image */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0E1013] via-[#0E1013]/75 to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#0E1013]/90 via-[#0E1013]/40 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/75 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0A]/90 via-[#0A0A0A]/40 to-transparent" />
 
               {/* Top Row: Trending Badge, Category & Reading Endorsement */}
               <div className="absolute top-5 sm:top-7 left-5 sm:left-7 right-5 sm:right-7 flex items-center justify-between z-10">
@@ -272,7 +272,7 @@ export const HeroSection: React.FC = () => {
 
           {/* RIGHT: CURATED TANGGA & SELEKSI SINEMA (4 Columns) */}
           <div className="lg:col-span-4 flex flex-col">
-            <div className="bg-[#171A1F] border border-white/[0.08] rounded-3xl p-5 flex-1 flex flex-col shadow-xl">
+            <div className="bg-[#171717] border border-white/[0.08] rounded-3xl p-5 flex-1 flex flex-col shadow-xl">
               
               {/* Segmented Control Filter Tabs */}
               <div

@@ -367,10 +367,10 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-[#111322] border border-cyan-500/30 w-full max-w-3xl rounded-3xl overflow-hidden shadow-2xl shadow-cyan-950/40 my-auto flex flex-col max-h-[92vh]">
+      <div className="bg-[#171717] border border-cyan-500/30 w-full max-w-3xl rounded-3xl overflow-hidden shadow-2xl shadow-cyan-950/40 my-auto flex flex-col max-h-[92vh]">
         
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-slate-800/80 bg-gradient-to-r from-[#161a33] via-[#111322] to-[#14122b]">
+        <div className="flex items-center justify-between p-5 border-b border-slate-800/80 bg-gradient-to-r from-[#161a33] via-[#171717] to-[#14122b]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-cyan-500/30">
               <Layers className="w-5 h-5" />

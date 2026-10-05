@@ -29,7 +29,7 @@ const HomeCategoryArticleItem: React.FC<HomeCategoryArticleItemProps> = ({ artic
     <article
       id={`cat-article-item-${article.id}`}
       onClick={() => navigateTo('article-detail', { articleId: article.id })}
-      className="bg-[#171A1F] border border-white/[0.08] hover:border-white/20 rounded-3xl p-5 flex flex-col sm:flex-row gap-5 group cursor-pointer transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-black/50"
+      className="bg-[#171717] border border-white/[0.08] hover:border-white/20 rounded-3xl p-5 flex flex-col sm:flex-row gap-5 group cursor-pointer transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-black/50"
     >
       {/* Article Thumbnail */}
       <div className="sm:w-56 h-44 sm:h-auto rounded-2xl overflow-hidden shrink-0 relative bg-slate-900">
@@ -38,7 +38,7 @@ const HomeCategoryArticleItem: React.FC<HomeCategoryArticleItemProps> = ({ artic
           alt={article.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent opacity-40 sm:hidden" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#171717] via-transparent to-transparent opacity-40 sm:hidden" />
       </div>
 
       {/* Article Content */}

@@ -274,7 +274,7 @@ export const CollectionDetailPage: React.FC = () => {
                   <div key={item.itemId} className="relative group">
                     <div
                       onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                      className="bg-[#171A1F] border border-slate-800 rounded-3xl overflow-hidden transition-all duration-300 flex flex-col hover:border-[#FF2E7E]/40 hover:shadow-xl hover:shadow-black/50 hover:-translate-y-1 select-none relative cursor-pointer"
+                      className="bg-[#171717] border border-slate-800 rounded-3xl overflow-hidden transition-all duration-300 flex flex-col hover:border-[#FF2E7E]/40 hover:shadow-xl hover:shadow-black/50 hover:-translate-y-1 select-none relative cursor-pointer"
                     >
                       {/* Image container */}
                       <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-950">
@@ -284,7 +284,7 @@ export const CollectionDetailPage: React.FC = () => {
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                           loading="lazy"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent opacity-80" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#171717] via-transparent to-transparent opacity-80" />
 
                         {/* Rating Badge */}
                         <div className="absolute top-2 left-2 bg-black/90 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/30 text-[#FFD000] text-[11px] font-black flex items-center gap-1 shadow-md">
@@ -338,7 +338,7 @@ export const CollectionDetailPage: React.FC = () => {
                   <div key={item.itemId} className="relative group">
                     <article
                       onClick={() => navigateTo('article-detail', { articleId: article.id })}
-                      className="bg-[#171A1F] border border-slate-800 rounded-3xl overflow-hidden hover:border-[#FF2E7E]/60 transition-all duration-300 flex flex-col cursor-pointer shadow-lg"
+                      className="bg-[#171717] border border-slate-800 rounded-3xl overflow-hidden hover:border-[#FF2E7E]/60 transition-all duration-300 flex flex-col cursor-pointer shadow-lg"
                     >
                       <div className="relative h-48 w-full overflow-hidden">
                         <img
@@ -346,7 +346,7 @@ export const CollectionDetailPage: React.FC = () => {
                           alt={article.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#171717] via-transparent to-transparent" />
                         <span className="absolute top-3 left-3 bg-[#FF2E7E] text-white text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
                           {article.subCategory}
                         </span>

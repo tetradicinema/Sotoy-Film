@@ -366,7 +366,7 @@ export const FilmDatabasePage: React.FC = () => {
           {selectedGenre !== 'all' && (
             <div
               id="genre-spotlight-banner"
-              className="bg-gradient-to-r from-[#17182e] via-[#171A1F] to-[#15162a] border border-slate-800/90 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl relative overflow-hidden"
+              className="bg-gradient-to-r from-[#17182e] via-[#171717] to-[#15162a] border border-slate-800/90 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl relative overflow-hidden"
             >
               <div
                 className="absolute top-0 right-0 w-64 h-full pointer-events-none opacity-20 blur-3xl"
@@ -482,7 +482,7 @@ export const FilmDatabasePage: React.FC = () => {
                   key={film.id}
                   id={`recent-film-card-${film.id}`}
                   onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                  className="bg-[#171A1F] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FF2E7E]/70 hover:shadow-[0_0_24px_rgba(255,46,126,0.18)] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
+                  className="bg-[#171717] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FF2E7E]/70 hover:shadow-[0_0_24px_rgba(255,46,126,0.18)] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
                 >
                   <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
                     <img
@@ -490,7 +490,7 @@ export const FilmDatabasePage: React.FC = () => {
                       alt={film.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent opacity-80" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#171717] via-transparent to-transparent opacity-80" />
 
                     <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/30 text-[#FFD000] text-[11px] font-black flex items-center gap-1">
                       <Star className="w-3 h-3 fill-current text-[#FFD000]" />
@@ -592,7 +592,7 @@ export const FilmDatabasePage: React.FC = () => {
                   key={film.id}
                   id={`popular-film-card-${film.id}`}
                   onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                  className="bg-[#171A1F] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FF2E7E]/70 hover:shadow-[0_0_24px_rgba(255,46,126,0.18)] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
+                  className="bg-[#171717] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FF2E7E]/70 hover:shadow-[0_0_24px_rgba(255,46,126,0.18)] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
                 >
                   <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
                     <img
@@ -600,7 +600,7 @@ export const FilmDatabasePage: React.FC = () => {
                       alt={film.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent opacity-80" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#171717] via-transparent to-transparent opacity-80" />
 
                     <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/30 text-[#FFD000] text-[11px] font-black flex items-center gap-1">
                       <Star className="w-3 h-3 fill-current text-[#FFD000]" />
@@ -702,7 +702,7 @@ export const FilmDatabasePage: React.FC = () => {
                   key={film.id}
                   id={`trending-film-card-${film.id}`}
                   onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                  className="bg-[#171A1F] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FF2E7E]/70 hover:shadow-[0_0_24px_rgba(255,46,126,0.18)] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
+                  className="bg-[#171717] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FF2E7E]/70 hover:shadow-[0_0_24px_rgba(255,46,126,0.18)] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group cursor-pointer shadow-md"
                 >
                   <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
                     <img
@@ -710,7 +710,7 @@ export const FilmDatabasePage: React.FC = () => {
                       alt={film.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent opacity-80" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#171717] via-transparent to-transparent opacity-80" />
 
                     <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/30 text-[#FFD000] text-[11px] font-black flex items-center gap-1">
                       <Star className="w-3 h-3 fill-current text-[#FFD000]" />
@@ -868,7 +868,7 @@ export const FilmDatabasePage: React.FC = () => {
                 <div
                   key={rev.id}
                   id={`popular-review-item-${rev.id}`}
-                  className="bg-[#171A1F] border border-slate-800/80 rounded-3xl p-5 sm:p-6 hover:border-slate-700 transition-all shadow-xl flex flex-col justify-between space-y-4"
+                  className="bg-[#171717] border border-slate-800/80 rounded-3xl p-5 sm:p-6 hover:border-slate-700 transition-all shadow-xl flex flex-col justify-between space-y-4"
                 >
                   <div className="space-y-4">
                     {/* Reviewer Header */}
@@ -962,7 +962,7 @@ export const FilmDatabasePage: React.FC = () => {
         {/* ========================================================================= */}
         {/* SECTION: BROWSE ALL DATABASE (SEARCH, FILTERS, RESULTS GRID) - MOVED TO BOTTOM */}
         {/* ========================================================================= */}
-        <section id="database-lengkap" className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6 pt-6 scroll-mt-20">
+        <section id="database-lengkap" className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6 pt-6 scroll-mt-20">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
             <div>
               <h2 className="font-display font-black text-2xl text-white flex items-center gap-2.5">
@@ -1161,19 +1161,19 @@ export const FilmDatabasePage: React.FC = () => {
                     <div
                       key={film.id}
                       id={`search-film-card-${film.id}`}
-                      className="bg-[#171A1F] border border-white/10 rounded-2xl overflow-hidden hover:border-[#FF2E7E] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group shadow-lg"
+                      className="bg-[#171717] border border-white/10 rounded-2xl overflow-hidden hover:border-[#FF2E7E] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group shadow-lg"
                     >
                       {/* Movie Poster */}
                       <div
                         onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                        className="relative aspect-[2/3] w-full overflow-hidden cursor-pointer bg-[#0E1013]"
+                        className="relative aspect-[2/3] w-full overflow-hidden cursor-pointer bg-[#0A0A0A]"
                       >
                         <img
                           src={film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80'}
                           alt={film.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent opacity-80" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#171717] via-transparent to-transparent opacity-80" />
 
                         {/* Rating Badge */}
                         <div className="absolute top-2 left-2 bg-black/90 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/30 text-[#FFD000] text-[11px] font-black flex items-center gap-1 shadow-md">

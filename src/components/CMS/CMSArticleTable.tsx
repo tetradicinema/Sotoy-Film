@@ -986,7 +986,7 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
       {/* Admin Bulk Author Reassign Modal */}
       {isBulkAuthorModalOpen && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0D0E15] border border-slate-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+          <div className="bg-[#0A0A0A] border border-slate-800 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
             <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
               <UserIcon className="w-4 h-4 text-purple-400" />
               Re-assign Penulis Massal

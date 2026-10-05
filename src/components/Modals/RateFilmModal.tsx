@@ -79,7 +79,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
     >
       <div
         id="rate-film-modal-container"
-        className="bg-[#171A1F] border border-slate-700/80 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-200"
+        className="bg-[#171717] border border-slate-700/80 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-200"
       >
         {/* Header with film backdrop */}
         <div className="relative h-28 w-full overflow-hidden bg-slate-900">
@@ -88,7 +88,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
             alt={film.title}
             className="w-full h-full object-cover opacity-30"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-black/60" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#171717] via-transparent to-black/60" />
 
           <button
             id="close-rate-modal-btn"

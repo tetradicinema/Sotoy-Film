@@ -122,10 +122,10 @@ export const BuzzFeedSidebar: React.FC<BuzzFeedSidebarProps> = ({
       className={`w-64 xl:w-72 shrink-0 sticky top-20 flex flex-col gap-4 select-none ${className}`}
     >
       {/* Brand Header */}
-      <div className="bg-[#171A1F] border border-white/[0.08] rounded-xl p-4 shadow-lg">
+      <div className="bg-[#171717] border border-white/[0.08] rounded-xl p-4 shadow-lg">
         <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#171A1F] border border-white/10 flex items-center justify-center text-[#FF2E7E] shadow-sm">
+            <div className="w-8 h-8 rounded-lg bg-[#171717] border border-white/10 flex items-center justify-center text-[#FF2E7E] shadow-sm">
               <MessageSquare className="w-4 h-4 text-[#FF2E7E]" />
             </div>
             <div>
@@ -152,7 +152,7 @@ export const BuzzFeedSidebar: React.FC<BuzzFeedSidebarProps> = ({
       </div>
 
       {/* Main Navigation Menu */}
-      <nav className="bg-[#171A1F] border border-white/[0.08] rounded-xl p-2.5 shadow-lg space-y-1">
+      <nav className="bg-[#171717] border border-white/[0.08] rounded-xl p-2.5 shadow-lg space-y-1">
         <div className="px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400 font-mono">
           Kategori Feed
         </div>
@@ -212,7 +212,7 @@ export const BuzzFeedSidebar: React.FC<BuzzFeedSidebarProps> = ({
       </nav>
 
       {/* User Profile Card Footer */}
-      <div className="bg-[#171A1F] border border-white/[0.08] rounded-xl p-3 shadow-lg">
+      <div className="bg-[#171717] border border-white/[0.08] rounded-xl p-3 shadow-lg">
         {isLoggedIn ? (
           <div
             onClick={() => navigateTo('user-profile')}

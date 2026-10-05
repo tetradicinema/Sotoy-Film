@@ -67,7 +67,7 @@ export const RoleBadge: React.FC<RoleBadgeProps> = ({
       {showTooltip && (
         <span
           role="tooltip"
-          className="pointer-events-none opacity-0 group-hover/role:opacity-100 group-hover/role:-translate-y-1 transition-all duration-200 z-50 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs bg-[#171A1F] border border-white/10 rounded-lg px-2.5 py-1.5 shadow-xl backdrop-blur-md text-left flex flex-col gap-0.5"
+          className="pointer-events-none opacity-0 group-hover/role:opacity-100 group-hover/role:-translate-y-1 transition-all duration-200 z-50 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs bg-[#171717] border border-white/10 rounded-lg px-2.5 py-1.5 shadow-xl backdrop-blur-md text-left flex flex-col gap-0.5"
         >
           <span className="flex items-center gap-1.5 text-[10px] font-bold text-white">
             <span
@@ -80,7 +80,7 @@ export const RoleBadge: React.FC<RoleBadgeProps> = ({
             {style.description}
           </span>
           {/* Tooltip triangle arrow */}
-          <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-[#171A1F]" />
+          <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-[#171717]" />
         </span>
       )}
     </span>

@@ -291,7 +291,7 @@ export const AdminAuditLog: React.FC = () => {
           <button
             type="button"
             onClick={handleExportCSV}
-            className="px-3 py-1.5 rounded-xl bg-[#171A1F] hover:bg-white/[0.08] border border-white/10 text-slate-300 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-[0.98]"
+            className="px-3 py-1.5 rounded-xl bg-[#171717] hover:bg-white/[0.08] border border-white/10 text-slate-300 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-[0.98]"
             title="Ekspor ke CSV"
           >
             <Download className="w-3.5 h-3.5 text-slate-300" />
@@ -301,7 +301,7 @@ export const AdminAuditLog: React.FC = () => {
           <button
             type="button"
             onClick={handleExportJSON}
-            className="px-3 py-1.5 rounded-xl bg-[#171A1F] hover:bg-white/[0.08] border border-white/10 text-slate-300 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-[0.98]"
+            className="px-3 py-1.5 rounded-xl bg-[#171717] hover:bg-white/[0.08] border border-white/10 text-slate-300 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-[0.98]"
             title="Ekspor ke JSON"
           >
             <FileText className="w-3.5 h-3.5 text-slate-300" />
@@ -327,7 +327,7 @@ export const AdminAuditLog: React.FC = () => {
         <div 
           onClick={() => setActionCategory('all')}
           className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-            actionCategory === 'all' ? 'bg-[#171A1F] border-[#FF2E7E] shadow-sm' : 'bg-[#171A1F] border-white/10 hover:border-white/20'
+            actionCategory === 'all' ? 'bg-[#171717] border-[#FF2E7E] shadow-sm' : 'bg-[#171717] border-white/10 hover:border-white/20'
           }`}
         >
           <div className="text-[10px] text-slate-400 font-bold uppercase">Total Log</div>
@@ -337,7 +337,7 @@ export const AdminAuditLog: React.FC = () => {
         <div 
           onClick={() => setActionCategory('roles')}
           className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-            actionCategory === 'roles' ? 'bg-[#171A1F] border-[#FF2E7E] shadow-sm' : 'bg-[#171A1F] border-white/10 hover:border-white/20'
+            actionCategory === 'roles' ? 'bg-[#171717] border-[#FF2E7E] shadow-sm' : 'bg-[#171717] border-white/10 hover:border-white/20'
           }`}
         >
           <div className="text-[10px] text-slate-400 font-bold uppercase">Role Overrides</div>
@@ -347,7 +347,7 @@ export const AdminAuditLog: React.FC = () => {
         <div 
           onClick={() => setActionCategory('suspensions')}
           className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-            actionCategory === 'suspensions' ? 'bg-[#171A1F] border-[#FF2E7E] shadow-sm' : 'bg-[#171A1F] border-white/10 hover:border-white/20'
+            actionCategory === 'suspensions' ? 'bg-[#171717] border-[#FF2E7E] shadow-sm' : 'bg-[#171717] border-white/10 hover:border-white/20'
           }`}
         >
           <div className="text-[10px] text-red-400 font-bold uppercase">Penangguhan</div>
@@ -357,7 +357,7 @@ export const AdminAuditLog: React.FC = () => {
         <div 
           onClick={() => setActionCategory('deletions')}
           className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-            actionCategory === 'deletions' ? 'bg-[#171A1F] border-[#FF2E7E] shadow-sm' : 'bg-[#171A1F] border-white/10 hover:border-white/20'
+            actionCategory === 'deletions' ? 'bg-[#171717] border-[#FF2E7E] shadow-sm' : 'bg-[#171717] border-white/10 hover:border-white/20'
           }`}
         >
           <div className="text-[10px] text-rose-400 font-bold uppercase">Hapus Akun</div>
@@ -367,7 +367,7 @@ export const AdminAuditLog: React.FC = () => {
         <div 
           onClick={() => setActionCategory('appeals')}
           className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-            actionCategory === 'appeals' ? 'bg-[#171A1F] border-[#FF2E7E] shadow-sm' : 'bg-[#171A1F] border-white/10 hover:border-white/20'
+            actionCategory === 'appeals' ? 'bg-[#171717] border-[#FF2E7E] shadow-sm' : 'bg-[#171717] border-white/10 hover:border-white/20'
           }`}
         >
           <div className="text-[10px] text-amber-400 font-bold uppercase">Banding</div>
@@ -377,7 +377,7 @@ export const AdminAuditLog: React.FC = () => {
         <div 
           onClick={() => setActionCategory('moderation')}
           className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-            actionCategory === 'moderation' ? 'bg-[#171A1F] border-[#FF2E7E] shadow-sm' : 'bg-[#171A1F] border-white/10 hover:border-white/20'
+            actionCategory === 'moderation' ? 'bg-[#171717] border-[#FF2E7E] shadow-sm' : 'bg-[#171717] border-white/10 hover:border-white/20'
           }`}
         >
           <div className="text-[10px] text-slate-300 font-bold uppercase">Moderasi</div>
@@ -387,7 +387,7 @@ export const AdminAuditLog: React.FC = () => {
         <div 
           onClick={() => setActionCategory('critics')}
           className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-            actionCategory === 'critics' ? 'bg-[#171A1F] border-[#FF2E7E] shadow-sm' : 'bg-[#171A1F] border-white/10 hover:border-white/20'
+            actionCategory === 'critics' ? 'bg-[#171717] border-[#FF2E7E] shadow-sm' : 'bg-[#171717] border-white/10 hover:border-white/20'
           }`}
         >
           <div className="text-[10px] text-slate-300 font-bold uppercase">Kritikus</div>
@@ -396,7 +396,7 @@ export const AdminAuditLog: React.FC = () => {
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-4 space-y-3 shadow-sm">
+      <div className="bg-[#171717] border border-white/10 rounded-2xl p-4 space-y-3 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           {/* Action Category Filters */}
           <div className="flex items-center gap-1.5 overflow-x-auto text-xs font-medium pb-1 lg:pb-0 scrollbar-none">
@@ -484,7 +484,7 @@ export const AdminAuditLog: React.FC = () => {
             <select
               value={timeFilter}
               onChange={(e) => setTimeFilter(e.target.value as any)}
-              className="bg-slate-900 border border-slate-750 text-xs text-slate-300 rounded-xl px-3 py-1.5 focus:outline-none focus:border-purple-400 cursor-pointer"
+              className="bg-[#171717] border border-neutral-700 text-xs text-neutral-300 rounded-xl px-3 py-1.5 focus:outline-none focus:border-[#FF2E7E] cursor-pointer"
             >
               <option value="all">Sepanjang Waktu</option>
               <option value="today">Hari Ini (24 Jam)</option>
@@ -520,7 +520,7 @@ export const AdminAuditLog: React.FC = () => {
       </div>
 
       {/* Main Table Layout */}
-      <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[#171A1F] shadow-sm">
+      <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[#171717] shadow-sm">
         <table className="w-full text-left text-xs">
           <thead className="bg-[#121418] text-slate-400 text-[11px] font-bold uppercase tracking-wider border-b border-white/10">
             <tr>
@@ -641,17 +641,17 @@ export const AdminAuditLog: React.FC = () => {
       {/* DETAIL MODAL / DRAWER */}
       {selectedLog && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-2xl bg-[#171A1F] border border-white/10 rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="w-full max-w-2xl bg-[#171717] border border-white/10 rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-purple-950/60 via-slate-900/90 to-purple-950/60 border-b border-purple-500/30 p-6 flex items-start justify-between gap-4">
+            <div className="bg-gradient-to-r from-[#FF2E7E]/10 via-neutral-900 to-[#FF2E7E]/10 border-b border-[#FF2E7E]/30 p-6 flex items-start justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-300 shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-[#FF2E7E]/20 border border-[#FF2E7E]/40 flex items-center justify-center text-[#FF2E7E] shrink-0">
                   <ScrollText className="w-6 h-6" />
                 </div>
                 <div>
                   <h3 className="font-display font-black text-xl text-white">Rincian Audit Log</h3>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[11px] text-purple-300 font-mono">ID: {selectedLog.id}</span>
+                    <span className="text-[11px] text-[#FF2E7E] font-mono">ID: {selectedLog.id}</span>
                     <button
                       onClick={() => handleCopy(selectedLog.id, 'Log ID')}
                       className="text-slate-400 hover:text-white p-0.5"
@@ -791,7 +791,7 @@ export const AdminAuditLog: React.FC = () => {
       {/* CLEAR ALL LOGS CONFIRMATION MODAL */}
       {isClearModalOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-[#171A1F] border border-white/10 rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="w-full max-w-md bg-[#171717] border border-white/10 rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="p-6 bg-red-500/15 border-b border-red-500/30 flex items-start gap-4">
               <div className="w-12 h-12 rounded-2xl bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-400 shrink-0">
                 <AlertTriangle className="w-6 h-6" />

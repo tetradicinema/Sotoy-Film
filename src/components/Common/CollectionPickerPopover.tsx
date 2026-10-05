@@ -269,7 +269,7 @@ export const CollectionPickerPopover: React.FC<CollectionPickerPopoverProps> = (
               maxWidth: 'calc(100vw - 32px)',
               zIndex: 99999,
             }}
-            className="rounded-2xl bg-[#171A1F] border border-white/10 shadow-2xl overflow-hidden backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150 text-left"
+            className="rounded-2xl bg-[#171717] border border-white/10 shadow-2xl overflow-hidden backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150 text-left"
           >
             {/* Header */}
             <div className="p-3.5 border-b border-white/[0.08] flex items-center justify-between bg-white/[0.02]">

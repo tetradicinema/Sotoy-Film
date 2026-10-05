@@ -123,7 +123,7 @@ export const AdminAppeals: React.FC = () => {
           <div 
             onClick={() => setFilter('all')}
             className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
-              filter === 'all' ? 'bg-white/[0.08] border-white/20 text-white shadow-sm' : 'bg-[#171A1F] border-white/[0.08] hover:border-white/20 text-slate-300'
+              filter === 'all' ? 'bg-white/[0.08] border-white/20 text-white shadow-sm' : 'bg-[#171717] border-white/[0.08] hover:border-white/20 text-slate-300'
             }`}
           >
             <div className="text-[11px] text-slate-400 font-semibold font-mono">Total Banding</div>
@@ -133,7 +133,7 @@ export const AdminAppeals: React.FC = () => {
           <div 
             onClick={() => setFilter('pending')}
             className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
-              filter === 'pending' ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-sm' : 'bg-[#171A1F] border-white/[0.08] hover:border-amber-500/30 text-slate-300'
+              filter === 'pending' ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-sm' : 'bg-[#171717] border-white/[0.08] hover:border-amber-500/30 text-slate-300'
             }`}
           >
             <div className="text-[11px] text-amber-400 font-semibold flex items-center gap-1 font-mono">
@@ -146,7 +146,7 @@ export const AdminAppeals: React.FC = () => {
           <div 
             onClick={() => setFilter('approved')}
             className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
-              filter === 'approved' ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 shadow-sm' : 'bg-[#171A1F] border-white/[0.08] hover:border-emerald-500/30 text-slate-300'
+              filter === 'approved' ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 shadow-sm' : 'bg-[#171717] border-white/[0.08] hover:border-emerald-500/30 text-slate-300'
             }`}
           >
             <div className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1 font-mono">
@@ -159,7 +159,7 @@ export const AdminAppeals: React.FC = () => {
           <div 
             onClick={() => setFilter('rejected')}
             className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
-              filter === 'rejected' ? 'bg-red-500/15 border-red-500/40 text-red-300 shadow-sm' : 'bg-[#171A1F] border-white/[0.08] hover:border-red-500/30 text-slate-300'
+              filter === 'rejected' ? 'bg-red-500/15 border-red-500/40 text-red-300 shadow-sm' : 'bg-[#171717] border-white/[0.08] hover:border-red-500/30 text-slate-300'
             }`}
           >
             <div className="text-[11px] text-red-400 font-semibold flex items-center gap-1 font-mono">
@@ -175,8 +175,8 @@ export const AdminAppeals: React.FC = () => {
         {/* Left Column: Appeals List */}
         <div className="lg:col-span-2 space-y-4">
           {/* Filters & Search */}
-          <div className="flex flex-col sm:flex-row items-center gap-4 bg-[#171A1F] border border-white/[0.08] p-3 rounded-2xl">
-            <div className="flex items-center gap-1.5 bg-[#0E1013] rounded-xl p-1 shrink-0 overflow-x-auto">
+          <div className="flex flex-col sm:flex-row items-center gap-4 bg-[#171717] border border-white/[0.08] p-3 rounded-2xl">
+            <div className="flex items-center gap-1.5 bg-[#0A0A0A] rounded-xl p-1 shrink-0 overflow-x-auto">
               <button
                 onClick={() => setFilter('pending')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
@@ -218,7 +218,7 @@ export const AdminAppeals: React.FC = () => {
                 placeholder="Cari nama, handle, email, atau alasan..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#0E1013] border border-white/10 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] transition-colors"
+                className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] transition-colors"
               />
             </div>
           </div>
@@ -226,7 +226,7 @@ export const AdminAppeals: React.FC = () => {
           {/* List items */}
           <div className="space-y-3">
             {filteredAppeals.length === 0 ? (
-              <div className="bg-[#171A1F] border border-white/[0.08] rounded-2xl p-12 text-center">
+              <div className="bg-[#171717] border border-white/[0.08] rounded-2xl p-12 text-center">
                 <History className="w-12 h-12 text-slate-700 mx-auto mb-3" />
                 <p className="text-slate-400 text-sm font-medium">Tidak ada permohonan banding yang sesuai dengan filter.</p>
               </div>
@@ -242,7 +242,7 @@ export const AdminAppeals: React.FC = () => {
                       setSelectedAppeal(appeal);
                       setAdminNote(appeal.adminNote || '');
                     }}
-                    className={`w-full text-left bg-[#171A1F] border transition-all rounded-2xl p-4 flex items-start gap-4 cursor-pointer ${
+                    className={`w-full text-left bg-[#171717] border transition-all rounded-2xl p-4 flex items-start gap-4 cursor-pointer ${
                       isSelected 
                         ? 'border-[#FF2E7E] bg-[#FF2E7E]/5 ring-1 ring-[#FF2E7E]/30' 
                         : 'border-white/[0.08] hover:border-white/20'
@@ -300,7 +300,7 @@ export const AdminAppeals: React.FC = () => {
         {/* Right Column: Appeal Detail & Action Sidebar */}
         <div className="lg:col-span-1">
           {selectedAppeal ? (
-            <div className="bg-[#171A1F] border border-white/[0.08] rounded-2xl p-5 sticky top-8 space-y-5 animate-in slide-in-from-right-4 duration-300 shadow-xl">
+            <div className="bg-[#171717] border border-white/[0.08] rounded-2xl p-5 sticky top-8 space-y-5 animate-in slide-in-from-right-4 duration-300 shadow-xl">
               <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
                 <h3 className="font-display font-black text-white text-base">Detail Permohonan</h3>
                 <button 
@@ -367,7 +367,7 @@ export const AdminAppeals: React.FC = () => {
                       value={adminNote}
                       onChange={(e) => setAdminNote(e.target.value)}
                       placeholder="Tuliskan catatan evaluasi atau alasan keputusan Anda..."
-                      className="w-full bg-[#0E1013] border border-white/10 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] min-h-[90px] resize-none transition-colors"
+                      className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] min-h-[90px] resize-none transition-colors"
                     />
                   </div>
 
@@ -435,7 +435,7 @@ export const AdminAppeals: React.FC = () => {
               )}
             </div>
           ) : (
-            <div className="bg-[#171A1F] border border-white/[0.08] border-dashed rounded-2xl p-10 text-center space-y-2">
+            <div className="bg-[#171717] border border-white/[0.08] border-dashed rounded-2xl p-10 text-center space-y-2">
               <MessageSquare className="w-10 h-10 text-slate-600 mx-auto" />
               <div className="text-xs text-slate-400 font-semibold">Pilih Permohonan</div>
               <p className="text-[11px] text-slate-500">Klik salah satu tiket banding pada daftar di samping untuk melihat rincian dan melakukan verifikasi.</p>

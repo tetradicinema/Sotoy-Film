@@ -44,7 +44,7 @@ export const MobileBottomNav: React.FC = () => {
     <nav
       id="mobile-bottom-navigation-bar"
       aria-label="Navigasi Bawah Mobile"
-      className={`lg:hidden tabletbottomnav fixed left-3 right-3 max-w-md mx-auto z-40 bg-[#0E1013]/95 backdrop-blur-xl border border-white/[0.08] shadow-[0_12px_36px_rgba(0,0,0,0.6)] px-2 py-1.5 md:py-2 rounded-2xl overflow-auto scrollbar-none scroll-smooth touch-pan-x transition-all duration-300 ${
+      className={`lg:hidden tabletbottomnav fixed left-3 right-3 max-w-md mx-auto z-40 bg-[#0A0A0A]/95 backdrop-blur-xl border border-white/[0.08] shadow-[0_12px_36px_rgba(0,0,0,0.6)] px-2 py-1.5 md:py-2 rounded-2xl overflow-auto scrollbar-none scroll-smooth touch-pan-x transition-all duration-300 ${
         isVisible 
           ? 'bottom-5 opacity-100 scale-100 translate-y-0' 
           : 'bottom-2 opacity-0 scale-95 translate-y-24 pointer-events-none'
@@ -171,7 +171,7 @@ export const MobileBottomNav: React.FC = () => {
                 }`}
               />
               {unreadNotificationsCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] px-1 bg-[#FF2E7E] text-white text-[8px] font-mono tabular-nums font-bold rounded-full flex items-center justify-center border border-[#0E1013] shadow-md">
+                <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] px-1 bg-[#FF2E7E] text-white text-[8px] font-mono tabular-nums font-bold rounded-full flex items-center justify-center border border-[#0A0A0A] shadow-md">
                   {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
                 </span>
               )}

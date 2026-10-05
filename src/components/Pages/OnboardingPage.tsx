@@ -122,7 +122,7 @@ export const OnboardingPage: React.FC = () => {
         transition={{ duration: 0.4 }}
         className="w-full max-w-2xl relative z-10 my-auto"
       >
-        <div className="bg-[#171A1F]/90 backdrop-blur-2xl border border-slate-800/80 rounded-3xl sm:rounded-[36px] p-6 sm:p-10 shadow-2xl overflow-hidden">
+        <div className="bg-[#171717]/90 backdrop-blur-2xl border border-slate-800/80 rounded-3xl sm:rounded-[36px] p-6 sm:p-10 shadow-2xl overflow-hidden">
           {/* Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF2E7E]/15 border border-[#FF2E7E]/30 text-[#FF2E7E] text-[11px] font-black uppercase tracking-widest mb-3">

@@ -373,7 +373,7 @@ export const SettingsPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
           {/* Subpage Navigation Sidebar */}
-          <aside className="lg:col-span-4 bg-[#171A1F] border border-slate-800 rounded-3xl p-3 sm:p-4 space-y-1 shadow-xl">
+          <aside className="lg:col-span-4 bg-[#171717] border border-slate-800 rounded-3xl p-3 sm:p-4 space-y-1 shadow-xl">
             <div className="px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-800/80 mb-2">
               Kategori Pengaturan
             </div>
@@ -440,7 +440,7 @@ export const SettingsPage: React.FC = () => {
           </aside>
 
           {/* Subpage Active Content Pane */}
-          <section className="lg:col-span-8 bg-[#171A1F] border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-6">
+          <section className="lg:col-span-8 bg-[#171717] border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-6">
             
             {/* =================================================================== */}
             {/* SUBPAGE 1: PROFIL & UPLOAD FOTO DARI DEVICE */}

@@ -282,7 +282,7 @@ export const AdminUserManagement: React.FC = () => {
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-4 space-y-3 shadow-sm">
+      <div className="bg-[#171717] border border-white/10 rounded-2xl p-4 space-y-3 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           {/* Role Filter Buttons */}
           <div className="flex items-center gap-1.5 overflow-x-auto text-xs font-medium pb-1 md:pb-0 scrollbar-none">
@@ -362,14 +362,14 @@ export const AdminUserManagement: React.FC = () => {
               placeholder="Cari nama, handle, email, atau UID..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full bg-[#0E1013] border border-white/10 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] transition-colors"
+              className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] transition-colors"
             />
           </div>
         </div>
 
         {/* Bulk Actions Floating Bar */}
         {selectedUserIds.length > 0 && (
-          <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-3.5 shadow-2xl backdrop-blur-md flex flex-wrap items-center justify-between gap-3 animate-in fade-in duration-200">
+          <div className="bg-[#171717] border border-white/10 rounded-2xl p-3.5 shadow-2xl backdrop-blur-md flex flex-wrap items-center justify-between gap-3 animate-in fade-in duration-200">
             <div className="flex items-center gap-3">
               <span className="flex items-center justify-center w-7 h-7 rounded-xl bg-white/[0.08] text-white font-mono tabular-nums text-xs border border-white/15">
                 {selectedUserIds.length}
@@ -387,7 +387,7 @@ export const AdminUserManagement: React.FC = () => {
 
             <div className="flex flex-wrap items-center gap-2">
               {/* Bulk Change Role */}
-              <div className="flex items-center gap-1.5 bg-[#0E1013] border border-white/10 px-2.5 py-1 rounded-xl">
+              <div className="flex items-center gap-1.5 bg-[#0A0A0A] border border-white/10 px-2.5 py-1 rounded-xl">
                 <ShieldCheck className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 <span className="text-[11px] text-slate-400 font-semibold">Ubah Role:</span>
                 <select
@@ -401,11 +401,11 @@ export const AdminUserManagement: React.FC = () => {
                   defaultValue=""
                   className="bg-transparent text-xs text-white font-semibold focus:outline-none cursor-pointer"
                 >
-                  <option value="" disabled className="bg-[#171A1F] text-slate-400">Pilih Role...</option>
-                  <option value="warga_sotoy" className="bg-[#171A1F] text-slate-300">Warga Sotoy</option>
-                  <option value="si_paling_sotoy" className="bg-[#171A1F] text-white">Si Paling Sotoy (Kritikus)</option>
-                  <option value="penulis_sotoy" className="bg-[#171A1F] text-[#FF2E7E]">Penulis Sotoy</option>
-                  <option value="admin" className="bg-[#171A1F] text-slate-200">Admin Sotoy</option>
+                  <option value="" disabled className="bg-[#171717] text-slate-400">Pilih Role...</option>
+                  <option value="warga_sotoy" className="bg-[#171717] text-slate-300">Warga Sotoy</option>
+                  <option value="si_paling_sotoy" className="bg-[#171717] text-white">Si Paling Sotoy (Kritikus)</option>
+                  <option value="penulis_sotoy" className="bg-[#171717] text-[#FF2E7E]">Penulis Sotoy</option>
+                  <option value="admin" className="bg-[#171717] text-slate-200">Admin Sotoy</option>
                 </select>
               </div>
 
@@ -459,7 +459,7 @@ export const AdminUserManagement: React.FC = () => {
         {/* Users Table */}
         <div className="overflow-x-auto rounded-xl border border-slate-850">
           <table className="w-full text-left text-xs">
-            <thead className="bg-[#17182b] text-slate-400 text-[11px] font-bold uppercase tracking-wider border-b border-slate-800">
+            <thead className="bg-[#171717] text-slate-400 text-[11px] font-bold uppercase tracking-wider border-b border-slate-800">
               <tr>
                 <th className="p-3.5 w-10 text-center">
                   <button
@@ -469,9 +469,9 @@ export const AdminUserManagement: React.FC = () => {
                     title={isAllSelected ? "Batal pilih semua" : "Pilih semua pengguna di halaman ini"}
                   >
                     {isAllSelected ? (
-                      <CheckSquare className="w-4 h-4 text-purple-400" />
+                      <CheckSquare className="w-4 h-4 text-[#FF2E7E]" />
                     ) : isSomeSelected ? (
-                      <MinusSquare className="w-4 h-4 text-purple-400" />
+                      <MinusSquare className="w-4 h-4 text-[#FF2E7E]" />
                     ) : (
                       <Square className="w-4 h-4 text-slate-600" />
                     )}
@@ -506,7 +506,7 @@ export const AdminUserManagement: React.FC = () => {
                       key={user.id}
                       className={`hover:bg-slate-850/60 transition-colors ${
                         isSuspended ? 'bg-red-950/15' : ''
-                      } ${isSelected ? 'bg-purple-950/20' : ''}`}
+                      } ${isSelected ? 'bg-[#FF2E7E]/10' : ''}`}
                     >
                       {/* Checkbox */}
                       <td className="p-3.5 text-center">
@@ -516,7 +516,7 @@ export const AdminUserManagement: React.FC = () => {
                           className="text-slate-400 hover:text-white transition-colors cursor-pointer"
                         >
                           {isSelected ? (
-                            <CheckSquare className="w-4 h-4 text-purple-400" />
+                            <CheckSquare className="w-4 h-4 text-[#FF2E7E]" />
                           ) : (
                             <Square className="w-4 h-4 text-slate-600 hover:text-slate-400" />
                           )}
@@ -613,18 +613,18 @@ export const AdminUserManagement: React.FC = () => {
                           <select
                             value={user.role}
                             onChange={e => handleRoleChange(user, e.target.value as UserRole)}
-                            className="w-full py-1.5 px-2.5 rounded-lg text-xs font-medium border border-white/10 bg-[#0E1013] text-slate-200 focus:border-[#FF2E7E] focus:outline-none transition-colors cursor-pointer"
+                            className="w-full py-1.5 px-2.5 rounded-lg text-xs font-medium border border-white/10 bg-[#0A0A0A] text-slate-200 focus:border-[#FF2E7E] focus:outline-none transition-colors cursor-pointer"
                           >
-                            <option value="warga_sotoy" className="bg-[#171A1F] text-slate-300">
+                            <option value="warga_sotoy" className="bg-[#171717] text-slate-300">
                               Warga Sotoy
                             </option>
-                            <option value="si_paling_sotoy" className="bg-[#171A1F] text-white font-semibold">
+                            <option value="si_paling_sotoy" className="bg-[#171717] text-white font-semibold">
                               Si Paling Sotoy (Kritikus)
                             </option>
-                            <option value="penulis_sotoy" className="bg-[#171A1F] text-[#FF2E7E] font-semibold">
+                            <option value="penulis_sotoy" className="bg-[#171717] text-[#FF2E7E] font-semibold">
                               Penulis Sotoy
                             </option>
-                            <option value="admin" className="bg-[#171A1F] text-slate-200">
+                            <option value="admin" className="bg-[#171717] text-slate-200">
                               Admin Sotoy
                             </option>
                           </select>
@@ -689,7 +689,7 @@ export const AdminUserManagement: React.FC = () => {
       {/* MODAL 1: SINGLE USER DELETE CONFIRMATION */}
       {userToDelete && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-lg bg-[#171A1F] border border-red-500/30 rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="w-full max-w-lg bg-[#171717] border border-red-500/30 rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             {/* Header */}
             <div className="bg-red-500/10 border-b border-red-500/20 p-6 flex items-start gap-4">
               <div className="w-12 h-12 rounded-xl bg-red-500/15 border border-red-500/25 flex items-center justify-center text-red-400 shrink-0">
@@ -781,7 +781,7 @@ export const AdminUserManagement: React.FC = () => {
       {/* MODAL 2: BULK USERS DELETE CONFIRMATION */}
       {isBulkDeleteModalOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-lg bg-[#171A1F] border border-red-500/30 rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="w-full max-w-lg bg-[#171717] border border-red-500/30 rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="bg-red-500/10 border-b border-red-500/20 p-6 flex items-start gap-4">
               <div className="w-12 h-12 rounded-xl bg-red-500/15 border border-red-500/25 flex items-center justify-center text-red-400 shrink-0">
                 <Trash2 className="w-6 h-6" />
@@ -851,7 +851,7 @@ export const AdminUserManagement: React.FC = () => {
       {/* MODAL 3: SUSPENSION CONFIRMATION */}
       {userToSuspend && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-[#171A1F] border border-white/10 rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="w-full max-w-md bg-[#171717] border border-white/10 rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             <div className={`p-6 border-b flex items-start gap-4 ${
               userToSuspend.isSuspending ? 'bg-red-500/10 border-red-500/20' : 'bg-emerald-500/10 border-emerald-500/20'
             }`}>
@@ -908,7 +908,7 @@ export const AdminUserManagement: React.FC = () => {
       {/* MODAL 4: BULK SUSPENSION CONFIRMATION */}
       {isBulkSuspendModalOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-lg bg-[#171A1F] border border-white/10 rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="w-full max-w-lg bg-[#171717] border border-white/10 rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className={`p-6 border-b flex items-start gap-4 ${
               isBulkSuspendModalOpen.isSuspending ? 'bg-red-500/10 border-red-500/20' : 'bg-emerald-500/10 border-emerald-500/20'
@@ -973,7 +973,7 @@ export const AdminUserManagement: React.FC = () => {
                               {targetUser?.name || uid}
                             </span>
                             {isSelf && (
-                              <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                              <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-[#FF2E7E]/20 text-[#FF2E7E] border border-[#FF2E7E]/40">
                                 Akun Anda (Dilewati)
                               </span>
                             )}

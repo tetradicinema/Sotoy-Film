@@ -24,18 +24,22 @@ function parseDateSafely(dateInput: string | number | Date | null | undefined): 
 }
 
 /**
- * Converts an ISO string, timestamp, or Date into a concise relative label:
- * - Clock skew / future / under 60 seconds: "baru saja"
- * - Under 60 minutes: "{n}m"
- * - Under 24 hours: "{n}j" (jam)
- * - Under 7 days: "{n}h" (hari)
- * - Under 35 days (~5 weeks): "{n}mg" (minggu)
- * - Beyond that: short absolute date ("12 Jan" or "12 Jan 2023" if different year)
+ * Converts an ISO string, timestamp, or Date into a descriptive relative label:
+ * - Clock skew / future / under 60 seconds: "baru saja diposting"
+ * - Under 60 minutes: "{n} menit yang lalu"
+ * - Under 24 hours: "{n} jam yang lalu"
+ * - Under 7 days: "{n} hari yang lalu"
+ * - Under ~4 weeks: "{n} minggu yang lalu"
+ * - Under 12 months: "{n} bulan yang lalu"
+ * - 1 year or more: "{n} tahun yang lalu"
  */
 export function formatRelativeTime(dateInput: string | number | Date | null | undefined): string {
   const date = parseDateSafely(dateInput);
   if (!date) {
-    return typeof dateInput === 'string' && dateInput.trim() ? dateInput : 'baru saja';
+    if (typeof dateInput === 'string' && dateInput.trim()) {
+      return dateInput;
+    }
+    return 'baru saja diposting';
   }
 
   const now = Date.now();
@@ -44,42 +48,49 @@ export function formatRelativeTime(dateInput: string | number | Date | null | un
 
   // Clock skew (timestamp slightly in the future) or less than 60 seconds
   if (diffSec < 60) {
-    return 'baru saja';
+    return 'baru saja diposting';
   }
 
   // Under 60 minutes
   const diffMin = Math.floor(diffSec / 60);
   if (diffMin < 60) {
-    return `${diffMin}m`;
+    return `${diffMin} menit yang lalu`;
   }
 
   // Under 24 hours (jam)
   const diffHours = Math.floor(diffMin / 60);
   if (diffHours < 24) {
-    return `${diffHours}j`;
+    return `${diffHours} jam yang lalu`;
   }
 
   // Under 7 days (hari)
   const diffDays = Math.floor(diffHours / 24);
   if (diffDays < 7) {
-    return `${diffDays}h`;
+    return `${diffDays} hari yang lalu`;
   }
 
-  // Under ~5 weeks (minggu)
+  // Under ~4 weeks (minggu)
   const diffWeeks = Math.floor(diffDays / 7);
-  if (diffWeeks < 5) {
-    return `${diffWeeks}mg`;
+  if (diffWeeks < 4) {
+    return `${diffWeeks} minggu yang lalu`;
   }
 
-  // Beyond ~5 weeks: absolute date
+  // Under 12 months (bulan)
+  const diffMonths = Math.floor(diffDays / 30);
+  if (diffMonths < 12) {
+    return `${diffMonths} bulan yang lalu`;
+  }
+
+  // 1 year or more (tahun)
+  const diffYears = Math.floor(diffDays / 365);
+  if (diffYears >= 1) {
+    return `${diffYears} tahun yang lalu`;
+  }
+
+  // Fallback: short absolute date
   const day = date.getDate();
   const month = ID_MONTHS_SHORT[date.getMonth()] || '';
   const year = date.getFullYear();
-  const currentYear = new Date(now).getFullYear();
-
-  if (year === currentYear) {
-    return `${day} ${month}`;
-  }
 
   return `${day} ${month} ${year}`;
 }

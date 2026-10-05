@@ -6,7 +6,7 @@ export const Footer: React.FC = () => {
   const { navigateTo, currentView } = useApp();
 
   return (
-    <footer id="main-footer" className="bg-[#0E1013] border-t border-white/[0.08] pt-12 pb-8 mt-16 text-slate-400 text-xs">
+    <footer id="main-footer" className="bg-[#0A0A0A] border-t border-white/[0.08] pt-12 pb-8 mt-16 text-slate-400 text-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
@@ -16,7 +16,7 @@ export const Footer: React.FC = () => {
               onClick={() => navigateTo('home')}
               className="flex items-center gap-2 cursor-pointer inline-flex group"
             >
-              <div className="w-8 h-8 rounded-xl bg-[#171A1F] border border-white/10 flex items-center justify-center text-[#FF2E7E] transition-all group-hover:border-[#FF2E7E]/50">
+              <div className="w-8 h-8 rounded-xl bg-[#171717] border border-white/10 flex items-center justify-center text-[#FF2E7E] transition-all group-hover:border-[#FF2E7E]/50">
                 <Clapperboard className="w-4 h-4 text-[#FF2E7E]" />
               </div>
               <div className="flex items-center gap-1 font-display font-black text-xl text-white tracking-tight">
@@ -30,10 +30,10 @@ export const Footer: React.FC = () => {
             </p>
 
             <div className="flex items-center gap-2 pt-2">
-              <span className="bg-[#171A1F] border border-white/[0.08] text-slate-300 text-[10px] font-semibold px-2.5 py-1 rounded-md">
+              <span className="bg-[#171717] border border-white/[0.08] text-slate-300 text-[10px] font-semibold px-2.5 py-1 rounded-md">
                 ★ 1-5 Bintang Skor Sotoy
               </span>
-              <span className="bg-[#171A1F] border border-white/[0.08] text-slate-300 text-[10px] font-semibold px-2.5 py-1 rounded-md">
+              <span className="bg-[#171717] border border-white/[0.08] text-slate-300 text-[10px] font-semibold px-2.5 py-1 rounded-md">
                 Komunitas Terbuka
               </span>
             </div>
@@ -196,7 +196,7 @@ export const Footer: React.FC = () => {
 
         {/* BOTTOM MENU NAVIGATION BAR */}
         <div id="footer-bottom-menu" className="pt-6 border-t border-white/[0.08]">
-          <div className="bg-[#171A1F] border border-white/[0.08] rounded-xl p-3 flex flex-wrap items-center justify-center sm:justify-between gap-3 text-xs">
+          <div className="bg-[#171717] border border-white/[0.08] rounded-xl p-3 flex flex-wrap items-center justify-center sm:justify-between gap-3 text-xs">
             <div className="text-slate-400 font-semibold flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#FF2E7E]" />
               <span>Menu Bawah / Quick Links:</span>

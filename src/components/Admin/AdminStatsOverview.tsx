@@ -37,7 +37,7 @@ export const AdminStatsOverview: React.FC = () => {
       {/* 1. Total Warga & Kritikus */}
       <Link 
         to="/admin/analytics" 
-        className="bg-[#171A1F] border border-white/10 hover:border-[#FF2E7E]/50 rounded-2xl p-5 shadow-sm relative overflow-hidden group transition-all block cursor-pointer"
+        className="bg-[#171717] border border-white/10 hover:border-[#FF2E7E]/50 rounded-2xl p-5 shadow-sm relative overflow-hidden group transition-all block cursor-pointer"
       >
         <div className="flex items-start justify-between">
           <div>
@@ -73,7 +73,7 @@ export const AdminStatsOverview: React.FC = () => {
       </Link>
 
       {/* 2. Total Artikel Terbit & Draft */}
-      <div className="bg-[#171A1F] border border-white/10 hover:border-white/20 rounded-2xl p-5 shadow-sm relative overflow-hidden group transition-all">
+      <div className="bg-[#171717] border border-white/10 hover:border-white/20 rounded-2xl p-5 shadow-sm relative overflow-hidden group transition-all">
         <div className="flex items-start justify-between">
           <div>
             <span className="text-xs font-semibold text-slate-400 block">Total Artikel Editorial</span>
@@ -104,7 +104,7 @@ export const AdminStatsOverview: React.FC = () => {
       </div>
 
       {/* 3. Total Diskusi & Komentar Warga */}
-      <div className="bg-[#171A1F] border border-white/10 hover:border-white/20 rounded-2xl p-5 shadow-sm relative overflow-hidden group transition-all">
+      <div className="bg-[#171717] border border-white/10 hover:border-white/20 rounded-2xl p-5 shadow-sm relative overflow-hidden group transition-all">
         <div className="flex items-start justify-between">
           <div>
             <span className="text-xs font-semibold text-slate-400 block">Total Diskusi & Review</span>
@@ -133,7 +133,7 @@ export const AdminStatsOverview: React.FC = () => {
       </div>
 
       {/* 4. Total Database Film & Series */}
-      <div className="bg-[#171A1F] border border-white/10 hover:border-white/20 rounded-2xl p-5 shadow-sm relative overflow-hidden group transition-all">
+      <div className="bg-[#171717] border border-white/10 hover:border-white/20 rounded-2xl p-5 shadow-sm relative overflow-hidden group transition-all">
         <div className="flex items-start justify-between">
           <div>
             <span className="text-xs font-semibold text-slate-400 block">Total Database Film</span>

@@ -147,10 +147,10 @@ export const ComposeBuzzModal: React.FC = () => {
     >
       <div
         id="compose-buzz-modal-container"
-        className="bg-[#171A1F] border border-white/10 rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-200"
+        className="bg-[#171717] border border-white/10 rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-200"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-white/10 bg-[#171A1F]">
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-white/10 bg-[#171717]">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-2xl bg-[#FF2E7E] p-0.5 shadow-md flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-white" />
@@ -189,7 +189,7 @@ export const ComposeBuzzModal: React.FC = () => {
                 value={postContent}
                 onChange={setPostContent}
                 placeholder="Apa opini sinematik unikmu hari ini? Ketik '@' untuk mention warga lain..."
-                className="w-full bg-[#0E1013] border border-white/10 rounded-2xl p-3.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-[#FF2E7E] resize-none transition-all"
+                className="w-full bg-[#0A0A0A] border border-white/10 rounded-2xl p-3.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-[#FF2E7E] resize-none transition-all"
                 autoFocus
               />
 
@@ -228,7 +228,7 @@ export const ComposeBuzzModal: React.FC = () => {
 
               {/* Photo Preview / Compressing indicator */}
               {isCompressingImage ? (
-                <div className="flex items-center gap-3 p-3 mt-3 bg-[#0E1013] border border-white/10 rounded-2xl animate-pulse">
+                <div className="flex items-center gap-3 p-3 mt-3 bg-[#0A0A0A] border border-white/10 rounded-2xl animate-pulse">
                   <div className="w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center shrink-0">
                     <Loader2 className="w-5 h-5 text-[#FF2E7E] animate-spin" />
                   </div>
@@ -238,7 +238,7 @@ export const ComposeBuzzModal: React.FC = () => {
                   </div>
                 </div>
               ) : attachedImagePreview ? (
-                <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-[#0E1013] group max-w-sm mt-3 shadow-md">
+                <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-[#0A0A0A] group max-w-sm mt-3 shadow-md">
                   <img
                     src={attachedImagePreview}
                     alt="Preview foto lampiran"
@@ -326,7 +326,7 @@ export const ComposeBuzzModal: React.FC = () => {
 
                   {/* Rating Selector if film tagged */}
                   {selectedFilmId && (
-                    <div className="flex items-center gap-1.5 bg-[#0E1013] px-3 py-1.5 rounded-xl border border-white/10">
+                    <div className="flex items-center gap-1.5 bg-[#0A0A0A] px-3 py-1.5 rounded-xl border border-white/10">
                       <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
                         <Star className="w-3 h-3 text-[#FFD000] fill-current" />
                         Skor:
@@ -336,9 +336,9 @@ export const ComposeBuzzModal: React.FC = () => {
                         onChange={e => setSkorMention(e.target.value ? Number(e.target.value) : undefined)}
                         className="bg-white/[0.06] text-[#FFD000] font-bold text-xs rounded-lg px-2 py-0.5 border border-[#FFD000]/30 focus:outline-none focus:border-[#FFD000] cursor-pointer"
                       >
-                        <option value="" className="text-slate-400 bg-[#171A1F]">Pilih Skor (1-10)</option>
+                        <option value="" className="text-slate-400 bg-[#171717]">Pilih Skor (1-10)</option>
                         {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map(num => (
-                          <option key={num} value={num} className="bg-[#171A1F] text-[#FFD000]">
+                          <option key={num} value={num} className="bg-[#171717] text-[#FFD000]">
                             ★ {num}.0 / 10.0
                           </option>
                         ))}
@@ -349,7 +349,7 @@ export const ComposeBuzzModal: React.FC = () => {
 
                 {/* Dropdown Menu for Tagging */}
                 {dropdownOpen && (
-                  <div className="absolute left-0 bottom-full mb-2 w-full bg-[#171A1F] border border-white/10 rounded-2xl p-3 shadow-2xl z-30 space-y-2">
+                  <div className="absolute left-0 bottom-full mb-2 w-full bg-[#171717] border border-white/10 rounded-2xl p-3 shadow-2xl z-30 space-y-2">
                     <div className="relative">
                       <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                       <input
@@ -361,7 +361,7 @@ export const ComposeBuzzModal: React.FC = () => {
                             ? 'Cari film berdasarkan judul...'
                             : 'Cari artikel berdasarkan judul...'
                         }
-                        className="w-full pl-9 pr-3 py-1.5 bg-[#0E1013] border border-white/10 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-[#FF2E7E]"
+                        className="w-full pl-9 pr-3 py-1.5 bg-[#0A0A0A] border border-white/10 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-[#FF2E7E]"
                       />
                     </div>
 

@@ -175,7 +175,7 @@ export const Navbar: React.FC = () => {
   return (
     <header className="sticky top-0 z-50">
       {/* Main Navbar Bar */}
-      <div className="bg-[#0E1013]/95 backdrop-blur-md border-b border-white/[0.08]">
+      <div className="bg-[#0A0A0A]/95 backdrop-blur-md border-b border-white/[0.08]">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-6">
           <div className="flex items-center justify-between h-16 gap-2 lg:gap-3 xl:gap-4">
             {/* Brand Logo Section & Mobile Category Drawer Trigger */}
@@ -239,7 +239,7 @@ export const Navbar: React.FC = () => {
                     {/* Dropdown Menu for Subcategories */}
                     {activeDropdown === cat.id && (
                       <div className="absolute left-0 top-full pt-1.5 w-52 z-50">
-                        <div className="bg-[#171A1F] border border-white/10 rounded-xl p-2 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-1 duration-150">
+                        <div className="bg-[#171717] border border-white/10 rounded-xl p-2 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-1 duration-150">
                           <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 border-b border-white/[0.08]">
                             Sub-Kategori {cat.name}
                           </div>
@@ -359,18 +359,18 @@ export const Navbar: React.FC = () => {
                     className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover ring-1 ring-white/20"
                   />
                 ) : (
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#171A1F] border border-white/10 flex items-center justify-center text-slate-300 font-bold text-xs">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#171717] border border-white/10 flex items-center justify-center text-slate-300 font-bold text-xs">
                     <UserIcon className="w-4 h-4" />
                   </div>
                 )}
                 {/* Semantic online status indicator */}
                 {isLoggedIn && (
-                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-[#0E1013]" />
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-[#0A0A0A]" />
                 )}
               </button>
 
               {roleDropdownOpen && (
-                <div className="absolute right-0 top-full mt-2 w-80 sm:w-88 bg-[#171A1F] border border-white/10 rounded-2xl p-4 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 max-h-[85vh] overflow-y-auto scrollbar-thin">
+                <div className="absolute right-0 top-full mt-2 w-80 sm:w-88 bg-[#171717] border border-white/10 rounded-2xl p-4 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 max-h-[85vh] overflow-y-auto scrollbar-thin">
                   {/* User Profile Header / Login Banner */}
                   {isLoggedIn ? (
                     <div className="flex items-center gap-3 pb-3 border-b border-white/[0.08]">
@@ -727,10 +727,10 @@ export const Navbar: React.FC = () => {
             role="dialog"
             aria-modal="true"
             aria-label="Kategori Artikel"
-            className="fixed inset-y-0 left-0 w-80 max-w-[85vw] h-full h-[100dvh] bg-[#171A1F] border-r border-white/10 shadow-2xl flex flex-col z-[61] animate-in slide-in-from-left duration-200 overflow-hidden"
+            className="fixed inset-y-0 left-0 w-80 max-w-[85vw] h-full h-[100dvh] bg-[#171717] border-r border-white/10 shadow-2xl flex flex-col z-[61] animate-in slide-in-from-left duration-200 overflow-hidden"
           >
             {/* Drawer Header */}
-            <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-white/[0.08] bg-[#0E1013] pt-[max(0.75rem,env(safe-area-inset-top))] min-h-[56px] w-full">
+            <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-white/[0.08] bg-[#0A0A0A] pt-[max(0.75rem,env(safe-area-inset-top))] min-h-[56px] w-full">
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
                 <div className="w-8 h-8 rounded-lg bg-[#FF2E7E]/10 border border-[#FF2E7E]/25 flex items-center justify-center text-[#FF2E7E] shrink-0">
                   <BookOpen className="w-4 h-4" />
@@ -757,7 +757,7 @@ export const Navbar: React.FC = () => {
             </div>
 
             {/* Top Navigation & Search Section */}
-            <div className="shrink-0 p-3 space-y-2.5 border-b border-white/[0.08] bg-[#0E1013]/60">
+            <div className="shrink-0 p-3 space-y-2.5 border-b border-white/[0.08] bg-[#0A0A0A]/60">
               {/* Global Search Bar in Drawer */}
               <div className="w-full">
                 <GlobalSearchBar

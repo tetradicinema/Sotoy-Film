@@ -253,7 +253,7 @@ export const BuzzDetailPage: React.FC = () => {
           {/* ================================================================= */}
           <article
             id={`buzz-thread-main-${buzz.id}`}
-            className="p-6 sm:p-7 rounded-3xl bg-[#171A1F] border border-white/10 shadow-2xl relative overflow-hidden space-y-5"
+            className="p-6 sm:p-7 rounded-3xl bg-[#171717] border border-white/10 shadow-2xl relative overflow-hidden space-y-5"
           >
             {/* Ambient subtle glow */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-[#FF2E7E]/5 rounded-full blur-3xl pointer-events-none" />
@@ -283,7 +283,7 @@ export const BuzzDetailPage: React.FC = () => {
                     alt={buzz.author.name}
                     className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl object-cover ring-2 ring-[#FF2E7E]/40 group-hover:ring-[#FF2E7E] transition-all shadow-lg shrink-0"
                   />
-                  <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 sm:w-4 sm:h-4 bg-emerald-500 border-2 border-[#171A1F] rounded-full" />
+                  <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 sm:w-4 sm:h-4 bg-emerald-500 border-2 border-[#171717] rounded-full" />
                 </button>
 
                 <div className="min-w-0 flex-1">
@@ -359,7 +359,7 @@ export const BuzzDetailPage: React.FC = () => {
 
                     {menuOpen && (
                       <div
-                        className="absolute right-0 top-full mt-1 w-32 bg-[#171A1F] border border-white/10 rounded-xl p-1 shadow-2xl z-30 animate-in fade-in zoom-in-95 duration-100"
+                        className="absolute right-0 top-full mt-1 w-32 bg-[#171717] border border-white/10 rounded-xl p-1 shadow-2xl z-30 animate-in fade-in zoom-in-95 duration-100"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <button
@@ -412,7 +412,7 @@ export const BuzzDetailPage: React.FC = () => {
               <div
                 id={`buzz-detail-tagged-film-${postFilm.id}`}
                 onClick={() => navigateTo('film-detail', { filmId: postFilm.id })}
-                className="p-4 rounded-2xl bg-[#0E1013] border border-white/10 hover:border-[#FF2E7E]/50 transition-all cursor-pointer group flex items-center justify-between gap-4 shadow-lg"
+                className="p-4 rounded-2xl bg-[#0A0A0A] border border-white/10 hover:border-[#FF2E7E]/50 transition-all cursor-pointer group flex items-center justify-between gap-4 shadow-lg"
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   <img
@@ -459,7 +459,7 @@ export const BuzzDetailPage: React.FC = () => {
               <div
                 id={`buzz-detail-tagged-article-${postArticle.id}`}
                 onClick={() => navigateTo('article-detail', { articleId: postArticle.id })}
-                className="p-4 rounded-2xl bg-[#0E1013] border border-white/10 hover:border-[#FF2E7E]/50 transition-all cursor-pointer group flex items-center justify-between gap-4 shadow-lg"
+                className="p-4 rounded-2xl bg-[#0A0A0A] border border-white/10 hover:border-[#FF2E7E]/50 transition-all cursor-pointer group flex items-center justify-between gap-4 shadow-lg"
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   <img
@@ -505,7 +505,7 @@ export const BuzzDetailPage: React.FC = () => {
                     navigateTo('collection-detail', { userId: buzz.sharedCollection.ownerId, collectionId: buzz.sharedCollection.collectionId });
                   }
                 }}
-                className="p-4 rounded-2xl bg-[#0E1013] border border-white/10 hover:border-[#FF2E7E]/50 transition-all cursor-pointer group flex items-center justify-between gap-4 shadow-lg text-left"
+                className="p-4 rounded-2xl bg-[#0A0A0A] border border-white/10 hover:border-[#FF2E7E]/50 transition-all cursor-pointer group flex items-center justify-between gap-4 shadow-lg text-left"
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   {/* Collage Preview */}
@@ -648,7 +648,7 @@ export const BuzzDetailPage: React.FC = () => {
             {/* Reply Input Box */}
             <div
               id="buzz-reply-composer"
-              className="p-5 rounded-3xl bg-[#171A1F] border border-white/10 shadow-xl space-y-3 transition-all"
+              className="p-5 rounded-3xl bg-[#171717] border border-white/10 shadow-xl space-y-3 transition-all"
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
@@ -726,7 +726,7 @@ export const BuzzDetailPage: React.FC = () => {
                       : `Tulis tanggapan untuk utas @${buzz.author.handle.replace('@', '')}... (Gunakan '@' untuk mention)`
                   }
                   rows={3}
-                  className="w-full bg-[#0E1013] border border-white/10 rounded-2xl p-3.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] transition-colors resize-none"
+                  className="w-full bg-[#0A0A0A] border border-white/10 rounded-2xl p-3.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] transition-colors resize-none"
                 />
 
                 <div className="flex items-center justify-between gap-2 pt-1">
@@ -767,7 +767,7 @@ export const BuzzDetailPage: React.FC = () => {
 
             {/* Threaded Replies List */}
             {replies.length === 0 ? (
-              <div className="p-8 rounded-3xl bg-[#171A1F]/40 border border-dashed border-white/10 text-center space-y-3">
+              <div className="p-8 rounded-3xl bg-[#171717]/40 border border-dashed border-white/10 text-center space-y-3">
                 <div className="w-12 h-12 rounded-2xl bg-[#FF2E7E]/10 text-[#FF2E7E] flex items-center justify-center mx-auto">
                   <MessageSquare className="w-6 h-6" />
                 </div>
@@ -800,10 +800,10 @@ export const BuzzDetailPage: React.FC = () => {
 
                     // Hierarchy styling depending on thread depth
                     const cardBg = depth === 0
-                      ? 'bg-[#171A1F] border-white/10 hover:border-white/20 shadow-lg border-l-4 border-l-[#FF2E7E]'
+                      ? 'bg-[#171717] border-white/10 hover:border-white/20 shadow-lg border-l-4 border-l-[#FF2E7E]'
                       : depth === 1
                         ? 'bg-[#111317] border-white/10 hover:border-[#FF2E7E]/40 shadow-md border-l-2 border-l-[#FF2E7E]/60'
-                        : 'bg-[#0E1013] border-white/10 hover:border-white/20 shadow-sm border-l-2 border-l-white/20';
+                        : 'bg-[#0A0A0A] border-white/10 hover:border-white/20 shadow-sm border-l-2 border-l-white/20';
 
                     const avatarSize = depth === 0
                       ? 'w-9 h-9 sm:w-10 sm:h-10'
@@ -836,7 +836,7 @@ export const BuzzDetailPage: React.FC = () => {
                             id={`buzz-reply-card-${reply.id}`}
                             className={`p-4 sm:p-5 rounded-2xl border transition-all duration-300 space-y-3 relative ${cardBg} ${
                               isReplyingToThis
-                                ? 'ring-2 ring-[#FF2E7E] shadow-lg shadow-[#FF2E7E]/25 bg-[#1C1F26]'
+                                ? 'ring-2 ring-[#FF2E7E] shadow-lg shadow-[#FF2E7E]/25 bg-[#262626]'
                                 : isHighlighted
                                   ? 'ring-2 ring-[#FF2E7E] shadow-xl shadow-[#FF2E7E]/30 scale-[1.006]'
                                   : ''
@@ -1036,7 +1036,7 @@ export const BuzzDetailPage: React.FC = () => {
         {/* Right Sidebar: Other Buzz Posts & Widget */}
         <aside className="lg:col-span-4 space-y-6">
           {/* Trending Buzz Posts */}
-          <div className="p-5 sm:p-6 rounded-3xl bg-[#171A1F] border border-white/10 shadow-xl space-y-4">
+          <div className="p-5 sm:p-6 rounded-3xl bg-[#171717] border border-white/10 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <h4 className="font-display font-black text-sm text-white flex items-center gap-2">
                 <Flame className="w-4 h-4 text-[#FF2E7E]" />

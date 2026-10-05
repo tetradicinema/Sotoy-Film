@@ -175,7 +175,7 @@ export const FALLBACK_HTML_TEMPLATE = `<!doctype html>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
   </head>
-  <body class="bg-[#0E1013] text-slate-100 antialiased selection:bg-[#FF2E7E] selection:text-white min-h-screen">
+  <body class="bg-[#0A0A0A] text-slate-100 antialiased selection:bg-[#FF2E7E] selection:text-white min-h-screen">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -69,10 +69,10 @@ interface DailyDataPoint {
 }
 
 const ROLE_COLORS: Record<string, string> = {
-  warga_sotoy: '#64748B',
+  warga_sotoy: '#737373',
   si_paling_sotoy: '#FF2E7E',
-  penulis_sotoy: '#94A3B8',
-  admin: '#CBD5E1',
+  penulis_sotoy: '#A3A3A3',
+  admin: '#D4D4D4',
 };
 
 const ROLE_LABELS: Record<string, string> = {
@@ -302,7 +302,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
       roleKey: role,
       value: count,
       percentage: allUsers.length > 0 ? Math.round((count / allUsers.length) * 100) : 0,
-      color: ROLE_COLORS[role] || '#94A3B8',
+      color: ROLE_COLORS[role] || '#A3A3A3',
     }));
 
     // 7. Calculate high level KPIs
@@ -425,7 +425,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
     <div className="space-y-6 animate-in fade-in duration-300">
       
       {/* 1. Header Banner & Action Bar */}
-      <div className="p-6 rounded-3xl bg-[#171A1F] border border-white/10 shadow-xl relative overflow-hidden">
+      <div className="p-6 rounded-3xl bg-[#171717] border border-white/10 shadow-xl relative overflow-hidden">
         <div className="absolute -top-12 -right-12 w-64 h-64 bg-[#FF2E7E]/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -505,7 +505,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
       {/* 2. Key Performance Indicators (KPI Cards) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* KPI 1: Total & Registrasi Baru */}
-        <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-5 shadow-sm relative overflow-hidden transition-all group">
+        <div className="bg-[#171717] border border-white/10 rounded-2xl p-5 shadow-sm relative overflow-hidden transition-all group">
           <div className="flex items-start justify-between">
             <div>
               <span className="text-xs font-semibold text-slate-400">Total Anggota Terdaftar</span>
@@ -527,7 +527,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
         </div>
 
         {/* KPI 2: Daily Active Users (DAU) */}
-        <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-5 shadow-sm relative overflow-hidden transition-all group">
+        <div className="bg-[#171717] border border-white/10 rounded-2xl p-5 shadow-sm relative overflow-hidden transition-all group">
           <div className="flex items-start justify-between">
             <div>
               <span className="text-xs font-semibold text-slate-400">Rata-rata DAU (Aktif/Hari)</span>
@@ -547,7 +547,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
         </div>
 
         {/* KPI 3: User Retention Rate & Returning Users */}
-        <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-5 shadow-sm relative overflow-hidden transition-all group">
+        <div className="bg-[#171717] border border-white/10 rounded-2xl p-5 shadow-sm relative overflow-hidden transition-all group">
           <div className="flex items-start justify-between">
             <div>
               <span className="text-xs font-semibold text-slate-400">Rata-rata Pengguna Kembali</span>
@@ -569,7 +569,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
         </div>
 
         {/* KPI 4: Community Health Score */}
-        <div className="bg-[#171A1F] border border-white/10 rounded-2xl p-5 shadow-sm relative overflow-hidden transition-all group">
+        <div className="bg-[#171717] border border-white/10 rounded-2xl p-5 shadow-sm relative overflow-hidden transition-all group">
           <div className="flex items-start justify-between">
             <div>
               <span className="text-xs font-semibold text-slate-400">Kesehatan Komunitas</span>
@@ -590,7 +590,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
       </div>
 
       {/* 3. SECTION: USER RETENTION BREAKDOWN (RECHARTS LINE CHART) */}
-      <div className="bg-[#171A1F] border border-white/10 rounded-3xl p-6 shadow-xl space-y-6 relative overflow-hidden">
+      <div className="bg-[#171717] border border-white/10 rounded-3xl p-6 shadow-xl space-y-6 relative overflow-hidden">
         {/* Section Header with Mode Filter */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4 relative z-10">
           <div className="flex items-center gap-3">
@@ -610,7 +610,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
           </div>
 
           {/* Retention View Selector */}
-          <div className="flex items-center gap-1.5 bg-[#0E1013] p-1 rounded-xl border border-white/10 text-xs self-start sm:self-auto">
+          <div className="flex items-center gap-1.5 bg-[#0A0A0A] p-1 rounded-xl border border-white/10 text-xs self-start sm:self-auto">
             <button
               onClick={() => setRetentionView('overview')}
               className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
@@ -650,21 +650,21 @@ export const AdminAnalyticsDashboard: React.FC = () => {
         <div className="h-80 w-full relative z-10">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#262b35" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#262626" vertical={false} />
               
               <XAxis 
                 dataKey="displayDate" 
-                stroke="#64748B" 
+                stroke="#737373" 
                 fontSize={11} 
                 tickLine={false} 
-                axisLine={{ stroke: '#334155' }} 
+                axisLine={{ stroke: '#404040' }} 
               />
               
               <YAxis 
-                stroke="#64748B" 
+                stroke="#737373" 
                 fontSize={11} 
                 tickLine={false} 
-                axisLine={{ stroke: '#334155' }} 
+                axisLine={{ stroke: '#404040' }} 
                 allowDecimals={false}
               />
               
@@ -682,9 +682,9 @@ export const AdminAnalyticsDashboard: React.FC = () => {
               {(retentionView === 'overview' || retentionView === 'rates') && (
                 <ReferenceLine 
                   y={40} 
-                  stroke="#94A3B8" 
+                  stroke="#A3A3A3" 
                   strokeDasharray="4 4" 
-                  label={{ value: 'Target Sehat (40%)', fill: '#94A3B8', fontSize: 10, position: 'insideTopLeft' }} 
+                  label={{ value: 'Target Sehat (40%)', fill: '#A3A3A3', fontSize: 10, position: 'insideTopLeft' }} 
                 />
               )}
 
@@ -704,18 +704,18 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                     type="monotone"
                     name="Registrasi Baru"
                     dataKey="newUsers"
-                    stroke="#94A3B8"
+                    stroke="#A3A3A3"
                     strokeWidth={2}
                     strokeDasharray="3 3"
-                    dot={{ r: 3, fill: '#94A3B8' }}
+                    dot={{ r: 3, fill: '#A3A3A3' }}
                   />
                   <Line
                     type="monotone"
                     name="Tingkat Retensi (%)"
                     dataKey="retentionRate"
-                    stroke="#CBD5E1"
+                    stroke="#D4D4D4"
                     strokeWidth={2.5}
-                    dot={{ r: 3, fill: '#CBD5E1' }}
+                    dot={{ r: 3, fill: '#D4D4D4' }}
                   />
                 </>
               )}
@@ -735,7 +735,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                     type="monotone"
                     name="Total Pengguna Aktif (DAU)"
                     dataKey="activeUsers"
-                    stroke="#CBD5E1"
+                    stroke="#D4D4D4"
                     strokeWidth={2}
                     strokeDasharray="4 4"
                     dot={false}
@@ -744,9 +744,9 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                     type="monotone"
                     name="User Baru Hari Tersebut"
                     dataKey="newUsers"
-                    stroke="#94A3B8"
+                    stroke="#A3A3A3"
                     strokeWidth={2}
-                    dot={{ r: 3, fill: '#94A3B8' }}
+                    dot={{ r: 3, fill: '#A3A3A3' }}
                   />
                 </>
               )}
@@ -767,7 +767,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                     type="monotone"
                     name="Day-1 Retention Benchmark (%)"
                     dataKey="day1Retention"
-                    stroke="#94A3B8"
+                    stroke="#A3A3A3"
                     strokeWidth={2}
                     strokeDasharray="2 2"
                     dot={false}
@@ -782,17 +782,17 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                     type="monotone"
                     name="Day 1 Retention (%)"
                     dataKey="day1Retention"
-                    stroke="#CBD5E1"
+                    stroke="#D4D4D4"
                     strokeWidth={2.5}
-                    dot={{ r: 3, fill: '#CBD5E1' }}
+                    dot={{ r: 3, fill: '#D4D4D4' }}
                   />
                   <Line
                     type="monotone"
                     name="Day 7 Retention (%)"
                     dataKey="day7Retention"
-                    stroke="#94A3B8"
+                    stroke="#A3A3A3"
                     strokeWidth={2.5}
-                    dot={{ r: 3, fill: '#94A3B8' }}
+                    dot={{ r: 3, fill: '#A3A3A3' }}
                   />
                   <Line
                     type="monotone"
@@ -811,7 +811,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
 
         {/* Retention Cohort Metrics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 relative z-10">
-          <div className="bg-[#0E1013] border border-white/10 p-3.5 rounded-2xl flex items-center justify-between">
+          <div className="bg-[#0A0A0A] border border-white/10 p-3.5 rounded-2xl flex items-center justify-between">
             <div>
               <span className="text-[11px] font-semibold text-slate-400 block">Day-1 Retention (D1)</span>
               <span className="text-xl font-black text-white tabular-nums">{retentionStats.avgD1}%</span>
@@ -821,7 +821,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
             </span>
           </div>
 
-          <div className="bg-[#0E1013] border border-white/10 p-3.5 rounded-2xl flex items-center justify-between">
+          <div className="bg-[#0A0A0A] border border-white/10 p-3.5 rounded-2xl flex items-center justify-between">
             <div>
               <span className="text-[11px] font-semibold text-slate-400 block">Day-7 Retention (D7)</span>
               <span className="text-xl font-black text-white tabular-nums">{retentionStats.avgD7}%</span>
@@ -831,7 +831,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
             </span>
           </div>
 
-          <div className="bg-[#0E1013] border border-white/10 p-3.5 rounded-2xl flex items-center justify-between">
+          <div className="bg-[#0A0A0A] border border-white/10 p-3.5 rounded-2xl flex items-center justify-between">
             <div>
               <span className="text-[11px] font-semibold text-slate-400 block">Day-30 Retention (D30)</span>
               <span className="text-xl font-black text-white tabular-nums">{retentionStats.avgD30}%</span>
@@ -841,7 +841,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
             </span>
           </div>
 
-          <div className="bg-[#0E1013] border border-white/10 p-3.5 rounded-2xl flex items-center justify-between">
+          <div className="bg-[#0A0A0A] border border-white/10 p-3.5 rounded-2xl flex items-center justify-between">
             <div>
               <span className="text-[11px] font-semibold text-slate-400 block">Rata-rata User Kembali/Hari</span>
               <span className="text-xl font-black text-white tabular-nums">{retentionStats.avgReturningUsers} Warga</span>
@@ -854,7 +854,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
       </div>
 
       {/* 4. Main Chart: Registrasi Tren & DAU (Interactive AreaChart) */}
-      <div className="bg-[#171A1F] border border-white/10 rounded-3xl p-6 shadow-xl space-y-6">
+      <div className="bg-[#171717] border border-white/10 rounded-3xl p-6 shadow-xl space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-[#FF2E7E]">
@@ -871,7 +871,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
           </div>
 
           {/* Metric display filter */}
-          <div className="flex items-center gap-1.5 bg-[#0E1013] p-1 rounded-xl border border-white/10 text-xs">
+          <div className="flex items-center gap-1.5 bg-[#0A0A0A] p-1 rounded-xl border border-white/10 text-xs">
             <button
               onClick={() => setSelectedMetric('all')}
               className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
@@ -909,26 +909,26 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                   <stop offset="95%" stopColor="#FF2E7E" stopOpacity={0.0} />
                 </linearGradient>
                 <linearGradient id="newUsersGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#94A3B8" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#94A3B8" stopOpacity={0.0} />
+                  <stop offset="5%" stopColor="#A3A3A3" stopOpacity={0.4} />
+                  <stop offset="95%" stopColor="#A3A3A3" stopOpacity={0.0} />
                 </linearGradient>
               </defs>
 
-              <CartesianGrid strokeDasharray="3 3" stroke="#262b35" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#262626" vertical={false} />
               
               <XAxis 
                 dataKey="displayDate" 
-                stroke="#64748B" 
+                stroke="#737373" 
                 fontSize={11} 
                 tickLine={false} 
-                axisLine={{ stroke: '#334155' }} 
+                axisLine={{ stroke: '#404040' }} 
               />
               
               <YAxis 
-                stroke="#64748B" 
+                stroke="#737373" 
                 fontSize={11} 
                 tickLine={false} 
-                axisLine={{ stroke: '#334155' }} 
+                axisLine={{ stroke: '#404040' }} 
                 allowDecimals={false}
               />
               
@@ -958,7 +958,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                   type="monotone"
                   name="Registrasi Baru"
                   dataKey="newUsers"
-                  stroke="#94A3B8"
+                  stroke="#A3A3A3"
                   strokeWidth={2}
                   fillOpacity={1}
                   fill="url(#newUsersGradient)"
@@ -985,7 +985,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Left Column (2 spans): Activity Volume BarChart */}
-        <div className="lg:col-span-2 bg-[#171A1F] border border-white/10 rounded-3xl p-6 shadow-xl space-y-6">
+        <div className="lg:col-span-2 bg-[#171717] border border-white/10 rounded-3xl p-6 shadow-xl space-y-6">
           <div className="flex items-center justify-between border-b border-white/10 pb-4">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-[#FF2E7E]">
@@ -1009,9 +1009,9 @@ export const AdminAnalyticsDashboard: React.FC = () => {
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#262b35" vertical={false} />
-                <XAxis dataKey="displayDate" stroke="#64748B" fontSize={11} tickLine={false} />
-                <YAxis stroke="#64748B" fontSize={11} tickLine={false} allowDecimals={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#262626" vertical={false} />
+                <XAxis dataKey="displayDate" stroke="#737373" fontSize={11} tickLine={false} />
+                <YAxis stroke="#737373" fontSize={11} tickLine={false} allowDecimals={false} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend 
                   verticalAlign="top" 
@@ -1020,14 +1020,14 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                   wrapperStyle={{ fontSize: '11px' }} 
                 />
                 <Bar name="Review Skor Sotoy" dataKey="reviewsCount" fill="#FF2E7E" radius={[4, 4, 0, 0]} />
-                <Bar name="Diskusi Buzz" dataKey="buzzCount" fill="#64748B" radius={[4, 4, 0, 0]} />
+                <Bar name="Diskusi Buzz" dataKey="buzzCount" fill="#737373" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Right Column (1 span): Role Composition Donut */}
-        <div className="bg-[#171A1F] border border-white/10 rounded-3xl p-6 shadow-xl space-y-4 flex flex-col justify-between">
+        <div className="bg-[#171717] border border-white/10 rounded-3xl p-6 shadow-xl space-y-4 flex flex-col justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-slate-300">
@@ -1061,7 +1061,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
                 </Pie>
                 <Tooltip 
                   formatter={(value: any, name: any) => [`${value} Akun`, name]}
-                  contentStyle={{ backgroundColor: '#171A1F', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '11px' }}
+                  contentStyle={{ backgroundColor: '#171717', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '11px' }}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -1093,7 +1093,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
       </div>
 
       {/* 6. Leaderboard of Top Contributors */}
-      <div className="bg-[#171A1F] border border-white/10 rounded-3xl p-6 shadow-xl space-y-4">
+      <div className="bg-[#171717] border border-white/10 rounded-3xl p-6 shadow-xl space-y-4">
         <div className="flex items-center justify-between border-b border-white/10 pb-4">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-[#FF2E7E]">
@@ -1121,7 +1121,7 @@ export const AdminAnalyticsDashboard: React.FC = () => {
             return (
               <div
                 key={user.id || index}
-                className="bg-[#0E1013] border border-white/10 hover:border-white/20 p-3.5 rounded-2xl flex flex-col justify-between transition-all group"
+                className="bg-[#0A0A0A] border border-white/10 hover:border-white/20 p-3.5 rounded-2xl flex flex-col justify-between transition-all group"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0">

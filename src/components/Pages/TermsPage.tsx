@@ -41,7 +41,7 @@ export const TermsPage: React.FC = () => {
         <AdBannerSlot variant="leaderboard" />
 
         {/* Core Principles */}
-        <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xl">
+        <div className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xl">
           <h2 className="font-display font-black text-lg text-white flex items-center gap-2">
             <FileCheck className="w-5 h-5 text-[#FF2E7E]" />
             <span>Kode Etik Komunitas Warga Sotoy</span>
@@ -55,7 +55,7 @@ export const TermsPage: React.FC = () => {
         <div className="space-y-8 text-slate-300 text-xs sm:text-sm leading-relaxed">
           
           {/* Section 1 */}
-          <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+          <section className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
             <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
               <span className="text-[#FF2E7E] font-black">1.</span>
               <span>Hak Cipta & Kepemilikan Materi</span>
@@ -74,7 +74,7 @@ export const TermsPage: React.FC = () => {
           </section>
 
           {/* Section 2 */}
-          <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+          <section className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
             <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
               <span className="text-[#FF2E7E] font-black">2.</span>
               <span>Aturan Spoiler & Tata Krama Ulasan</span>
@@ -106,7 +106,7 @@ export const TermsPage: React.FC = () => {
           </section>
 
           {/* Section 3 */}
-          <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+          <section className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
             <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
               <span className="text-[#FF2E7E] font-black">3.</span>
               <span>Integritas Sistem Skor Sotoy & Anti-Review Bombing</span>
@@ -122,7 +122,7 @@ export const TermsPage: React.FC = () => {
           </section>
 
           {/* Section 4 */}
-          <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+          <section className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
             <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
               <span className="text-purple-400 font-black">4.</span>
               <span>Kewenangan Moderasi & Penegakan Sanksi</span>
@@ -133,7 +133,7 @@ export const TermsPage: React.FC = () => {
           </section>
 
           {/* Section 5 */}
-          <section className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
+          <section className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
             <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
               <span className="text-emerald-400 font-black">5.</span>
               <span>Hukum yang Berlaku</span>

@@ -288,7 +288,7 @@ export const SearchPage: React.FC = () => {
   const hasQuery = localQuery.trim().length > 0;
 
   return (
-    <div id="sotoy-search-page" className="min-h-screen pb-20 pt-4 sm:pt-6 bg-[#0A0B10]">
+    <div id="sotoy-search-page" className="min-h-screen pb-20 pt-4 sm:pt-6 bg-[#0A0A0A]">
       <div className="max-w-6xl mx-auto px-3 sm:px-6">
         
         {/* Breadcrumb & Back Navigation Bar */}
@@ -316,7 +316,7 @@ export const SearchPage: React.FC = () => {
         </div>
 
         {/* Search Header Banner */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#171A1F] via-[#1a1735] to-[#171A1F] border border-slate-800 p-5 sm:p-8 mb-6 shadow-2xl">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#171717] via-[#1a1735] to-[#171717] border border-slate-800 p-5 sm:p-8 mb-6 shadow-2xl">
           <div className="relative z-10 max-w-3xl">
             <h1 className="text-2xl sm:text-4xl font-black font-display text-white tracking-tight flex items-center gap-3">
               <Search className="w-7 h-7 sm:w-8 sm:h-8 text-[#FF2E7E] shrink-0" />
@@ -412,7 +412,7 @@ export const SearchPage: React.FC = () => {
                   className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all shrink-0 min-h-[44px] cursor-pointer active:scale-95 ${
                     isActive
                       ? 'bg-[#FF2E7E] text-white shadow-lg shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
-                      : 'bg-[#171A1F] text-slate-400 hover:text-white border border-slate-800 hover:border-slate-700 hover:bg-white/[0.04]'
+                      : 'bg-[#171717] text-slate-400 hover:text-white border border-slate-800 hover:border-slate-700 hover:bg-white/[0.04]'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -435,7 +435,7 @@ export const SearchPage: React.FC = () => {
           <div className="space-y-6">
             {/* Recent Searches Panel */}
             {recentSearches.length > 0 && (
-              <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl">
+              <div className="bg-[#171717] border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
                   <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
                     <Clock className="w-4 h-4 text-[#FF2E7E]" />
@@ -472,7 +472,7 @@ export const SearchPage: React.FC = () => {
             )}
 
             {/* Quick Browse Categories Shortcuts */}
-            <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl">
+            <div className="bg-[#171717] border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl">
               <h2 className="text-sm sm:text-base font-bold text-white mb-4 flex items-center gap-2">
                 <Film className="w-4 h-4 text-[#FF2E7E]" />
                 <span>Jelajahi Berdasarkan Kategori</span>
@@ -509,7 +509,7 @@ export const SearchPage: React.FC = () => {
           <div className="space-y-8">
             {totalResults === 0 ? (
               /* No Results State */
-              <div className="text-center py-16 px-4 bg-[#171A1F] border border-slate-800 rounded-3xl shadow-xl">
+              <div className="text-center py-16 px-4 bg-[#171717] border border-slate-800 rounded-3xl shadow-xl">
                 <div className="w-16 h-16 rounded-3xl bg-slate-900 border border-slate-700 flex items-center justify-center mx-auto mb-4 text-slate-500">
                   <Search className="w-8 h-8 text-slate-400" />
                 </div>
@@ -557,7 +557,7 @@ export const SearchPage: React.FC = () => {
                         <div
                           key={film.id}
                           onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                          className="group bg-[#171A1F] hover:bg-slate-850 border border-slate-800 hover:border-[#FF2E7E]/50 rounded-2xl p-3 sm:p-4 flex gap-3.5 cursor-pointer transition-all shadow-md hover:shadow-xl"
+                          className="group bg-[#171717] hover:bg-slate-850 border border-slate-800 hover:border-[#FF2E7E]/50 rounded-2xl p-3 sm:p-4 flex gap-3.5 cursor-pointer transition-all shadow-md hover:shadow-xl"
                         >
                           <img
                             src={film.poster?.trim() || DEFAULT_POSTER}
@@ -634,7 +634,7 @@ export const SearchPage: React.FC = () => {
                                 media_type: tmdbItem.media_type,
                               });
                             }}
-                            className="group bg-[#171A1F] hover:bg-slate-850 border border-cyan-900/40 hover:border-cyan-500/60 rounded-2xl p-3 sm:p-4 flex gap-3.5 cursor-pointer transition-all shadow-md hover:shadow-xl relative overflow-hidden"
+                            className="group bg-[#171717] hover:bg-slate-850 border border-cyan-900/40 hover:border-cyan-500/60 rounded-2xl p-3 sm:p-4 flex gap-3.5 cursor-pointer transition-all shadow-md hover:shadow-xl relative overflow-hidden"
                           >
                             <img
                               src={poster?.trim() || DEFAULT_POSTER}
@@ -704,7 +704,7 @@ export const SearchPage: React.FC = () => {
                         <div
                           key={art.id}
                           onClick={() => navigateTo('article-detail', { articleId: art.id })}
-                          className="group bg-[#171A1F] hover:bg-slate-850 border border-slate-800 hover:border-[#FF2E7E]/50 rounded-2xl p-4 flex gap-4 cursor-pointer transition-all shadow-md hover:shadow-xl"
+                          className="group bg-[#171717] hover:bg-slate-850 border border-slate-800 hover:border-[#FF2E7E]/50 rounded-2xl p-4 flex gap-4 cursor-pointer transition-all shadow-md hover:shadow-xl"
                         >
                           <img
                             src={art.coverImage?.trim() || DEFAULT_COVER}
@@ -761,7 +761,7 @@ export const SearchPage: React.FC = () => {
                         <div
                           key={buzz.id}
                           onClick={() => navigateTo('buzz-detail', { buzzId: buzz.id })}
-                          className="group bg-[#171A1F] hover:bg-slate-850 border border-slate-800 hover:border-[#FF2E7E]/50 rounded-2xl p-4 cursor-pointer transition-all shadow-md"
+                          className="group bg-[#171717] hover:bg-slate-850 border border-slate-800 hover:border-[#FF2E7E]/50 rounded-2xl p-4 cursor-pointer transition-all shadow-md"
                         >
                           <div className="flex items-start gap-3">
                             <img
@@ -830,7 +830,7 @@ export const SearchPage: React.FC = () => {
                         return (
                           <div
                             key={user.id}
-                            className="bg-[#171A1F] border border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-md"
+                            className="bg-[#171717] border border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-md"
                           >
                             <div
                               onClick={() => navigateTo('user-profile', { userId: user.id })}

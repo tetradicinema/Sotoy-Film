@@ -74,7 +74,7 @@ const AppContent: React.FC = () => {
   const isOnboarding = location.pathname === '/onboarding';
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0E1013] text-slate-100 relative selection:bg-[#FF2E7E] selection:text-white pb-16 lg:pb-0">
+    <div className="min-h-screen flex flex-col bg-[#0A0A0A] text-slate-100 relative selection:bg-[#FF2E7E] selection:text-white pb-16 lg:pb-0">
       {/* Default SEO Metadata fallback */}
       <SEOHead />
 
@@ -82,7 +82,7 @@ const AppContent: React.FC = () => {
       {toastMessage && (
         <div
           id="global-toast-notification"
-          className={`fixed bottom-20 sm:bottom-6 right-4 sm:right-6 left-4 sm:left-auto z-[100] bg-[#171A1F]/95 backdrop-blur-md border ${
+          className={`fixed bottom-20 sm:bottom-6 right-4 sm:right-6 left-4 sm:left-auto z-[100] bg-[#171717]/95 backdrop-blur-md border ${
             toastType === 'success' ? 'border-emerald-500/60' : 
             toastType === 'error' ? 'border-red-500/60' : 
             'border-[#FF2E7E]/60'

@@ -125,7 +125,7 @@ export const FilmRecommendationsPage: React.FC = () => {
             <div
               key={film.id}
               id={`rec-card-${film.id}`}
-              className="bg-[#171A1F] border border-slate-800 hover:border-[#FF2E7E]/60 rounded-3xl p-5 flex flex-col sm:flex-row gap-5 group transition-all duration-300 shadow-xl"
+              className="bg-[#171717] border border-slate-800 hover:border-[#FF2E7E]/60 rounded-3xl p-5 flex flex-col sm:flex-row gap-5 group transition-all duration-300 shadow-xl"
             >
               <img
                 src={film.poster?.trim() || DEFAULT_POSTER}

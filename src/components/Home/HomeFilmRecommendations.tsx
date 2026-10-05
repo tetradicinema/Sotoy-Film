@@ -111,7 +111,7 @@ export const HomeFilmRecommendations: React.FC = () => {
               <div
                 key={film.id}
                 id={`rec-film-card-${film.id}`}
-                className="bg-[#171A1F] border border-white/[0.08] hover:border-white/20 rounded-2xl overflow-hidden hover:-translate-y-1 transition-all duration-300 flex flex-col group shadow-lg"
+                className="bg-[#171717] border border-white/[0.08] hover:border-white/20 rounded-2xl overflow-hidden hover:-translate-y-1 transition-all duration-300 flex flex-col group shadow-lg"
               >
                 {/* Movie Poster with Hover Zoom */}
                 <div
@@ -123,7 +123,7 @@ export const HomeFilmRecommendations: React.FC = () => {
                     alt={film.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#171A1F] via-transparent to-transparent opacity-80" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#171717] via-transparent to-transparent opacity-80" />
 
                   {/* Rating Tag */}
                   <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/30 text-[#FFD000] text-xs font-mono tabular-nums flex items-center gap-1 shadow-md">

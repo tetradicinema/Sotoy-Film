@@ -633,7 +633,7 @@ export const AdminCatalogManager: React.FC = () => {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-[#171A1F] border border-white/[0.08] rounded-2xl p-4 space-y-3 shadow-sm">
+      <div className="bg-[#171717] border border-white/[0.08] rounded-2xl p-4 space-y-3 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           {/* Format Filter Pills */}
           <div className="flex items-center gap-1.5 overflow-x-auto text-xs font-medium pb-1 sm:pb-0 scrollbar-none">
@@ -660,14 +660,14 @@ export const AdminCatalogManager: React.FC = () => {
               placeholder="Cari judul, sutradara, genre..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full bg-[#0E1013] border border-white/10 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] transition-colors"
+              className="w-full bg-[#0A0A0A] border border-white/10 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] transition-colors"
             />
           </div>
         </div>
 
         {/* Bulk Actions Floating/Contextual Bar */}
         {selectedFilmIds.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-[#171A1F] border border-white/15 rounded-xl animate-in fade-in slide-in-from-top-2 duration-200 shadow-md">
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-[#171717] border border-white/15 rounded-xl animate-in fade-in slide-in-from-top-2 duration-200 shadow-md">
             <div className="flex items-center gap-2.5">
               <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-white/[0.08] text-white font-mono text-xs">
                 {selectedFilmIds.length}
@@ -696,10 +696,10 @@ export const AdminCatalogManager: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowBulkTagModal(true)}
-                className="px-2.5 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-750 text-purple-300 border border-purple-500/30 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                className="px-2.5 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-750 text-[#FF2E7E] border border-[#FF2E7E]/30 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
                 title="Tambahkan tag ke semua film yang dipilih"
               >
-                <Tag className="w-3.5 h-3.5 text-purple-400" />
+                <Tag className="w-3.5 h-3.5 text-[#FF2E7E]" />
                 <span>Tambah Tag</span>
               </button>
 
@@ -763,7 +763,7 @@ export const AdminCatalogManager: React.FC = () => {
         {/* Film Catalog Grid/List */}
         <div className="overflow-x-auto rounded-xl border border-slate-850">
           <table className="w-full text-left text-xs">
-            <thead className="bg-[#17182b] text-slate-400 text-[11px] font-bold uppercase tracking-wider border-b border-slate-800">
+            <thead className="bg-[#171717] text-slate-400 text-[11px] font-bold uppercase tracking-wider border-b border-slate-800">
               <tr>
                 {/* Select All Checkbox Column */}
                 <th className="p-3.5 w-10 text-center">
@@ -792,7 +792,7 @@ export const AdminCatalogManager: React.FC = () => {
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-slate-850/80 bg-[#111220]">
+            <tbody className="divide-y divide-slate-850/80 bg-[#171717]">
               {filteredFilms.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="p-8 text-center text-slate-500 text-xs">
@@ -944,7 +944,7 @@ export const AdminCatalogManager: React.FC = () => {
       {/* ADD / EDIT METADATA MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
-          <div className="bg-[#171A1F] border border-white/10 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-5 my-8 max-h-[90vh] overflow-y-auto custom-scrollbar">
+          <div className="bg-[#171717] border border-white/10 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-5 my-8 max-h-[90vh] overflow-y-auto custom-scrollbar">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
               <div className="flex items-center gap-2.5 text-white font-display font-bold text-base">
@@ -1663,7 +1663,7 @@ export const AdminCatalogManager: React.FC = () => {
         >
           <div
             id="delete-film-modal-card"
-            className="bg-[#171A1F] border border-red-500/30 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 text-center"
+            className="bg-[#171717] border border-red-500/30 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 text-center"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-14 h-14 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto text-red-400">
@@ -1722,7 +1722,7 @@ export const AdminCatalogManager: React.FC = () => {
           onClick={() => !isBulkOperating && setShowBulkDeleteModal(false)}
         >
           <div
-            className="bg-[#171A1F] border border-red-500/30 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 text-center"
+            className="bg-[#171717] border border-red-500/30 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 text-center"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-14 h-14 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto text-red-400">
@@ -1794,7 +1794,7 @@ export const AdminCatalogManager: React.FC = () => {
           onClick={() => !isBulkOperating && setShowBulkFormatModal(false)}
         >
           <div
-            className="bg-[#171A1F] border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5"
+            className="bg-[#171717] border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
@@ -1874,7 +1874,7 @@ export const AdminCatalogManager: React.FC = () => {
           onClick={() => !isBulkOperating && setShowBulkTagModal(false)}
         >
           <div
-            className="bg-[#171A1F] border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5"
+            className="bg-[#171717] border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
@@ -1928,7 +1928,7 @@ export const AdminCatalogManager: React.FC = () => {
                   value={bulkTagInput}
                   onChange={e => setBulkTagInput(e.target.value)}
                   placeholder="trending, must-watch, plot-twist..."
-                  className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-400 transition-colors"
+                  className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#FF2E7E] transition-colors"
                 />
               </div>
             </div>
@@ -1946,7 +1946,7 @@ export const AdminCatalogManager: React.FC = () => {
                 type="button"
                 onClick={handleBulkAddTags}
                 disabled={isBulkOperating}
-                className="py-2.5 px-5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-black text-xs transition-all shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
+                className="py-2.5 px-5 rounded-xl bg-[#FF2E7E] hover:bg-[#e0266e] text-white font-black text-xs transition-all shadow-lg shadow-[#FF2E7E]/20 flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
               >
                 {isBulkOperating ? (
                   <>

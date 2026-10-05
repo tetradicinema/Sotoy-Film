@@ -98,8 +98,8 @@ export const AdminStorageFiles: React.FC = () => {
       {/* Main Split View */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: User Explorer */}
-        <div className="lg:col-span-6 bg-[#111220] border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-          <div className="p-4 border-b border-slate-800 bg-[#151624]/60 space-y-3">
+        <div className="lg:col-span-6 bg-[#171717] border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+          <div className="p-4 border-b border-slate-800 bg-[#171717]/60 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-display font-bold text-white text-sm">
                 Pilih Pengguna ({allUsers.length})
@@ -182,10 +182,10 @@ export const AdminStorageFiles: React.FC = () => {
         </div>
 
         {/* Right Column: Files Grid */}
-        <div className="lg:col-span-6 bg-[#111220] border border-slate-800 rounded-2xl overflow-hidden shadow-xl min-h-[500px] flex flex-col">
+        <div className="lg:col-span-6 bg-[#171717] border border-slate-800 rounded-2xl overflow-hidden shadow-xl min-h-[500px] flex flex-col">
           {selectedUser ? (
             <div className="flex-1 flex flex-col">
-              <div className="p-4 border-b border-slate-800 bg-[#151624]/60 flex items-center justify-between">
+              <div className="p-4 border-b border-slate-800 bg-[#171717]/60 flex items-center justify-between">
                 <div>
                   <h4 className="font-bold text-white text-xs">
                     Arsip: {selectedUser.name}
@@ -282,7 +282,7 @@ export const AdminStorageFiles: React.FC = () => {
           onClick={() => setActiveLightboxFile(null)}
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 animate-in fade-in"
         >
-          <div className="relative max-w-2xl max-h-[80vh] overflow-hidden rounded-2xl bg-[#0D0E15] border border-slate-800 flex flex-col">
+          <div className="relative max-w-2xl max-h-[80vh] overflow-hidden rounded-2xl bg-[#0A0A0A] border border-slate-800 flex flex-col">
             <button
               onClick={() => setActiveLightboxFile(null)}
               className="absolute top-3 right-3 z-10 w-7 h-7 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-bold"

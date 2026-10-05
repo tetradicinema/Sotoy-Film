@@ -43,7 +43,7 @@ export const BuzzCardSkeleton: React.FC<BuzzCardSkeletonProps> = ({ hasMedia = f
 
       {/* Optional Rich Media / Tagged Entity Card Skeleton */}
       {hasMedia && (
-        <div className="p-3 rounded-2xl bg-[#0E1013]/80 border border-white/[0.08]/60 flex items-center gap-3.5">
+        <div className="p-3 rounded-2xl bg-[#0A0A0A]/80 border border-white/[0.08]/60 flex items-center gap-3.5">
           <div className="w-12 h-16 rounded-xl bg-slate-800 shrink-0" />
           <div className="space-y-2 flex-1">
             <div className="h-3.5 w-3/4 bg-slate-800 rounded" />
