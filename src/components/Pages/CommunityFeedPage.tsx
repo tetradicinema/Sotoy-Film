@@ -602,7 +602,7 @@ export const CommunityFeedPage: React.FC = () => {
               <button
                 id="buzz-tab-foryou"
                 onClick={() => setBuzzFeedTab('for-you')}
-                className={`flex items-center gap-2 px-4 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
                   buzzFeedTab === 'for-you'
                     ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25'
                     : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
@@ -615,7 +615,7 @@ export const CommunityFeedPage: React.FC = () => {
               <button
                 id="buzz-tab-following"
                 onClick={() => setBuzzFeedTab('following')}
-                className={`flex items-center gap-2 px-4 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
                   buzzFeedTab === 'following'
                     ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25'
                     : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
@@ -630,45 +630,6 @@ export const CommunityFeedPage: React.FC = () => {
                     {followingIds.length}
                   </span>
                 )}
-              </button>
-
-              <button
-                id="buzz-tab-trending"
-                onClick={() => setBuzzFeedTab('trending')}
-                className={`hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  buzzFeedTab === 'trending'
-                    ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5 text-current" />
-                <span>Populer</span>
-              </button>
-
-              <button
-                id="buzz-tab-saved"
-                onClick={() => setBuzzFeedTab('saved')}
-                className={`hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  buzzFeedTab === 'saved'
-                    ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
-                }`}
-              >
-                <Bookmark className="w-3.5 h-3.5 text-current" />
-                <span>Tersimpan</span>
-              </button>
-
-              <button
-                id="buzz-tab-liked"
-                onClick={() => setBuzzFeedTab('liked')}
-                className={`hidden md:flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  buzzFeedTab === 'liked'
-                    ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
-                }`}
-              >
-                <Heart className="w-3.5 h-3.5 text-current" />
-                <span>Disukai</span>
               </button>
             </div>
 

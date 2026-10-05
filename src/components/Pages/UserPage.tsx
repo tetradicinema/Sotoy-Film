@@ -665,33 +665,33 @@ export const UserPage: React.FC = () => {
   const roleTheme = getRoleTheme();
 
   return (
-    <div className="min-h-screen py-6 sm:py-8">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+    <div className="min-h-screen bg-[#0A0A0E] text-white py-4 sm:py-6">
+      <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 pt-2 pb-12 space-y-6">
         
         {/* Visitor Alert Banner */}
         {!isLoggedIn && (
-          <div className="bg-gradient-to-r from-blue-950/60 via-purple-950/50 to-slate-900 border border-[#FF2E7E]/30 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
-            <div className="flex items-center gap-3.5">
-              <div className="w-11 h-11 rounded-2xl bg-cyan-500/20 text-[#FF2E7E] flex items-center justify-center shrink-0 border border-cyan-500/30">
+          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-slate-800 text-[#FF2E7E] flex items-center justify-center shrink-0 border border-slate-700">
                 <Eye className="w-5 h-5" />
               </div>
               <div className="space-y-0.5 text-center sm:text-left">
-                <h4 className="text-white font-bold text-sm flex items-center justify-center sm:justify-start gap-2">
+                <h4 className="text-white font-bold text-xs sm:text-sm flex items-center justify-center sm:justify-start gap-2">
                   <span>Mode Pengunjung (Visitor Mode)</span>
-                  <span className="text-[10px] bg-cyan-500/20 text-[#FF2E7E] px-2 py-0.5 rounded-full font-black uppercase">
+                  <span className="text-[10px] bg-slate-800 text-[#FF2E7E] px-2 py-0.5 rounded-full font-black uppercase border border-slate-700">
                     Publik
                   </span>
                 </h4>
                 <p className="text-slate-300 text-xs leading-relaxed">
-                  Kamu sedang melihat profil publik <strong>{targetUser.name}</strong> ({targetUser.roleTitle}). Masuk untuk memberi Skor Sotoy, ikut berdiskusi di Buzz, dan saling follow sesama cinephile!
+                  Kamu sedang melihat profil publik <strong>{targetUser.name}</strong> ({targetUser.roleTitle}). Masuk untuk memberi Skor Sotoy, ikut berdiskusi di Buzz, dan saling follow!
                 </p>
               </div>
             </div>
             <button
               onClick={() => setLoginModalOpen(true)}
-              className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-[#FF2E7E]/25 hover:brightness-110 active:scale-95 transition-all shrink-0 flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-[#FF2E7E]/25 hover:brightness-110 active:scale-95 transition-all shrink-0 flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              <LogIn className="w-4 h-4" />
+              <LogIn className="w-3.5 h-3.5" />
               <span>Masuk / Buat Akun</span>
             </button>
           </div>
@@ -699,8 +699,8 @@ export const UserPage: React.FC = () => {
 
         {/* Visiting Another User's Profile Banner (for logged in users) */}
         {isLoggedIn && !isOwnProfile && (
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl px-5 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
-            <div className="flex items-center gap-2.5 text-xs text-slate-300">
+          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl px-4 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2.5 shadow-lg">
+            <div className="flex items-center gap-2 text-xs text-slate-300">
               <span className="w-2 h-2 rounded-full bg-[#FF2E7E] animate-pulse" />
               <span>
                 Sedang mengunjungi profil publik milik <strong className="text-white">{targetUser.name}</strong> ({targetUser.handle})
@@ -708,7 +708,7 @@ export const UserPage: React.FC = () => {
             </div>
             <button
               onClick={() => navigateTo('user-profile', { userId: currentUser.id })}
-              className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 hover:border-slate-600 transition-colors flex items-center gap-1.5 shrink-0"
+              className="px-3 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition-colors flex items-center gap-1 shrink-0 cursor-pointer"
             >
               <span>← Kembali ke Profil Saya</span>
             </button>
@@ -716,97 +716,159 @@ export const UserPage: React.FC = () => {
         )}
 
         {/* ========================================================================= */}
-        {/* USER PROFILE HEADER BANNER */}
+        {/* PROFILE DOSSIER HEADER (CLEAN ZINE STYLE) */}
         {/* ========================================================================= */}
-        <div className="bg-[#171A1F] border border-slate-800 rounded-3xl overflow-hidden shadow-2xl relative">
-          {/* Header Banner Background */}
-          <div className="h-36 sm:h-44 bg-gradient-to-r from-[#191a32] via-[#2a1b32] to-[#171A1F] relative overflow-hidden">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-[#FF2E7E]/20 via-transparent to-transparent" />
-            <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
-              {/* Share Profile Button (IG, WA, X) */}
-              <button
-                id="user-header-share-btn"
-                onClick={() => {
-                  openShareModal({
-                    title: `Profil Sinema ${targetUser.name} (${targetUser.handle})`,
-                    text: targetUser.bio || `Cek kurasi film, ulasan, dan Skor Sotoy oleh ${targetUser.name} di Sotoy Film!`,
-                    image: targetUser.avatar,
-                    imageUrl: targetUser.avatar,
-                    authorAvatar: targetUser.avatar,
-                    url: window.location.href,
-                    type: 'buzz',
-                    authorName: targetUser.name,
-                    meta: `${targetUser.roleTitle} di Sotoy Film`,
-                  });
-                }}
-                className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-white text-xs font-bold border border-slate-700/80 hover:border-[#FF2E7E] flex items-center gap-1.5 transition-all shadow-md backdrop-blur-sm"
-                title="Bagikan Profil ke Instagram Stories, Feed, atau WhatsApp"
-              >
-                <Share2 className="w-3.5 h-3.5 text-[#FF2E7E]" />
-                <span className="hidden sm:inline">Bagikan Profil</span>
-                <span className="sm:hidden">Share</span>
-              </button>
+        <header className="flex flex-col gap-4 pb-6 border-b border-slate-800/80">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            {/* Avatar & Identifiers */}
+            <div className="flex items-start gap-4 sm:gap-5 min-w-0 flex-1">
+              <div className="relative shrink-0">
+                <img
+                  src={targetUser.avatar?.trim() || DEFAULT_AVATAR}
+                  alt={targetUser.name}
+                  className="w-20 h-20 md:w-24 md:h-24 rounded-full object-cover p-[2px] bg-slate-900 border border-slate-700 shadow-xl"
+                />
+                {isOwnProfile && (
+                  <button
+                    onClick={() => navigateTo('settings', { settingsTab: 'profile' })}
+                    className="absolute bottom-0 right-0 p-1.5 bg-[#FF2E7E] text-white rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all cursor-pointer"
+                    title="Ganti Foto Profil"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
 
-              {/* Follow Button on Profile Banner if visiting someone else */}
-              {!isOwnProfile && (
-                <button
-                  id="user-header-follow-btn"
-                  onClick={() => {
-                    if (!isLoggedIn) {
-                      setLoginModalOpen(true);
-                      showToast(`Silakan masuk untuk mengikuti ${targetUser.name}!`);
-                      return;
-                    }
-                    toggleFollowUser(targetUser.id);
-                  }}
-                  className={`px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-md backdrop-blur-sm ${
-                    isLoggedIn && isFollowing(targetUser.id)
-                      ? 'bg-slate-900/90 text-slate-300 border border-slate-700 hover:bg-red-500/20 hover:text-red-400'
-                      : 'bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-white hover:brightness-110'
-                  }`}
-                >
-                  {isLoggedIn && isFollowing(targetUser.id) ? (
+              <div className="flex flex-col pt-0.5 space-y-1.5 min-w-0 flex-1">
+                {/* Name & Role Badge */}
+                <div className="flex items-center flex-wrap gap-x-2.5 gap-y-1">
+                  <h1 className="font-display font-black text-2xl md:text-3xl text-white tracking-tight leading-none">
+                    {targetUser.name}
+                  </h1>
+                  <RoleBadge role={targetUser.role} size="md" />
+                </div>
+
+                {/* Handle / Username Only */}
+                <div className="text-xs sm:text-sm font-mono text-slate-400">
+                  {targetUser.handle}
+                </div>
+
+                {/* Linear Telemetric Row (Directly below username) */}
+                <div className="pt-1 flex flex-wrap items-center gap-x-2 text-xs sm:text-sm text-slate-400">
+                  <button
+                    onClick={() => setFollowModalType('following')}
+                    className="hover:text-white transition-colors cursor-pointer"
+                  >
+                    <strong className="font-bold text-white">{targetFollowingCount}</strong> mengikuti
+                  </button>
+                  <span className="opacity-40">·</span>
+                  <button
+                    onClick={() => setFollowModalType('followers')}
+                    className="hover:text-white transition-colors cursor-pointer"
+                  >
+                    <strong className="font-bold text-white">{targetFollowersCount}</strong> pengikut
+                  </button>
+                  <span className="opacity-40">·</span>
+                  <span>
+                    <strong className="font-bold text-white">{myBuzz.length}</strong> buzz
+                  </span>
+                  <span className="opacity-40">·</span>
+                  <span>
+                    <strong className="font-bold text-white">{myReviews.length}</strong> film diulas
+                  </span>
+
+                  {isOwnProfile && (
                     <>
-                      <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Mengikuti</span>
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="w-3.5 h-3.5" />
-                      <span>+ Ikuti</span>
+                      <span className="opacity-40">·</span>
+                      <button
+                        onClick={() => setFollowModalType('discover')}
+                        className="inline-flex items-center justify-center p-1 rounded-md bg-[#FF2E7E]/15 hover:bg-[#FF2E7E]/25 text-[#FF2E7E] transition-all cursor-pointer"
+                        title="Cari Teman"
+                      >
+                        <UserPlus className="w-3.5 h-3.5" />
+                      </button>
                     </>
                   )}
-                </button>
-              )}
+                </div>
+              </div>
+            </div>
 
-              {/* Own Profile Actions */}
-              {isOwnProfile && (
+            {/* Action Row */}
+            <div className="flex items-center gap-2 sm:self-start pt-1 flex-wrap shrink-0">
+              {!isOwnProfile ? (
                 <>
-                  {(currentUser.role === 'admin' || currentUser.id === 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' || (currentUser.email === 'eksposurmedia@gmail.com' && auth.currentUser?.emailVerified) || isAdmin) && (
+                  <button
+                    id="user-header-follow-btn"
+                    onClick={() => {
+                      if (!isLoggedIn) {
+                        setLoginModalOpen(true);
+                        showToast(`Silakan masuk untuk mengikuti ${targetUser.name}!`);
+                        return;
+                      }
+                      toggleFollowUser(targetUser.id);
+                    }}
+                    className={`px-5 py-2 rounded-lg font-bold text-xs sm:text-sm transition-all flex items-center gap-1.5 cursor-pointer ${
+                      isLoggedIn && isFollowing(targetUser.id)
+                        ? 'bg-slate-800 text-slate-200 hover:bg-red-500/20 hover:text-red-400 border border-slate-700'
+                        : 'bg-[#FF2E7E] text-white hover:brightness-110 shadow-lg shadow-[#FF2E7E]/25'
+                    }`}
+                  >
+                    {isLoggedIn && isFollowing(targetUser.id) ? (
+                      <>
+                        <Check className="w-4 h-4 text-emerald-400" />
+                        <span>Mengikuti</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-4 h-4" />
+                        <span>+ Ikuti</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      openShareModal({
+                        title: `Profil Sinema ${targetUser.name} (${targetUser.handle})`,
+                        text: targetUser.bio || `Cek kurasi film, ulasan, dan Skor Sotoy oleh ${targetUser.name} di Sotoy Film!`,
+                        image: targetUser.avatar,
+                        imageUrl: targetUser.avatar,
+                        authorAvatar: targetUser.avatar,
+                        url: window.location.href,
+                        type: 'buzz',
+                        authorName: targetUser.name,
+                        meta: `${targetUser.roleTitle} di Sotoy Film`,
+                      });
+                    }}
+                    className="px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 transition-colors text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Share2 className="w-3.5 h-3.5 text-[#FF2E7E]" />
+                    <span>Bagikan</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => navigateTo('settings')}
+                    className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Settings className="w-3.5 h-3.5 text-[#FF2E7E]" />
+                    <span>Pengaturan</span>
+                  </button>
+
+                  {showAdminTab && (
                     <button
-                      id="user-header-admin-btn"
                       onClick={() => setActiveUserTab('admin')}
-                      className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold border border-amber-500/50 flex items-center gap-1.5 transition-all shadow-md backdrop-blur-sm animate-pulse"
-                      title="Buka Dasbor Kontrol Admin"
+                      className="px-3 py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold border border-amber-500/50 flex items-center gap-1.5 transition-colors cursor-pointer"
                     >
                       <Shield className="w-3.5 h-3.5 text-amber-400" />
-                      <span className="hidden sm:inline">Dasbor Admin</span>
-                      <span className="text-[9px] bg-amber-500 text-black px-1.5 py-0.2 rounded font-black">ADMIN</span>
+                      <span>Admin</span>
                     </button>
                   )}
+
                   <button
-                    id="user-header-settings-btn"
-                    onClick={() => navigateTo('settings')}
-                    className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-purple-600/80 hover:bg-purple-600 text-white text-xs font-bold border border-purple-400/40 flex items-center gap-1.5 transition-all shadow-md backdrop-blur-sm"
-                    title="Buka Halaman Pengaturan & Privasi"
-                  >
-                    <Settings className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Pengaturan</span>
-                  </button>
-                  <button
-                    id="user-header-logout-btn"
                     onClick={logout}
-                    className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-red-500/20 hover:text-red-400 text-slate-300 text-xs font-bold border border-slate-700/60 flex items-center gap-1.5 transition-colors backdrop-blur-sm"
+                    className="px-3 py-2 rounded-lg bg-slate-900 hover:bg-red-500/20 text-slate-400 hover:text-red-400 border border-slate-800 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     <span>Keluar</span>
@@ -816,333 +878,68 @@ export const UserPage: React.FC = () => {
             </div>
           </div>
 
-          {/* User Info Strip */}
-          <div className="px-4 sm:px-8 pb-6 pt-0 relative">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-14 sm:-mt-20 mb-6">
-              <div className="flex flex-col sm:flex-row sm:items-end gap-3.5 sm:gap-4">
-                <div className="relative group self-start">
-                  <img
-                    src={targetUser.avatar?.trim() || DEFAULT_AVATAR}
-                    alt={targetUser.name}
-                    className="w-20 h-20 sm:w-28 sm:h-28 rounded-3xl object-cover ring-4 ring-[#171A1F] border-2 border-white/20 shadow-2xl bg-slate-900"
-                  />
-                  {isOwnProfile && (
-                    <button
-                      onClick={() => navigateTo('settings', { settingsTab: 'profile' })}
-                      className="absolute bottom-1 right-1 p-1.5 bg-[#FF2E7E] text-black font-black rounded-xl shadow-lg hover:scale-110 active:scale-95 transition-all"
-                      title="Ganti Foto Profil dari Perangkat di Settings"
-                    >
-                      <Camera className="w-3.5 h-3.5" />
-                    </button>
+          {/* Bio / Statement */}
+          {Boolean(targetUser.bio) && (
+            <div className="mt-1">
+              <p className="text-slate-200 text-xs sm:text-sm leading-relaxed max-w-[680px]">
+                {targetUser.bio}
+              </p>
+            </div>
+          )}
+        </header>
+
+        {/* ========================================================================= */}
+        {/* ZINE NAVIGATION TABS */}
+        {/* ========================================================================= */}
+        <nav className="relative flex items-center gap-4 sm:gap-6 overflow-x-auto scrollbar-none pt-1 bg-[#0A0A0E] z-10 border-b border-slate-800/80">
+          {[
+            { id: 'buzz', label: 'Buzz', count: myBuzz.length },
+            { id: 'replies', label: 'Replies', count: myReplies.length },
+            { id: 'reviews', label: 'Reviews', count: myReviews.length },
+            { id: 'watchlist', label: 'Watchlist', count: myWatchlistFilms.length + mySavedArticles.length },
+            { id: 'reposts', label: 'Reposts', count: myReposts.length },
+            ...(showArticlesTab ? [{ id: 'articles', label: 'Editorial', count: myArticles.length }] : []),
+          ].map(tab => {
+            const isActive = activeUserTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                id={`user-tab-${tab.id}`}
+                onClick={() => setActiveUserTab(tab.id as UserTab)}
+                className={`profile-tab relative py-3 text-xs sm:text-sm font-bold transition-colors shrink-0 cursor-pointer ${
+                  isActive ? 'text-white' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <span className="flex items-center gap-1.5">
+                  <span>{tab.label}</span>
+                  {tab.count !== undefined && tab.count > 0 && (
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                      isActive ? 'bg-[#FF2E7E] text-white' : 'bg-slate-800 text-slate-400'
+                    }`}>
+                      {tab.count}
+                    </span>
                   )}
-                </div>
-
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h1 className="font-display font-black text-2xl sm:text-3xl text-white">
-                      {targetUser.name}
-                    </h1>
-                    <RoleBadge role={targetUser.role} size="md" />
-                  </div>
-                  <div className="text-slate-400 text-xs font-medium flex items-center gap-2">
-                    <span>{targetUser.handle}</span>
-                    <span>•</span>
-                    <span>{targetUser.roleTitle}</span>
-                  </div>
-
-                  {/* Following & Followers counts */}
-                  <div className="flex items-center gap-2 pt-1 flex-wrap">
-                    <button
-                      id="btn-dashboard-followers"
-                      onClick={() => setFollowModalType('followers')}
-                      className="px-2.5 py-1 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-[#FF2E7E]/50 text-xs text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors group"
-                      title="Lihat Pengikut"
-                    >
-                      <span className="font-black text-[#FF2E7E] group-hover:scale-110 transition-transform">
-                        {targetFollowersCount}
-                      </span>
-                      <span className="text-slate-400 text-[11px]">Pengikut (Followers)</span>
-                    </button>
-
-                    <button
-                      id="btn-dashboard-following"
-                      onClick={() => setFollowModalType('following')}
-                      className="px-2.5 py-1 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-[#FF2E7E]/50 text-xs text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors group"
-                      title="Lihat Akun yang Diikuti"
-                    >
-                      <span className="font-black text-[#FF2E7E] group-hover:scale-110 transition-transform">
-                        {targetFollowingCount}
-                      </span>
-                      <span className="text-slate-400 text-[11px]">Mengikuti (Following)</span>
-                    </button>
-
-                    {isOwnProfile && (
-                      <button
-                        id="btn-dashboard-discover"
-                        onClick={() => setFollowModalType('discover')}
-                        className="px-2.5 py-1 rounded-xl bg-pink-500/15 border border-pink-500/40 text-[11px] font-bold text-pink-300 hover:text-white flex items-center gap-1.5 transition-colors"
-                        title="Temukan Cinephile untuk Saling Follow"
-                      >
-                        <Sparkles className="w-3 h-3 text-[#FF2E7E]" />
-                        <span>+ Temukan Teman</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Bio Strip */}
-            <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Filosofi Sinema / Bio:</span>
-                <p className="text-slate-200 text-xs sm:text-sm italic">
-                  "{targetUser.bio || 'Penikmat dan kurator film di komunitas Sotoy Film.'}"
-                </p>
-              </div>
-              {isOwnProfile && (
-                <button
-                  onClick={() => navigateTo('settings')}
-                  className="self-end sm:self-center px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold border border-slate-700 flex items-center gap-1.5 transition-colors shrink-0"
-                >
-                  <Settings className="w-3.5 h-3.5 text-[#FF2E7E]" />
-                  <span>Pengaturan & Privasi</span>
-                </button>
-              )}
-            </div>
-
-            {/* Quick Metrics Bar */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-              <div
-                onClick={() => setActiveUserTab('buzz')}
-                className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 text-center cursor-pointer hover:border-[#FF2E7E] transition-colors"
-              >
-                <div className="font-display font-black text-xl text-[#FF2E7E]">
-                  {myBuzz.length}
-                </div>
-                <div className="text-[10px] uppercase font-bold text-slate-400 mt-0.5">
-                  Postingan Buzz
-                </div>
-              </div>
-
-              <div
-                onClick={() => setActiveUserTab('reviews')}
-                className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 text-center cursor-pointer hover:border-[#FF2E7E] transition-colors"
-              >
-                <div className="font-display font-black text-xl text-[#FF2E7E]">
-                  {myReviews.length}
-                </div>
-                <div className="text-[10px] uppercase font-bold text-slate-400 mt-0.5">
-                  Ulasan & Rating
-                </div>
-              </div>
-
-              <div
-                onClick={() => setActiveUserTab('watchlist')}
-                className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 text-center cursor-pointer hover:border-emerald-500 transition-colors"
-              >
-                <div className="font-display font-black text-xl text-emerald-400">
-                  {myWatchlistFilms.length}
-                </div>
-                <div className="text-[10px] uppercase font-bold text-slate-400 mt-0.5">
-                  Watchlist Film
-                </div>
-              </div>
-
-              <div
-                onClick={() => setActiveUserTab('reviews')}
-                className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 text-center cursor-pointer hover:border-[#FF2E7E] transition-colors"
-              >
-                <div className="font-display font-black text-xl text-[#FF2E7E]">
-                  ★ {averageScore}
-                </div>
-                <div className="text-[10px] uppercase font-bold text-slate-400 mt-0.5">
-                  Rata-rata Skor Diberi
-                </div>
-              </div>
-            </div>
-
-            {/* Leaderboard Rank Widget (Only for Warga & Kritikus) */}
-            {rankInfo && (
-              <div className="mt-4 bg-[#171A1F] border border-[#FF2E7E]/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg relative overflow-hidden">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 text-[#FF2E7E] flex items-center justify-center shrink-0 shadow-md">
-                    <Trophy className="w-5 h-5 text-[#FF2E7E]" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-black text-[#FF2E7E]">
-                        Peringkat #{rankInfo.rank}
-                      </span>
-                      <span className="text-slate-500 text-[10px]">•</span>
-                      <span className="text-xs text-slate-300 font-bold">
-                        {targetUser.role === 'si_paling_sotoy' ? 'Leaderboard Kritikus' : 'Leaderboard Warga'}
-                      </span>
-                    </div>
-                    <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
-                      <Flame className="w-3.5 h-3.5 text-[#FF2E7E] fill-[#FF2E7E]" />
-                      <span className="font-bold text-white">{rankInfo.score} Poin Leaderboard</span>
-                      <span className="text-slate-500 text-[10px]">({rankInfo.totalReviews} ulasan, {rankInfo.helpfulVotes} suka)</span>
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => navigateTo('panduan-leaderboard')}
-                  className="self-start sm:self-auto px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-bold border border-slate-700 hover:border-[#FF2E7E] transition-all flex items-center gap-1.5 shrink-0"
-                >
-                  <Info className="w-3.5 h-3.5 text-[#FF2E7E]" />
-                  <span>Lihat Panduan</span>
-                </button>
-              </div>
-            )}
-
-            {/* Monthly Progression Sotoy Score Sparkline Chart */}
-            <SotoyScoreSparkline user={targetUser} ratings={isOwnProfile ? ratings : targetUserRatings} className="mt-4" />
-          </div>
-        </div>
-
-        {/* ========================================================================= */}
-        {/* MAIN USER NAVIGATION TABS (ALL TABS IN ONE HORIZONTALLY SCROLLABLE ROW) */}
-        {/* ========================================================================= */}
-        <div className="user-profile-tab-wrapper relative w-full">
-          {/* Left Gradient Edge Hint */}
-          {canScrollLeft && (
-            <div className="absolute left-0 top-0 bottom-2 w-8 bg-gradient-to-r from-[#0E1013] to-transparent pointer-events-none z-10" />
-          )}
-
-          {/* Right Gradient Edge Hint */}
-          {canScrollRight && (
-            <div className="absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-[#0E1013] to-transparent pointer-events-none z-10" />
-          )}
-
-          <div
-            ref={tabListRef}
-            className="user-profile-tab-list flex items-center gap-2 pb-2 border-b border-slate-800 w-full overflow-x-auto scrollbar-none flex-nowrap scroll-smooth touch-pan-x"
-            style={{ WebkitOverflowScrolling: 'touch' }}
-          >
-            {/* TAB 1: BUZZ (TAB UTAMA DASHBOARD) */}
-            <button
-              id="user-tab-buzz"
-              onClick={() => setActiveUserTab('buzz')}
-              className={`min-h-[44px] px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap active:scale-95 ${
-                activeUserTab === 'buzz'
-                  ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
-                  : 'text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent'
-              }`}
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span>Buzz ({myBuzz.length})</span>
-            </button>
-
-            {/* TAB 2: REPLIES (BALASAN) */}
-            <button
-              id="user-tab-replies"
-              onClick={() => setActiveUserTab('replies')}
-              className={`min-h-[44px] px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap active:scale-95 ${
-                activeUserTab === 'replies'
-                  ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
-                  : 'text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent'
-              }`}
-            >
-              <CornerDownRight className="w-4 h-4" />
-              <span>Replies ({myReplies.length})</span>
-            </button>
-
-            {/* TAB 3: SKOR & ULASAN */}
-            <button
-              id="user-tab-reviews"
-              onClick={() => setActiveUserTab('reviews')}
-              className={`min-h-[44px] px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap active:scale-95 ${
-                activeUserTab === 'reviews'
-                  ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
-                  : 'text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent'
-              }`}
-            >
-              <Star className="w-4 h-4" />
-              <span>Skor ({myReviews.length})</span>
-            </button>
-
-            {/* TAB 4: WATCHLIST & PERPUSTAKAAN */}
-            <button
-              id="user-tab-watchlist"
-              onClick={() => setActiveUserTab('watchlist')}
-              className={`min-h-[44px] px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap active:scale-95 ${
-                activeUserTab === 'watchlist'
-                  ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
-                  : 'text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent'
-              }`}
-            >
-              <Bookmark className="w-4 h-4" />
-              <span>Watchlist ({myWatchlistFilms.length + mySavedArticles.length})</span>
-            </button>
-
-            {/* TAB 5: REPOSTS */}
-            <button
-              id="user-tab-reposts"
-              onClick={() => setActiveUserTab('reposts')}
-              className={`min-h-[44px] px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap active:scale-95 ${
-                activeUserTab === 'reposts'
-                  ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
-                  : 'text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent'
-              }`}
-            >
-              <Repeat2 className="w-4 h-4" />
-              <span>Reposts ({myReposts.length})</span>
-            </button>
-
-            {/* TAB 6: ARTIKEL DITULIS (only if showArticlesTab) */}
-            {showArticlesTab && (
-              <button
-                id="user-tab-articles"
-                onClick={() => setActiveUserTab('articles')}
-                className={`min-h-[44px] px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap active:scale-95 ${
-                  activeUserTab === 'articles'
-                    ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent'
-                }`}
-              >
-                <PenSquare className="w-4 h-4" />
-                <span>Artikel Ditulis ({myArticles.length})</span>
-              </button>
-            )}
-
-            {/* TAB 7: DASBOR ADMIN (only if showAdminTab) */}
-            {showAdminTab && (
-              <button
-                id="user-tab-admin"
-                onClick={() => setActiveUserTab('admin')}
-                className={`min-h-[44px] px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shrink-0 whitespace-nowrap active:scale-95 ${
-                  activeUserTab === 'admin'
-                    ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04] border border-transparent'
-                }`}
-              >
-                <Shield className="w-4 h-4" />
-                <span>Dasbor Admin</span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                  activeUserTab === 'admin' ? 'bg-white/20 text-white' : 'bg-amber-500/20 text-amber-300'
-                }`}>
-                  ADMIN
                 </span>
+                <span className={`tab-indicator absolute bottom-0 left-0 right-0 h-[2px] transition-all ${
+                  isActive ? 'bg-[#FF2E7E]' : 'bg-transparent'
+                }`} />
               </button>
-            )}
-          </div>
-        </div>
+            );
+          })}
+        </nav>
 
         {/* ========================================================================= */}
         {/* TAB 1: POSTINGAN BUZZ & OPINI SINEMA (TAB UTAMA DASHBOARD) */}
         {/* ========================================================================= */}
         {activeUserTab === 'buzz' && (
-          <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-neutral-800">
               <div>
                 <h3 className="font-display font-black text-xl text-white flex items-center gap-2.5">
                   <MessageSquare className="w-5 h-5 text-[#FF2E7E]" />
                   <span>{isOwnProfile ? 'Postingan Buzz & Opini Saya' : `Postingan Buzz ${targetUser.name}`}</span>
                 </h3>
-                <p className="text-slate-400 text-xs mt-1">
+                <p className="text-neutral-400 text-xs mt-1">
                   {isOwnProfile
                     ? 'Arsip thread obrolan, opini film, dan teori sinema yang pernah kamu posting'
                     : `Arsip thread opini, ulasan cepat, dan diskusi sinema yang diposting oleh ${targetUser.name}`}
@@ -1161,17 +958,17 @@ export const UserPage: React.FC = () => {
             {isOwnProfile && (
               <form
                 onSubmit={handlePostDashboardBuzz}
-                className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3.5 shadow-inner"
+                className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-3.5"
               >
                 <div className="flex items-center gap-3">
                   <img
                     src={currentUser.avatar?.trim() || DEFAULT_AVATAR}
                     alt={currentUser.name}
-                    className="w-9 h-9 rounded-xl object-cover ring-1 ring-slate-700"
+                    className="w-9 h-9 rounded-xl object-cover ring-1 ring-neutral-700"
                   />
                   <div className="flex-1">
                     <span className="text-xs font-bold text-white block">Tulis Buzz & Teori Sinema Baru</span>
-                    <span className="text-[11px] text-slate-400">Suarakan opini jujurmu langsung ke feed komunitas</span>
+                    <span className="text-[11px] text-neutral-400">Suarakan opini jujurmu langsung ke feed komunitas</span>
                   </div>
                 </div>
 
@@ -1180,7 +977,7 @@ export const UserPage: React.FC = () => {
                   onChange={e => setNewBuzzContent(e.target.value)}
                   placeholder={`Film apa yang baru kamu tonton atau ada plot twist yang bikin mikir, ${currentUser.name.split(' ')[0]}?`}
                   rows={3}
-                  className="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] resize-none leading-relaxed"
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#FF2E7E] resize-none leading-relaxed"
                 />
 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
@@ -1189,7 +986,7 @@ export const UserPage: React.FC = () => {
                     <select
                       value={newBuzzFilmId}
                       onChange={e => setNewBuzzFilmId(e.target.value)}
-                      className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-300 focus:outline-none focus:border-[#FF2E7E] max-w-[200px]"
+                      className="bg-neutral-950 border border-neutral-800 rounded-lg px-2.5 py-1.5 text-[11px] text-neutral-300 focus:outline-none focus:border-[#FF2E7E] max-w-[200px]"
                     >
                       <option value="">Tag Film (Opsional)</option>
                       {films.map(f => (
@@ -1200,7 +997,7 @@ export const UserPage: React.FC = () => {
                     </select>
 
                     {/* Optional score */}
-                    <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-slate-400 text-xs">
+                    <div className="flex items-center gap-1 bg-neutral-950 border border-neutral-800 rounded-lg px-2 py-1 text-neutral-400 text-xs">
                       <Star className="w-3 h-3 text-[#FF2E7E] fill-current" />
                       <input
                         type="number"
@@ -1228,13 +1025,13 @@ export const UserPage: React.FC = () => {
             )}
 
             {myBuzz.length === 0 ? (
-              <div className="text-center py-16 bg-slate-900/50 rounded-2xl border border-slate-800 space-y-4">
-                <MessageSquare className="w-12 h-12 text-slate-600 mx-auto" />
+              <div className="text-center py-16 bg-neutral-900 rounded-2xl border border-neutral-800 space-y-4">
+                <MessageSquare className="w-12 h-12 text-neutral-600 mx-auto" />
                 <div className="space-y-1">
                   <h4 className="font-display font-bold text-white text-base">
                     {isOwnProfile ? 'Belum ada postingan Buzz' : `${targetUser.name} belum memposting Buzz`}
                   </h4>
-                  <p className="text-slate-400 text-xs max-w-sm mx-auto">
+                  <p className="text-neutral-400 text-xs max-w-sm mx-auto">
                     {isOwnProfile
                       ? 'Bagikan pemikiran, teori plot twist, atau impresi film pertama kamu sekarang.'
                       : 'Pengguna ini belum membagikan opini atau diskusi film di komunitas.'}
@@ -1250,7 +1047,7 @@ export const UserPage: React.FC = () => {
                   return (
                     <div
                       key={buzz.id}
-                      className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-3 hover:border-slate-700 transition-colors"
+                      className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 space-y-3 hover:border-neutral-700 transition-colors"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div
@@ -1260,11 +1057,11 @@ export const UserPage: React.FC = () => {
                           <img
                             src={authorAvatar?.trim() || DEFAULT_AVATAR}
                             alt={authorName}
-                            className="w-8 h-8 rounded-xl object-cover ring-1 ring-slate-700 group-hover:ring-[#FF2E7E] transition-all"
+                            className="w-8 h-8 rounded-xl object-cover ring-1 ring-neutral-700 group-hover:ring-[#FF2E7E] transition-all"
                           />
                           <div>
                             <span className="font-bold text-xs text-white block group-hover:text-[#FF2E7E] transition-colors">{authorName}</span>
-                            <span className="text-[10px] text-slate-400" title={formatFullDateTime(buzz.createdAt)}>{formatRelativeTime(buzz.createdAt)}</span>
+                            <span className="text-[10px] text-neutral-400" title={formatFullDateTime(buzz.createdAt)}>{formatRelativeTime(buzz.createdAt)}</span>
                           </div>
                         </div>
 
@@ -1277,14 +1074,14 @@ export const UserPage: React.FC = () => {
                           )}
 
                           {(isOwnProfile || currentUser.id === buzz.author?.id || isAdmin) && (
-                            <div className="flex items-center gap-1 border-l border-slate-800 pl-2">
+                            <div className="flex items-center gap-1 border-l border-neutral-800 pl-2">
                               <button
                                 onClick={() => {
                                   setEditingBuzzId(buzz.id);
                                   setEditingBuzzContent(buzz.content);
                                   setEditingBuzzScore(buzz.skorSotoyMention);
                                 }}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                                className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
                                 title="Edit Buzz"
                               >
                                 <Edit3 className="w-3.5 h-3.5" />
@@ -1295,7 +1092,7 @@ export const UserPage: React.FC = () => {
                                     deleteBuzzPost(buzz.id);
                                   }
                                 }}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
+                                className="p-1.5 rounded-lg text-neutral-400 hover:text-rose-400 hover:bg-neutral-800 transition-colors"
                                 title="Hapus Buzz"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -1306,15 +1103,15 @@ export const UserPage: React.FC = () => {
                       </div>
 
                       {editingBuzzId === buzz.id ? (
-                        <div className="space-y-3 bg-slate-950 p-3.5 rounded-xl border border-[#FF2E7E]/40">
+                        <div className="space-y-3 bg-neutral-950 p-3.5 rounded-xl border border-[#FF2E7E]/40">
                           <textarea
                             value={editingBuzzContent}
                             onChange={e => setEditingBuzzContent(e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-[#FF2E7E] resize-none"
+                            className="w-full bg-neutral-900 border border-neutral-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-[#FF2E7E] resize-none"
                             rows={3}
                           />
                           <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1">
+                            <div className="flex items-center gap-1.5 bg-neutral-900 border border-neutral-800 rounded-lg px-2 py-1">
                               <Star className="w-3 h-3 text-[#FF2E7E] fill-current" />
                               <input
                                 type="number"
@@ -1330,7 +1127,7 @@ export const UserPage: React.FC = () => {
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => setEditingBuzzId(null)}
-                                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold"
+                                className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-bold"
                               >
                                 Batal
                               </button>
@@ -1347,7 +1144,7 @@ export const UserPage: React.FC = () => {
                           </div>
                         </div>
                       ) : (
-                        <p className="text-slate-200 text-xs sm:text-sm leading-relaxed whitespace-pre-line">
+                        <p className="text-neutral-200 text-xs sm:text-sm leading-relaxed whitespace-pre-line">
                           {buzz.content}
                         </p>
                       )}
@@ -1357,16 +1154,16 @@ export const UserPage: React.FC = () => {
                       {buzz.taggedFilm && (
                         <div
                           onClick={() => navigateTo('film-detail', { filmId: buzz.taggedFilm!.id })}
-                          className="p-2.5 rounded-xl bg-black/40 border border-slate-800 flex items-center justify-between hover:border-slate-700 cursor-pointer"
+                          className="p-2.5 rounded-xl bg-black/40 border border-neutral-800 flex items-center justify-between hover:border-neutral-700 cursor-pointer"
                         >
                           <span className="text-xs font-bold text-[#FF2E7E]">
                             🎬 {buzz.taggedFilm.title} ({buzz.taggedFilm.year})
                           </span>
-                          <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+                          <ChevronRight className="w-3.5 h-3.5 text-neutral-500" />
                         </div>
                       )}
 
-                      <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-3 text-xs text-slate-400 select-none">
+                      <div className="pt-2 border-t border-neutral-800 flex items-center justify-between gap-3 text-xs text-neutral-400 select-none">
                         <div className="flex items-center gap-4 sm:gap-6">
                           <QuickReactionBar
                             buzzId={buzz.id}
@@ -1375,10 +1172,10 @@ export const UserPage: React.FC = () => {
                           />
                           <button
                             onClick={() => navigateTo('buzz-detail', { buzzId: buzz.id })}
-                            className="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 transition-opacity hover:opacity-80 active:scale-95 cursor-pointer text-xs shrink-0 py-1"
+                            className="flex items-center gap-1.5 text-neutral-400 hover:text-neutral-200 transition-opacity hover:opacity-80 active:scale-95 cursor-pointer text-xs shrink-0 py-1"
                           >
                             <MessageSquare className="w-4 h-4 text-current" />
-                            <span className="font-medium text-slate-400">{buzz.repliesCount || 0}</span>
+                            <span className="font-medium text-neutral-400">{buzz.repliesCount || 0}</span>
                           </button>
 
                           <button
@@ -1389,8 +1186,8 @@ export const UserPage: React.FC = () => {
                               currentUser?.id && buzz.repostedByUsers?.[currentUser.id]
                                 ? 'text-emerald-400'
                                 : currentUser?.id === buzz.author?.id
-                                  ? 'text-slate-600 cursor-not-allowed opacity-50'
-                                  : 'text-slate-400 hover:text-slate-200'
+                                  ? 'text-neutral-600 cursor-not-allowed opacity-50'
+                                  : 'text-neutral-400 hover:text-neutral-200'
                             }`}
                             title={
                               currentUser?.id === buzz.author?.id
@@ -1401,7 +1198,7 @@ export const UserPage: React.FC = () => {
                             }
                           >
                             <Repeat2 className={`w-4 h-4 ${currentUser?.id && buzz.repostedByUsers?.[currentUser.id] ? 'stroke-[2.2]' : ''}`} />
-                            <span className={`font-medium ${currentUser?.id && buzz.repostedByUsers?.[currentUser.id] ? 'text-emerald-400' : 'text-slate-400'}`}>
+                            <span className={`font-medium ${currentUser?.id && buzz.repostedByUsers?.[currentUser.id] ? 'text-emerald-400' : 'text-neutral-400'}`}>
                               {buzz.repostsCount || 0}
                             </span>
                           </button>
@@ -1419,14 +1216,14 @@ export const UserPage: React.FC = () => {
         {/* TAB 2: REPLIES & BALASAN DISKUSI */}
         {/* ========================================================================= */}
         {activeUserTab === 'replies' && (
-          <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-neutral-800">
               <div>
                 <h3 className="font-display font-black text-xl text-white flex items-center gap-2.5">
                   <CornerDownRight className="w-5 h-5 text-[#FF2E7E]" />
                   <span>{isOwnProfile ? 'Balasan & Komentar Saya' : `Balasan Diskusi ${targetUser.name}`}</span>
                 </h3>
-                <p className="text-slate-400 text-xs mt-1">
+                <p className="text-neutral-400 text-xs mt-1">
                   {isOwnProfile
                     ? 'Semua tanggapan dan partisipasi kamu di thread buzz komunitas'
                     : `Semua tanggapan dan opini yang dibagikan ${targetUser.name} di thread komunitas`}
@@ -1434,7 +1231,7 @@ export const UserPage: React.FC = () => {
               </div>
               <button
                 onClick={() => navigateTo('community-feed')}
-                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-bold text-xs flex items-center gap-1.5 self-start sm:self-auto transition-colors"
+                className="px-4 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 hover:text-white font-bold text-xs flex items-center gap-1.5 self-start sm:self-auto transition-colors"
               >
                 <MessageSquare className="w-3.5 h-3.5 text-[#FF2E7E]" />
                 <span>Jelajahi Buzz Feed</span>
@@ -1442,13 +1239,13 @@ export const UserPage: React.FC = () => {
             </div>
 
             {myReplies.length === 0 ? (
-              <div className="text-center py-16 bg-slate-900/50 rounded-2xl border border-slate-800 space-y-4">
-                <CornerDownRight className="w-12 h-12 text-slate-600 mx-auto" />
+              <div className="text-center py-16 bg-neutral-900 rounded-2xl border border-neutral-800 space-y-4">
+                <CornerDownRight className="w-12 h-12 text-neutral-600 mx-auto" />
                 <div className="space-y-1">
                   <h4 className="font-display font-bold text-white text-base">
                     {isOwnProfile ? 'Belum ada balasan' : `${targetUser.name} belum membalas buzz apapun`}
                   </h4>
-                  <p className="text-slate-400 text-xs max-w-sm mx-auto">
+                  <p className="text-neutral-400 text-xs max-w-sm mx-auto">
                     {isOwnProfile
                       ? 'Ikuti diskusi seru di komunitas dan berikan tanggapanmu terhadap opini film lainnya.'
                       : 'Pengguna ini belum memberikan komentar atau tanggapan di diskusi manapun.'}
@@ -1466,37 +1263,37 @@ export const UserPage: React.FC = () => {
                     <div
                       key={reply.id}
                       onClick={() => navigateTo('buzz-detail', { buzzId: parentPost.id })}
-                      className="bg-slate-900/80 border border-slate-800 hover:border-cyan-500/40 rounded-2xl p-5 space-y-3.5 transition-all cursor-pointer group"
+                      className="bg-neutral-900 border border-neutral-800 hover:border-[#FF2E7E]/40 rounded-2xl p-5 space-y-3.5 transition-all cursor-pointer group"
                     >
                       {/* Context badge: Replying to ... */}
-                      <div className="flex items-center justify-between text-xs text-slate-400 pb-2.5 border-b border-slate-800/60">
+                      <div className="flex items-center justify-between text-xs text-neutral-400 pb-2.5 border-b border-neutral-800">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <CornerDownRight className="w-3.5 h-3.5 text-[#FF2E7E] shrink-0" />
                           <span>
                             {reply.replyToUser ? (
                               <>
-                                Membalas <span className="font-bold text-slate-200">@{reply.replyToUser.handle?.replace('@', '') || reply.replyToUser.name}</span>
+                                Membalas <span className="font-bold text-neutral-200">@{reply.replyToUser.handle?.replace('@', '') || reply.replyToUser.name}</span>
                               </>
                             ) : (
                               <>
-                                Membalas postingan <span className="font-bold text-slate-200">{parentPost.author?.name || 'Pengguna'}</span>
+                                Membalas postingan <span className="font-bold text-neutral-200">{parentPost.author?.name || 'Pengguna'}</span>
                               </>
                             )}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-[11px] text-slate-500" title={formatFullDateTime(reply.createdAt)}>
+                          <span className="text-[11px] text-neutral-500" title={formatFullDateTime(reply.createdAt)}>
                             {formatRelativeTime(reply.createdAt)}
                           </span>
 
                           {(isOwnProfile || currentUser.id === reply.author?.id || isAdmin) && (
-                            <div className="flex items-center gap-1 border-l border-slate-800 pl-2" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center gap-1 border-l border-neutral-800 pl-2" onClick={e => e.stopPropagation()}>
                               <button
                                 onClick={() => {
                                   setEditingReplyKey(`${parentPost.id}_${reply.id}`);
                                   setEditingReplyContent(reply.content);
                                 }}
-                                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                                className="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
                                 title="Edit Balasan"
                               >
                                 <Edit3 className="w-3.5 h-3.5" />
@@ -1507,7 +1304,7 @@ export const UserPage: React.FC = () => {
                                     deleteBuzzReply(parentPost.id, reply.id);
                                   }
                                 }}
-                                className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
+                                className="p-1 rounded-lg text-neutral-400 hover:text-rose-400 hover:bg-neutral-800 transition-colors"
                                 title="Hapus Balasan"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -1518,11 +1315,11 @@ export const UserPage: React.FC = () => {
                       </div>
 
                       {/* Parent post snippet */}
-                      <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3 text-xs text-slate-400 line-clamp-2">
-                        <span className="font-bold text-slate-300 block mb-0.5">
+                      <div className="bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs text-neutral-400 line-clamp-2">
+                        <span className="font-bold text-neutral-300 block mb-0.5">
                           {parentPost.author?.name}:
                         </span>
-                        <span className="text-slate-400 italic">
+                        <span className="text-neutral-400 italic">
                           "{parentPost.content.length > 140 ? parentPost.content.slice(0, 140) + '...' : parentPost.content}"
                         </span>
                       </div>
@@ -1533,7 +1330,7 @@ export const UserPage: React.FC = () => {
                           <img
                             src={replyAuthorAvatar?.trim() || DEFAULT_AVATAR}
                             alt={replyAuthorName}
-                            className="w-7 h-7 rounded-lg object-cover ring-1 ring-slate-700"
+                            className="w-7 h-7 rounded-lg object-cover ring-1 ring-neutral-700"
                           />
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-xs text-white">{replyAuthorName}</span>
@@ -1542,17 +1339,17 @@ export const UserPage: React.FC = () => {
                         </div>
 
                         {editingReplyKey === `${parentPost.id}_${reply.id}` ? (
-                          <div className="space-y-3 bg-slate-950 p-3.5 rounded-xl border border-[#FF2E7E]/40" onClick={e => e.stopPropagation()}>
+                          <div className="space-y-3 bg-neutral-950 p-3.5 rounded-xl border border-[#FF2E7E]/40" onClick={e => e.stopPropagation()}>
                             <textarea
                               value={editingReplyContent}
                               onChange={e => setEditingReplyContent(e.target.value)}
-                              className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-[#FF2E7E] resize-none"
+                              className="w-full bg-neutral-900 border border-neutral-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-[#FF2E7E] resize-none"
                               rows={2}
                             />
                             <div className="flex justify-end gap-2">
                               <button
                                 onClick={() => setEditingReplyKey(null)}
-                                className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold"
+                                className="px-3 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-bold"
                               >
                                 Batal
                               </button>
@@ -1568,20 +1365,20 @@ export const UserPage: React.FC = () => {
                             </div>
                           </div>
                         ) : (
-                          <p className="text-slate-200 text-xs sm:text-sm leading-relaxed whitespace-pre-line pl-1">
+                          <p className="text-neutral-200 text-xs sm:text-sm leading-relaxed whitespace-pre-line pl-1">
                             {reply.content}
                           </p>
                         )}
                       </div>
 
                       {/* Reply Footer: Likes count and View thread button */}
-                      <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between text-xs text-slate-400">
+                      <div className="pt-2 border-t border-neutral-800 flex items-center justify-between text-xs text-neutral-400">
                         <div className="flex items-center gap-1.5 text-rose-400 font-semibold">
                           <Heart className="w-3.5 h-3.5 fill-rose-500/20 text-rose-500" />
                           <span>{reply.likes || 0} Suka</span>
                         </div>
 
-                        <span className="text-slate-400 group-hover:text-[#FF2E7E] transition-colors flex items-center gap-1 font-semibold text-xs">
+                        <span className="text-neutral-400 group-hover:text-[#FF2E7E] transition-colors flex items-center gap-1 font-semibold text-xs">
                           <span>Lihat di Utas Lengkap</span>
                           <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                         </span>
@@ -1598,14 +1395,14 @@ export const UserPage: React.FC = () => {
         {/* TAB 3: REPOSTS */}
         {/* ========================================================================= */}
         {activeUserTab === 'reposts' && (
-          <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-neutral-800">
               <div>
                 <h3 className="font-display font-black text-xl text-white flex items-center gap-2.5">
                   <Repeat2 className="w-5 h-5 text-emerald-400" />
                   <span>{isOwnProfile ? 'Postingan yang Saya Repost' : `Repost ${targetUser.name}`}</span>
                 </h3>
-                <p className="text-slate-400 text-xs mt-1">
+                <p className="text-neutral-400 text-xs mt-1">
                   {isOwnProfile
                     ? 'Arsip semua buzz menarik dari kurator lain yang kamu bagikan ulang ke profilmu'
                     : `Postingan buzz dari komunitas yang di-repost oleh ${targetUser.name}`}
@@ -1613,7 +1410,7 @@ export const UserPage: React.FC = () => {
               </div>
               <button
                 onClick={() => navigateTo('community-feed')}
-                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white font-bold text-xs flex items-center gap-1.5 self-start sm:self-auto transition-colors"
+                className="px-4 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 hover:text-white font-bold text-xs flex items-center gap-1.5 self-start sm:self-auto transition-colors"
               >
                 <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Jelajahi Buzz Feed</span>
@@ -1621,13 +1418,13 @@ export const UserPage: React.FC = () => {
             </div>
 
             {myReposts.length === 0 ? (
-              <div className="text-center py-16 bg-slate-900/50 rounded-2xl border border-slate-800 space-y-4">
-                <Repeat2 className="w-12 h-12 text-slate-600 mx-auto" />
+              <div className="text-center py-16 bg-neutral-900 rounded-2xl border border-neutral-800 space-y-4">
+                <Repeat2 className="w-12 h-12 text-neutral-600 mx-auto" />
                 <div className="space-y-1">
                   <h4 className="font-display font-bold text-white text-base">
                     {isOwnProfile ? 'Belum ada postingan yang di-repost' : `${targetUser.name} belum me-repost apapun`}
                   </h4>
-                  <p className="text-slate-400 text-xs max-w-sm mx-auto">
+                  <p className="text-neutral-400 text-xs max-w-sm mx-auto">
                     {isOwnProfile
                       ? 'Temukan opini film atau teori menarik di Buzz Feed dan tekan tombol Repost untuk membagikannya di sini.'
                       : 'Pengguna ini belum me-repost opini atau diskusi buzz dari kurator lain.'}
@@ -1643,7 +1440,7 @@ export const UserPage: React.FC = () => {
                   return (
                     <div
                       key={`repost-${buzz.id}`}
-                      className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-3 hover:border-slate-700 transition-colors"
+                      className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 space-y-3 hover:border-neutral-700 transition-colors"
                     >
                       {/* Repost Header Indicator */}
                       <div className="flex items-center gap-1.5 text-xs text-emerald-400/90 font-bold mb-1 pl-0.5">
@@ -1659,11 +1456,11 @@ export const UserPage: React.FC = () => {
                           <img
                             src={authorAvatar?.trim() || DEFAULT_AVATAR}
                             alt={authorName}
-                            className="w-8 h-8 rounded-xl object-cover ring-1 ring-slate-700 group-hover:ring-[#FF2E7E] transition-all"
+                            className="w-8 h-8 rounded-xl object-cover ring-1 ring-neutral-700 group-hover:ring-[#FF2E7E] transition-all"
                           />
                           <div>
                             <span className="font-bold text-xs text-white block group-hover:text-[#FF2E7E] transition-colors">{authorName}</span>
-                            <span className="text-[10px] text-slate-400" title={formatFullDateTime(buzz.createdAt)}>{formatRelativeTime(buzz.createdAt)}</span>
+                            <span className="text-[10px] text-neutral-400" title={formatFullDateTime(buzz.createdAt)}>{formatRelativeTime(buzz.createdAt)}</span>
                           </div>
                         </div>
                         {buzz.skorSotoyMention && (
@@ -1674,7 +1471,7 @@ export const UserPage: React.FC = () => {
                         )}
                       </div>
 
-                      <p className="text-slate-200 text-xs sm:text-sm leading-relaxed whitespace-pre-line">
+                      <p className="text-neutral-200 text-xs sm:text-sm leading-relaxed whitespace-pre-line">
                         {buzz.content}
                       </p>
 
@@ -1683,16 +1480,16 @@ export const UserPage: React.FC = () => {
                       {buzz.taggedFilm && (
                         <div
                           onClick={() => navigateTo('film-detail', { filmId: buzz.taggedFilm!.id })}
-                          className="p-2.5 rounded-xl bg-black/40 border border-slate-800 flex items-center justify-between hover:border-slate-700 cursor-pointer"
+                          className="p-2.5 rounded-xl bg-black/40 border border-neutral-800 flex items-center justify-between hover:border-neutral-700 cursor-pointer"
                         >
                           <span className="text-xs font-bold text-[#FF2E7E]">
                             🎬 {buzz.taggedFilm.title} ({buzz.taggedFilm.year})
                           </span>
-                          <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+                          <ChevronRight className="w-3.5 h-3.5 text-neutral-500" />
                         </div>
                       )}
 
-                      <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-3 text-xs text-slate-400 select-none">
+                      <div className="pt-2 border-t border-neutral-800 flex items-center justify-between gap-3 text-xs text-neutral-400 select-none">
                         <div className="flex items-center gap-4 sm:gap-6">
                           <QuickReactionBar
                             buzzId={buzz.id}
@@ -1701,10 +1498,10 @@ export const UserPage: React.FC = () => {
                           />
                           <button
                             onClick={() => navigateTo('buzz-detail', { buzzId: buzz.id })}
-                            className="flex items-center gap-1.5 text-slate-400 hover:text-slate-200 transition-opacity hover:opacity-80 active:scale-95 cursor-pointer text-xs shrink-0 py-1"
+                            className="flex items-center gap-1.5 text-neutral-400 hover:text-neutral-200 transition-opacity hover:opacity-80 active:scale-95 cursor-pointer text-xs shrink-0 py-1"
                           >
                             <MessageSquare className="w-4 h-4 text-current" />
-                            <span className="font-medium text-slate-400">{buzz.repliesCount || 0}</span>
+                            <span className="font-medium text-neutral-400">{buzz.repliesCount || 0}</span>
                           </button>
 
                           <button
@@ -1715,8 +1512,8 @@ export const UserPage: React.FC = () => {
                               currentUser?.id && buzz.repostedByUsers?.[currentUser.id]
                                 ? 'text-emerald-400'
                                 : currentUser?.id === buzz.author?.id
-                                  ? 'text-slate-600 cursor-not-allowed opacity-50'
-                                  : 'text-slate-400 hover:text-slate-200'
+                                  ? 'text-neutral-600 cursor-not-allowed opacity-50'
+                                  : 'text-neutral-400 hover:text-neutral-200'
                             }`}
                             title={
                               currentUser?.id === buzz.author?.id
@@ -1727,7 +1524,7 @@ export const UserPage: React.FC = () => {
                             }
                           >
                             <Repeat2 className={`w-4 h-4 ${currentUser?.id && buzz.repostedByUsers?.[currentUser.id] ? 'stroke-[2.2]' : ''}`} />
-                            <span className={`font-medium ${currentUser?.id && buzz.repostedByUsers?.[currentUser.id] ? 'text-emerald-400' : 'text-slate-400'}`}>
+                            <span className={`font-medium ${currentUser?.id && buzz.repostedByUsers?.[currentUser.id] ? 'text-emerald-400' : 'text-neutral-400'}`}>
                               {buzz.repostsCount || 0}
                             </span>
                           </button>
@@ -2376,14 +2173,14 @@ export const UserPage: React.FC = () => {
         {/* TAB 3: SKOR & ULASAN SAYA */}
         {/* ========================================================================= */}
         {activeUserTab === 'reviews' && (
-          <div className="bg-[#171A1F] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-neutral-800">
               <div>
                 <h3 className="font-display font-black text-xl text-white flex items-center gap-2.5">
                   <Star className="w-5 h-5 text-[#FF2E7E] fill-current" />
                   <span>{isOwnProfile ? 'Kumpulan Ulasan & Skor Sotoy Saya' : `Ulasan & Skor Sinema ${targetUser.name}`}</span>
                 </h3>
-                <p className="text-slate-400 text-xs mt-1">
+                <p className="text-neutral-400 text-xs mt-1">
                   {isOwnProfile
                     ? 'Arsip semua film yang sudah kamu tonton dan nilai dengan skor jujur'
                     : `Arsip semua film yang sudah ditonton dan dinilai oleh ${targetUser.name}`}
@@ -2392,7 +2189,7 @@ export const UserPage: React.FC = () => {
               {isOwnProfile && (
                 <button
                   onClick={() => navigateTo('film-database')}
-                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-slate-950 font-black text-xs flex items-center gap-1.5 self-start sm:self-auto"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-white font-black text-xs flex items-center gap-1.5 self-start sm:self-auto"
                 >
                   <Star className="w-3.5 h-3.5 fill-current" />
                   <span>Nilai Film Lainnya</span>
@@ -2401,18 +2198,18 @@ export const UserPage: React.FC = () => {
             </div>
 
             {loadingRatings ? (
-              <div className="flex flex-col items-center justify-center py-16 text-slate-400 space-y-3">
+              <div className="flex flex-col items-center justify-center py-16 text-neutral-400 space-y-3">
                 <Loader2 className="w-8 h-8 text-[#FF2E7E] animate-spin" />
                 <p className="text-xs font-bold">Memuat ulasan dan skor film...</p>
               </div>
             ) : myReviews.length === 0 ? (
-              <div className="text-center py-16 bg-slate-900/50 rounded-2xl border border-slate-800 space-y-4">
-                <Star className="w-12 h-12 text-slate-600 mx-auto" />
+              <div className="text-center py-16 bg-neutral-900 rounded-2xl border border-neutral-800 space-y-4">
+                <Star className="w-12 h-12 text-neutral-600 mx-auto" />
                 <div className="space-y-1">
                   <h4 className="font-display font-bold text-white text-base">
                     {isOwnProfile ? 'Kamu belum menulis ulasan' : `${targetUser.name} belum menulis ulasan`}
                   </h4>
-                  <p className="text-slate-400 text-xs max-w-sm mx-auto">
+                  <p className="text-neutral-400 text-xs max-w-sm mx-auto">
                     {isOwnProfile
                       ? 'Kunjungi halaman detail film favoritmu dan klik tombol "Beri Skor Sotoy" untuk meninggalkan ulasan pertamamu.'
                       : 'Pengguna ini belum mempublikasikan skor atau ulasan film apa pun.'}
@@ -2421,7 +2218,7 @@ export const UserPage: React.FC = () => {
                 {isOwnProfile && (
                   <button
                     onClick={() => navigateTo('film-database')}
-                    className="px-5 py-2.5 rounded-xl bg-[#FF2E7E] text-slate-950 font-black text-xs"
+                    className="px-5 py-2.5 rounded-xl bg-[#FF2E7E] text-white font-black text-xs"
                   >
                     Beri Nilai Film Pertama
                   </button>
@@ -2434,7 +2231,7 @@ export const UserPage: React.FC = () => {
                   return (
                     <div
                       key={rev.id}
-                      className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-3 hover:border-slate-700 transition-colors"
+                      className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 space-y-3.5 hover:border-neutral-700 transition-colors"
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
@@ -2442,31 +2239,34 @@ export const UserPage: React.FC = () => {
                             <img
                               src={targetFilm.poster.trim()}
                               alt={targetFilm.title}
-                              className="w-10 h-14 object-cover rounded-lg border border-slate-700"
+                              className="w-12 h-16 object-cover rounded-xl border border-neutral-700 shrink-0"
                             />
                           ) : null}
                           <div>
                             <h4
                               onClick={() => targetFilm && navigateTo('film-detail', { filmId: targetFilm.id })}
-                              className="font-display font-black text-sm text-white hover:text-[#FF2E7E] cursor-pointer"
+                              className="font-display font-black text-base text-white hover:text-[#FF2E7E] cursor-pointer"
                             >
                               {targetFilm ? targetFilm.title : 'Film Terkait'}
                             </h4>
-                            <span className="text-[11px] text-slate-400" title={formatFullDateTime(rev.createdAt)}>
+                            {targetFilm && (
+                              <p className="text-xs text-neutral-400 mt-0.5">
+                                {targetFilm.year} • {targetFilm.director}
+                              </p>
+                            )}
+                            <span className="text-[11px] text-neutral-500 block mt-0.5" title={formatFullDateTime(rev.createdAt)}>
                               Diulas {formatRelativeTime(rev.createdAt)}
                             </span>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 self-start sm:self-auto">
-                          <div className="bg-black/60 border border-[#FF2E7E]/40 px-3 py-1.5 rounded-xl text-[#FF2E7E] font-black text-sm flex items-center gap-1.5">
-                            <Star className="w-4 h-4 fill-current" />
-                            <span>{rev.score.toFixed(1)}</span>
-                            <span className="text-slate-500 text-xs">/ 10.0</span>
+                        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+                          <div className="w-11 h-11 rounded-full bg-neutral-950 border border-[#FF2E7E]/40 flex flex-col items-center justify-center text-[#FF2E7E] font-black text-sm shrink-0 shadow-inner">
+                            <span className="leading-none">{rev.score.toFixed(1)}</span>
                           </div>
 
                           {(isOwnProfile || currentUser.id === rev.userId || isAdmin) && (
-                            <div className="flex items-center gap-1 border-l border-slate-800 pl-2">
+                            <div className="flex items-center gap-1 border-l border-neutral-800 pl-2">
                               <button
                                 onClick={() => {
                                   setEditingReviewId(rev.id);
@@ -2474,7 +2274,7 @@ export const UserPage: React.FC = () => {
                                   setEditingReviewHeadline(rev.headline || '');
                                   setEditingReviewText(rev.reviewText || '');
                                 }}
-                                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 font-bold text-xs flex items-center gap-1 transition-colors"
+                                className="px-2.5 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white border border-neutral-700 font-bold text-xs flex items-center gap-1 transition-colors"
                                 title="Edit Skor & Ulasan"
                               >
                                 <Edit3 className="w-3 h-3" />
@@ -2486,7 +2286,7 @@ export const UserPage: React.FC = () => {
                                     deleteFilmRating(rev.id);
                                   }
                                 }}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
+                                className="p-1.5 rounded-lg text-neutral-400 hover:text-rose-400 hover:bg-neutral-800 transition-colors"
                                 title="Hapus Ulasan"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -2497,9 +2297,9 @@ export const UserPage: React.FC = () => {
                       </div>
 
                       {editingReviewId === rev.id ? (
-                        <div className="space-y-3 bg-slate-950 p-4 rounded-xl border border-[#FF2E7E]/40">
+                        <div className="space-y-3 bg-neutral-950 p-4 rounded-xl border border-[#FF2E7E]/40">
                           <div className="flex items-center gap-3">
-                            <label className="text-xs font-bold text-slate-300">Skor Sotoy (1-10):</label>
+                            <label className="text-xs font-bold text-neutral-300">Skor Sotoy (1-10):</label>
                             <input
                               type="number"
                               min="1"
@@ -2507,7 +2307,7 @@ export const UserPage: React.FC = () => {
                               step="0.1"
                               value={editingReviewScore}
                               onChange={e => setEditingReviewScore(parseFloat(e.target.value) || 10)}
-                              className="w-20 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-[#FF2E7E]"
+                              className="w-20 bg-neutral-900 border border-neutral-700 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-[#FF2E7E]"
                             />
                           </div>
                           <input
@@ -2515,19 +2315,19 @@ export const UserPage: React.FC = () => {
                             placeholder="Headline ulasan..."
                             value={editingReviewHeadline}
                             onChange={e => setEditingReviewHeadline(e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-[#FF2E7E]"
+                            className="w-full bg-neutral-900 border border-neutral-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-[#FF2E7E]"
                           />
                           <textarea
                             placeholder="Tulis ulasan jujurmu..."
                             value={editingReviewText}
                             onChange={e => setEditingReviewText(e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-[#FF2E7E] resize-none"
+                            className="w-full bg-neutral-900 border border-neutral-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-[#FF2E7E] resize-none"
                             rows={3}
                           />
                           <div className="flex justify-end gap-2">
                             <button
                               onClick={() => setEditingReviewId(null)}
-                              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold"
+                              className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-bold"
                             >
                               Batal
                             </button>
@@ -2552,14 +2352,14 @@ export const UserPage: React.FC = () => {
                             "{rev.headline}"
                           </h5>
                           {Boolean(rev.reviewText && rev.reviewText.trim()) && (
-                            <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                            <p className="text-neutral-200 text-xs sm:text-sm leading-relaxed">
                               {rev.reviewText}
                             </p>
                           )}
                         </div>
                       )}
 
-                      <div className="pt-2.5 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400 flex-wrap gap-2">
+                      <div className="pt-2.5 border-t border-neutral-800 flex items-center justify-between text-xs text-neutral-400 flex-wrap gap-2">
                         <span className="flex items-center gap-1 text-[#FF2E7E]">
                           <Heart className="w-3.5 h-3.5 fill-current" />
                           {rev.likes} Warga menyukai ulasan ini
