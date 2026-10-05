@@ -123,6 +123,8 @@ export const UserPage: React.FC = () => {
     createCollection,
     deleteCollection,
     shareCollectionToBuzz,
+    toggleSaveBuzz,
+    savedBuzzIds,
   } = useApp();
 
   // Support URL param for user profile /user/:id
@@ -1244,7 +1246,34 @@ export const UserPage: React.FC = () => {
                               {buzz.repostsCount || 0}
                             </span>
                           </button>
+
+                          <button
+                            onClick={() =>
+                              openShareModal({
+                                title: `Buzz oleh ${authorName}`,
+                                text: buzz.content,
+                                url: window.location.href,
+                              })
+                            }
+                            className="flex items-center gap-1.5 text-neutral-400 hover:text-neutral-200 transition-opacity hover:opacity-80 active:scale-95 cursor-pointer text-xs shrink-0 py-1"
+                            title="Bagikan Buzz ini ke Media Sosial"
+                          >
+                            <Share2 className="w-4 h-4 text-current" />
+                          </button>
                         </div>
+
+                        <button
+                          id={`user-page-save-${buzz.id}`}
+                          onClick={() => toggleSaveBuzz(buzz.id)}
+                          className={`flex items-center gap-1.5 transition-opacity hover:opacity-80 active:scale-95 text-xs shrink-0 py-1 cursor-pointer ${
+                            savedBuzzIds.includes(buzz.id)
+                              ? 'text-white'
+                              : 'text-neutral-400 hover:text-neutral-200'
+                          }`}
+                          title={savedBuzzIds.includes(buzz.id) ? 'Hapus dari Tersimpan' : 'Simpan Buzz ini'}
+                        >
+                          <Bookmark className={`w-4 h-4 ${savedBuzzIds.includes(buzz.id) ? 'fill-current text-white' : 'text-current'}`} />
+                        </button>
                       </div>
                     </div>
                   );
@@ -1570,7 +1599,34 @@ export const UserPage: React.FC = () => {
                               {buzz.repostsCount || 0}
                             </span>
                           </button>
+
+                          <button
+                            onClick={() =>
+                              openShareModal({
+                                title: `Buzz oleh ${buzz.author?.name || 'Warga Sotoy'}`,
+                                text: buzz.content,
+                                url: window.location.href,
+                              })
+                            }
+                            className="flex items-center gap-1.5 text-neutral-400 hover:text-neutral-200 transition-opacity hover:opacity-80 active:scale-95 cursor-pointer text-xs shrink-0 py-1"
+                            title="Bagikan Buzz ini ke Media Sosial"
+                          >
+                            <Share2 className="w-4 h-4 text-current" />
+                          </button>
                         </div>
+
+                        <button
+                          id={`repost-page-save-${buzz.id}`}
+                          onClick={() => toggleSaveBuzz(buzz.id)}
+                          className={`flex items-center gap-1.5 transition-opacity hover:opacity-80 active:scale-95 text-xs shrink-0 py-1 cursor-pointer ${
+                            savedBuzzIds.includes(buzz.id)
+                              ? 'text-white'
+                              : 'text-neutral-400 hover:text-neutral-200'
+                          }`}
+                          title={savedBuzzIds.includes(buzz.id) ? 'Hapus dari Tersimpan' : 'Simpan Buzz ini'}
+                        >
+                          <Bookmark className={`w-4 h-4 ${savedBuzzIds.includes(buzz.id) ? 'fill-current text-white' : 'text-current'}`} />
+                        </button>
                       </div>
                     </div>
                   );
