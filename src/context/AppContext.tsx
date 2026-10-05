@@ -133,6 +133,7 @@ import {
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
+  browserPopupRedirectResolver,
   sendEmailVerification
 } from 'firebase/auth';
 import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -1448,6 +1449,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       } else {
         // Visitor / Not logged in
+        console.log('[Auth] onAuthStateChanged: fbUser is null (visitor/unauthenticated)');
         setIsLoggedIn(false);
         setCurrentUser(GUEST_USER);
         setIsEmailVerified(true);
@@ -2955,10 +2957,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Check for redirect sign-in result on mount (for iOS standalone PWA)
   useEffect(() => {
-    getRedirectResult(auth)
+    getRedirectResult(auth, browserPopupRedirectResolver)
       .then(async (result) => {
         if (result?.user) {
+          console.log('[Auth] getRedirectResult returned authenticated user:', result.user.uid);
           await handleGoogleUserAuth(result.user);
+        } else {
+          console.warn('[Auth] getRedirectResult returned null — check persistence config');
         }
       })
       .catch((err) => {
@@ -2974,11 +2979,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const isIosStandalone = ('standalone' in window.navigator) && (window.navigator as any).standalone === true;
       if (isIosStandalone) {
-        await signInWithRedirect(auth, provider);
+        await signInWithRedirect(auth, provider, browserPopupRedirectResolver);
         return true;
       }
 
-      const userCredential = await signInWithPopup(auth, provider);
+      const userCredential = await signInWithPopup(auth, provider, browserPopupRedirectResolver);
       if (userCredential.user) {
         return await handleGoogleUserAuth(userCredential.user);
       }
