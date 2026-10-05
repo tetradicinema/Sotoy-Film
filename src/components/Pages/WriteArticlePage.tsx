@@ -304,6 +304,7 @@ export const WriteArticlePage: React.FC = () => {
             ...payload,
             id: newDraftId,
             publishedAt: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
+            publishedAtTimestamp: new Date().toISOString(),
             views: 1,
             likes: 0,
             commentsCount: 0,
@@ -474,9 +475,19 @@ export const WriteArticlePage: React.FC = () => {
 
     try {
       let customPublishedAt: string | undefined = undefined;
+      let publishedAtTimestamp: string | undefined = undefined;
+      const now = new Date();
+
       if (targetStatus === 'scheduled' && scheduledAtDate) {
         const d = new Date(scheduledAtDate);
         customPublishedAt = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+        publishedAtTimestamp = d.toISOString();
+      } else if (targetStatus === 'published') {
+        customPublishedAt = now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+        publishedAtTimestamp = now.toISOString();
+      } else {
+        customPublishedAt = now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+        publishedAtTimestamp = now.toISOString();
       }
 
       const payload: Record<string, any> = {
@@ -491,6 +502,7 @@ export const WriteArticlePage: React.FC = () => {
         tags: cleanTags.length > 0 ? cleanTags : ['SotoyFilm'],
         status: targetStatus,
         publishedAt: customPublishedAt,
+        publishedAtTimestamp,
         seoTitle: seoTitle.trim() || title,
         metaDescription: metaDescription.trim() || excerpt || title,
         ogImage: ogImage.trim() || coverImage,

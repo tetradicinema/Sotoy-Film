@@ -468,27 +468,137 @@ export const ArticleDetailPage: React.FC = () => {
 
           {/* Article Main Body Content */}
           <div className="prose prose-invert max-w-none text-slate-200 text-sm sm:text-base leading-relaxed space-y-4 pt-4">
-            {article.content.split('\n\n').map((para, idx) => {
-              if (para.startsWith('### ')) {
-                return (
-                  <h3 key={idx} className="font-display font-black text-xl text-white pt-4 pb-1 border-b border-slate-800">
-                    {para.replace('### ', '')}
-                  </h3>
-                );
+            {(() => {
+              interface ArticleContentBlock {
+                type: 'h1' | 'h2' | 'h3' | 'callout' | 'list' | 'p';
+                text?: string;
+                items?: string[];
               }
-              if (para.startsWith('**') && para.endsWith('**')) {
-                return (
-                  <div key={idx} className="bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 p-4 rounded-2xl text-[#FF2E7E] font-bold">
-                    {para.replace(/\*\*/g, '')}
-                  </div>
-                );
+
+              const blocks: ArticleContentBlock[] = [];
+              const rawParagraphs = article.content.split('\n\n');
+
+              for (const rawPara of rawParagraphs) {
+                const trimmed = rawPara.trim();
+                if (!trimmed) continue;
+
+                if (trimmed.startsWith('### ')) {
+                  blocks.push({
+                    type: 'h3',
+                    text: trimmed.slice(4).trim(),
+                  });
+                } else if (trimmed.startsWith('## ')) {
+                  blocks.push({
+                    type: 'h2',
+                    text: trimmed.slice(3).trim(),
+                  });
+                } else if (trimmed.startsWith('# ')) {
+                  blocks.push({
+                    type: 'h1',
+                    text: trimmed.slice(2).trim(),
+                  });
+                } else if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
+                  blocks.push({
+                    type: 'callout',
+                    text: trimmed.replace(/\*\*/g, '').trim(),
+                  });
+                } else if (trimmed.startsWith('- ')) {
+                  const lines = trimmed.split('\n');
+                  const bulletItems: string[] = [];
+                  let currentItem = '';
+
+                  for (const line of lines) {
+                    const trimmedLine = line.trim();
+                    if (trimmedLine.startsWith('- ')) {
+                      if (currentItem) bulletItems.push(currentItem);
+                      currentItem = trimmedLine.slice(2).trim();
+                    } else if (currentItem) {
+                      currentItem += ' ' + trimmedLine;
+                    } else {
+                      bulletItems.push(trimmedLine);
+                    }
+                  }
+                  if (currentItem) bulletItems.push(currentItem);
+
+                  const prevBlock = blocks[blocks.length - 1];
+                  if (prevBlock && prevBlock.type === 'list' && prevBlock.items) {
+                    prevBlock.items.push(...bulletItems);
+                  } else {
+                    blocks.push({
+                      type: 'list',
+                      items: bulletItems,
+                    });
+                  }
+                } else {
+                  blocks.push({
+                    type: 'p',
+                    text: rawPara,
+                  });
+                }
               }
-              return (
-                <p key={idx} className="text-slate-300 leading-relaxed">
-                  {para}
-                </p>
-              );
-            })}
+
+              const renderInline = (str: string) => {
+                if (!str.includes('**')) return str;
+                const parts = str.split(/(\*\*.*?\*\*)/g);
+                return parts.map((part, i) => {
+                  if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
+                    return (
+                      <strong key={i} className="font-bold text-white">
+                        {part.slice(2, -2)}
+                      </strong>
+                    );
+                  }
+                  return part;
+                });
+              };
+
+              return blocks.map((block, idx) => {
+                if (block.type === 'h1') {
+                  return (
+                    <h1 key={idx} className="font-display font-black text-2xl sm:text-3xl text-white pt-6 pb-2 border-b border-slate-800">
+                      {block.text}
+                    </h1>
+                  );
+                }
+                if (block.type === 'h2') {
+                  return (
+                    <h2 key={idx} className="font-display font-black text-xl sm:text-2xl text-white pt-5 pb-1.5 border-b border-slate-800">
+                      {block.text}
+                    </h2>
+                  );
+                }
+                if (block.type === 'h3') {
+                  return (
+                    <h3 key={idx} className="font-display font-black text-xl text-white pt-4 pb-1 border-b border-slate-800">
+                      {block.text}
+                    </h3>
+                  );
+                }
+                if (block.type === 'callout') {
+                  return (
+                    <div key={idx} className="bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 p-4 rounded-2xl text-[#FF2E7E] font-bold">
+                      {block.text}
+                    </div>
+                  );
+                }
+                if (block.type === 'list') {
+                  return (
+                    <ul key={idx} className="list-disc list-inside space-y-1.5 text-slate-300 my-4 pl-2">
+                      {block.items?.map((item, itemIdx) => (
+                        <li key={itemIdx} className="leading-relaxed">
+                          {renderInline(item)}
+                        </li>
+                      ))}
+                    </ul>
+                  );
+                }
+                return (
+                  <p key={idx} className="text-slate-300 leading-relaxed whitespace-pre-line">
+                    {renderInline(block.text || '')}
+                  </p>
+                );
+              });
+            })()}
           </div>
 
           {/* Tags */}

@@ -70,7 +70,15 @@ export const HeroSection: React.FC = () => {
 
   // Recent articles for the right sidebar tab
   const recentArticles = [...publishedArticles]
-    .sort((a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime())
+    .sort((a, b) => {
+      const timeA = a.publishedAtTimestamp
+        ? new Date(a.publishedAtTimestamp).getTime()
+        : new Date(a.publishedAt || 0).getTime();
+      const timeB = b.publishedAtTimestamp
+        ? new Date(b.publishedAtTimestamp).getTime()
+        : new Date(b.publishedAt || 0).getTime();
+      return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
+    })
     .slice(0, 4);
 
   const [currentSlide, setCurrentSlide] = useState(0);

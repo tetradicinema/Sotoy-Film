@@ -847,13 +847,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [syncFilmsWithRemovedMarkers]);
 
-  // Optimized fetch for articles with limit(50), ordered by publishedAt desc, merged with INITIAL_ARTICLES
+  // Optimized fetch for articles with limit(50), ordered by publishedAtTimestamp desc, merged with INITIAL_ARTICLES
   const refreshArticles = useCallback(async () => {
     try {
       setIsLoadingArticles(true);
       let snapshot;
       try {
-        snapshot = await getDocs(query(collection(db, 'articles'), orderBy('publishedAt', 'desc'), limit(50)));
+        snapshot = await getDocs(query(collection(db, 'articles'), orderBy('publishedAtTimestamp', 'desc'), limit(50)));
       } catch (orderErr) {
         snapshot = await getDocs(query(collection(db, 'articles'), limit(50)));
       }
@@ -871,8 +871,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           articleMap.set(init.id, init);
         }
       }
+      const getArticleTime = (art: Article): number => {
+        if (art.publishedAtTimestamp) {
+          const t = new Date(art.publishedAtTimestamp).getTime();
+          if (!isNaN(t)) return t;
+        }
+        if (art.scheduledAt) {
+          const t = new Date(art.scheduledAt).getTime();
+          if (!isNaN(t)) return t;
+        }
+        if (art.publishedAt) {
+          const t = new Date(art.publishedAt).getTime();
+          if (!isNaN(t)) return t;
+        }
+        return 0;
+      };
       const merged = Array.from(articleMap.values());
-      setArticles(merged.sort((a, b) => b.id.localeCompare(a.id)));
+      setArticles(merged.sort((a, b) => getArticleTime(b) - getArticleTime(a)));
       setIsLoadingArticles(false);
     } catch (err: any) {
       console.warn('[Firestore] articles subscription fallback to initial mock:', err.message);
@@ -3583,11 +3598,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const articleId = `art-${Date.now()}`;
     const status = newArticle.status || 'published';
+    const now = new Date();
+    const publishedAtTimestamp = (newArticle as any).publishedAtTimestamp || (
+      status === 'scheduled' && (newArticle as any).scheduledAt
+        ? new Date((newArticle as any).scheduledAt).toISOString()
+        : now.toISOString()
+    );
     const created: Article = {
       ...newArticle,
       id: articleId,
       status,
-      publishedAt: (newArticle as any).publishedAt || new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
+      publishedAt: (newArticle as any).publishedAt || now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
+      publishedAtTimestamp,
       views: 1,
       likes: 0,
       commentsCount: 0,
@@ -3626,8 +3648,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return false;
     }
     try {
+      const updatesToSave: Partial<Article> = { ...updatedFields };
+      if (updatesToSave.status === 'published' && !updatesToSave.publishedAtTimestamp) {
+        updatesToSave.publishedAtTimestamp = targetArticle?.publishedAtTimestamp || new Date().toISOString();
+      } else if (updatesToSave.status === 'scheduled' && updatesToSave.scheduledAt) {
+        updatesToSave.publishedAtTimestamp = new Date(updatesToSave.scheduledAt).toISOString();
+      }
       // Remove any undefined properties which crash Firestore updateDoc
-      const sanitizedUpdates = JSON.parse(JSON.stringify(updatedFields));
+      const sanitizedUpdates = JSON.parse(JSON.stringify(updatesToSave));
       await updateDoc(doc(db, 'articles', id), sanitizedUpdates);
       refreshArticles();
       const toastMsg = updatedFields.status === 'draft'
@@ -4942,11 +4970,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const bulkUpdateArticles = async (articleIds: string[], updates: Partial<Article>): Promise<boolean> => {
     try {
-      const sanitizedUpdates = JSON.parse(JSON.stringify(updates));
+      const updatesToApply: Partial<Article> = { ...updates };
+      if (updatesToApply.status === 'published' && !updatesToApply.publishedAtTimestamp) {
+        updatesToApply.publishedAtTimestamp = new Date().toISOString();
+      } else if (updatesToApply.status === 'scheduled' && updatesToApply.scheduledAt) {
+        updatesToApply.publishedAtTimestamp = new Date(updatesToApply.scheduledAt).toISOString();
+      }
+      const sanitizedUpdates = JSON.parse(JSON.stringify(updatesToApply));
       await Promise.all(
         articleIds.map(id => updateDoc(doc(db, 'articles', id), sanitizedUpdates))
       );
-      setArticles(prev => prev.map(a => articleIds.includes(a.id) ? { ...a, ...updates } : a));
+      setArticles(prev => prev.map(a => articleIds.includes(a.id) ? { ...a, ...updatesToApply } : a));
       refreshArticles();
       showToast(`${articleIds.length} artikel berhasil diperbarui secara massal.`);
       return true;

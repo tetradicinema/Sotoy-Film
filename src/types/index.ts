@@ -112,6 +112,7 @@ export interface Article {
     role: UserRole;
   };
   publishedAt: string;
+  publishedAtTimestamp?: string;
   readTime: string;
   skorSotoy?: number; // legacy/optional, but articles do not show rating stars
   featured?: boolean;
