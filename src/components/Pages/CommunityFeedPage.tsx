@@ -592,126 +592,87 @@ export const CommunityFeedPage: React.FC = () => {
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 flex justify-center items-start gap-4 xl:gap-8">
         
         {/* ========================================================================= */}
-        {/* DESKTOP SOTOY BUZZ SIDEBAR */}
+        {/* CENTER FEED COLUMN (Expanded Width Without Left Sidebar) */}
         {/* ========================================================================= */}
-        <BuzzFeedSidebar
-          activeTab={buzzFeedTab}
-          onSelectTab={setBuzzFeedTab}
-          savedCount={savedBuzzIds.length}
-          followingCount={followingIds.length}
-          onComposeClick={() => {
-            setIsComposeBuzzOpen(true);
-          }}
-          onSearchClick={() => {
-            navigateTo('search');
-          }}
-          className="hidden lg:flex"
-        />
-
-        {/* ========================================================================= */}
-        {/* CENTER FEED COLUMN */}
-        {/* ========================================================================= */}
-        <div className="w-full max-w-2xl flex-1 min-w-0 space-y-4">
+        <div className="w-full max-w-4xl flex-1 min-w-0 space-y-4">
           
-          {/* Mobile & Tablet Sticky Feed Tabs (Clean, native 1-tap switcher) */}
-          <div className="lg:hidden sticky top-14 z-20 -mx-2 px-2 py-2 bg-[#0A0A0E]/95 backdrop-blur-md border-b border-slate-800/80">
-            <div
-              className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1 scroll-smooth touch-pan-x"
-              style={{ WebkitOverflowScrolling: 'touch' }}
-            >
-              {[
-                { id: 'for-you', label: 'Untukmu', icon: Flame },
-                { id: 'following', label: 'Mengikuti', icon: Users, badge: followingIds.length > 0 ? followingIds.length : null },
-                { id: 'trending', label: 'Populer', icon: Sparkles },
-                { id: 'saved', label: 'Tersimpan', icon: Bookmark, badge: savedBuzzIds.length > 0 ? savedBuzzIds.length : null },
-                { id: 'liked', label: 'Disukai', icon: Heart },
-              ].map((tab) => {
-                const Icon = tab.icon;
-                const isActive = buzzFeedTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    id={`mobile-buzz-tab-${tab.id}`}
-                    onClick={() => setBuzzFeedTab(tab.id as BuzzFeedTab)}
-                    className={`relative flex items-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all shrink-0 min-h-[44px] cursor-pointer active:scale-95 ${
-                      isActive
-                        ? 'text-white'
-                        : 'bg-slate-900/90 text-slate-400 hover:text-white border border-slate-800'
-                    }`}
-                  >
-                    {isActive && (
-                      <motion.div
-                        layoutId="activeMobileBuzzTab"
-                        className="absolute inset-0 bg-[#FF2E7E] rounded-full shadow-md shadow-[#FF2E7E]/25 z-0"
-                        transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-                      />
-                    )}
-                    <span className="relative z-10 flex items-center gap-1.5">
-                      <Icon className="w-3.5 h-3.5" />
-                      <span>{tab.label}</span>
-                      {tab.badge ? (
-                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
-                          isActive ? 'bg-black/30 text-white' : 'bg-slate-800 text-slate-400'
-                        }`}>
-                          {tab.badge}
-                        </span>
-                      ) : null}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          {/* Header Sticky Feed Tabs switcher (Untukmu & Mengikuti prominent) */}
+          <div className="sticky top-14 sm:top-16 z-20 pb-2.5 pt-1.5 bg-[#0A0A0E]/95 backdrop-blur-md border-b border-slate-800/80 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5 p-1 bg-slate-900/90 border border-slate-800/90 rounded-2xl overflow-x-auto scrollbar-none">
+              <button
+                id="buzz-tab-foryou"
+                onClick={() => setBuzzFeedTab('for-you')}
+                className={`flex items-center gap-2 px-4 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  buzzFeedTab === 'for-you'
+                    ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                }`}
+              >
+                <Flame className="w-4 h-4 text-current" />
+                <span>Untukmu</span>
+              </button>
 
-          {/* Header Title Bar */}
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 sticky top-16 bg-[#0A0A0E]/95 backdrop-blur-md z-10 pt-1">
-            <div className="flex items-center gap-2.5 sm:gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="font-display font-black text-lg sm:text-2xl text-white tracking-tight flex items-center gap-2">
-                    {buzzFeedTab === 'for-you' && (
-                      <>
-                        <Flame className="w-5 h-5 text-[#FF2E7E] shrink-0" />
-                        <span>Feed Untukmu</span>
-                      </>
-                    )}
-                    {buzzFeedTab === 'following' && (
-                      <>
-                        <Users className="w-5 h-5 text-cyan-400 shrink-0" />
-                        <span>Mengikuti</span>
-                      </>
-                    )}
-                    {buzzFeedTab === 'saved' && (
-                      <>
-                        <Bookmark className="w-5 h-5 text-amber-400 shrink-0" />
-                        <span>Tersimpan</span>
-                      </>
-                    )}
-                    {buzzFeedTab === 'liked' && (
-                      <>
-                        <Heart className="w-5 h-5 text-rose-500 fill-rose-500 shrink-0" />
-                        <span>Disukai</span>
-                      </>
-                    )}
-                    {buzzFeedTab === 'trending' && (
-                      <>
-                        <Sparkles className="w-5 h-5 text-[#FF2E7E] shrink-0" />
-                        <span>Sedang Hangat</span>
-                      </>
-                    )}
-                  </h1>
-                </div>
-                <p className="text-slate-400 text-xs hidden sm:block mt-0.5">
-                  {buzzFeedTab === 'for-you' && 'Obrolan pop-culture film & ulasan terkini dari komunitas'}
-                  {buzzFeedTab === 'following' && 'Postingan dari kritikus & penonton yang kamu ikuti'}
-                  {buzzFeedTab === 'saved' && 'Koleksi buzz yang kamu bookmark untuk dibaca kembali'}
-                  {buzzFeedTab === 'liked' && 'Koleksi buzz yang telah kamu beri tanda suka'}
-                  {buzzFeedTab === 'trending' && 'Postingan dengan tanggapan dan diskusi paling ramai'}
-                </p>
-              </div>
+              <button
+                id="buzz-tab-following"
+                onClick={() => setBuzzFeedTab('following')}
+                className={`flex items-center gap-2 px-4 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  buzzFeedTab === 'following'
+                    ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                }`}
+              >
+                <Users className="w-4 h-4 text-current" />
+                <span>Mengikuti</span>
+                {followingIds.length > 0 && (
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                    buzzFeedTab === 'following' ? 'bg-black/30 text-white' : 'bg-slate-800 text-slate-400'
+                  }`}>
+                    {followingIds.length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                id="buzz-tab-trending"
+                onClick={() => setBuzzFeedTab('trending')}
+                className={`hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  buzzFeedTab === 'trending'
+                    ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-current" />
+                <span>Populer</span>
+              </button>
+
+              <button
+                id="buzz-tab-saved"
+                onClick={() => setBuzzFeedTab('saved')}
+                className={`hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  buzzFeedTab === 'saved'
+                    ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                }`}
+              >
+                <Bookmark className="w-3.5 h-3.5 text-current" />
+                <span>Tersimpan</span>
+              </button>
+
+              <button
+                id="buzz-tab-liked"
+                onClick={() => setBuzzFeedTab('liked')}
+                className={`hidden md:flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  buzzFeedTab === 'liked'
+                    ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                }`}
+              >
+                <Heart className="w-3.5 h-3.5 text-current" />
+                <span>Disukai</span>
+              </button>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               {activeTagFilter !== 'all' && (
                 <button
                   onClick={() => setActiveTagFilter('all')}
@@ -1735,7 +1696,7 @@ export const CommunityFeedPage: React.FC = () => {
             compact={true}
             limit={5}
             flat={true}
-            minimal={false}
+            minimal={true}
             hideHeader={true}
             showFooterLink={true}
           />
