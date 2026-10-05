@@ -444,7 +444,9 @@ interface AppContextType {
   bulkDeleteFilms: (filmIds: string[]) => Promise<boolean>;
   bulkUpdateFilms: (filmIds: string[], updates: Partial<FilmItem>) => Promise<boolean>;
   deleteBuzzPost: (buzzId: string) => Promise<boolean>;
+  editBuzzPost: (buzzId: string, newContent: string, newScore?: number) => Promise<boolean>;
   deleteBuzzReply: (buzzId: string, replyId: string) => Promise<boolean>;
+  editBuzzReply: (buzzId: string, replyId: string, newContent: string) => Promise<boolean>;
   moderationReports: ModerationReport[];
   reportContent: (report: Omit<ModerationReport, 'id' | 'createdAt' | 'status'>) => Promise<boolean>;
   resolveReport: (reportId: string, action: 'dismiss' | 'take_down', targetInfo?: { targetType: 'buzz' | 'reply' | 'review'; targetId: string; parentBuzzId?: string }) => Promise<boolean>;
@@ -5342,6 +5344,75 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const editBuzzPost = async (buzzId: string, newContent: string, newScore?: number): Promise<boolean> => {
+    if (!requireVerified()) return false;
+    const post = rawBuzzList.find(b => b.id === buzzId) || buzzList.find(b => b.id === buzzId);
+    if (!post) return false;
+
+    if (post.author?.id !== currentUser.id && !isAdmin) {
+      showToast('Akses ditolak: Hanya pemilik postingan yang dapat mengedit.', 'error');
+      return false;
+    }
+
+    const updatedPost: BuzzPost = {
+      ...post,
+      content: newContent,
+      skorSotoyMention: newScore !== undefined ? newScore : post.skorSotoyMention,
+    };
+
+    const previousRawBuzzList = [...rawBuzzList];
+    setRawBuzzList(prev => prev.map(b => b.id === buzzId ? updatedPost : b));
+
+    try {
+      await updateDoc(doc(db, 'buzz', buzzId), {
+        content: newContent,
+        ...(newScore !== undefined ? { skorSotoyMention: newScore } : {}),
+        updatedAt: new Date().toISOString(),
+      });
+      showToast('Post obrolan warga berhasil diperbarui.', 'success');
+      return true;
+    } catch (error: any) {
+      setRawBuzzList(previousRawBuzzList);
+      console.error('[BuzzPost] Error editing buzz post:', error);
+      showToast('Gagal memperbarui postingan obrolan.', 'error');
+      return false;
+    }
+  };
+
+  const editBuzzReply = async (buzzId: string, replyId: string, newContent: string): Promise<boolean> => {
+    if (!requireVerified()) return false;
+    const post = rawBuzzList.find(b => b.id === buzzId) || buzzList.find(b => b.id === buzzId);
+    if (!post) return false;
+
+    const reply = (post.replies || []).find(r => r.id === replyId);
+    if (!reply) return false;
+
+    if (reply.author?.id !== currentUser.id && !isAdmin) {
+      showToast('Akses ditolak: Hanya pemilik balasan yang dapat mengedit.', 'error');
+      return false;
+    }
+
+    const updatedReplies = (post.replies || []).map(r =>
+      r.id === replyId ? { ...r, content: newContent, updatedAt: new Date().toISOString() } : r
+    );
+
+    const previousRawBuzzList = [...rawBuzzList];
+    setRawBuzzList(prev => prev.map(b => b.id === buzzId ? { ...b, replies: updatedReplies } : b));
+
+    try {
+      await updateDoc(doc(db, 'buzz', buzzId), {
+        replies: updatedReplies,
+      });
+      showToast('Balasan komentar berhasil diperbarui.', 'success');
+      return true;
+    } catch (error: any) {
+      setRawBuzzList(previousRawBuzzList);
+      console.error('[BuzzReply] Error editing buzz reply:', error);
+      showToast('Gagal memperbarui balasan komentar.', 'error');
+      return false;
+    }
+  };
+
   const reportContent = async (report: Omit<ModerationReport, 'id' | 'createdAt' | 'status'>): Promise<boolean> => {
     if (!requireVerified()) return false;
     const reportId = `rep-${Date.now()}`;
@@ -5559,7 +5630,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         bulkDeleteFilms,
         bulkUpdateFilms,
         deleteBuzzPost,
+        editBuzzPost,
         deleteBuzzReply,
+        editBuzzReply,
         moderationReports,
         reportContent,
         resolveReport,

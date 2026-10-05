@@ -59,21 +59,33 @@ const HeroActiveAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }
 export const HeroSection: React.FC = () => {
   const { publishedArticles, films, navigateTo, currentUser, isLoggedIn } = useApp();
 
-  // Filter hero slider articles
-  const sliderArticles = publishedArticles.filter(a => a.heroSlider);
+  // Trending articles for the main hero slider (sorted by popularity / heroSlider flag)
+  const trendingArticles = [...publishedArticles]
+    .sort((a, b) => {
+      if (a.heroSlider && !b.heroSlider) return -1;
+      if (!a.heroSlider && b.heroSlider) return 1;
+      return (b.likes || 0) - (a.likes || 0);
+    })
+    .slice(0, 6);
+
+  // Recent articles for the right sidebar tab
+  const recentArticles = [...publishedArticles]
+    .sort((a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime())
+    .slice(0, 4);
+
   const [currentSlide, setCurrentSlide] = useState(0);
   const [activeTab, setActiveTab] = useState<'trending' | 'to-watch' | 'gear-addict'>('trending');
 
   // Auto slide
   useEffect(() => {
-    if (sliderArticles.length <= 1) return;
+    if (trendingArticles.length <= 1) return;
     const interval = setInterval(() => {
-      setCurrentSlide(prev => (prev + 1) % sliderArticles.length);
+      setCurrentSlide(prev => (prev + 1) % trendingArticles.length);
     }, 6500);
     return () => clearInterval(interval);
-  }, [sliderArticles.length]);
+  }, [trendingArticles.length]);
 
-  const activeArticle = sliderArticles[currentSlide] || publishedArticles[0];
+  const activeArticle = trendingArticles[currentSlide] || publishedArticles[0];
 
   if (publishedArticles.length === 0 || !activeArticle) {
     return (
@@ -98,17 +110,12 @@ export const HeroSection: React.FC = () => {
   }
 
   const handlePrevSlide = () => {
-    setCurrentSlide(prev => (prev === 0 ? sliderArticles.length - 1 : prev - 1));
+    setCurrentSlide(prev => (prev === 0 ? trendingArticles.length - 1 : prev - 1));
   };
 
   const handleNextSlide = () => {
-    setCurrentSlide(prev => (prev + 1) % sliderArticles.length);
+    setCurrentSlide(prev => (prev + 1) % trendingArticles.length);
   };
-
-  // Trending films sorted by rank or score
-  const trendingFilms = [...films]
-    .sort((a, b) => (a.trendingRank || 99) - (b.trendingRank || 99))
-    .slice(0, 4);
 
   // To watch recommendations
   const toWatchFilms = films.filter(f => f.featuredRecommendation).slice(0, 4);
@@ -159,7 +166,7 @@ export const HeroSection: React.FC = () => {
         {/* Master 2-Column Hero: 8-Column Cinematic Showcase + 4-Column Curated Tangga */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
           
-          {/* LEFT: CINEMATIC COVER SLIDER (8 Columns) */}
+          {/* LEFT: CINEMATIC COVER SLIDER (8 Columns - Trending Articles) */}
           <div className="lg:col-span-8 flex flex-col">
             <div className="relative w-full flex-1 min-h-[460px] sm:min-h-[540px] rounded-3xl overflow-hidden border border-white/[0.08] shadow-2xl bg-[#0E1013] group">
               {/* Background Cover Image with cinematic pan/zoom */}
@@ -173,16 +180,18 @@ export const HeroSection: React.FC = () => {
               <div className="absolute inset-0 bg-gradient-to-t from-[#0E1013] via-[#0E1013]/75 to-transparent" />
               <div className="absolute inset-0 bg-gradient-to-r from-[#0E1013]/90 via-[#0E1013]/40 to-transparent" />
 
-              {/* Top Row: Clean Unboxed Editorial Kicker & Reading Endorsement */}
+              {/* Top Row: Trending Badge, Category & Reading Endorsement */}
               <div className="absolute top-5 sm:top-7 left-5 sm:left-7 right-5 sm:right-7 flex items-center justify-between z-10">
                 <div className="flex items-center gap-2 text-xs text-slate-300 font-medium tracking-wide">
+                  <span className="bg-[#FF2E7E] text-white px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md shadow-[#FF2E7E]/30">
+                    <Flame className="w-3 h-3 fill-current text-white" />
+                    <span>Trending</span>
+                  </span>
                   <span className="text-[#FF2E7E] font-bold uppercase tracking-wider text-[11px]">
                     {activeArticle.category}
                   </span>
                   <span className="text-slate-500" aria-hidden="true">·</span>
                   <span className="capitalize">{activeArticle.subCategory}</span>
-                  <span className="hidden sm:inline text-slate-500" aria-hidden="true">·</span>
-                  <span className="hidden sm:inline text-slate-400">Headline Pilihan</span>
                 </div>
 
                 <div className="flex items-center gap-1.5 text-xs text-slate-300/90 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 font-mono tabular-nums">
@@ -234,14 +243,14 @@ export const HeroSection: React.FC = () => {
                     <div className="flex items-center gap-2 text-xs font-mono text-slate-400 tabular-nums">
                       <span className="text-white font-bold">{String(currentSlide + 1).padStart(2, '0')}</span>
                       <span>/</span>
-                      <span>{String(sliderArticles.length).padStart(2, '0')}</span>
+                      <span>{String(trendingArticles.length).padStart(2, '0')}</span>
                     </div>
 
                     <div className="flex items-center gap-1">
                       <button
                         id="hero-slider-prev"
                         onClick={handlePrevSlide}
-                        className="w-8 h-8 rounded-lg bg-black/40 hover:bg-white/10 text-white border border-white/10 flex items-center justify-center transition-colors"
+                        className="w-8 h-8 rounded-lg bg-black/40 hover:bg-white/10 text-white border border-white/10 flex items-center justify-center transition-colors cursor-pointer"
                         aria-label="Previous Slide"
                       >
                         <ChevronLeft className="w-4 h-4" />
@@ -249,7 +258,7 @@ export const HeroSection: React.FC = () => {
                       <button
                         id="hero-slider-next"
                         onClick={handleNextSlide}
-                        className="w-8 h-8 rounded-lg bg-black/40 hover:bg-white/10 text-white border border-white/10 flex items-center justify-center transition-colors"
+                        className="w-8 h-8 rounded-lg bg-black/40 hover:bg-white/10 text-white border border-white/10 flex items-center justify-center transition-colors cursor-pointer"
                         aria-label="Next Slide"
                       >
                         <ChevronRight className="w-4 h-4" />
@@ -279,8 +288,8 @@ export const HeroSection: React.FC = () => {
                       : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                   }`}
                 >
-                  <Flame className="w-3.5 h-3.5 text-current" />
-                  <span>Trending</span>
+                  <Clock className="w-3.5 h-3.5 text-current" />
+                  <span>Recent</span>
                 </button>
 
                 <button
@@ -310,62 +319,57 @@ export const HeroSection: React.FC = () => {
                 </button>
               </div>
 
-              {/* Tab Content 1: TRENDING */}
+              {/* Tab Content 1: RECENT ARTICLES */}
               {activeTab === 'trending' && (
                 <div className="flex-1 flex flex-col justify-between space-y-3">
                   <div className="space-y-2">
-                    {trendingFilms.map((film, index) => (
+                    {recentArticles.map((art, index) => (
                       <div
-                        key={film.id}
-                        id={`trending-film-item-${film.id}`}
-                        onClick={() => navigateTo('film-detail', { filmId: film.id })}
+                        key={art.id}
+                        id={`recent-article-item-${art.id}`}
+                        onClick={() => navigateTo('article-detail', { articleId: art.id })}
                         className="group flex items-center gap-3 p-2 rounded-2xl hover:bg-white/[0.04] border border-transparent hover:border-white/[0.06] transition-all cursor-pointer"
                       >
-                        {/* Tabular Rank Number */}
+                        {/* Tabular Index Number */}
                         <span className={`w-6 font-mono tabular-nums text-xs font-bold text-center ${
                           index === 0 ? 'text-white' : 'text-slate-500'
                         }`}>
                           {String(index + 1).padStart(2, '0')}
                         </span>
 
-                        {/* Poster */}
+                        {/* Poster/Cover */}
                         <img
-                          src={film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=120&q=80'}
-                          alt={film.title}
-                          className="w-10 h-14 object-cover rounded-lg shrink-0 border border-white/10 group-hover:scale-105 transition-transform"
+                          src={art.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=120&q=80'}
+                          alt={art.title}
+                          className="w-12 h-12 object-cover rounded-xl shrink-0 border border-white/10 group-hover:scale-105 transition-transform"
                         />
 
-                        {/* Metadata & Scores */}
+                        {/* Metadata */}
                         <div className="flex-1 min-w-0">
+                          <span className="text-[10px] text-[#FF2E7E] font-bold uppercase tracking-wider block truncate">
+                            {art.category}
+                          </span>
                           <h4 className="text-white font-semibold text-xs truncate group-hover:text-white transition-colors">
-                            {film.title}
+                            {art.title}
                           </h4>
-                          <p className="text-slate-400 text-[11px] truncate mt-0.5">
-                            {film.year} · {film.genres.slice(0, 2).join(', ')}
-                          </p>
-                          <div className="mt-1 flex items-center gap-2 text-[11px] font-mono tabular-nums">
-                            <span className="text-amber-400 font-semibold flex items-center gap-0.5">
-                              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                              <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
-                            </span>
-                            <span className="text-slate-500">·</span>
-                            <span className="text-slate-400 text-[10px]">
-                              Skor Sotoy {film.skorSotoy.toFixed(1)}
-                            </span>
+                          <div className="mt-0.5 flex items-center gap-2 text-[10px] text-slate-400">
+                            <span>{art.readTime}</span>
+                            <span>·</span>
+                            <span className="text-slate-400">{art.publishedAt}</span>
                           </div>
                         </div>
 
-                        <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-white transition-transform group-hover:translate-x-0.5" />
+                        <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-white transition-transform group-hover:translate-x-0.5 shrink-0" />
                       </div>
                     ))}
                   </div>
 
                   <button
                     id="see-all-trending-btn"
-                    onClick={() => navigateTo('film-database')}
-                    className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 mt-2"
+                    onClick={() => navigateTo('category', { category: 'movies' })}
+                    className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 mt-2 cursor-pointer"
                   >
-                    <span>Jelajahi Tangga Skor Sotoy Lengkap</span>
+                    <span>Jelajahi Semua Artikel Terbaru</span>
                     <ArrowRight className="w-3 h-3 text-[#FF2E7E]" />
                   </button>
                 </div>

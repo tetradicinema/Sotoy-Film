@@ -98,6 +98,12 @@ export const UserPage: React.FC = () => {
     updateUserSettings,
     updateUserProfile,
     addBuzzPost,
+    editBuzzPost,
+    deleteBuzzPost,
+    editBuzzReply,
+    deleteBuzzReply,
+    updateFilmRating,
+    deleteFilmRating,
     likeBuzzPost,
     toggleRepostBuzzPost,
     navigateTo,
@@ -240,6 +246,19 @@ export const UserPage: React.FC = () => {
   const [tabNewCollectionName, setTabNewCollectionName] = useState('');
   const [tabNewCollectionDesc, setTabNewCollectionDesc] = useState('');
   const [tabNewCollectionIsPublic, setTabNewCollectionIsPublic] = useState(true);
+
+  // Inline editing state for Buzz, Replies, and Ratings
+  const [editingBuzzId, setEditingBuzzId] = useState<string | null>(null);
+  const [editingBuzzContent, setEditingBuzzContent] = useState<string>('');
+  const [editingBuzzScore, setEditingBuzzScore] = useState<number | undefined>(undefined);
+
+  const [editingReplyKey, setEditingReplyKey] = useState<string | null>(null);
+  const [editingReplyContent, setEditingReplyContent] = useState<string>('');
+
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+  const [editingReviewScore, setEditingReviewScore] = useState<number>(10);
+  const [editingReviewHeadline, setEditingReviewHeadline] = useState<string>('');
+  const [editingReviewText, setEditingReviewText] = useState<string>('');
 
   // Real-time follow lists for viewed profile (when not own profile)
   const [viewedFollowersIds, setViewedFollowersIds] = useState<string[]>([]);
@@ -1233,7 +1252,7 @@ export const UserPage: React.FC = () => {
                       key={buzz.id}
                       className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-3 hover:border-slate-700 transition-colors"
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <div
                           onClick={() => navigateTo('user-profile', { userId: buzz.author?.id || targetUser.id })}
                           className="flex items-center gap-2.5 cursor-pointer group"
@@ -1248,17 +1267,90 @@ export const UserPage: React.FC = () => {
                             <span className="text-[10px] text-slate-400" title={formatFullDateTime(buzz.createdAt)}>{formatRelativeTime(buzz.createdAt)}</span>
                           </div>
                         </div>
-                        {buzz.skorSotoyMention && (
-                          <div className="bg-black/60 border border-[#FF2E7E]/40 px-2.5 py-1 rounded-xl text-[#FF2E7E] font-black text-xs flex items-center gap-1">
-                            <Star className="w-3 h-3 fill-current" />
-                            <span>{buzz.skorSotoyMention.toFixed(1)}</span>
-                          </div>
-                        )}
+
+                        <div className="flex items-center gap-2">
+                          {buzz.skorSotoyMention && (
+                            <div className="bg-black/60 border border-[#FF2E7E]/40 px-2.5 py-1 rounded-xl text-[#FF2E7E] font-black text-xs flex items-center gap-1">
+                              <Star className="w-3 h-3 fill-current" />
+                              <span>{buzz.skorSotoyMention.toFixed(1)}</span>
+                            </div>
+                          )}
+
+                          {(isOwnProfile || currentUser.id === buzz.author?.id || isAdmin) && (
+                            <div className="flex items-center gap-1 border-l border-slate-800 pl-2">
+                              <button
+                                onClick={() => {
+                                  setEditingBuzzId(buzz.id);
+                                  setEditingBuzzContent(buzz.content);
+                                  setEditingBuzzScore(buzz.skorSotoyMention);
+                                }}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                                title="Edit Buzz"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (window.confirm('Yakin ingin menghapus Buzz ini?')) {
+                                    deleteBuzzPost(buzz.id);
+                                  }
+                                }}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
+                                title="Hapus Buzz"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
-                      <p className="text-slate-200 text-xs sm:text-sm leading-relaxed whitespace-pre-line">
-                        {buzz.content}
-                      </p>
+                      {editingBuzzId === buzz.id ? (
+                        <div className="space-y-3 bg-slate-950 p-3.5 rounded-xl border border-[#FF2E7E]/40">
+                          <textarea
+                            value={editingBuzzContent}
+                            onChange={e => setEditingBuzzContent(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-[#FF2E7E] resize-none"
+                            rows={3}
+                          />
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1">
+                              <Star className="w-3 h-3 text-[#FF2E7E] fill-current" />
+                              <input
+                                type="number"
+                                min="1"
+                                max="10"
+                                step="0.1"
+                                placeholder="Skor"
+                                value={editingBuzzScore !== undefined ? String(editingBuzzScore) : ''}
+                                onChange={e => setEditingBuzzScore(e.target.value ? parseFloat(e.target.value) : undefined)}
+                                className="w-12 bg-transparent text-white text-xs focus:outline-none"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => setEditingBuzzId(null)}
+                                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold"
+                              >
+                                Batal
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  const ok = await editBuzzPost(buzz.id, editingBuzzContent, editingBuzzScore);
+                                  if (ok) setEditingBuzzId(null);
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-[#FF2E7E] hover:bg-[#e0266e] text-white text-xs font-bold"
+                              >
+                                Simpan
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-slate-200 text-xs sm:text-sm leading-relaxed whitespace-pre-line">
+                          {buzz.content}
+                        </p>
+                      )}
 
                       <BuzzImageAttachment src={buzz.image} alt={`Foto postingan ${buzz.author.name}`} />
 
@@ -1392,9 +1484,37 @@ export const UserPage: React.FC = () => {
                             )}
                           </span>
                         </div>
-                        <span className="text-[11px] text-slate-500" title={formatFullDateTime(reply.createdAt)}>
-                          {formatRelativeTime(reply.createdAt)}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] text-slate-500" title={formatFullDateTime(reply.createdAt)}>
+                            {formatRelativeTime(reply.createdAt)}
+                          </span>
+
+                          {(isOwnProfile || currentUser.id === reply.author?.id || isAdmin) && (
+                            <div className="flex items-center gap-1 border-l border-slate-800 pl-2" onClick={e => e.stopPropagation()}>
+                              <button
+                                onClick={() => {
+                                  setEditingReplyKey(`${parentPost.id}_${reply.id}`);
+                                  setEditingReplyContent(reply.content);
+                                }}
+                                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                                title="Edit Balasan"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (window.confirm('Yakin ingin menghapus balasan ini?')) {
+                                    deleteBuzzReply(parentPost.id, reply.id);
+                                  }
+                                }}
+                                className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
+                                title="Hapus Balasan"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* Parent post snippet */}
@@ -1421,9 +1541,37 @@ export const UserPage: React.FC = () => {
                           </div>
                         </div>
 
-                        <p className="text-slate-200 text-xs sm:text-sm leading-relaxed whitespace-pre-line pl-1">
-                          {reply.content}
-                        </p>
+                        {editingReplyKey === `${parentPost.id}_${reply.id}` ? (
+                          <div className="space-y-3 bg-slate-950 p-3.5 rounded-xl border border-[#FF2E7E]/40" onClick={e => e.stopPropagation()}>
+                            <textarea
+                              value={editingReplyContent}
+                              onChange={e => setEditingReplyContent(e.target.value)}
+                              className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-[#FF2E7E] resize-none"
+                              rows={2}
+                            />
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={() => setEditingReplyKey(null)}
+                                className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold"
+                              >
+                                Batal
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  const ok = await editBuzzReply(parentPost.id, reply.id, editingReplyContent);
+                                  if (ok) setEditingReplyKey(null);
+                                }}
+                                className="px-3 py-1 rounded-lg bg-[#FF2E7E] hover:bg-[#e0266e] text-white text-xs font-bold"
+                              >
+                                Simpan
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-slate-200 text-xs sm:text-sm leading-relaxed whitespace-pre-line pl-1">
+                            {reply.content}
+                          </p>
+                        )}
                       </div>
 
                       {/* Reply Footer: Likes count and View thread button */}
@@ -2310,23 +2458,106 @@ export const UserPage: React.FC = () => {
                           </div>
                         </div>
 
-                        <div className="bg-black/60 border border-[#FF2E7E]/40 px-3 py-1.5 rounded-xl text-[#FF2E7E] font-black text-sm flex items-center gap-1.5 self-start sm:self-auto">
-                          <Star className="w-4 h-4 fill-current" />
-                          <span>{rev.score.toFixed(1)}</span>
-                          <span className="text-slate-500 text-xs">/ 10.0</span>
+                        <div className="flex items-center gap-2 self-start sm:self-auto">
+                          <div className="bg-black/60 border border-[#FF2E7E]/40 px-3 py-1.5 rounded-xl text-[#FF2E7E] font-black text-sm flex items-center gap-1.5">
+                            <Star className="w-4 h-4 fill-current" />
+                            <span>{rev.score.toFixed(1)}</span>
+                            <span className="text-slate-500 text-xs">/ 10.0</span>
+                          </div>
+
+                          {(isOwnProfile || currentUser.id === rev.userId || isAdmin) && (
+                            <div className="flex items-center gap-1 border-l border-slate-800 pl-2">
+                              <button
+                                onClick={() => {
+                                  setEditingReviewId(rev.id);
+                                  setEditingReviewScore(rev.score);
+                                  setEditingReviewHeadline(rev.headline || '');
+                                  setEditingReviewText(rev.reviewText || '');
+                                }}
+                                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 font-bold text-xs flex items-center gap-1 transition-colors"
+                                title="Edit Skor & Ulasan"
+                              >
+                                <Edit3 className="w-3 h-3" />
+                                <span>Edit</span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (window.confirm('Yakin ingin menghapus ulasan ini?')) {
+                                    deleteFilmRating(rev.id);
+                                  }
+                                }}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
+                                title="Hapus Ulasan"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
 
-                      <div className="space-y-1 pt-1">
-                        <h5 className="font-display font-bold text-sm text-white">
-                          "{rev.headline}"
-                        </h5>
-                        {Boolean(rev.reviewText && rev.reviewText.trim()) && (
-                          <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
-                            {rev.reviewText}
-                          </p>
-                        )}
-                      </div>
+                      {editingReviewId === rev.id ? (
+                        <div className="space-y-3 bg-slate-950 p-4 rounded-xl border border-[#FF2E7E]/40">
+                          <div className="flex items-center gap-3">
+                            <label className="text-xs font-bold text-slate-300">Skor Sotoy (1-10):</label>
+                            <input
+                              type="number"
+                              min="1"
+                              max="10"
+                              step="0.1"
+                              value={editingReviewScore}
+                              onChange={e => setEditingReviewScore(parseFloat(e.target.value) || 10)}
+                              className="w-20 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-[#FF2E7E]"
+                            />
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="Headline ulasan..."
+                            value={editingReviewHeadline}
+                            onChange={e => setEditingReviewHeadline(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-[#FF2E7E]"
+                          />
+                          <textarea
+                            placeholder="Tulis ulasan jujurmu..."
+                            value={editingReviewText}
+                            onChange={e => setEditingReviewText(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-[#FF2E7E] resize-none"
+                            rows={3}
+                          />
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => setEditingReviewId(null)}
+                              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold"
+                            >
+                              Batal
+                            </button>
+                            <button
+                              onClick={async () => {
+                                await updateFilmRating(rev.id, {
+                                  score: editingReviewScore,
+                                  headline: editingReviewHeadline,
+                                  reviewText: editingReviewText,
+                                });
+                                setEditingReviewId(null);
+                              }}
+                              className="px-3 py-1.5 rounded-lg bg-[#FF2E7E] hover:bg-[#e0266e] text-white text-xs font-bold"
+                            >
+                              Simpan Ulasan
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-1 pt-1">
+                          <h5 className="font-display font-bold text-sm text-white">
+                            "{rev.headline}"
+                          </h5>
+                          {Boolean(rev.reviewText && rev.reviewText.trim()) && (
+                            <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                              {rev.reviewText}
+                            </p>
+                          )}
+                        </div>
+                      )}
 
                       <div className="pt-2.5 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400 flex-wrap gap-2">
                         <span className="flex items-center gap-1 text-[#FF2E7E]">
