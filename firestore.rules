@@ -1,21 +1,3 @@
-/**
- * IMPORTANT MIGRATION NOTE:
- * ========================
- * Hardcoded admin UIDs have been removed from security rules.
- * All role checks now use Firestore user documents only.
- * 
- * Ensure the following user documents have correct 'role' field:
- * - Admin users: role = 'admin'
- * - Writers: role = 'penulis_sotoy'
- * - Critics: role = 'si_paling_sotoy'
- * 
- * Migration checklist:
- * 1. ✅ Update firestore.rules (this file)
- * 2. ⚠️  Verify existing admin/writer/critic user documents in Firestore
- * 3. ⚠️  Deploy rules: firebase deploy --only firestore:rules
- * 4. ⚠️  Test admin access after deployment
- */
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -39,24 +21,32 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-        getUserData().role == 'admin';
+      return isSignedIn() && (
+        // TODO: migrate these hardcoded UIDs to role-based checks only — the users/{uid}.role check below already covers them; remove after verifying those user docs have the correct role field.
+        request.auth.uid == 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' ||
+        request.auth.uid == 'QkNGf1ZfhsMyUEk90a6Iz8ZplZS2' ||
+        request.auth.uid == 'I34eqzOmvsSdS2Rf7jpfxw1ZKeu1' ||
+        (request.auth.token.email == 'eksposurmedia@gmail.com' && request.auth.token.email_verified == true) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'admin')
+      );
     }
 
     function isWriter() {
       return isSignedIn() && (
+        // TODO: migrate these hardcoded UIDs to role-based checks only — the users/{uid}.role check below already covers them; remove after verifying those user docs have the correct role field.
+        request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' ||
+        request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' ||
         isAdmin() ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         getUserData().role in ['penulis_sotoy', 'admin'])
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role in ['penulis_sotoy', 'admin'])
       );
     }
 
     function isCritic() {
       return isSignedIn() && (
+        // TODO: migrate these hardcoded UIDs to role-based checks only — the users/{uid}.role check below already covers them; remove after verifying those user docs have the correct role field.
+        request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' ||
         isAdmin() ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         getUserData().role in ['si_paling_sotoy', 'admin'])
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role in ['si_paling_sotoy', 'admin'])
       );
     }
 

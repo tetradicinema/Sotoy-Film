@@ -1,5 +1,4 @@
 import type { IncomingMessage, ServerResponse } from 'http';
-import { imageProxySchema } from '../src/validation/imageProxyValidation';
 
 const ALLOWED_HOSTS = new Set([
   'firebasestorage.googleapis.com',
@@ -18,17 +17,15 @@ const MAX_REDIRECTS = 3;
  * Validates whether a URL is an allowed HTTPS image URL from our trusted hosts.
  */
 function validateAllowedUrl(rawUrl: string): { valid: boolean; url?: URL; error?: string } {
-  // Use Zod schema validation first
-  const validation = imageProxySchema.safeParse({ url: rawUrl });
-  if (!validation.success) {
-    return { 
-      valid: false, 
-      error: validation.error.errors[0]?.message || 'Invalid URL' 
-    };
-  }
-
   try {
     const parsed = new URL(rawUrl);
+    if (parsed.protocol !== 'https:') {
+      return { valid: false, error: 'Only HTTPS URLs are supported' };
+    }
+    const hostname = parsed.hostname.toLowerCase();
+    if (!ALLOWED_HOSTS.has(hostname)) {
+      return { valid: false, error: `Host "${hostname}" is not in the allowlist` };
+    }
     return { valid: true, url: parsed };
   } catch {
     return { valid: false, error: 'Invalid URL format' };

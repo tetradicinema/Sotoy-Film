@@ -41,5 +41,3 @@ Thumbs.db
 .eslintcache
 .turbo/
 .cache/
-.vercel
-.env*

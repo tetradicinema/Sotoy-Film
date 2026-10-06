@@ -1,6 +1,4 @@
 import type { IncomingMessage, ServerResponse } from 'http';
-import { tmdbRequestSchema } from '../src/validation/tmdbValidation';
-import { formatValidationError } from '../src/validation/commonValidation';
 
 interface TmdbHandlerRequest extends IncomingMessage {
   query?: Record<string, string | string[]>;
@@ -30,46 +28,36 @@ export async function handleTmdbRequest(req: any, res: any) {
   }
 
   // Extract query parameters (supporting both Express and Vercel serverless request shapes)
-  let queryParams: Record<string, string> = {};
-  
+  let action = '';
+  let query = '';
+  let type = 'movie';
+  let id = '';
+  let list = 'popular';
+  let page = '1';
+
   if (req.query && typeof req.query === 'object') {
-    queryParams = {
-      action: String(req.query.action || ''),
-      query: String(req.query.query || ''),
-      type: String(req.query.type || 'movie'),
-      id: String(req.query.id || ''),
-      list: String(req.query.list || 'popular'),
-      page: String(req.query.page || '1'),
-    };
+    action = String(req.query.action || '');
+    query = String(req.query.query || '');
+    type = String(req.query.type || 'movie');
+    id = String(req.query.id || '');
+    list = String(req.query.list || 'popular');
+    page = String(req.query.page || '1');
   } else if (req.url) {
     try {
       const parsedUrl = new URL(req.url, 'http://localhost');
-      queryParams = {
-        action: parsedUrl.searchParams.get('action') || '',
-        query: parsedUrl.searchParams.get('query') || '',
-        type: parsedUrl.searchParams.get('type') || 'movie',
-        id: parsedUrl.searchParams.get('id') || '',
-        list: parsedUrl.searchParams.get('list') || 'popular',
-        page: parsedUrl.searchParams.get('page') || '1',
-      };
+      action = parsedUrl.searchParams.get('action') || '';
+      query = parsedUrl.searchParams.get('query') || '';
+      type = parsedUrl.searchParams.get('type') || 'movie';
+      id = parsedUrl.searchParams.get('id') || '';
+      list = parsedUrl.searchParams.get('list') || 'popular';
+      page = parsedUrl.searchParams.get('page') || '1';
     } catch {
-      return res.status(400).json({ error: 'Invalid request URL', code: 'INVALID_URL' });
+      // ignore
     }
   }
 
-  // Validate request dengan Zod
-  const validation = tmdbRequestSchema.safeParse(queryParams);
-  if (!validation.success) {
-    return res.status(400).json({
-      error: 'Invalid request parameters',
-      code: 'VALIDATION_ERROR',
-      details: formatValidationError(validation.error),
-    });
-  }
-
-  const validatedParams = validation.data;
-  const { action, type } = validatedParams;
   const normalizedType = type === 'tv' ? 'tv' : 'movie';
+  const pageNumber = Math.max(1, Math.min(500, parseInt(page, 10) || 1));
 
   // Determine headers and URL params for TMDB authentication
   // Supports both TMDB v3 API Key and v4 Read Access Token
@@ -83,8 +71,7 @@ export async function handleTmdbRequest(req: any, res: any) {
 
   try {
     if (action === 'search') {
-      const { query } = validatedParams as any;
-      if (!query || !query.trim()) {
+      if (!query.trim()) {
         return res.status(400).json({ error: 'Parameter "query" is required for search action.' });
       }
 
@@ -132,7 +119,6 @@ export async function handleTmdbRequest(req: any, res: any) {
     }
 
     if (action === 'details') {
-      const { id } = validatedParams as any;
       if (!id || isNaN(Number(id))) {
         return res.status(400).json({ error: 'Valid numerical parameter "id" is required for details action.' });
       }
@@ -163,9 +149,6 @@ export async function handleTmdbRequest(req: any, res: any) {
     }
 
     if (action === 'list') {
-      const { list, page } = validatedParams as any;
-      const pageNumber = Math.max(1, Math.min(500, parseInt(page, 10) || 1));
-      
       let endpoint = '';
       const normalizedList = list.toLowerCase().trim();
 

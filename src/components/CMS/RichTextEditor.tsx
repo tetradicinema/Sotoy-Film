@@ -1,5 +1,4 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { sanitizeRichText } from '../../utils/sanitizeHtml';
 import {
   Bold,
   Italic,
@@ -312,7 +311,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           <div
             className="w-full h-full overflow-y-auto p-4 bg-[#171717] text-slate-100 markdown-body prose prose-invert max-w-none text-sm leading-relaxed"
             style={{ height: isFullscreen ? 'calc(100vh - 150px)' : '240px', minHeight: '240px' }}
-            dangerouslySetInnerHTML={{ __html: sanitizeRichText(parseMarkdown(value)) }}
+            dangerouslySetInnerHTML={{ __html: parseMarkdown(value) }}
           />
         )}
       </div>

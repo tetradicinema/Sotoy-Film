@@ -1,70 +1,29 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
-import helmet from "helmet";
-import compression from "compression";
 import { handleTmdbRequest } from "./api/tmdb";
 import { handleImageProxy } from "./api/image-proxy";
 import { isBotUserAgent } from "./src/lib/edge/botDetection";
 import { injectMetaTags, FALLBACK_HTML_TEMPLATE } from "./src/lib/edge/metaInjection";
 import { buildRouteMetadata } from "./src/utils/seoMetadata";
 import { fetchEntityData } from "./src/lib/edge/firestoreRest";
-import { requestLogger } from "./src/middleware/requestLogger";
-import { errorHandler, notFoundHandler } from "./src/middleware/errorHandler";
-import { apiLimiter, tmdbLimiter, imageProxyLimiter } from "./src/middleware/rateLimiter";
-import { optionalAuth } from "./src/middleware/auth";
 
 async function startServer() {
   const app = express();
-  const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+  const PORT = 3000;
 
-  // SECURITY MIDDLEWARE (Applied globally)
-  // 1. Helmet - Security headers
-  app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://www.googletagmanager.com"],
-        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-        imgSrc: ["'self'", "data:", "https:", "http:"],
-        fontSrc: ["'self'", "https://fonts.gstatic.com"],
-        connectSrc: ["'self'", "https://firestore.googleapis.com", "https://firebase.googleapis.com", "https://identitytoolkit.googleapis.com", "https://securetoken.googleapis.com", "https://api.themoviedb.org"],
-        frameSrc: ["'self'", "https://www.youtube.com"],
-        objectSrc: ["'none'"],
-        upgradeInsecureRequests: [],
-      },
-    },
-    crossOriginEmbedderPolicy: false, // Required for some Firebase features
-  }));
-
-  // 2. Compression - Gzip/Brotli
-  app.use(compression());
-
-  // 3. Request logging with correlation ID
-  app.use(requestLogger);
-
-  // 4. JSON body parser
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-  // API ROUTES
-  // Health check (no rate limiting, no auth)
+  // 1. API ROUTES FIRST
   app.get("/api/health", (req, res) => {
-    res.json({ 
-      status: "ok",
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      environment: process.env.NODE_ENV || 'development',
-    });
+    res.json({ status: "ok" });
   });
 
-  // TMDB Proxy - Protected dengan rate limiting dan optional auth
-  app.get("/api/tmdb", tmdbLimiter, optionalAuth, (req, res) => {
+  // TMDB Proxy route for catalog import (mirrors Vercel api/tmdb.ts)
+  app.get("/api/tmdb", (req, res) => {
     return handleTmdbRequest(req, res);
   });
 
-  // Image Proxy - Protected dengan rate limiting
-  app.all("/api/image-proxy", imageProxyLimiter, (req, res) => {
+  // Image Proxy route for canvas rendering without CORS tainting (mirrors Vercel api/image-proxy.ts)
+  app.all("/api/image-proxy", (req, res) => {
     return handleImageProxy(req, res);
   });
 
@@ -229,23 +188,12 @@ async function startServer() {
     });
   }
 
-  // ERROR HANDLING MIDDLEWARE (Must be last)
-  app.use(notFoundHandler);
-  app.use(errorHandler);
-
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`
-╔══════════════════════════════════════════════════════════════╗
-║  🎬 Sotoy Film Server                                        ║
-║  Port: ${PORT.toString().padEnd(51)}║
-║  Environment: ${(process.env.NODE_ENV || 'development').padEnd(45)}║
-║  Started: ${new Date().toISOString().padEnd(47)}║
-╚══════════════════════════════════════════════════════════════╝
-    `);
+    console.log(`Server running on port ${PORT} (NODE_ENV: ${process.env.NODE_ENV})`);
   });
 }
 
 startServer().catch(err => {
-  console.error("❌ Critical error starting server:", err);
+  console.error("Critical error starting server:", err);
   process.exit(1);
 });
