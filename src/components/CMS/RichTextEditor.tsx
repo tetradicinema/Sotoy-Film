@@ -81,6 +81,194 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     return formattedParagraphs.join('\n');
   };
 
+  // Helper to convert rich HTML from clipboard into clean Markdown
+  const convertHtmlToMarkdown = (html: string): string => {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+
+      const processNode = (node: Node): string => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          return node.textContent || '';
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) {
+          return '';
+        }
+
+        const el = node as HTMLElement;
+        const tag = el.tagName.toLowerCase();
+
+        // Skip non-content tags
+        if (['script', 'style', 'meta', 'link', 'head', 'svg', 'noscript'].includes(tag)) {
+          return '';
+        }
+
+        let inner = '';
+        node.childNodes.forEach((child) => {
+          inner += processNode(child);
+        });
+
+        switch (tag) {
+          case 'a': {
+            const href = el.getAttribute('href');
+            const cleanText = inner.replace(/\s+/g, ' ').trim();
+            if (href && cleanText && !href.startsWith('javascript:')) {
+              return `[${cleanText}](${href})`;
+            }
+            return inner;
+          }
+          case 'b':
+          case 'strong': {
+            const trimmed = inner.trim();
+            return trimmed ? `**${trimmed}**` : '';
+          }
+          case 'i':
+          case 'em': {
+            const trimmed = inner.trim();
+            return trimmed ? `*${trimmed}*` : '';
+          }
+          case 'h1': {
+            const trimmed = inner.trim();
+            return trimmed ? `\n\n# ${trimmed}\n\n` : '';
+          }
+          case 'h2': {
+            const trimmed = inner.trim();
+            return trimmed ? `\n\n## ${trimmed}\n\n` : '';
+          }
+          case 'h3':
+          case 'h4':
+          case 'h5':
+          case 'h6': {
+            const trimmed = inner.trim();
+            return trimmed ? `\n\n### ${trimmed}\n\n` : '';
+          }
+          case 'li': {
+            const trimmed = inner.trim();
+            return trimmed ? `\n- ${trimmed}` : '';
+          }
+          case 'ul':
+          case 'ol': {
+            return `\n${inner}\n`;
+          }
+          case 'p': {
+            const trimmed = inner.trim();
+            return trimmed ? `\n\n${trimmed}\n\n` : '';
+          }
+          case 'blockquote': {
+            const lines = inner.trim().split('\n');
+            return `\n\n${lines.map(l => `> ${l}`).join('\n')}\n\n`;
+          }
+          case 'code': {
+            return `\`${inner}\``;
+          }
+          case 'pre': {
+            return `\n\`\`\`\n${inner.trim()}\n\`\`\`\n`;
+          }
+          case 'br': {
+            return '\n';
+          }
+          case 'div':
+          case 'section':
+          case 'article': {
+            return inner ? `\n${inner}\n` : '';
+          }
+          default:
+            return inner;
+        }
+      };
+
+      const result = processNode(doc.body);
+      return result
+        .replace(/\r\n/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    } catch (err) {
+      console.warn('Failed to parse rich HTML on paste:', err);
+      return '';
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const html = e.clipboardData.getData('text/html');
+    const plainText = e.clipboardData.getData('text/plain');
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = textarea.value.substring(start, end);
+
+    // 1. If text is selected in editor and user pastes a URL, auto-wrap into [selectedText](url)
+    const isUrl = /^https?:\/\/[^\s]+$/i.test(plainText.trim());
+    if (selected.trim() && isUrl) {
+      e.preventDefault();
+      const replacement = `[${selected}](${plainText.trim()})`;
+      const newValue = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
+      onChange(newValue);
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + replacement.length, start + replacement.length);
+      }, 20);
+      return;
+    }
+
+    // 2. If clipboard contains rich HTML (e.g. copied from website, docs, or word with links)
+    if (html && (
+      html.includes('<a ') ||
+      html.includes('<a\n') ||
+      html.includes('<strong') ||
+      html.includes('<b>') ||
+      html.includes('<h1') ||
+      html.includes('<h2') ||
+      html.includes('<h3') ||
+      html.includes('<li')
+    )) {
+      const markdown = convertHtmlToMarkdown(html);
+      if (markdown && markdown.length > 0) {
+        e.preventDefault();
+        const newValue = textarea.value.substring(0, start) + markdown + textarea.value.substring(end);
+        onChange(newValue);
+        setTimeout(() => {
+          textarea.focus();
+          textarea.setSelectionRange(start + markdown.length, start + markdown.length);
+        }, 20);
+        return;
+      }
+    }
+  };
+
+  const handleInsertLink = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selectedText = text.substring(start, end);
+
+    if (selectedText) {
+      const replacement = `[${selectedText}](https://)`;
+      const newValue = text.substring(0, start) + replacement + text.substring(end);
+      onChange(newValue);
+      setTimeout(() => {
+        textarea.focus();
+        const urlStart = start + selectedText.length + 3;
+        const urlEnd = urlStart + 8;
+        textarea.setSelectionRange(urlStart, urlEnd);
+      }, 30);
+    } else {
+      const replacement = '[teks tautan](https://)';
+      const newValue = text.substring(0, start) + replacement + text.substring(end);
+      onChange(newValue);
+      setTimeout(() => {
+        textarea.focus();
+        const urlStart = start + 14;
+        const urlEnd = urlStart + 8;
+        textarea.setSelectionRange(urlStart, urlEnd);
+      }, 30);
+    }
+  };
+
   const insertFormatting = (prefix: string, suffix: string = '') => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -207,10 +395,10 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => insertFormatting('[', '](url)')}
+            onClick={handleInsertLink}
             disabled={activeTab === 'preview'}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
-            title="Insert Link"
+            title="Sisipkan Tautan / Link ([teks](url))"
           >
             <Link className="w-4 h-4" />
           </button>
@@ -303,6 +491,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             ref={textareaRef}
             value={value}
             onChange={(e) => onChange(e.target.value)}
+            onPaste={handlePaste}
             placeholder={placeholder}
             className="w-full h-full min-h-[220px] bg-[#171717] text-slate-100 p-4 font-sans text-sm placeholder-slate-500 focus:outline-none resize-y"
             style={{ minHeight: isFullscreen ? 'calc(100vh - 150px)' : '240px' }}

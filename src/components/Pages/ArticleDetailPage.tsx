@@ -538,9 +538,32 @@ export const ArticleDetailPage: React.FC = () => {
               }
 
               const renderInline = (str: string) => {
-                if (!str.includes('**')) return str;
-                const parts = str.split(/(\*\*.*?\*\*)/g);
+                if (!str) return null;
+                const tokenRegex = /(\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*|\*[^*]+\*)/g;
+                const parts = str.split(tokenRegex);
+
                 return parts.map((part, i) => {
+                  if (!part) return null;
+
+                  // Link: [text](url)
+                  const linkMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+                  if (linkMatch) {
+                    const [, text, url] = linkMatch;
+                    return (
+                      <a
+                        key={i}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#FF2E7E] hover:underline font-semibold"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {text}
+                      </a>
+                    );
+                  }
+
+                  // Bold: **text**
                   if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
                     return (
                       <strong key={i} className="font-bold text-white">
@@ -548,6 +571,16 @@ export const ArticleDetailPage: React.FC = () => {
                       </strong>
                     );
                   }
+
+                  // Italic: *text*
+                  if (part.startsWith('*') && part.endsWith('*') && part.length >= 2 && !part.startsWith('**')) {
+                    return (
+                      <em key={i} className="italic text-slate-200">
+                        {part.slice(1, -1)}
+                      </em>
+                    );
+                  }
+
                   return part;
                 });
               };
