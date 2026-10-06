@@ -469,10 +469,16 @@ export const ArticleDetailPage: React.FC = () => {
           {/* Article Main Body Content */}
           <div className="prose prose-invert max-w-none text-slate-200 text-sm sm:text-base leading-relaxed space-y-4 pt-4">
             {(() => {
+              interface TableData {
+                headers: string[];
+                rows: string[][];
+              }
+
               interface ArticleContentBlock {
-                type: 'h1' | 'h2' | 'h3' | 'callout' | 'list' | 'p';
+                type: 'h1' | 'h2' | 'h3' | 'callout' | 'list' | 'table' | 'p';
                 text?: string;
                 items?: string[];
+                tableData?: TableData;
               }
 
               const blocks: ArticleContentBlock[] = [];
@@ -527,6 +533,51 @@ export const ArticleDetailPage: React.FC = () => {
                     blocks.push({
                       type: 'list',
                       items: bulletItems,
+                    });
+                  }
+                } else if (trimmed.startsWith('|') && trimmed.includes('|')) {
+                  const lines = trimmed.split('\n').filter(l => l.trim().startsWith('|'));
+                  if (lines.length >= 2) {
+                    const headers: string[] = [];
+                    const rows: string[][] = [];
+                    let isFirstRow = true;
+
+                    lines.forEach((line) => {
+                      const trimmedLine = line.trim();
+                      if (/^\|[\s\-:]+(\|[\s\-:]+)+\|?$/.test(trimmedLine)) {
+                        isFirstRow = false;
+                        return;
+                      }
+
+                      const cells = trimmedLine
+                        .replace(/^\|/, '')
+                        .replace(/\|$/, '')
+                        .split('|')
+                        .map(c => c.trim());
+
+                      if (isFirstRow) {
+                        headers.push(...cells);
+                        isFirstRow = false;
+                      } else {
+                        rows.push(cells);
+                      }
+                    });
+
+                    if (headers.length > 0) {
+                      blocks.push({
+                        type: 'table',
+                        tableData: { headers, rows },
+                      });
+                    } else {
+                      blocks.push({
+                        type: 'p',
+                        text: rawPara,
+                      });
+                    }
+                  } else {
+                    blocks.push({
+                      type: 'p',
+                      text: rawPara,
                     });
                   }
                 } else {
@@ -623,6 +674,46 @@ export const ArticleDetailPage: React.FC = () => {
                         </li>
                       ))}
                     </ul>
+                  );
+                }
+                if (block.type === 'table' && block.tableData) {
+                  const { headers, rows } = block.tableData;
+                  return (
+                    <div key={idx} className="my-6 overflow-x-auto rounded-2xl border border-slate-800 bg-neutral-950/80 shadow-xl">
+                      <table className="w-full border-collapse text-left text-xs sm:text-sm">
+                        {headers.length > 0 && (
+                          <thead>
+                            <tr className="bg-neutral-900 border-b border-slate-800">
+                              {headers.map((h, hIdx) => (
+                                <th
+                                  key={hIdx}
+                                  className="px-4 py-3 font-display font-black text-white uppercase tracking-wider text-[11px] sm:text-xs"
+                                >
+                                  {renderInline(h)}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                        )}
+                        <tbody className="divide-y divide-slate-800/60">
+                          {rows.map((row, rIdx) => (
+                            <tr
+                              key={rIdx}
+                              className="hover:bg-white/[0.02] transition-colors"
+                            >
+                              {row.map((cell, cIdx) => (
+                                <td
+                                  key={cIdx}
+                                  className="px-4 py-3 text-slate-300 leading-relaxed"
+                                >
+                                  {renderInline(cell)}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   );
                 }
                 return (
