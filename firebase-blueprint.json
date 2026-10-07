@@ -313,9 +313,23 @@
         "createdAt": { "type": "string" }
       },
       "required": ["id", "articleId", "userId", "userName", "text", "createdAt"]
+    },
+    "HomepageSectionsConfig": {
+      "title": "HomepageSectionsConfig",
+      "description": "Configuration for homepage content sections and their source rules",
+      "type": "object",
+      "properties": {
+        "sections": { "type": "object" },
+        "updatedAt": { "type": "string" },
+        "updatedBy": { "type": "string" }
+      }
     }
   },
   "firestore": {
+    "/siteConfig/{configId}": {
+      "schema": "HomepageSectionsConfig",
+      "description": "Site-wide configuration documents including homepage sections"
+    },
     "/reports/{reportId}": {
       "schema": "Report",
       "description": "Community moderation reports"

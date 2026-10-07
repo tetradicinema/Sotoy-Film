@@ -72,7 +72,8 @@ export const ArticleDetailPage: React.FC = () => {
   const article = (slug ? (articles.find(a => (a.slug && a.slug === slug) || a.id === slug || slugify(a.title) === slug) || INITIAL_ARTICLES.find(a => (a.slug && a.slug === slug) || a.id === slug || slugify(a.title) === slug)) : null)
     || articles.find(a => a.id === selectedArticleId)
     || INITIAL_ARTICLES.find(a => a.id === selectedArticleId)
-    || articles[0];
+    || articles[0]
+    || INITIAL_ARTICLES[0];
   const author = useDynamicArticleAuthor(article?.authorId || article?.author?.id, article?.author);
   const [commentText, setCommentText] = useState('');
   const [rateModalOpen, setRateModalOpen] = useState(false);

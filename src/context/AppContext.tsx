@@ -27,6 +27,9 @@ import {
   AuditLogActionType,
   UserCollection,
   CollectionItem,
+  HomepageSectionKey,
+  SectionConfig,
+  HomepageSectionsConfig,
 } from '../types';
 import {
   DEFAULT_FALLBACK_AUTHOR,
@@ -265,6 +268,8 @@ interface AppContextType {
   getRatingsForUser: (userId: string) => Promise<UserRating[]>;
   refreshFilms: () => Promise<void>;
   refreshArticles: () => Promise<void>;
+  homepageSectionsConfig: HomepageSectionsConfig | null;
+  updateHomepageSectionConfig: (sectionKey: HomepageSectionKey, config: Partial<SectionConfig>) => Promise<void>;
   criticSubmissions: CriticSubmission[];
   addCriticSubmission: (sub: Omit<CriticSubmission, 'id' | 'status' | 'date'>) => Promise<boolean>;
   updateCriticSubmissionStatus: (id: string, status: 'approved' | 'rejected') => Promise<void>;
@@ -518,6 +523,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(INITIAL_AUDIT_LOGS);
   const [userProfilesCache, setUserProfilesCache] = useState<Record<string, any>>({});
+  const [homepageSectionsConfig, setHomepageSectionsConfig] = useState<HomepageSectionsConfig | null>(null);
 
   const cacheUserProfile = useCallback((userId: string, profile: any) => {
     setUserProfilesCache(prev => {
@@ -1154,6 +1160,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubReports();
     };
   }, [isAdmin, isWriter, isLoggedIn, currentUser?.id]);
+
+  // Homepage Sections Real-time Config Subscription (siteConfig/homepageSections)
+  useEffect(() => {
+    const configDocRef = doc(db, 'siteConfig', 'homepageSections');
+    const unsub = onSnapshot(
+      configDocRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          setHomepageSectionsConfig(docSnap.data() as HomepageSectionsConfig);
+        } else {
+          setHomepageSectionsConfig(null);
+        }
+      },
+      (err) => {
+        console.warn('[Firestore] homepageSections subscription error:', err?.message || err);
+      }
+    );
+    return () => unsub();
+  }, []);
+
+  const updateHomepageSectionConfig = useCallback(async (
+    sectionKey: HomepageSectionKey,
+    config: Partial<SectionConfig>
+  ) => {
+    if (!isAdmin && currentUser.role !== 'admin') {
+      showToast('Hanya administrator yang memiliki izin untuk mengubah konfigurasi seksi beranda.', 'error');
+      throw new Error('Unauthorized: Admin access required');
+    }
+    const configDocRef = doc(db, 'siteConfig', 'homepageSections');
+    const now = new Date().toISOString();
+    const existingSection = homepageSectionsConfig?.sections?.[sectionKey] || { sourceType: 'auto' };
+    const mergedSection = { ...existingSection, ...config };
+
+    await setDoc(
+      configDocRef,
+      {
+        sections: {
+          [sectionKey]: mergedSection,
+        },
+        updatedAt: now,
+        updatedBy: currentUser.id || currentUser.email || 'admin',
+      },
+      { merge: true }
+    );
+
+    showToast(`Konfigurasi seksi "${sectionKey}" berhasil disimpan.`, 'success');
+  }, [isAdmin, currentUser, homepageSectionsConfig, showToast]);
 
   // Merge private emails onto users for admin viewer, and currentUser's auth email for currentUser
   const resolvedAllUsers = useMemo(() => {
@@ -5550,6 +5603,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         getRatingsForUser,
         refreshFilms,
         refreshArticles,
+        homepageSectionsConfig,
+        updateHomepageSectionConfig,
         criticSubmissions,
         addCriticSubmission,
         updateCriticSubmissionStatus,

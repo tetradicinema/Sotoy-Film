@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,7 +13,8 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
-import { GEAR_ADDICT_ITEMS } from '../../data/mockData';
+import { GEAR_ADDICT_ITEMS, INITIAL_ARTICLES } from '../../data/mockData';
+import { resolveConfigFilms, resolveConfigArticles } from '../../utils/homepageConfigHelper';
 
 const HeroActiveAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }> = ({ authorId, defaultAuthor }) => {
   const author = useDynamicArticleAuthor(authorId, defaultAuthor);
@@ -57,29 +58,46 @@ const HeroActiveAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }
 };
 
 export const HeroSection: React.FC = () => {
-  const { publishedArticles, films, navigateTo, currentUser, isLoggedIn } = useApp();
+  const { publishedArticles, films, navigateTo, currentUser, isLoggedIn, homepageSectionsConfig } = useApp();
+
+  // Ensure article pool is never completely empty
+  const articlesPool = publishedArticles.length > 0 ? publishedArticles : INITIAL_ARTICLES;
 
   // Trending articles for the main hero slider (sorted by popularity / heroSlider flag)
-  const trendingArticles = [...publishedArticles]
-    .sort((a, b) => {
-      if (a.heroSlider && !b.heroSlider) return -1;
-      if (!a.heroSlider && b.heroSlider) return 1;
-      return (b.likes || 0) - (a.likes || 0);
-    })
-    .slice(0, 6);
+  const trendingArticles = useMemo(() => {
+    return [...articlesPool]
+      .sort((a, b) => {
+        if (a.heroSlider && !b.heroSlider) return -1;
+        if (!a.heroSlider && b.heroSlider) return 1;
+        return (b.likes || 0) - (a.likes || 0);
+      })
+      .slice(0, 6);
+  }, [articlesPool]);
 
-  // Recent articles for the right sidebar tab
-  const recentArticles = [...publishedArticles]
-    .sort((a, b) => {
-      const timeA = a.publishedAtTimestamp
-        ? new Date(a.publishedAtTimestamp).getTime()
-        : new Date(a.publishedAt || 0).getTime();
-      const timeB = b.publishedAtTimestamp
-        ? new Date(b.publishedAtTimestamp).getTime()
-        : new Date(b.publishedAt || 0).getTime();
-      return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
-    })
-    .slice(0, 5);
+  // Default recent articles for the right sidebar tab
+  const defaultRecentArticles = useMemo(() => {
+    return [...articlesPool]
+      .sort((a, b) => {
+        const timeA = a.publishedAtTimestamp
+          ? new Date(a.publishedAtTimestamp).getTime()
+          : new Date(a.publishedAt || 0).getTime();
+        const timeB = b.publishedAtTimestamp
+          ? new Date(b.publishedAtTimestamp).getTime()
+          : new Date(b.publishedAt || 0).getTime();
+        return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
+      })
+      .slice(0, 5);
+  }, [articlesPool]);
+
+  // Resolved recent articles using shared homepage config or fallback
+  const recentArticles = useMemo(() => {
+    const resolved = resolveConfigArticles(
+      articlesPool,
+      homepageSectionsConfig?.sections?.recent,
+      defaultRecentArticles
+    );
+    return resolved.length > 0 ? resolved : articlesPool.slice(0, 5);
+  }, [articlesPool, homepageSectionsConfig?.sections?.recent, defaultRecentArticles]);
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [activeTab, setActiveTab] = useState<'trending' | 'to-watch' | 'gear-addict'>('trending');
@@ -93,29 +111,8 @@ export const HeroSection: React.FC = () => {
     return () => clearInterval(interval);
   }, [trendingArticles.length]);
 
-  const activeArticle = trendingArticles[currentSlide] || publishedArticles[0];
-
-  if (publishedArticles.length === 0 || !activeArticle) {
-    return (
-      <section id="home-hero-section" className="relative pt-6 pb-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-            <div className="lg:col-span-8">
-              <div className="animate-pulse w-full min-h-[480px] rounded-3xl border border-white/[0.06] bg-[#171717] flex items-center justify-center">
-                <div className="text-center space-y-3">
-                  <div className="w-8 h-8 border-2 border-[#FF2E7E] border-t-transparent rounded-full animate-spin mx-auto" />
-                  <span className="text-slate-400 text-xs font-medium">Memuat Ulasan Headline...</span>
-                </div>
-              </div>
-            </div>
-            <div className="lg:col-span-4">
-              <div className="animate-pulse w-full h-full min-h-[480px] rounded-3xl border border-white/[0.06] bg-[#171717]" />
-            </div>
-          </div>
-        </div>
-      </section>
-    );
-  }
+  const safeSlide = trendingArticles.length > 0 ? currentSlide % trendingArticles.length : 0;
+  const activeArticle = trendingArticles[safeSlide] || articlesPool[0] || INITIAL_ARTICLES[0];
 
   const handlePrevSlide = () => {
     setCurrentSlide(prev => (prev === 0 ? trendingArticles.length - 1 : prev - 1));
@@ -125,8 +122,19 @@ export const HeroSection: React.FC = () => {
     setCurrentSlide(prev => (prev + 1) % trendingArticles.length);
   };
 
-  // To watch recommendations
-  const toWatchFilms = films.filter(f => f.featuredRecommendation || f.skorSotoy >= 4.5).slice(0, 5);
+  // Default to watch recommendations
+  const defaultToWatchFilms = useMemo(() => {
+    return films.filter(f => f.featuredRecommendation || f.skorSotoy >= 4.5).slice(0, 5);
+  }, [films]);
+
+  // Resolved to watch films using shared homepage config or fallback
+  const toWatchFilms = useMemo(() => {
+    return resolveConfigFilms(
+      films,
+      homepageSectionsConfig?.sections?.hero_to_watch,
+      defaultToWatchFilms
+    );
+  }, [films, homepageSectionsConfig?.sections?.hero_to_watch, defaultToWatchFilms]);
 
   return (
     <section id="home-hero-section" className="relative pt-4 sm:pt-6 pb-6">
@@ -179,8 +187,8 @@ export const HeroSection: React.FC = () => {
             <div className="relative w-full flex-1 min-h-[460px] sm:min-h-[540px] rounded-3xl overflow-hidden border border-white/[0.08] shadow-2xl bg-[#0A0A0A] group">
               {/* Background Cover Image with cinematic pan/zoom */}
               <img
-                src={activeArticle.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80'}
-                alt={activeArticle.title}
+                src={activeArticle?.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80'}
+                alt={activeArticle?.title || 'Hero Article'}
                 className="absolute inset-0 w-full h-full object-cover object-center transform transition-transform duration-1000 scale-100 group-hover:scale-105"
               />
 
@@ -196,15 +204,15 @@ export const HeroSection: React.FC = () => {
                     <span>Trending</span>
                   </span>
                   <span className="text-[#FF2E7E] font-bold uppercase tracking-wider text-[11px]">
-                    {activeArticle.category}
+                    {activeArticle?.category || 'Cinematic'}
                   </span>
                   <span className="text-slate-500" aria-hidden="true">·</span>
-                  <span className="capitalize">{activeArticle.subCategory}</span>
+                  <span className="capitalize">{activeArticle?.subCategory || 'Review'}</span>
                 </div>
 
                 <div className="flex items-center gap-1.5 text-xs text-slate-300/90 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 font-mono tabular-nums">
                   <span className="text-rose-400">♥</span>
-                  <span>{activeArticle.likes.toLocaleString()}</span>
+                  <span>{(activeArticle?.likes || 0).toLocaleString()}</span>
                 </div>
               </div>
 
@@ -212,34 +220,34 @@ export const HeroSection: React.FC = () => {
               <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-8 z-10 flex flex-col justify-end">
                 {/* Author attribution & Read time */}
                 <div className="flex items-center flex-wrap gap-2.5 mb-3 text-xs text-slate-300">
-                  <HeroActiveAuthorBadge authorId={activeArticle.authorId} defaultAuthor={activeArticle.author} />
+                  <HeroActiveAuthorBadge authorId={activeArticle?.authorId} defaultAuthor={activeArticle?.author} />
                   <span className="text-slate-500" aria-hidden="true">·</span>
                   <span className="flex items-center gap-1 text-slate-400 text-xs">
                     <Clock className="w-3.5 h-3.5 text-slate-500" />
-                    <span>{activeArticle.readTime}</span>
+                    <span>{activeArticle?.readTime || '5 mnt'}</span>
                   </span>
                   <span className="text-slate-500" aria-hidden="true">·</span>
-                  <span className="text-slate-400 text-xs">{activeArticle.publishedAt}</span>
+                  <span className="text-slate-400 text-xs">{activeArticle?.publishedAt || 'Terkini'}</span>
                 </div>
 
                 {/* Primary Headline */}
                 <h1
-                  onClick={() => navigateTo('article-detail', { articleId: activeArticle.id })}
+                  onClick={() => activeArticle?.id && navigateTo('article-detail', { articleId: activeArticle.id })}
                   className="font-display font-black text-2xl sm:text-3xl md:text-4xl text-white leading-tight mb-3 cursor-pointer hover:text-white transition-colors line-clamp-3 text-balance"
                 >
-                  {activeArticle.title}
+                  {activeArticle?.title}
                 </h1>
 
                 {/* Excerpt */}
                 <p className="text-slate-300 text-xs sm:text-sm line-clamp-2 max-w-2xl mb-6 leading-relaxed">
-                  {activeArticle.excerpt}
+                  {activeArticle?.excerpt}
                 </p>
 
                 {/* Footer Controls & Slider Navigation */}
                 <div className="flex items-center justify-between gap-4 pt-4 border-t border-white/[0.08]">
                   <button
                     id="hero-read-article-btn"
-                    onClick={() => navigateTo('article-detail', { articleId: activeArticle.id })}
+                    onClick={() => activeArticle?.id && navigateTo('article-detail', { articleId: activeArticle.id })}
                     className="bg-[#FF2E7E] hover:bg-[#e0266e] text-white font-semibold text-xs sm:text-sm px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-[#FF2E7E]/25"
                   >
                     <span>Baca Ulasan Lengkap</span>

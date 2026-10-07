@@ -459,4 +459,37 @@ export interface AuditLog {
   timestamp: string;
 }
 
+// -------------------------------------------------------------
+// HOMEPAGE SECTIONS ADMIN CONFIG DATA MODEL
+// -------------------------------------------------------------
+
+export type HomepageSectionKey =
+  | 'hero_to_watch'
+  | 'recent'
+  | 'gear'
+  | 'movie_list'
+  | 'series_list'
+  | 'anime_list'
+  | 'cinema_gear_articles'
+  | 'reviews_movie'
+  | 'reviews_series'
+  | 'anime_news'
+  | 'film_studies';
+
+export interface SectionConfig {
+  title?: string;
+  sourceType: 'auto' | 'manual';
+  category?: MainCategory | 'movie' | 'series' | 'anime';
+  tag?: string;
+  sortBy?: 'newest' | 'rating' | 'views';
+  limit?: number;
+  itemIds?: string[];
+}
+
+export interface HomepageSectionsConfig {
+  sections?: Partial<Record<HomepageSectionKey, SectionConfig>>;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
 

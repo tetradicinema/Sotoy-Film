@@ -533,5 +533,10 @@ service cloud.firestore {
       allow create: if isSignedIn() && (isAdmin() || isWriter());
       allow update, delete: if isAdmin();
     }
+
+    match /siteConfig/{configId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }

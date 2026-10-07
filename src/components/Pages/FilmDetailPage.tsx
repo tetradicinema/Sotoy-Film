@@ -128,7 +128,8 @@ export const FilmDetailPage: React.FC = () => {
   const film: FilmItem = (slug ? (films.find(f => (f.slug && f.slug === slug) || slugify(f.title) === slug || f.id === slug) || INITIAL_FILMS.find(f => (f.slug && f.slug === slug) || slugify(f.title) === slug || f.id === slug)) : null)
     || films.find(f => f.id === selectedFilmId)
     || INITIAL_FILMS.find(f => f.id === selectedFilmId)
-    || films[0];
+    || films[0]
+    || INITIAL_FILMS[0];
 
   // TMDB live cast & crew sync
   const [liveCredits, setLiveCredits] = useState<{ cast: CastMember[]; crew: CrewMember[] }>({
