@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 import { handleTmdbRequest } from "./api/tmdb";
 import { handleImageProxy } from "./api/image-proxy";
+import { handleSitemapRequest } from "./api/sitemap";
 import { isBotUserAgent } from "./src/lib/edge/botDetection";
 import { injectMetaTags, FALLBACK_HTML_TEMPLATE } from "./src/lib/edge/metaInjection";
 import { buildRouteMetadata } from "./src/utils/seoMetadata";
@@ -29,16 +30,11 @@ async function startServer() {
 
   // Explicit XML Sitemap & robots.txt routes with correct MIME types
   app.get("/sitemap.xml", (req, res) => {
-    const candidatePaths = [
-      path.join(process.cwd(), "dist", "sitemap.xml"),
-      path.join(process.cwd(), "public", "sitemap.xml"),
-    ];
-    for (const p of candidatePaths) {
-      if (fs.existsSync(p)) {
-        return res.status(200).type("application/xml; charset=utf-8").sendFile(p);
-      }
-    }
-    return res.status(404).type("text/plain").send("sitemap.xml not found");
+    return handleSitemapRequest(req, res);
+  });
+
+  app.get("/api/sitemap", (req, res) => {
+    return handleSitemapRequest(req, res);
   });
 
   app.get("/robots.txt", (req, res) => {
