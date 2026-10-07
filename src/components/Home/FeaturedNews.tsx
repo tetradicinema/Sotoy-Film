@@ -1,5 +1,5 @@
-import React from 'react';
-import { Clock, ArrowUpRight, Flame, MessageCircle, Eye } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Clock, ArrowUpRight, Eye } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { ArticleCardSkeleton } from '../Skeletons';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
@@ -17,53 +17,50 @@ const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo
     <article
       id={`featured-news-card-${article.id}`}
       onClick={() => navigateTo('article-detail', { articleId: article.id })}
-      className="bg-[#171717] border border-white/[0.08] hover:border-white/20 rounded-3xl overflow-hidden group transition-all duration-300 flex flex-col cursor-pointer shadow-lg hover:shadow-2xl hover:shadow-black/50"
+      className="bg-[#171717] border border-white/[0.08] hover:border-white/20 rounded-2xl overflow-hidden group transition-all duration-300 flex flex-col cursor-pointer shadow-md hover:shadow-xl hover:shadow-black/50"
     >
       {/* Editorial Card Cover Image */}
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-900">
         <img
-          src={article.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80'}
+          src={article.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=800&q=80'}
           alt={article.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#171717] via-transparent to-transparent opacity-60" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#171717] via-transparent to-transparent opacity-50" />
       </div>
 
       {/* Editorial Card Body */}
-      <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between">
+      <div className="p-3.5 sm:p-4 flex-1 flex flex-col justify-between min-w-0">
         <div>
-          {/* Clean Unboxed Kicker Metadata */}
-          <div className="flex items-center gap-2 text-xs text-slate-400 mb-2.5">
-            <span className="text-[#FF2E7E] font-semibold uppercase tracking-wider text-[11px]">
+          {/* Metadata */}
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mb-1.5">
+            <span className="text-[#FF2E7E] font-semibold uppercase tracking-wider text-[10px] truncate max-w-[80px]">
               {article.category}
             </span>
             <span className="text-slate-600" aria-hidden="true">·</span>
-            <span className="capitalize">{article.subCategory}</span>
-            <span className="text-slate-600" aria-hidden="true">·</span>
-            <span className="flex items-center gap-1 text-[11px]">
-              <Clock className="w-3 h-3 text-slate-500" />
+            <span className="flex items-center gap-1 text-[10px]">
+              <Clock className="w-2.5 h-2.5 text-slate-500" />
               <span>{article.readTime}</span>
             </span>
           </div>
 
           {/* Card Title */}
-          <h3 className="font-display font-bold text-base sm:text-lg text-white group-hover:text-white transition-colors line-clamp-2 leading-snug mb-2.5">
+          <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-white transition-colors line-clamp-2 leading-snug mb-1.5">
             {article.title}
           </h3>
 
           {/* Excerpt */}
-          <p className="text-slate-400 text-xs sm:text-[13px] line-clamp-2 leading-relaxed mb-4">
+          <p className="text-slate-400 text-[11px] line-clamp-2 leading-relaxed mb-3">
             {article.excerpt}
           </p>
         </div>
 
-        {/* Card Footer: Attributable Author & Engagement */}
-        <div className="pt-4 border-t border-white/[0.08] flex items-center justify-between text-xs text-slate-400">
-          {/* Author Block */}
+        {/* Card Footer */}
+        <div className="pt-2.5 border-t border-white/[0.06] flex items-center justify-between text-[11px] text-slate-400">
           {author.loading ? (
-            <div className="flex items-center gap-2 animate-pulse">
-              <div className="w-6 h-6 rounded-full bg-slate-800" />
-              <div className="h-3 w-20 bg-slate-800 rounded" />
+            <div className="flex items-center gap-1.5 animate-pulse">
+              <div className="w-5 h-5 rounded-full bg-slate-800" />
+              <div className="h-2.5 w-14 bg-slate-800 rounded" />
             </div>
           ) : (
             <div
@@ -71,28 +68,24 @@ const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo
                 e.stopPropagation();
                 navigateTo('user-profile', { userId: author.id });
               }}
-              className="flex items-center gap-2 group/author cursor-pointer hover:text-white transition-colors"
+              className="flex items-center gap-1.5 group/author cursor-pointer hover:text-white transition-colors"
               title={`Kunjungi profil ${author.displayName || author.name}`}
             >
               <img
                 src={author.avatarURL || author.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}
                 alt={author.displayName || author.name}
-                className="w-6 h-6 rounded-full object-cover ring-1 ring-white/10 group-hover/author:ring-[#FF2E7E] transition-all"
+                className="w-5 h-5 rounded-full object-cover ring-1 ring-white/10 group-hover/author:ring-[#FF2E7E] transition-all"
               />
-              <span className="text-slate-300 font-medium text-xs group-hover/author:text-white transition-colors truncate max-w-[120px]">
+              <span className="text-slate-300 font-medium text-[11px] group-hover/author:text-white transition-colors truncate max-w-[85px]">
                 {author.displayName || author.name}
               </span>
             </div>
           )}
 
-          {/* Read affordance */}
-          <div className="flex items-center gap-3 font-mono tabular-nums text-[11px] text-slate-400">
-            <span className="flex items-center gap-1">
-              <Eye className="w-3.5 h-3.5 text-slate-500" />
+          <div className="flex items-center gap-2 font-mono tabular-nums text-[10px] text-slate-400 shrink-0">
+            <span className="flex items-center gap-0.5">
+              <Eye className="w-3 h-3 text-slate-500" />
               <span>{article.views.toLocaleString()}</span>
-            </span>
-            <span className="text-[#FF2E7E] font-sans font-semibold group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
-              Baca →
             </span>
           </div>
         </div>
@@ -104,14 +97,26 @@ const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo
 export const FeaturedNews: React.FC = () => {
   const { publishedArticles, isLoadingArticles, navigateTo } = useApp();
 
-  // Pick articles with featured: true that are not heroSlider
-  const featuredArticles = publishedArticles.filter(a => a.featured && !a.heroSlider).slice(0, 3);
+  // Pick 5 featured/top articles
+  const featuredArticles = useMemo(() => {
+    const featured = publishedArticles.filter(a => a.featured && !a.heroSlider);
+    if (featured.length >= 5) return featured.slice(0, 5);
+    const fallback = publishedArticles.filter(a => !a.heroSlider);
+    const combined = [...featured];
+    for (const art of fallback) {
+      if (combined.length >= 5) break;
+      if (!combined.some(a => a.id === art.id)) {
+        combined.push(art);
+      }
+    }
+    return combined.slice(0, 5);
+  }, [publishedArticles]);
 
   return (
     <section id="featured-news-section" className="py-6 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 mb-6 pb-4 border-b border-white/[0.08]">
+        <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 mb-5 pb-3 border-b border-white/[0.08]">
           <div>
             <div className="flex items-center gap-2">
               <span className="w-1.5 h-4 bg-[#FF2E7E] rounded-full inline-block" />
@@ -120,7 +125,7 @@ export const FeaturedNews: React.FC = () => {
               </h2>
             </div>
             <p className="text-slate-400 text-xs sm:text-[13px] mt-1 ml-3.5">
-              Global cinema industry dispatches, festival highlights, and in-depth editorial stories.
+              Kabar terkini dari industri sinema global, sorotan festival, dan berita pilihan redaksi.
             </p>
           </div>
 
@@ -129,15 +134,15 @@ export const FeaturedNews: React.FC = () => {
             onClick={() => navigateTo('category', { category: 'movies', subCategory: 'news' })}
             className="self-start sm:self-auto text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1 transition-colors"
           >
-            <span>All News</span>
+            <span>Semua Berita</span>
             <ArrowUpRight className="w-3.5 h-3.5 text-[#FF2E7E]" />
           </button>
         </div>
 
-        {/* 3-Column Grid for Featured Stories */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* 5-Column Grid for Compact Featured Stories */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {isLoadingArticles && publishedArticles.length === 0 ? (
-            Array.from({ length: 3 }).map((_, index) => (
+            Array.from({ length: 5 }).map((_, index) => (
               <ArticleCardSkeleton key={`featured-article-skeleton-${index}`} />
             ))
           ) : (

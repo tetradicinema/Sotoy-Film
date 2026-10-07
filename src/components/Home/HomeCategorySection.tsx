@@ -12,6 +12,8 @@ import {
   Sparkles,
   SlidersHorizontal,
   Flame,
+  Camera,
+  BookOpen,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
@@ -137,10 +139,114 @@ const HomeCategoryArticleItem: React.FC<HomeCategoryArticleItemProps> = ({ artic
   );
 };
 
+
+// -------------------------------------------------------------
+// SKELETON COMPONENT LOADERS
+// -------------------------------------------------------------
+
+const Section1Skeleton: React.FC = () => (
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-pulse">
+    {[1, 2, 3].map((col) => (
+      <div key={col} className="space-y-2">
+        <div className="h-4 w-28 bg-slate-800/80 rounded mb-2" />
+        {[1, 2, 3, 4].map((item) => (
+          <div key={item} className="flex items-center gap-3 p-2.5 rounded-2xl bg-[#171717] border border-white/[0.04]">
+            <div className="w-5 h-4 bg-slate-800 rounded shrink-0" />
+            <div className="w-11 h-14 bg-slate-800 rounded-xl shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <div className="h-3 bg-slate-800 rounded w-5/6" />
+              <div className="h-2.5 bg-slate-800/60 rounded w-1/2" />
+            </div>
+          </div>
+        ))}
+      </div>
+    ))}
+  </div>
+);
+
+const Section2Skeleton: React.FC = () => (
+  <div className="space-y-4 animate-pulse">
+    <div className="p-6 rounded-3xl bg-[#171717] border border-white/[0.04] grid grid-cols-1 sm:grid-cols-12 gap-6">
+      <div className="sm:col-span-5 h-48 bg-slate-800 rounded-2xl" />
+      <div className="sm:col-span-7 space-y-3 justify-center flex flex-col">
+        <div className="h-3 w-32 bg-slate-800 rounded" />
+        <div className="h-6 w-3/4 bg-slate-800 rounded" />
+        <div className="h-3 w-full bg-slate-800/60 rounded" />
+      </div>
+    </div>
+  </div>
+);
+
+const Section3Skeleton: React.FC = () => (
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-pulse">
+    {[1, 2].map((col) => (
+      <div key={col} className="space-y-3">
+        <div className="h-4 w-36 bg-slate-800/80 rounded mb-2" />
+        {[1, 2, 3].map((item) => (
+          <div key={item} className="p-4 rounded-2xl bg-[#171717] border border-white/[0.04] flex gap-3.5">
+            <div className="w-24 h-24 bg-slate-800 rounded-xl shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="h-3 w-20 bg-slate-800 rounded" />
+              <div className="h-4 w-full bg-slate-800 rounded" />
+              <div className="h-3 w-5/6 bg-slate-800/60 rounded" />
+            </div>
+          </div>
+        ))}
+      </div>
+    ))}
+  </div>
+);
+
+const Section4Skeleton: React.FC = () => (
+  <div className="bg-[#171717] rounded-3xl border border-white/[0.04] divide-y divide-white/[0.04] animate-pulse">
+    {[1, 2, 3, 4, 5].map((i) => (
+      <div key={i} className="p-3.5 flex items-center gap-3.5">
+        <div className="w-12 h-12 bg-slate-800 rounded-xl shrink-0" />
+        <div className="flex-1 space-y-1.5">
+          <div className="h-2.5 w-28 bg-slate-800/70 rounded" />
+          <div className="h-3.5 w-3/4 bg-slate-800 rounded" />
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+const Section5Skeleton: React.FC = () => (
+  <div className="space-y-4 animate-pulse">
+    <div className="p-6 rounded-3xl bg-[#171717] border border-white/[0.04] grid grid-cols-1 md:grid-cols-12 gap-6">
+      <div className="md:col-span-5 h-48 bg-slate-800 rounded-2xl" />
+      <div className="md:col-span-7 space-y-3 flex flex-col justify-center">
+        <div className="h-3 w-28 bg-slate-800 rounded" />
+        <div className="h-6 w-5/6 bg-slate-800 rounded" />
+        <div className="h-3 w-full bg-slate-800/60 rounded" />
+      </div>
+    </div>
+  </div>
+);
+
+// -------------------------------------------------------------
+// EMPTY STATE COMPONENT INDICATOR
+// -------------------------------------------------------------
+
+const SectionEmptyState: React.FC<{ icon: React.ReactNode; message: string; submessage?: string }> = ({
+  icon,
+  message,
+  submessage,
+}) => (
+  <div className="p-8 sm:p-10 text-center rounded-3xl bg-[#171717]/80 border border-white/[0.06] flex flex-col items-center justify-center space-y-2.5">
+    <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/[0.06] text-slate-500 mb-1">
+      {icon}
+    </div>
+    <p className="text-xs sm:text-sm font-semibold text-slate-300">{message}</p>
+    {submessage && <p className="text-xs text-slate-500 max-w-sm leading-relaxed">{submessage}</p>}
+  </div>
+);
+
 export const HomeCategorySection: React.FC = () => {
   const {
     films,
     publishedArticles,
+    isLoadingArticles,
     navigateTo,
     openShareModal,
   } = useApp();
@@ -291,9 +397,11 @@ export const HomeCategorySection: React.FC = () => {
   const renderCuratedArticleList = (items: Article[]) => {
     if (items.length === 0) {
       return (
-        <div className="p-6 text-center rounded-2xl bg-[#171717]/60 border border-white/[0.06] text-xs text-slate-400">
-          Belum ada artikel daftar untuk kategori ini.
-        </div>
+        <SectionEmptyState
+          icon={<Film className="w-5 h-5 text-slate-500" />}
+          message="Belum ada daftar kurasi"
+          submessage="Koleksi artikel daftar pilihan redaksi akan segera hadir."
+        />
       );
     }
 
@@ -399,39 +507,45 @@ export const HomeCategorySection: React.FC = () => {
                 </div>
               </div>
 
-              {/* Desktop 3-Column View */}
-              <div className="hidden md:grid md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between pb-1 text-xs text-slate-300 font-semibold border-b border-white/[0.04]">
-                    <span>Movie Lists</span>
-                    <span className="text-[11px] font-mono text-slate-500">{movieListsArticles.length} artikel</span>
-                  </div>
-                  {renderCuratedArticleList(movieListsArticles)}
-                </div>
+              {isLoadingArticles ? (
+                <Section1Skeleton />
+              ) : (
+                <>
+                  {/* Desktop 3-Column View */}
+                  <div className="hidden md:grid md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between pb-1 text-xs text-slate-300 font-semibold border-b border-white/[0.04]">
+                        <span>Movie Lists</span>
+                        <span className="text-[11px] font-mono text-slate-500">{movieListsArticles.length} artikel</span>
+                      </div>
+                      {renderCuratedArticleList(movieListsArticles)}
+                    </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between pb-1 text-xs text-slate-300 font-semibold border-b border-white/[0.04]">
-                    <span>Series Lists</span>
-                    <span className="text-[11px] font-mono text-slate-500">{seriesListsArticles.length} artikel</span>
-                  </div>
-                  {renderCuratedArticleList(seriesListsArticles)}
-                </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between pb-1 text-xs text-slate-300 font-semibold border-b border-white/[0.04]">
+                        <span>Series Lists</span>
+                        <span className="text-[11px] font-mono text-slate-500">{seriesListsArticles.length} artikel</span>
+                      </div>
+                      {renderCuratedArticleList(seriesListsArticles)}
+                    </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between pb-1 text-xs text-slate-300 font-semibold border-b border-white/[0.04]">
-                    <span>Anime Lists</span>
-                    <span className="text-[11px] font-mono text-slate-500">{animeListsArticles.length} artikel</span>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between pb-1 text-xs text-slate-300 font-semibold border-b border-white/[0.04]">
+                        <span>Anime Lists</span>
+                        <span className="text-[11px] font-mono text-slate-500">{animeListsArticles.length} artikel</span>
+                      </div>
+                      {renderCuratedArticleList(animeListsArticles)}
+                    </div>
                   </div>
-                  {renderCuratedArticleList(animeListsArticles)}
-                </div>
-              </div>
 
-              {/* Mobile/Tablet Single Column Tabbed Content */}
-              <div className="md:hidden">
-                {mediaListTab === 'movie' && renderCuratedArticleList(movieListsArticles)}
-                {mediaListTab === 'series' && renderCuratedArticleList(seriesListsArticles)}
-                {mediaListTab === 'anime' && renderCuratedArticleList(animeListsArticles)}
-              </div>
+                  {/* Mobile/Tablet Single Column Tabbed Content */}
+                  <div className="md:hidden">
+                    {mediaListTab === 'movie' && renderCuratedArticleList(movieListsArticles)}
+                    {mediaListTab === 'series' && renderCuratedArticleList(seriesListsArticles)}
+                    {mediaListTab === 'anime' && renderCuratedArticleList(animeListsArticles)}
+                  </div>
+                </>
+              )}
             </section>
 
 
@@ -470,10 +584,14 @@ export const HomeCategorySection: React.FC = () => {
                 </div>
               </div>
 
-              {gearArticles.length === 0 ? (
-                <div className="p-8 text-center rounded-3xl bg-[#171717] border border-white/[0.08] text-xs text-slate-400">
-                  Belum ada artikel cinema gear yang dipublikasikan.
-                </div>
+              {isLoadingArticles ? (
+                <Section2Skeleton />
+              ) : gearArticles.length === 0 ? (
+                <SectionEmptyState
+                  icon={<Camera className="w-5 h-5 text-slate-500" />}
+                  message="Belum ada artikel cinema gear"
+                  submessage="Ulasan kamera sinema, lensa, dan perangkat produksi akan segera dipublikasikan."
+                />
               ) : (
                 <div className="space-y-4">
                   {/* Featured Large Asymmetric Card */}
@@ -597,10 +715,13 @@ export const HomeCategorySection: React.FC = () => {
                     <span className="text-[11px] font-mono text-slate-500">{movieReviews.length} ulasan</span>
                   </div>
 
-                  {movieReviews.length === 0 ? (
-                    <div className="p-6 text-center rounded-2xl bg-[#171717]/60 border border-white/[0.06] text-xs text-slate-400">
-                      Belum ada ulasan film yang dirilis.
-                    </div>
+                  {isLoadingArticles ? (
+                    <Section3Skeleton />
+                  ) : movieReviews.length === 0 ? (
+                    <SectionEmptyState
+                      icon={<Film className="w-4 h-4 text-slate-500" />}
+                      message="Belum ada ulasan film"
+                    />
                   ) : (
                     <div className="space-y-3">
                       {movieReviews.map((article) => (
@@ -656,10 +777,13 @@ export const HomeCategorySection: React.FC = () => {
                     <span className="text-[11px] font-mono text-slate-500">{seriesReviews.length} ulasan</span>
                   </div>
 
-                  {seriesReviews.length === 0 ? (
-                    <div className="p-6 text-center rounded-2xl bg-[#171717]/60 border border-white/[0.06] text-xs text-slate-400">
-                      Belum ada ulasan serial yang dirilis.
-                    </div>
+                  {isLoadingArticles ? (
+                    <Section3Skeleton />
+                  ) : seriesReviews.length === 0 ? (
+                    <SectionEmptyState
+                      icon={<Tv className="w-4 h-4 text-slate-500" />}
+                      message="Belum ada ulasan serial"
+                    />
                   ) : (
                     <div className="space-y-3">
                       {seriesReviews.map((article) => (
@@ -729,10 +853,14 @@ export const HomeCategorySection: React.FC = () => {
                 </span>
               </div>
 
-              {animeNews.length === 0 ? (
-                <div className="p-6 text-center rounded-2xl bg-[#171717] border border-white/[0.08] text-xs text-slate-400">
-                  Belum ada kabar anime terbaru saat ini.
-                </div>
+              {isLoadingArticles ? (
+                <Section4Skeleton />
+              ) : animeNews.length === 0 ? (
+                <SectionEmptyState
+                  icon={<Sparkles className="w-5 h-5 text-slate-500" />}
+                  message="Belum ada kabar anime terbaru"
+                  submessage="Update jadwal tayang dan kabar terkini anime akan segera diperbarui."
+                />
               ) : (
                 <div className="bg-[#171717] rounded-3xl border border-white/[0.08] divide-y divide-white/[0.06] overflow-hidden">
                   {animeNews.map((article) => (
@@ -797,10 +925,14 @@ export const HomeCategorySection: React.FC = () => {
                 </div>
               </div>
 
-              {filmStudiesArticles.length === 0 ? (
-                <div className="p-8 text-center rounded-3xl bg-[#171717] border border-white/[0.08] text-xs text-slate-400">
-                  Belum ada esai kajian film yang dipublikasikan.
-                </div>
+              {isLoadingArticles ? (
+                <Section5Skeleton />
+              ) : filmStudiesArticles.length === 0 ? (
+                <SectionEmptyState
+                  icon={<BookOpen className="w-5 h-5 text-slate-500" />}
+                  message="Belum ada esai kajian sinema"
+                  submessage="Analisis sinematografi, teori montase, dan esai sinematik mendalam akan segera dirilis."
+                />
               ) : (
                 <div className="space-y-4">
                   {/* Primary Editorial Long-form Lead with Article Cover Image */}
@@ -1012,8 +1144,8 @@ export const HomeCategorySection: React.FC = () => {
 
           </div>
 
-          {/* RIGHT SIDEBAR (4 Columns) - Continues to scroll alongside all left content */}
-          <div className="lg:col-span-4">
+          {/* RIGHT SIDEBAR (4 Columns) - Sticky positioning as user scrolls */}
+          <div className="lg:col-span-4 lg:sticky lg:top-24 self-start space-y-6">
             <EditorialSidebar />
           </div>
         </div>

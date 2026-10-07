@@ -280,17 +280,17 @@ export const HeroSection: React.FC = () => {
 
           {/* RIGHT: CURATED TANGGA & SELEKSI SINEMA (4 Columns) */}
           <div className="lg:col-span-4 flex flex-col">
-            <div className="bg-[#171717] border border-white/[0.08] rounded-3xl p-5 flex-1 flex flex-col shadow-xl">
+            <div className="bg-[#171717] border border-white/[0.08] rounded-3xl p-4 sm:p-5 flex-1 flex flex-col shadow-xl">
               
               {/* Segmented Control Filter Tabs */}
               <div
-                className="flex items-center p-1 bg-black/40 rounded-xl border border-white/[0.06] mb-4 overflow-x-auto scrollbar-none flex-nowrap scroll-smooth touch-pan-x"
+                className="flex items-center p-1 bg-black/40 rounded-xl border border-white/[0.06] mb-3 overflow-x-auto scrollbar-none flex-nowrap scroll-smooth touch-pan-x"
                 style={{ WebkitOverflowScrolling: 'touch' }}
               >
                 <button
                   id="hero-tab-trending"
                   onClick={() => setActiveTab('trending')}
-                  className={`flex-1 min-w-[90px] py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 min-h-[42px] cursor-pointer active:scale-95 ${
+                  className={`flex-1 min-w-[85px] py-1.5 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer active:scale-95 ${
                     activeTab === 'trending'
                       ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 font-bold'
                       : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
@@ -303,7 +303,7 @@ export const HeroSection: React.FC = () => {
                 <button
                   id="hero-tab-towatch"
                   onClick={() => setActiveTab('to-watch')}
-                  className={`flex-1 min-w-[90px] py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 min-h-[42px] cursor-pointer active:scale-95 ${
+                  className={`flex-1 min-w-[85px] py-1.5 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer active:scale-95 ${
                     activeTab === 'to-watch'
                       ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 font-bold'
                       : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
@@ -316,7 +316,7 @@ export const HeroSection: React.FC = () => {
                 <button
                   id="hero-tab-gearaddict"
                   onClick={() => setActiveTab('gear-addict')}
-                  className={`flex-1 min-w-[90px] py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 min-h-[42px] cursor-pointer active:scale-95 ${
+                  className={`flex-1 min-w-[85px] py-1.5 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer active:scale-95 ${
                     activeTab === 'gear-addict'
                       ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 font-bold'
                       : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
@@ -329,17 +329,17 @@ export const HeroSection: React.FC = () => {
 
               {/* Tab Content 1: RECENT ARTICLES */}
               {activeTab === 'trending' && (
-                <div className="flex-1 flex flex-col justify-between space-y-3 min-h-0">
-                  <div className="space-y-2 flex-1 flex flex-col justify-around">
+                <div className="flex-1 flex flex-col justify-between min-h-0">
+                  <div className="divide-y divide-white/[0.06] flex-1 flex flex-col justify-between">
                     {recentArticles.map((art, index) => (
                       <div
                         key={art.id}
                         id={`recent-article-item-${art.id}`}
                         onClick={() => navigateTo('article-detail', { articleId: art.id })}
-                        className="group flex items-center gap-3 p-2.5 rounded-2xl hover:bg-white/[0.04] border border-transparent hover:border-white/[0.08] transition-all cursor-pointer"
+                        className="group flex items-center gap-3 py-2 px-1.5 rounded-xl hover:bg-white/[0.04] transition-colors cursor-pointer"
                       >
                         {/* Tabular Index Number */}
-                        <span className={`w-5 font-mono tabular-nums text-xs font-bold text-center shrink-0 ${
+                        <span className={`w-4 font-mono tabular-nums text-xs font-bold text-center shrink-0 ${
                           index === 0 ? 'text-[#FF2E7E]' : 'text-slate-500'
                         }`}>
                           {String(index + 1).padStart(2, '0')}
@@ -347,30 +347,30 @@ export const HeroSection: React.FC = () => {
 
                         {/* Poster/Cover */}
                         <img
-                          src={art.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=160&q=80'}
+                          src={art.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=200&q=80'}
                           alt={art.title}
-                          className="w-13 h-13 object-cover rounded-xl shrink-0 border border-white/10 group-hover:scale-105 transition-transform duration-300"
+                          className="w-12 h-12 object-cover rounded-xl shrink-0 border border-white/10 group-hover:scale-105 transition-transform duration-300"
                         />
 
                         {/* Metadata */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 mb-0.5">
-                            <span className="text-[10px] text-[#FF2E7E] font-bold uppercase tracking-wider truncate">
+                          <div className="flex items-center gap-1.5 mb-0.5 text-[10px]">
+                            <span className="text-[#FF2E7E] font-bold uppercase tracking-wider truncate">
                               {art.category}
                             </span>
-                            <span className="text-slate-600 text-[10px]">·</span>
-                            <span className="text-[10px] text-slate-400 truncate">{art.publishedAt}</span>
+                            <span className="text-slate-600">·</span>
+                            <span className="text-slate-400 truncate">{art.publishedAt}</span>
                           </div>
-                          <h4 className="text-white font-semibold text-xs leading-snug line-clamp-2 group-hover:text-white transition-colors">
+                          <h4 className="text-white font-semibold text-xs leading-snug line-clamp-2 group-hover:text-[#FF2E7E] transition-colors">
                             {art.title}
                           </h4>
-                          <div className="mt-1 flex items-center gap-1 text-[10px] text-slate-400">
+                          <div className="mt-0.5 flex items-center gap-1 text-[10px] text-slate-400">
                             <Clock className="w-2.5 h-2.5 text-slate-500" />
                             <span>{art.readTime}</span>
                           </div>
                         </div>
 
-                        <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition-transform group-hover:translate-x-0.5 shrink-0" />
+                        <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-white transition-transform group-hover:translate-x-0.5 shrink-0" />
                       </div>
                     ))}
                   </div>
@@ -378,7 +378,7 @@ export const HeroSection: React.FC = () => {
                   <button
                     id="see-all-trending-btn"
                     onClick={() => navigateTo('category', { category: 'movies' })}
-                    className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer mt-auto shrink-0"
+                    className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 hover:bg-white/[0.04] text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer mt-3 shrink-0"
                   >
                     <span>Jelajahi Semua Artikel Terbaru</span>
                     <ArrowRight className="w-3.5 h-3.5 text-[#FF2E7E]" />
@@ -388,44 +388,44 @@ export const HeroSection: React.FC = () => {
 
               {/* Tab Content 2: TO WATCH */}
               {activeTab === 'to-watch' && (
-                <div className="flex-1 flex flex-col justify-between space-y-3 min-h-0">
-                  <div className="space-y-2 flex-1 flex flex-col justify-around">
+                <div className="flex-1 flex flex-col justify-between min-h-0">
+                  <div className="divide-y divide-white/[0.06] flex-1 flex flex-col justify-between">
                     {toWatchFilms.map(film => (
                       <div
                         key={film.id}
                         id={`towatch-film-item-${film.id}`}
                         onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                        className="group flex items-center gap-3 p-2.5 rounded-2xl hover:bg-white/[0.04] border border-transparent hover:border-white/[0.08] transition-all cursor-pointer"
+                        className="group flex items-center gap-3 py-2 px-1.5 rounded-xl hover:bg-white/[0.04] transition-colors cursor-pointer"
                       >
                         <img
                           src={film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=160&q=80'}
                           alt={film.title}
-                          className="w-11 h-15 object-cover rounded-xl shrink-0 border border-white/10 group-hover:scale-105 transition-transform duration-300"
+                          className="w-10 h-14 object-cover rounded-lg shrink-0 border border-white/10 group-hover:scale-105 transition-transform duration-300"
                         />
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-white font-semibold text-xs leading-snug truncate group-hover:text-white transition-colors">
+                          <h4 className="text-white font-semibold text-xs leading-snug truncate group-hover:text-[#FF2E7E] transition-colors">
                             {film.title}
                           </h4>
                           <p className="text-slate-400 text-[11px] line-clamp-1 mt-0.5">
                             {film.curatorNote || film.synopsis}
                           </p>
-                          <div className="mt-1 flex items-center gap-2 text-[11px]">
+                          <div className="mt-1 flex items-center gap-2 text-[10px]">
                             {film.whereToWatch.slice(0, 1).map((w, idx) => (
                               <span
                                 key={idx}
-                                className="text-slate-300 text-[10px] font-medium"
+                                className="text-slate-300 font-medium"
                               >
                                 {w.platform}
                               </span>
                             ))}
                             <span className="text-slate-600">·</span>
-                            <span className="font-mono tabular-nums text-amber-400 text-[11px] font-semibold flex items-center gap-0.5">
+                            <span className="font-mono tabular-nums text-amber-400 font-semibold flex items-center gap-0.5">
                               <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                               <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
                             </span>
                           </div>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition-transform group-hover:translate-x-0.5 shrink-0" />
+                        <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-white transition-transform group-hover:translate-x-0.5 shrink-0" />
                       </div>
                     ))}
                   </div>
@@ -433,7 +433,7 @@ export const HeroSection: React.FC = () => {
                   <button
                     id="see-all-towatch-btn"
                     onClick={() => navigateTo('film-recommendations')}
-                    className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer mt-auto shrink-0"
+                    className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 hover:bg-white/[0.04] text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer mt-3 shrink-0"
                   >
                     <span>Buka Generator Rekomendasi Film</span>
                     <ArrowRight className="w-3.5 h-3.5 text-[#FF2E7E]" />
@@ -443,37 +443,37 @@ export const HeroSection: React.FC = () => {
 
               {/* Tab Content 3: GEAR ADDICT */}
               {activeTab === 'gear-addict' && (
-                <div className="flex-1 flex flex-col justify-between space-y-3 min-h-0">
-                  <div className="space-y-2 flex-1 flex flex-col justify-around">
+                <div className="flex-1 flex flex-col justify-between min-h-0">
+                  <div className="divide-y divide-white/[0.06] flex-1 flex flex-col justify-between">
                     {GEAR_ADDICT_ITEMS.slice(0, 5).map(gear => (
                       <div
                         key={gear.id}
                         id={`gear-addict-item-${gear.id}`}
                         onClick={() => navigateTo('category', { category: 'cinema-gear' })}
-                        className="group flex items-center gap-3 p-2.5 rounded-2xl hover:bg-white/[0.04] border border-transparent hover:border-white/[0.08] transition-all cursor-pointer"
+                        className="group flex items-center gap-3 py-2 px-1.5 rounded-xl hover:bg-white/[0.04] transition-colors cursor-pointer"
                       >
                         <img
                           src={gear.image || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=200&q=80'}
                           alt={gear.name}
-                          className="w-13 h-13 object-cover rounded-xl shrink-0 border border-white/10 group-hover:scale-105 transition-transform duration-300"
+                          className="w-12 h-12 object-cover rounded-xl shrink-0 border border-white/10 group-hover:scale-105 transition-transform duration-300"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-[#FF2E7E] font-bold text-[10px] uppercase tracking-wider">
+                          <div className="flex items-center justify-between text-[10px]">
+                            <span className="text-[#FF2E7E] font-bold uppercase tracking-wider">
                               {gear.badge}
                             </span>
-                            <span className="font-mono tabular-nums text-white text-[11px] font-semibold">
+                            <span className="font-mono tabular-nums text-white font-semibold">
                               {gear.price}
                             </span>
                           </div>
-                          <h4 className="text-white font-semibold text-xs leading-snug line-clamp-1 group-hover:text-white transition-colors mt-0.5">
+                          <h4 className="text-white font-semibold text-xs leading-snug line-clamp-1 group-hover:text-[#FF2E7E] transition-colors mt-0.5">
                             {gear.name}
                           </h4>
                           <p className="text-slate-400 text-[10px] truncate mt-0.5">
                             {gear.sensor}
                           </p>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition-transform group-hover:translate-x-0.5 shrink-0" />
+                        <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-white transition-transform group-hover:translate-x-0.5 shrink-0" />
                       </div>
                     ))}
                   </div>
@@ -481,13 +481,13 @@ export const HeroSection: React.FC = () => {
                   <button
                     id="see-all-gear-btn"
                     onClick={() => navigateTo('category', { category: 'cinema-gear' })}
-                    className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer mt-auto shrink-0"
+                    className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 hover:bg-white/[0.04] text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer mt-3 shrink-0"
                   >
                     <span>Lihat Katalog Cinema Gear</span>
                     <ArrowRight className="w-3.5 h-3.5 text-[#FF2E7E]" />
                   </button>
                 </div>
-              )}
+              )}`
             </div>
           </div>
         </div>

@@ -1078,7 +1078,7 @@ export const ArticleDetailPage: React.FC = () => {
           </div>
 
           {/* RIGHT SIDEBAR COLUMN (4 Columns) - Matching Homepage */}
-          <div className="lg:col-span-4 sticky top-24">
+          <div className="lg:col-span-4 lg:sticky lg:top-20 space-y-6">
             <EditorialSidebar currentArticleId={article.id} />
           </div>
         </div>

@@ -1034,7 +1034,7 @@ export const BuzzDetailPage: React.FC = () => {
         </div>
 
         {/* Right Sidebar: Other Buzz Posts & Widget */}
-        <aside className="lg:col-span-4 space-y-6">
+        <aside className="lg:col-span-4 space-y-6 lg:sticky lg:top-20">
           {/* Trending Buzz Posts */}
           <div className="p-5 sm:p-6 rounded-3xl bg-[#171717] border border-white/10 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
