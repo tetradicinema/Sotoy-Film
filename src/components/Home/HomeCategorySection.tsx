@@ -18,6 +18,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
 import { MainCategory, Article, FilmItem } from '../../types';
+import { resolveConfigArticles } from '../../utils/homepageConfigHelper';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { EditorialSidebar } from '../Common/EditorialSidebar';
 import {
@@ -249,6 +250,7 @@ export const HomeCategorySection: React.FC = () => {
     isLoadingArticles,
     navigateTo,
     openShareModal,
+    homepageSectionsConfig,
   } = useApp();
 
   const [selectedCategoryTab, setSelectedCategoryTab] = useState<MainCategory | 'all'>('all');
@@ -272,7 +274,7 @@ export const HomeCategorySection: React.FC = () => {
   // -------------------------------------------------------------
 
   // Section 1: Curated list articles (movies, series, anime)
-  const movieListsArticles = useMemo(() => {
+  const defaultMovieListsArticles = useMemo(() => {
     const lists = publishedArticles.filter(
       (a) =>
         a.category === 'movies' &&
@@ -282,7 +284,15 @@ export const HomeCategorySection: React.FC = () => {
     return publishedArticles.filter((a) => a.category === 'movies').slice(0, 5);
   }, [publishedArticles]);
 
-  const seriesListsArticles = useMemo(() => {
+  const movieListsArticles = useMemo(() => {
+    return resolveConfigArticles(
+      publishedArticles,
+      homepageSectionsConfig?.sections?.movie_list,
+      defaultMovieListsArticles
+    );
+  }, [publishedArticles, homepageSectionsConfig?.sections?.movie_list, defaultMovieListsArticles]);
+
+  const defaultSeriesListsArticles = useMemo(() => {
     const lists = publishedArticles.filter(
       (a) =>
         a.category === 'series' &&
@@ -292,7 +302,15 @@ export const HomeCategorySection: React.FC = () => {
     return publishedArticles.filter((a) => a.category === 'series').slice(0, 5);
   }, [publishedArticles]);
 
-  const animeListsArticles = useMemo(() => {
+  const seriesListsArticles = useMemo(() => {
+    return resolveConfigArticles(
+      publishedArticles,
+      homepageSectionsConfig?.sections?.series_list,
+      defaultSeriesListsArticles
+    );
+  }, [publishedArticles, homepageSectionsConfig?.sections?.series_list, defaultSeriesListsArticles]);
+
+  const defaultAnimeListsArticles = useMemo(() => {
     const lists = publishedArticles.filter(
       (a) =>
         a.category === 'anime' &&
@@ -302,15 +320,31 @@ export const HomeCategorySection: React.FC = () => {
     return publishedArticles.filter((a) => a.category === 'anime').slice(0, 5);
   }, [publishedArticles]);
 
+  const animeListsArticles = useMemo(() => {
+    return resolveConfigArticles(
+      publishedArticles,
+      homepageSectionsConfig?.sections?.anime_list,
+      defaultAnimeListsArticles
+    );
+  }, [publishedArticles, homepageSectionsConfig?.sections?.anime_list, defaultAnimeListsArticles]);
+
   // Section 2: Cinema gear articles (~4-6 items)
-  const gearArticles = useMemo(() => {
+  const defaultGearArticles = useMemo(() => {
     return publishedArticles
       .filter((a) => a.category === 'cinema-gear')
       .slice(0, 6);
   }, [publishedArticles]);
 
+  const gearArticles = useMemo(() => {
+    return resolveConfigArticles(
+      publishedArticles,
+      homepageSectionsConfig?.sections?.cinema_gear_articles,
+      defaultGearArticles
+    );
+  }, [publishedArticles, homepageSectionsConfig?.sections?.cinema_gear_articles, defaultGearArticles]);
+
   // Section 3: Honest reviews (split movies vs series)
-  const movieReviews = useMemo(() => {
+  const defaultMovieReviews = useMemo(() => {
     return publishedArticles
       .filter(
         (a) =>
@@ -320,7 +354,15 @@ export const HomeCategorySection: React.FC = () => {
       .slice(0, 4);
   }, [publishedArticles]);
 
-  const seriesReviews = useMemo(() => {
+  const movieReviews = useMemo(() => {
+    return resolveConfigArticles(
+      publishedArticles,
+      homepageSectionsConfig?.sections?.reviews_movie,
+      defaultMovieReviews
+    );
+  }, [publishedArticles, homepageSectionsConfig?.sections?.reviews_movie, defaultMovieReviews]);
+
+  const defaultSeriesReviews = useMemo(() => {
     return publishedArticles
       .filter(
         (a) =>
@@ -330,8 +372,16 @@ export const HomeCategorySection: React.FC = () => {
       .slice(0, 4);
   }, [publishedArticles]);
 
+  const seriesReviews = useMemo(() => {
+    return resolveConfigArticles(
+      publishedArticles,
+      homepageSectionsConfig?.sections?.reviews_series,
+      defaultSeriesReviews
+    );
+  }, [publishedArticles, homepageSectionsConfig?.sections?.reviews_series, defaultSeriesReviews]);
+
   // Section 4: Anime news (compact ticker)
-  const animeNews = useMemo(() => {
+  const defaultAnimeNews = useMemo(() => {
     const newsOnly = publishedArticles.filter(
       (a) =>
         a.category === 'anime' &&
@@ -342,12 +392,28 @@ export const HomeCategorySection: React.FC = () => {
     return publishedArticles.filter((a) => a.category === 'anime').slice(0, 5);
   }, [publishedArticles]);
 
+  const animeNews = useMemo(() => {
+    return resolveConfigArticles(
+      publishedArticles,
+      homepageSectionsConfig?.sections?.anime_news,
+      defaultAnimeNews
+    );
+  }, [publishedArticles, homepageSectionsConfig?.sections?.anime_news, defaultAnimeNews]);
+
   // Section 5: Film studies (editorial, 2-3 long-form essays)
-  const filmStudiesArticles = useMemo(() => {
+  const defaultFilmStudiesArticles = useMemo(() => {
     return publishedArticles
       .filter((a) => a.category === 'film-studies')
       .slice(0, 3);
   }, [publishedArticles]);
+
+  const filmStudiesArticles = useMemo(() => {
+    return resolveConfigArticles(
+      publishedArticles,
+      homepageSectionsConfig?.sections?.film_studies,
+      defaultFilmStudiesArticles
+    );
+  }, [publishedArticles, homepageSectionsConfig?.sections?.film_studies, defaultFilmStudiesArticles]);
 
   // SubCategory label translator for film studies
   const getFilmStudiesLabel = (sub: string) => {
@@ -480,7 +546,7 @@ export const HomeCategorySection: React.FC = () => {
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    Movie Lists ({movieListsArticles.length})
+                    {homepageSectionsConfig?.sections?.movie_list?.title?.trim() || 'Movie Lists'} ({movieListsArticles.length})
                   </button>
                   <button
                     type="button"
@@ -491,7 +557,7 @@ export const HomeCategorySection: React.FC = () => {
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    Series Lists ({seriesListsArticles.length})
+                    {homepageSectionsConfig?.sections?.series_list?.title?.trim() || 'Series Lists'} ({seriesListsArticles.length})
                   </button>
                   <button
                     type="button"
@@ -502,7 +568,7 @@ export const HomeCategorySection: React.FC = () => {
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    Anime Lists ({animeListsArticles.length})
+                    {homepageSectionsConfig?.sections?.anime_list?.title?.trim() || 'Anime Lists'} ({animeListsArticles.length})
                   </button>
                 </div>
               </div>
@@ -515,7 +581,7 @@ export const HomeCategorySection: React.FC = () => {
                   <div className="hidden md:grid md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between pb-1 text-xs text-slate-300 font-semibold border-b border-white/[0.04]">
-                        <span>Movie Lists</span>
+                        <span>{homepageSectionsConfig?.sections?.movie_list?.title?.trim() || 'Movie Lists'}</span>
                         <span className="text-[11px] font-mono text-slate-500">{movieListsArticles.length} artikel</span>
                       </div>
                       {renderCuratedArticleList(movieListsArticles)}
@@ -523,7 +589,7 @@ export const HomeCategorySection: React.FC = () => {
 
                     <div className="space-y-2">
                       <div className="flex items-center justify-between pb-1 text-xs text-slate-300 font-semibold border-b border-white/[0.04]">
-                        <span>Series Lists</span>
+                        <span>{homepageSectionsConfig?.sections?.series_list?.title?.trim() || 'Series Lists'}</span>
                         <span className="text-[11px] font-mono text-slate-500">{seriesListsArticles.length} artikel</span>
                       </div>
                       {renderCuratedArticleList(seriesListsArticles)}
@@ -531,7 +597,7 @@ export const HomeCategorySection: React.FC = () => {
 
                     <div className="space-y-2">
                       <div className="flex items-center justify-between pb-1 text-xs text-slate-300 font-semibold border-b border-white/[0.04]">
-                        <span>Anime Lists</span>
+                        <span>{homepageSectionsConfig?.sections?.anime_list?.title?.trim() || 'Anime Lists'}</span>
                         <span className="text-[11px] font-mono text-slate-500">{animeListsArticles.length} artikel</span>
                       </div>
                       {renderCuratedArticleList(animeListsArticles)}
@@ -556,7 +622,7 @@ export const HomeCategorySection: React.FC = () => {
               <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 mb-4 pb-3 border-b border-white/[0.08]">
                 <div>
                   <h2 id="heading-cinema-gear" className="font-display font-black text-xl sm:text-2xl text-white tracking-tight">
-                    Cinema Gear & Filmmaking Tech
+                    {homepageSectionsConfig?.sections?.cinema_gear_articles?.title?.trim() || 'Cinema Gear & Filmmaking Tech'}
                   </h2>
                   <p className="text-slate-400 text-xs sm:text-[13px] mt-1">
                     Ulasan mendalam kamera sinema, lensa anamorphic, lighting rig, dan panduan perangkat produksi film independen.
@@ -711,7 +777,7 @@ export const HomeCategorySection: React.FC = () => {
                 {/* Column 1: Movie Reviews */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between pb-1.5 text-xs text-slate-300 font-semibold border-b border-white/[0.04]">
-                    <span>Review Film Bioskop</span>
+                    <span>{homepageSectionsConfig?.sections?.reviews_movie?.title?.trim() || 'Review Film Bioskop'}</span>
                     <span className="text-[11px] font-mono text-slate-500">{movieReviews.length} ulasan</span>
                   </div>
 
@@ -773,7 +839,7 @@ export const HomeCategorySection: React.FC = () => {
                 {/* Column 2: Series Reviews */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between pb-1.5 text-xs text-slate-300 font-semibold border-b border-white/[0.04]">
-                    <span>Review Serial Streaming</span>
+                    <span>{homepageSectionsConfig?.sections?.reviews_series?.title?.trim() || 'Review Serial Streaming'}</span>
                     <span className="text-[11px] font-mono text-slate-500">{seriesReviews.length} ulasan</span>
                   </div>
 
@@ -842,7 +908,7 @@ export const HomeCategorySection: React.FC = () => {
               <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 mb-4 pb-3 border-b border-white/[0.08]">
                 <div>
                   <h2 id="heading-anime-news" className="font-display font-black text-xl sm:text-2xl text-white tracking-tight">
-                    Anime News & Season Updates
+                    {homepageSectionsConfig?.sections?.anime_news?.title?.trim() || 'Anime News & Season Updates'}
                   </h2>
                   <p className="text-slate-400 text-xs sm:text-[13px] mt-1">
                     Warta terkini seputar jadwal tayang musim baru, adaptasi manga, dan kabar resmi dari studio animasi Jepang.
@@ -917,7 +983,7 @@ export const HomeCategorySection: React.FC = () => {
               <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 mb-4 pb-3 border-b border-white/[0.08]">
                 <div>
                   <h2 id="heading-film-studies" className="font-display font-black text-xl sm:text-2xl text-white tracking-tight">
-                    Film Studies & Cinematic Essays
+                    {homepageSectionsConfig?.sections?.film_studies?.title?.trim() || 'Film Studies & Cinematic Essays'}
                   </h2>
                   <p className="text-slate-400 text-xs sm:text-[13px] mt-1">
                     Kajian mendalam seputar teori montase, dramaturgi penyutradaraan, tata sinematografi, dan analisis visual.
