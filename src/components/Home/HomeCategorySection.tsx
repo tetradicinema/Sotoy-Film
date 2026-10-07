@@ -1,14 +1,21 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   Clock,
   Share2,
   ChevronRight,
+  ChevronLeft,
   ArrowRight,
   ChevronDown,
+  Star,
+  Film,
+  Tv,
+  Sparkles,
+  SlidersHorizontal,
+  Flame,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
-import { MainCategory, Article } from '../../types';
+import { MainCategory, Article, FilmItem } from '../../types';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { EditorialSidebar } from '../Common/EditorialSidebar';
 import {
@@ -132,6 +139,7 @@ const HomeCategoryArticleItem: React.FC<HomeCategoryArticleItemProps> = ({ artic
 
 export const HomeCategorySection: React.FC = () => {
   const {
+    films,
     publishedArticles,
     navigateTo,
     openShareModal,
@@ -139,6 +147,119 @@ export const HomeCategorySection: React.FC = () => {
 
   const [selectedCategoryTab, setSelectedCategoryTab] = useState<MainCategory | 'all'>('all');
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+
+  // SECTION 1: Tab state for mobile/tablet responsive view
+  const [mediaListTab, setMediaListTab] = useState<'movie' | 'series' | 'anime'>('movie');
+
+  // Carousel ref for Section 2 (Cinema Gear)
+  const gearScrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollGear = (direction: 'left' | 'right') => {
+    if (gearScrollRef.current) {
+      const offset = direction === 'left' ? -320 : 320;
+      gearScrollRef.current.scrollBy({ left: offset, behavior: 'smooth' });
+    }
+  };
+
+  // -------------------------------------------------------------
+  // DATA MEMOS FOR THE 5 NEW BLOCKS
+  // -------------------------------------------------------------
+
+  // Section 1: Curated list articles (movies, series, anime)
+  const movieListsArticles = useMemo(() => {
+    const lists = publishedArticles.filter(
+      (a) =>
+        a.category === 'movies' &&
+        (a.subCategory === 'lists' || a.tags?.some((t) => t.toLowerCase().includes('list') || t.toLowerCase().includes('rekomendasi')))
+    );
+    if (lists.length > 0) return lists.slice(0, 5);
+    return publishedArticles.filter((a) => a.category === 'movies').slice(0, 5);
+  }, [publishedArticles]);
+
+  const seriesListsArticles = useMemo(() => {
+    const lists = publishedArticles.filter(
+      (a) =>
+        a.category === 'series' &&
+        (a.subCategory === 'lists' || a.tags?.some((t) => t.toLowerCase().includes('list') || t.toLowerCase().includes('rekomendasi')))
+    );
+    if (lists.length > 0) return lists.slice(0, 5);
+    return publishedArticles.filter((a) => a.category === 'series').slice(0, 5);
+  }, [publishedArticles]);
+
+  const animeListsArticles = useMemo(() => {
+    const lists = publishedArticles.filter(
+      (a) =>
+        a.category === 'anime' &&
+        (a.subCategory === 'lists' || a.tags?.some((t) => t.toLowerCase().includes('list') || t.toLowerCase().includes('rekomendasi')))
+    );
+    if (lists.length > 0) return lists.slice(0, 5);
+    return publishedArticles.filter((a) => a.category === 'anime').slice(0, 5);
+  }, [publishedArticles]);
+
+  // Section 2: Cinema gear articles (~4-6 items)
+  const gearArticles = useMemo(() => {
+    return publishedArticles
+      .filter((a) => a.category === 'cinema-gear')
+      .slice(0, 6);
+  }, [publishedArticles]);
+
+  // Section 3: Honest reviews (split movies vs series)
+  const movieReviews = useMemo(() => {
+    return publishedArticles
+      .filter(
+        (a) =>
+          a.category === 'movies' &&
+          (a.subCategory === 'reviews' || a.tags?.some((t) => t.toLowerCase().includes('review')))
+      )
+      .slice(0, 4);
+  }, [publishedArticles]);
+
+  const seriesReviews = useMemo(() => {
+    return publishedArticles
+      .filter(
+        (a) =>
+          a.category === 'series' &&
+          (a.subCategory === 'reviews' || a.tags?.some((t) => t.toLowerCase().includes('review')))
+      )
+      .slice(0, 4);
+  }, [publishedArticles]);
+
+  // Section 4: Anime news (compact ticker)
+  const animeNews = useMemo(() => {
+    const newsOnly = publishedArticles.filter(
+      (a) =>
+        a.category === 'anime' &&
+        (a.subCategory === 'news' || a.tags?.some((t) => t.toLowerCase().includes('news')))
+    );
+    if (newsOnly.length >= 3) return newsOnly.slice(0, 5);
+    // Fallback to all anime articles if news specific is sparse
+    return publishedArticles.filter((a) => a.category === 'anime').slice(0, 5);
+  }, [publishedArticles]);
+
+  // Section 5: Film studies (editorial, 2-3 long-form essays)
+  const filmStudiesArticles = useMemo(() => {
+    return publishedArticles
+      .filter((a) => a.category === 'film-studies')
+      .slice(0, 3);
+  }, [publishedArticles]);
+
+  // SubCategory label translator for film studies
+  const getFilmStudiesLabel = (sub: string) => {
+    switch (sub) {
+      case 'cinematography':
+        return 'Sinematografi';
+      case 'directing':
+        return 'Penyutradaraan';
+      case 'producing':
+        return 'Produksi & Industri';
+      case 'lighting':
+        return 'Tata Cahaya';
+      case 'post-production':
+        return 'Pascaproduksi';
+      default:
+        return 'Kajian Sinema';
+    }
+  };
 
   // Compute article count per category for drawer display
   const categoryCounts = useMemo(() => {
@@ -161,114 +282,737 @@ export const HomeCategorySection: React.FC = () => {
   const currentCategoryOption = CATEGORY_OPTIONS.find((c) => c.id === selectedCategoryTab);
   const currentCategoryLabel = currentCategoryOption ? currentCategoryOption.label : 'Semua Artikel';
 
-  // Filter articles based on tab
+  // Filter articles based on tab for bottom Explore section
   const filteredArticles = selectedCategoryTab === 'all'
     ? publishedArticles
-    : publishedArticles.filter(a => a.category === selectedCategoryTab);
+    : publishedArticles.filter((a) => a.category === selectedCategoryTab);
+
+  // Helper renderer for curated list articles in Section 1
+  const renderCuratedArticleList = (items: Article[]) => {
+    if (items.length === 0) {
+      return (
+        <div className="p-6 text-center rounded-2xl bg-[#171717]/60 border border-white/[0.06] text-xs text-slate-400">
+          Belum ada artikel daftar untuk kategori ini.
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-2">
+        {items.map((article, index) => (
+          <article
+            key={article.id}
+            onClick={() => navigateTo('article-detail', { articleId: article.id })}
+            className="group flex items-center gap-3 p-2.5 rounded-2xl bg-[#171717] hover:bg-white/[0.04] border border-white/[0.06] hover:border-white/20 transition-all cursor-pointer"
+          >
+            {/* Rank Number */}
+            <span className="w-5 text-center font-mono font-bold text-xs text-slate-500 group-hover:text-[#FF2E7E] transition-colors shrink-0">
+              0{index + 1}
+            </span>
+
+            {/* Poster / Article Cover Thumbnail */}
+            <img
+              src={article.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=140&q=80'}
+              alt={article.title}
+              className="w-11 h-14 rounded-xl object-cover shrink-0 bg-slate-900 border border-white/[0.08] group-hover:scale-105 transition-transform duration-300"
+            />
+
+            {/* Title & Metadata */}
+            <div className="min-w-0 flex-1">
+              <h4 className="text-xs font-bold text-white group-hover:text-white line-clamp-2 leading-snug">
+                {article.title}
+              </h4>
+              <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
+                <span className="truncate max-w-[90px]">{article.author?.name || 'Redaksi'}</span>
+                <span className="text-slate-600">·</span>
+                <span className="flex items-center gap-0.5 shrink-0">
+                  <Clock className="w-2.5 h-2.5 text-slate-500" />
+                  <span>{article.readTime}</span>
+                </span>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <section id="category-articles-section" className="py-6 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Section Header */}
-        <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 mb-6 pb-4 border-b border-white/[0.08]">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="w-1.5 h-4 bg-slate-300 rounded-full inline-block" />
-              <h2 className="font-display font-black text-xl sm:text-2xl text-white tracking-tight">
-                Explore Categories & Archives
-              </h2>
-            </div>
-            <p className="text-slate-400 text-xs sm:text-[13px] mt-1 ml-3.5">
-              Ulasan film, bedah serial, anime musim ini, eksplorasi cinema gear, dan kajian sinematik.
-            </p>
-          </div>
-
-          {selectedCategoryTab !== 'all' && (
-            <button
-              onClick={() => navigateTo('category', { category: selectedCategoryTab })}
-              className="text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1 transition-colors"
-            >
-              <span>Arsip Lengkap {selectedCategoryTab}</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-
         {/* Main 2-Column Layout: Left Content (8 cols), Right Sidebar (4 cols) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
-          {/* MAIN ARTICLES COLUMN (8 Columns) */}
-          <div className="lg:col-span-8 space-y-6">
+          {/* MAIN COLUMN (8 Columns) - Houses the 5 New Blocks + Explore Categories */}
+          <div className="lg:col-span-8 space-y-12">
             
-            {/* Desktop Category Filter Tabs Bar (Cohesive Segmented Control) */}
-            <div className="hidden lg:flex items-center gap-1.5 p-1 bg-black/40 rounded-2xl border border-white/[0.08] overflow-x-auto scrollbar-none">
-              {CATEGORY_OPTIONS.map((cat) => {
-                const isCatActive = selectedCategoryTab === cat.id;
-                const buttonIdMap: Record<string, string> = {
-                  all: 'filter-cat-all',
-                  movies: 'filter-cat-movies',
-                  series: 'filter-cat-series',
-                  anime: 'filter-cat-anime',
-                  'cinema-gear': 'filter-cat-gear',
-                  'film-studies': 'filter-cat-studies',
-                };
+            {/* ============================================================== */}
+            {/* SECTION 1: MOVIE / SERIES / ANIME LISTS                        */}
+            {/* ============================================================== */}
+            <section id="home-community-ranked-lists" aria-labelledby="heading-ranked-lists">
+              <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 mb-4 pb-3 border-b border-white/[0.08]">
+                <div>
+                  <h2 id="heading-ranked-lists" className="font-display font-black text-xl sm:text-2xl text-white tracking-tight">
+                    Curated Watchlists: Movies, Series & Anime
+                  </h2>
+                  <p className="text-slate-400 text-xs sm:text-[13px] mt-1">
+                    Koleksi kurasi daftar film terbaik, serial pilihan untuk maraton, dan anime rekomendasi yang dirangkum oleh redaksi.
+                  </p>
+                </div>
 
-                return (
+                {/* Mobile/Tablet Tabbed Switcher */}
+                <div className="flex md:hidden items-center p-1 bg-black/40 rounded-xl border border-white/[0.08] text-xs self-start mt-2 sm:mt-0">
                   <button
-                    key={cat.id}
-                    id={buttonIdMap[cat.id]}
-                    onClick={() => setSelectedCategoryTab(cat.id)}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
-                      isCatActive
+                    type="button"
+                    onClick={() => setMediaListTab('movie')}
+                    className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+                      mediaListTab === 'movie'
                         ? 'bg-white/[0.12] text-white shadow-sm'
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    {cat.label}
+                    Movie Lists ({movieListsArticles.length})
                   </button>
-                );
-              })}
+                  <button
+                    type="button"
+                    onClick={() => setMediaListTab('series')}
+                    className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+                      mediaListTab === 'series'
+                        ? 'bg-white/[0.12] text-white shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Series Lists ({seriesListsArticles.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMediaListTab('anime')}
+                    className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+                      mediaListTab === 'anime'
+                        ? 'bg-white/[0.12] text-white shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Anime Lists ({animeListsArticles.length})
+                  </button>
+                </div>
+              </div>
+
+              {/* Desktop 3-Column View */}
+              <div className="hidden md:grid md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between pb-1 text-xs text-slate-300 font-semibold border-b border-white/[0.04]">
+                    <span>Movie Lists</span>
+                    <span className="text-[11px] font-mono text-slate-500">{movieListsArticles.length} artikel</span>
+                  </div>
+                  {renderCuratedArticleList(movieListsArticles)}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between pb-1 text-xs text-slate-300 font-semibold border-b border-white/[0.04]">
+                    <span>Series Lists</span>
+                    <span className="text-[11px] font-mono text-slate-500">{seriesListsArticles.length} artikel</span>
+                  </div>
+                  {renderCuratedArticleList(seriesListsArticles)}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between pb-1 text-xs text-slate-300 font-semibold border-b border-white/[0.04]">
+                    <span>Anime Lists</span>
+                    <span className="text-[11px] font-mono text-slate-500">{animeListsArticles.length} artikel</span>
+                  </div>
+                  {renderCuratedArticleList(animeListsArticles)}
+                </div>
+              </div>
+
+              {/* Mobile/Tablet Single Column Tabbed Content */}
+              <div className="md:hidden">
+                {mediaListTab === 'movie' && renderCuratedArticleList(movieListsArticles)}
+                {mediaListTab === 'series' && renderCuratedArticleList(seriesListsArticles)}
+                {mediaListTab === 'anime' && renderCuratedArticleList(animeListsArticles)}
+              </div>
+            </section>
+
+
+            {/* ============================================================== */}
+            {/* SECTION 2: CINEMA GEAR ARTICLES (INTERACTIVE CAROUSEL)        */}
+            {/* ============================================================== */}
+            <section id="home-cinema-gear-section" aria-labelledby="heading-cinema-gear">
+              <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 mb-4 pb-3 border-b border-white/[0.08]">
+                <div>
+                  <h2 id="heading-cinema-gear" className="font-display font-black text-xl sm:text-2xl text-white tracking-tight">
+                    Cinema Gear & Filmmaking Tech
+                  </h2>
+                  <p className="text-slate-400 text-xs sm:text-[13px] mt-1">
+                    Ulasan mendalam kamera sinema, lensa anamorphic, lighting rig, dan panduan perangkat produksi film independen.
+                  </p>
+                </div>
+
+                {/* Carousel Controls */}
+                <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => scrollGear('left')}
+                    className="p-2 rounded-xl bg-black/40 hover:bg-white/[0.08] text-slate-400 hover:text-white border border-white/[0.08] transition-colors"
+                    aria-label="Geser ke kiri"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollGear('right')}
+                    className="p-2 rounded-xl bg-black/40 hover:bg-white/[0.08] text-slate-400 hover:text-white border border-white/[0.08] transition-colors"
+                    aria-label="Geser ke kanan"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {gearArticles.length === 0 ? (
+                <div className="p-8 text-center rounded-3xl bg-[#171717] border border-white/[0.08] text-xs text-slate-400">
+                  Belum ada artikel cinema gear yang dipublikasikan.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Featured Large Asymmetric Card */}
+                  {gearArticles[0] && (
+                    <article
+                      onClick={() => navigateTo('article-detail', { articleId: gearArticles[0].id })}
+                      className="group relative rounded-3xl bg-[#171717] border border-white/[0.08] hover:border-white/20 p-5 sm:p-6 overflow-hidden cursor-pointer transition-all shadow-lg hover:shadow-2xl"
+                    >
+                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center">
+                        <div className="sm:col-span-5 aspect-[16/10] sm:aspect-[4/3] rounded-2xl overflow-hidden bg-slate-900 relative">
+                          <img
+                            src={gearArticles[0].coverImage || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80'}
+                            alt={gearArticles[0].title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                          <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-black/80 backdrop-blur-md text-[11px] font-bold text-white border border-white/10">
+                            Sorotan Gear
+                          </div>
+                        </div>
+
+                        <div className="sm:col-span-7 flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center gap-2 text-xs text-slate-400 mb-2">
+                              <span className="text-[#FF2E7E] font-semibold">{gearArticles[0].subCategory}</span>
+                              <span className="text-slate-600">·</span>
+                              <span>{gearArticles[0].publishedAt}</span>
+                              <span className="text-slate-600">·</span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-slate-500" />
+                                <span>{gearArticles[0].readTime}</span>
+                              </span>
+                            </div>
+
+                            <h3 className="font-display font-bold text-lg sm:text-xl text-white group-hover:text-white leading-snug mb-2">
+                              {gearArticles[0].title}
+                            </h3>
+
+                            <p className="text-slate-400 text-xs sm:text-[13px] line-clamp-3 leading-relaxed mb-4">
+                              {gearArticles[0].excerpt}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-3 border-t border-white/[0.06] text-xs">
+                            <span className="text-slate-400 text-[11px]">Oleh {gearArticles[0].author?.name || 'Redaksi'}</span>
+                            <span className="text-[#FF2E7E] font-semibold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                              <span>Bedah Spesifikasi</span>
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                  )}
+
+                  {/* Horizontal Snap Strip for remaining gear items */}
+                  {gearArticles.length > 1 && (
+                    <div
+                      ref={gearScrollRef}
+                      className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 pt-1 scrollbar-none"
+                    >
+                      {gearArticles.slice(1).map((article) => (
+                        <div
+                          key={article.id}
+                          onClick={() => navigateTo('article-detail', { articleId: article.id })}
+                          className="snap-start min-w-[240px] sm:min-w-[270px] max-w-[270px] p-4 rounded-2xl bg-[#171717] border border-white/[0.08] hover:border-white/20 group cursor-pointer transition-all flex flex-col justify-between"
+                        >
+                          <div>
+                            <div className="aspect-[16/10] rounded-xl overflow-hidden bg-slate-900 mb-3 relative">
+                              <img
+                                src={article.coverImage || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=600&q=80'}
+                                alt={article.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              />
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mb-1.5">
+                              <span className="text-[#FF2E7E] font-medium">{article.subCategory}</span>
+                              <span className="text-slate-600">·</span>
+                              <span>{article.readTime}</span>
+                            </div>
+                            <h4 className="font-display font-bold text-sm text-white group-hover:text-white line-clamp-2 leading-snug mb-1">
+                              {article.title}
+                            </h4>
+                          </div>
+
+                          <div className="pt-3 mt-3 border-t border-white/[0.06] flex items-center justify-between text-[11px]">
+                            <span className="text-slate-400 truncate max-w-[150px]">{article.publishedAt}</span>
+                            <span className="text-[#FF2E7E] font-semibold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                              <span>Detail</span>
+                              <ArrowRight className="w-3 h-3" />
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+
+
+            {/* ============================================================== */}
+            {/* SECTION 3: HONEST REVIEWS (2 COLUMNS: MOVIE VS SERIES)        */}
+            {/* ============================================================== */}
+            <section id="home-honest-reviews-section" aria-labelledby="heading-honest-reviews">
+              <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 mb-4 pb-3 border-b border-white/[0.08]">
+                <div>
+                  <h2 id="heading-honest-reviews" className="font-display font-black text-xl sm:text-2xl text-white tracking-tight">
+                    Honest Reviews: Movies & Series
+                  </h2>
+                  <p className="text-slate-400 text-xs sm:text-[13px] mt-1">
+                    Ulasan jujur, mendalam, dan objektif dari redaksi untuk rilisan layar lebar serta serial streaming terbaru.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Column 1: Movie Reviews */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between pb-1.5 text-xs text-slate-300 font-semibold border-b border-white/[0.04]">
+                    <span>Review Film Bioskop</span>
+                    <span className="text-[11px] font-mono text-slate-500">{movieReviews.length} ulasan</span>
+                  </div>
+
+                  {movieReviews.length === 0 ? (
+                    <div className="p-6 text-center rounded-2xl bg-[#171717]/60 border border-white/[0.06] text-xs text-slate-400">
+                      Belum ada ulasan film yang dirilis.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {movieReviews.map((article) => (
+                        <article
+                          key={article.id}
+                          onClick={() => navigateTo('article-detail', { articleId: article.id })}
+                          className="p-3.5 sm:p-4 rounded-2xl bg-[#171717] hover:bg-white/[0.04] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer group flex flex-col sm:flex-row gap-3.5"
+                        >
+                          {/* Article Thumbnail */}
+                          <div className="w-full sm:w-24 sm:h-24 aspect-[16/10] sm:aspect-square rounded-xl overflow-hidden shrink-0 bg-slate-900 border border-white/[0.08]">
+                            <img
+                              src={article.coverImage || 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=300&q=80'}
+                              alt={article.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                          </div>
+
+                          <div className="flex-1 min-w-0 flex flex-col justify-between">
+                            <div>
+                              <div className="flex items-center gap-2 text-[11px] text-slate-400 mb-1">
+                                <span className="text-[#FF2E7E] font-semibold">Verdict Film</span>
+                                <span className="text-slate-600">·</span>
+                                <span>{article.readTime}</span>
+                              </div>
+
+                              <h4 className="font-display font-bold text-sm text-white group-hover:text-white leading-snug mb-1.5 line-clamp-2">
+                                {article.title}
+                              </h4>
+
+                              <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                                "{article.excerpt}"
+                              </p>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-white/[0.06] text-[11px] text-slate-400">
+                              <span className="truncate max-w-[110px]">{article.author?.name || 'Redaksi'}</span>
+                              <span className="text-[#FF2E7E] font-semibold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform shrink-0">
+                                <span>Baca Ulasan</span>
+                                <ArrowRight className="w-3 h-3" />
+                              </span>
+                            </div>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Column 2: Series Reviews */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between pb-1.5 text-xs text-slate-300 font-semibold border-b border-white/[0.04]">
+                    <span>Review Serial Streaming</span>
+                    <span className="text-[11px] font-mono text-slate-500">{seriesReviews.length} ulasan</span>
+                  </div>
+
+                  {seriesReviews.length === 0 ? (
+                    <div className="p-6 text-center rounded-2xl bg-[#171717]/60 border border-white/[0.06] text-xs text-slate-400">
+                      Belum ada ulasan serial yang dirilis.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {seriesReviews.map((article) => (
+                        <article
+                          key={article.id}
+                          onClick={() => navigateTo('article-detail', { articleId: article.id })}
+                          className="p-3.5 sm:p-4 rounded-2xl bg-[#171717] hover:bg-white/[0.04] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer group flex flex-col sm:flex-row gap-3.5"
+                        >
+                          {/* Article Thumbnail */}
+                          <div className="w-full sm:w-24 sm:h-24 aspect-[16/10] sm:aspect-square rounded-xl overflow-hidden shrink-0 bg-slate-900 border border-white/[0.08]">
+                            <img
+                              src={article.coverImage || 'https://images.unsplash.com/photo-1528164344705-475426879c0d?auto=format&fit=crop&w=300&q=80'}
+                              alt={article.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                          </div>
+
+                          <div className="flex-1 min-w-0 flex flex-col justify-between">
+                            <div>
+                              <div className="flex items-center gap-2 text-[11px] text-slate-400 mb-1">
+                                <span className="text-[#FF2E7E] font-semibold">Verdict Serial</span>
+                                <span className="text-slate-600">·</span>
+                                <span>{article.readTime}</span>
+                              </div>
+
+                              <h4 className="font-display font-bold text-sm text-white group-hover:text-white leading-snug mb-1.5 line-clamp-2">
+                                {article.title}
+                              </h4>
+
+                              <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                                "{article.excerpt}"
+                              </p>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-white/[0.06] text-[11px] text-slate-400">
+                              <span className="truncate max-w-[110px]">{article.author?.name || 'Redaksi'}</span>
+                              <span className="text-[#FF2E7E] font-semibold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform shrink-0">
+                                <span>Baca Ulasan</span>
+                                <ArrowRight className="w-3 h-3" />
+                              </span>
+                            </div>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+
+
+            {/* ============================================================== */}
+            {/* SECTION 4: ANIME NEWS (COMPACT TICKER / WIRE STYLE)           */}
+            {/* ============================================================== */}
+            <section id="home-anime-news-ticker" aria-labelledby="heading-anime-news">
+              <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 mb-4 pb-3 border-b border-white/[0.08]">
+                <div>
+                  <h2 id="heading-anime-news" className="font-display font-black text-xl sm:text-2xl text-white tracking-tight">
+                    Anime News & Season Updates
+                  </h2>
+                  <p className="text-slate-400 text-xs sm:text-[13px] mt-1">
+                    Warta terkini seputar jadwal tayang musim baru, adaptasi manga, dan kabar resmi dari studio animasi Jepang.
+                  </p>
+                </div>
+                <span className="text-[11px] font-mono text-slate-500 self-start sm:self-auto">
+                  News Wire ({animeNews.length})
+                </span>
+              </div>
+
+              {animeNews.length === 0 ? (
+                <div className="p-6 text-center rounded-2xl bg-[#171717] border border-white/[0.08] text-xs text-slate-400">
+                  Belum ada kabar anime terbaru saat ini.
+                </div>
+              ) : (
+                <div className="bg-[#171717] rounded-3xl border border-white/[0.08] divide-y divide-white/[0.06] overflow-hidden">
+                  {animeNews.map((article) => (
+                    <div
+                      key={article.id}
+                      onClick={() => navigateTo('article-detail', { articleId: article.id })}
+                      className="p-3 sm:p-3.5 flex items-center justify-between gap-4 hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-3 sm:gap-3.5 min-w-0">
+                        {/* Article Thumbnail */}
+                        <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-slate-900 border border-white/[0.08]">
+                          <img
+                            src={article.coverImage || 'https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=160&q=80'}
+                            alt={article.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-[11px] font-mono text-slate-400">
+                              {article.publishedAt}
+                            </span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#FF2E7E]" />
+                            <span className="text-[10px] uppercase font-bold text-[#FF2E7E] tracking-wider">
+                              {article.subCategory || 'Anime Wire'}
+                            </span>
+                          </div>
+
+                          {/* Title */}
+                          <h4 className="text-xs sm:text-sm font-semibold text-white group-hover:text-white transition-colors truncate">
+                            {article.title}
+                          </h4>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0 text-slate-400 group-hover:text-[#FF2E7E] transition-colors text-xs">
+                        <span className="hidden sm:inline text-[11px] font-mono text-slate-500">
+                          {article.readTime}
+                        </span>
+                        <ChevronRight className="w-4 h-4" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+
+            {/* ============================================================== */}
+            {/* SECTION 5: FILM STUDIES (MAGAZINE / ESSAY LONG-FORM)          */}
+            {/* ============================================================== */}
+            <section id="home-film-studies-section" aria-labelledby="heading-film-studies">
+              <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 mb-4 pb-3 border-b border-white/[0.08]">
+                <div>
+                  <h2 id="heading-film-studies" className="font-display font-black text-xl sm:text-2xl text-white tracking-tight">
+                    Film Studies & Cinematic Essays
+                  </h2>
+                  <p className="text-slate-400 text-xs sm:text-[13px] mt-1">
+                    Kajian mendalam seputar teori montase, dramaturgi penyutradaraan, tata sinematografi, dan analisis visual.
+                  </p>
+                </div>
+              </div>
+
+              {filmStudiesArticles.length === 0 ? (
+                <div className="p-8 text-center rounded-3xl bg-[#171717] border border-white/[0.08] text-xs text-slate-400">
+                  Belum ada esai kajian film yang dipublikasikan.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Primary Editorial Long-form Lead with Article Cover Image */}
+                  {filmStudiesArticles[0] && (
+                    <article
+                      onClick={() => navigateTo('article-detail', { articleId: filmStudiesArticles[0].id })}
+                      className="group p-5 sm:p-7 rounded-3xl bg-[#171717] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer shadow-lg hover:shadow-2xl relative overflow-hidden"
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                        {/* Article Image */}
+                        <div className="md:col-span-5 aspect-[16/10] rounded-2xl overflow-hidden bg-slate-900 border border-white/[0.08]">
+                          <img
+                            src={filmStudiesArticles[0].coverImage || 'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=800&q=80'}
+                            alt={filmStudiesArticles[0].title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        </div>
+
+                        <div className="md:col-span-7 flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center gap-2 text-xs text-slate-400 mb-2.5">
+                              <span className="text-[#FF2E7E] font-semibold">
+                                {getFilmStudiesLabel(filmStudiesArticles[0].subCategory)}
+                              </span>
+                              <span className="text-slate-600">·</span>
+                              <span>{filmStudiesArticles[0].publishedAt}</span>
+                              <span className="text-slate-600">·</span>
+                              <span>{filmStudiesArticles[0].readTime}</span>
+                            </div>
+
+                            <h3 className="font-display font-bold text-xl sm:text-2xl text-white group-hover:text-white leading-tight mb-3">
+                              {filmStudiesArticles[0].title}
+                            </h3>
+
+                            <p className="text-slate-300 text-xs sm:text-sm leading-relaxed mb-4 font-serif italic line-clamp-3">
+                              "{filmStudiesArticles[0].excerpt}"
+                            </p>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-4 border-t border-white/[0.08] text-xs text-slate-400">
+                            <div className="flex items-center gap-2">
+                              <img
+                                src={filmStudiesArticles[0].author?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}
+                                alt={filmStudiesArticles[0].author?.name || 'Penulis'}
+                                className="w-6 h-6 rounded-full object-cover"
+                              />
+                              <span className="text-slate-300 font-medium">
+                                {filmStudiesArticles[0].author?.name || 'Redaksi Sotoy'}
+                              </span>
+                            </div>
+
+                            <span className="text-[#FF2E7E] font-semibold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                              <span>Baca Esai Lengkap</span>
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                  )}
+
+                  {/* Secondary Essay Cards with Article Cover Images */}
+                  {filmStudiesArticles.length > 1 && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {filmStudiesArticles.slice(1).map((article) => (
+                        <article
+                          key={article.id}
+                          onClick={() => navigateTo('article-detail', { articleId: article.id })}
+                          className="group p-4 sm:p-5 rounded-2xl bg-[#171717] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer flex flex-col justify-between"
+                        >
+                          <div>
+                            {/* Article Image */}
+                            <div className="aspect-[16/10] rounded-xl overflow-hidden bg-slate-900 border border-white/[0.08] mb-3">
+                              <img
+                                src={article.coverImage || 'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=600&q=80'}
+                                alt={article.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              />
+                            </div>
+
+                            <div className="flex items-center gap-2 text-[11px] text-slate-400 mb-1.5">
+                              <span className="text-[#FF2E7E] font-medium">
+                                {getFilmStudiesLabel(article.subCategory)}
+                              </span>
+                              <span className="text-slate-600">·</span>
+                              <span>{article.readTime}</span>
+                            </div>
+
+                            <h4 className="font-display font-bold text-sm sm:text-base text-white group-hover:text-white leading-snug mb-2 line-clamp-2">
+                              {article.title}
+                            </h4>
+
+                            <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed mb-4">
+                              {article.excerpt}
+                            </p>
+                          </div>
+
+                          <div className="pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs text-slate-400">
+                            <span>{article.author?.name || 'Redaksi'}</span>
+                            <span className="text-[#FF2E7E] font-semibold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform text-[11px]">
+                              <span>Baca</span>
+                              <ArrowRight className="w-3 h-3" />
+                            </span>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+
+
+            {/* ============================================================== */}
+            {/* EXISTING EXPLORE CATEGORIES & ARCHIVES CONTENT                 */}
+            {/* ============================================================== */}
+            <div id="explore-categories-container" className="pt-8 border-t border-white/[0.08] space-y-6">
+              {/* Section Header */}
+              <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 pb-2">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-4 bg-slate-300 rounded-full inline-block" />
+                    <h2 className="font-display font-black text-xl sm:text-2xl text-white tracking-tight">
+                      Explore Categories & Archives
+                    </h2>
+                  </div>
+                  <p className="text-slate-400 text-xs sm:text-[13px] mt-1 ml-3.5">
+                    Ulasan film, bedah serial, anime musim ini, eksplorasi cinema gear, dan kajian sinematik.
+                  </p>
+                </div>
+
+                {selectedCategoryTab !== 'all' && (
+                  <button
+                    onClick={() => navigateTo('category', { category: selectedCategoryTab })}
+                    className="text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1 transition-colors"
+                  >
+                    <span>Arsip Lengkap {selectedCategoryTab}</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Desktop Category Filter Tabs Bar (Cohesive Segmented Control) */}
+              <div className="hidden lg:flex items-center gap-1.5 p-1 bg-black/40 rounded-2xl border border-white/[0.08] overflow-x-auto scrollbar-none">
+                {CATEGORY_OPTIONS.map((cat) => {
+                  const isCatActive = selectedCategoryTab === cat.id;
+                  const buttonIdMap: Record<string, string> = {
+                    all: 'filter-cat-all',
+                    movies: 'filter-cat-movies',
+                    series: 'filter-cat-series',
+                    anime: 'filter-cat-anime',
+                    'cinema-gear': 'filter-cat-gear',
+                    'film-studies': 'filter-cat-studies',
+                  };
+
+                  return (
+                    <button
+                      key={cat.id}
+                      id={buttonIdMap[cat.id]}
+                      onClick={() => setSelectedCategoryTab(cat.id)}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
+                        isCatActive
+                          ? 'bg-white/[0.12] text-white shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Mobile Category Trigger Button (Threads-style Drawer Opener) */}
+              <div className="lg:hidden flex items-center justify-between gap-3">
+                <button
+                  id="mobile-category-drawer-trigger"
+                  type="button"
+                  onClick={() => setIsMobileDrawerOpen(true)}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-black/40 hover:bg-black/60 border border-white/[0.10] active:border-white/20 text-xs font-semibold text-white transition-all active:scale-[0.98] min-h-[44px]"
+                  aria-haspopup="dialog"
+                  aria-expanded={isMobileDrawerOpen}
+                  aria-label="Pilih Kategori Konten"
+                >
+                  <span className="text-slate-400 font-normal">Kategori:</span>
+                  <span className="font-bold text-white">{currentCategoryLabel}</span>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-0.5" />
+                </button>
+
+                <span className="text-xs text-slate-500 font-mono tabular-nums">
+                  {filteredArticles.length} artikel
+                </span>
+              </div>
+
+              {/* Articles List */}
+              <div className="space-y-4">
+                {filteredArticles.slice(0, 7).map((article) => (
+                  <HomeCategoryArticleItem
+                    key={article.id}
+                    article={article}
+                    navigateTo={navigateTo}
+                    openShareModal={openShareModal}
+                  />
+                ))}
+              </div>
+
+              {/* In-feed Ad Banner Slot */}
+              <AdBannerSlot variant="infeed" />
             </div>
 
-            {/* Mobile Category Trigger Button (Threads-style Drawer Opener) */}
-            <div className="lg:hidden flex items-center justify-between gap-3">
-              <button
-                id="mobile-category-drawer-trigger"
-                type="button"
-                onClick={() => setIsMobileDrawerOpen(true)}
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-black/40 hover:bg-black/60 border border-white/[0.10] active:border-white/20 text-xs font-semibold text-white transition-all active:scale-[0.98] min-h-[44px]"
-                aria-haspopup="dialog"
-                aria-expanded={isMobileDrawerOpen}
-                aria-label="Pilih Kategori Konten"
-              >
-                <span className="text-slate-400 font-normal">Kategori:</span>
-                <span className="font-bold text-white">{currentCategoryLabel}</span>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-0.5" />
-              </button>
-
-              <span className="text-xs text-slate-500 font-mono tabular-nums">
-                {filteredArticles.length} artikel
-              </span>
-            </div>
-
-            {/* Articles List */}
-            <div className="space-y-4">
-              {filteredArticles.slice(0, 7).map((article) => (
-                <HomeCategoryArticleItem
-                  key={article.id}
-                  article={article}
-                  navigateTo={navigateTo}
-                  openShareModal={openShareModal}
-                />
-              ))}
-            </div>
-
-            {/* In-feed Ad Banner Slot */}
-            <AdBannerSlot variant="infeed" />
           </div>
 
-          {/* RIGHT SIDEBAR (4 Columns) */}
+          {/* RIGHT SIDEBAR (4 Columns) - Continues to scroll alongside all left content */}
           <div className="lg:col-span-4">
             <EditorialSidebar />
           </div>

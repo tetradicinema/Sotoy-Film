@@ -79,7 +79,7 @@ export const HeroSection: React.FC = () => {
         : new Date(b.publishedAt || 0).getTime();
       return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
     })
-    .slice(0, 4);
+    .slice(0, 5);
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [activeTab, setActiveTab] = useState<'trending' | 'to-watch' | 'gear-addict'>('trending');
@@ -126,7 +126,7 @@ export const HeroSection: React.FC = () => {
   };
 
   // To watch recommendations
-  const toWatchFilms = films.filter(f => f.featuredRecommendation).slice(0, 4);
+  const toWatchFilms = films.filter(f => f.featuredRecommendation || f.skorSotoy >= 4.5).slice(0, 5);
 
   return (
     <section id="home-hero-section" className="relative pt-4 sm:pt-6 pb-6">
@@ -329,45 +329,48 @@ export const HeroSection: React.FC = () => {
 
               {/* Tab Content 1: RECENT ARTICLES */}
               {activeTab === 'trending' && (
-                <div className="flex-1 flex flex-col justify-between space-y-3">
-                  <div className="space-y-2">
+                <div className="flex-1 flex flex-col justify-between space-y-3 min-h-0">
+                  <div className="space-y-2 flex-1 flex flex-col justify-around">
                     {recentArticles.map((art, index) => (
                       <div
                         key={art.id}
                         id={`recent-article-item-${art.id}`}
                         onClick={() => navigateTo('article-detail', { articleId: art.id })}
-                        className="group flex items-center gap-3 p-2 rounded-2xl hover:bg-white/[0.04] border border-transparent hover:border-white/[0.06] transition-all cursor-pointer"
+                        className="group flex items-center gap-3 p-2.5 rounded-2xl hover:bg-white/[0.04] border border-transparent hover:border-white/[0.08] transition-all cursor-pointer"
                       >
                         {/* Tabular Index Number */}
-                        <span className={`w-6 font-mono tabular-nums text-xs font-bold text-center ${
-                          index === 0 ? 'text-white' : 'text-slate-500'
+                        <span className={`w-5 font-mono tabular-nums text-xs font-bold text-center shrink-0 ${
+                          index === 0 ? 'text-[#FF2E7E]' : 'text-slate-500'
                         }`}>
                           {String(index + 1).padStart(2, '0')}
                         </span>
 
                         {/* Poster/Cover */}
                         <img
-                          src={art.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=120&q=80'}
+                          src={art.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=160&q=80'}
                           alt={art.title}
-                          className="w-12 h-12 object-cover rounded-xl shrink-0 border border-white/10 group-hover:scale-105 transition-transform"
+                          className="w-13 h-13 object-cover rounded-xl shrink-0 border border-white/10 group-hover:scale-105 transition-transform duration-300"
                         />
 
                         {/* Metadata */}
                         <div className="flex-1 min-w-0">
-                          <span className="text-[10px] text-[#FF2E7E] font-bold uppercase tracking-wider block truncate">
-                            {art.category}
-                          </span>
-                          <h4 className="text-white font-semibold text-xs truncate group-hover:text-white transition-colors">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="text-[10px] text-[#FF2E7E] font-bold uppercase tracking-wider truncate">
+                              {art.category}
+                            </span>
+                            <span className="text-slate-600 text-[10px]">·</span>
+                            <span className="text-[10px] text-slate-400 truncate">{art.publishedAt}</span>
+                          </div>
+                          <h4 className="text-white font-semibold text-xs leading-snug line-clamp-2 group-hover:text-white transition-colors">
                             {art.title}
                           </h4>
-                          <div className="mt-0.5 flex items-center gap-2 text-[10px] text-slate-400">
+                          <div className="mt-1 flex items-center gap-1 text-[10px] text-slate-400">
+                            <Clock className="w-2.5 h-2.5 text-slate-500" />
                             <span>{art.readTime}</span>
-                            <span>·</span>
-                            <span className="text-slate-400">{art.publishedAt}</span>
                           </div>
                         </div>
 
-                        <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-white transition-transform group-hover:translate-x-0.5 shrink-0" />
+                        <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition-transform group-hover:translate-x-0.5 shrink-0" />
                       </div>
                     ))}
                   </div>
@@ -375,32 +378,32 @@ export const HeroSection: React.FC = () => {
                   <button
                     id="see-all-trending-btn"
                     onClick={() => navigateTo('category', { category: 'movies' })}
-                    className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 mt-2 cursor-pointer"
+                    className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer mt-auto shrink-0"
                   >
                     <span>Jelajahi Semua Artikel Terbaru</span>
-                    <ArrowRight className="w-3 h-3 text-[#FF2E7E]" />
+                    <ArrowRight className="w-3.5 h-3.5 text-[#FF2E7E]" />
                   </button>
                 </div>
               )}
 
               {/* Tab Content 2: TO WATCH */}
               {activeTab === 'to-watch' && (
-                <div className="flex-1 flex flex-col justify-between space-y-3">
-                  <div className="space-y-2">
+                <div className="flex-1 flex flex-col justify-between space-y-3 min-h-0">
+                  <div className="space-y-2 flex-1 flex flex-col justify-around">
                     {toWatchFilms.map(film => (
                       <div
                         key={film.id}
                         id={`towatch-film-item-${film.id}`}
                         onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                        className="group flex items-center gap-3 p-2 rounded-2xl hover:bg-white/[0.04] border border-transparent hover:border-white/[0.06] transition-all cursor-pointer"
+                        className="group flex items-center gap-3 p-2.5 rounded-2xl hover:bg-white/[0.04] border border-transparent hover:border-white/[0.08] transition-all cursor-pointer"
                       >
                         <img
-                          src={film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=120&q=80'}
+                          src={film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=160&q=80'}
                           alt={film.title}
-                          className="w-10 h-14 object-cover rounded-lg shrink-0 border border-white/10 group-hover:scale-105 transition-transform"
+                          className="w-11 h-15 object-cover rounded-xl shrink-0 border border-white/10 group-hover:scale-105 transition-transform duration-300"
                         />
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-white font-semibold text-xs truncate group-hover:text-white transition-colors">
+                          <h4 className="text-white font-semibold text-xs leading-snug truncate group-hover:text-white transition-colors">
                             {film.title}
                           </h4>
                           <p className="text-slate-400 text-[11px] line-clamp-1 mt-0.5">
@@ -422,6 +425,7 @@ export const HeroSection: React.FC = () => {
                             </span>
                           </div>
                         </div>
+                        <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition-transform group-hover:translate-x-0.5 shrink-0" />
                       </div>
                     ))}
                   </div>
@@ -429,46 +433,47 @@ export const HeroSection: React.FC = () => {
                   <button
                     id="see-all-towatch-btn"
                     onClick={() => navigateTo('film-recommendations')}
-                    className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 mt-2"
+                    className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer mt-auto shrink-0"
                   >
                     <span>Buka Generator Rekomendasi Film</span>
-                    <ArrowRight className="w-3 h-3 text-slate-300" />
+                    <ArrowRight className="w-3.5 h-3.5 text-[#FF2E7E]" />
                   </button>
                 </div>
               )}
 
               {/* Tab Content 3: GEAR ADDICT */}
               {activeTab === 'gear-addict' && (
-                <div className="flex-1 flex flex-col justify-between space-y-3">
-                  <div className="space-y-2">
-                    {GEAR_ADDICT_ITEMS.map(gear => (
+                <div className="flex-1 flex flex-col justify-between space-y-3 min-h-0">
+                  <div className="space-y-2 flex-1 flex flex-col justify-around">
+                    {GEAR_ADDICT_ITEMS.slice(0, 5).map(gear => (
                       <div
                         key={gear.id}
                         id={`gear-addict-item-${gear.id}`}
                         onClick={() => navigateTo('category', { category: 'cinema-gear' })}
-                        className="group flex items-center gap-3 p-2 rounded-2xl hover:bg-white/[0.04] border border-transparent hover:border-white/[0.06] transition-all cursor-pointer"
+                        className="group flex items-center gap-3 p-2.5 rounded-2xl hover:bg-white/[0.04] border border-transparent hover:border-white/[0.08] transition-all cursor-pointer"
                       >
                         <img
                           src={gear.image || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=200&q=80'}
                           alt={gear.name}
-                          className="w-12 h-12 object-cover rounded-lg shrink-0 border border-white/10 group-hover:scale-105 transition-transform"
+                          className="w-13 h-13 object-cover rounded-xl shrink-0 border border-white/10 group-hover:scale-105 transition-transform duration-300"
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-white font-medium">
+                            <span className="text-[#FF2E7E] font-bold text-[10px] uppercase tracking-wider">
                               {gear.badge}
                             </span>
-                            <span className="font-mono tabular-nums text-white text-[11px]">
+                            <span className="font-mono tabular-nums text-white text-[11px] font-semibold">
                               {gear.price}
                             </span>
                           </div>
-                          <h4 className="text-white font-semibold text-xs truncate group-hover:text-white transition-colors mt-0.5">
+                          <h4 className="text-white font-semibold text-xs leading-snug line-clamp-1 group-hover:text-white transition-colors mt-0.5">
                             {gear.name}
                           </h4>
-                          <p className="text-slate-400 text-[10px] truncate">
+                          <p className="text-slate-400 text-[10px] truncate mt-0.5">
                             {gear.sensor}
                           </p>
                         </div>
+                        <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition-transform group-hover:translate-x-0.5 shrink-0" />
                       </div>
                     ))}
                   </div>
@@ -476,10 +481,10 @@ export const HeroSection: React.FC = () => {
                   <button
                     id="see-all-gear-btn"
                     onClick={() => navigateTo('category', { category: 'cinema-gear' })}
-                    className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 mt-2"
+                    className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer mt-auto shrink-0"
                   >
-                    <span>Lihat Semua Ulasan Cinema Gear</span>
-                    <ArrowRight className="w-3 h-3 text-white" />
+                    <span>Lihat Katalog Cinema Gear</span>
+                    <ArrowRight className="w-3.5 h-3.5 text-[#FF2E7E]" />
                   </button>
                 </div>
               )}
