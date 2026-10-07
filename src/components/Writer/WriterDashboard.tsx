@@ -13,6 +13,12 @@ import {
   BarChart3,
   ExternalLink,
   ShieldCheck,
+  FileEdit,
+  Trash2,
+  Clock,
+  Bookmark,
+  Layers,
+  ArrowRight,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -35,6 +41,7 @@ export const WriterDashboard: React.FC = () => {
     currentUser,
     articles,
     navigateTo,
+    deleteArticle,
     showToast,
   } = useApp();
 
@@ -43,6 +50,28 @@ export const WriterDashboard: React.FC = () => {
   const authorArticles = useMemo(() => {
     return articles.filter(a => a.author?.id === authorId || a.author?.id === currentUser.id);
   }, [articles, authorId, currentUser.id]);
+
+  // Drafts: Unpublished articles
+  const draftArticles = useMemo(() => {
+    return authorArticles.filter(a => a.status === 'draft' || a.status === 'trash');
+  }, [authorArticles]);
+
+  const [deletingDraftId, setDeletingDraftId] = useState<string | null>(null);
+
+  const handleDeleteDraft = async (draftId: string, title: string) => {
+    if (!window.confirm(`Apakah Anda yakin ingin menghapus draf "${title || 'Draf Tanpa Judul'}"? Tindakan ini tidak dapat dibatalkan.`)) {
+      return;
+    }
+    try {
+      setDeletingDraftId(draftId);
+      await deleteArticle(draftId);
+      showToast('Draf artikel berhasil dihapus.', 'success');
+    } catch {
+      showToast('Gagal menghapus draf artikel.', 'error');
+    } finally {
+      setDeletingDraftId(null);
+    }
+  };
 
   // Compute 30-Day Daily Article Views for Chart
   const last30DaysViewsData = useMemo(() => {
@@ -197,13 +226,39 @@ export const WriterDashboard: React.FC = () => {
       </html>
     `;
 
-    const printWin = window.open('', '_blank');
-    if (printWin) {
-      printWin.document.write(reportHtml);
-      printWin.document.close();
-      showToast('Menyiapkan laporan PDF untuk dicetak/diunduh...');
-    } else {
-      showToast('Popup diblokir. Harap izinkan popup untuk mengunduh laporan PDF.');
+    try {
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+      const doc = iframe.contentWindow?.document;
+      if (doc) {
+        doc.open();
+        doc.write(reportHtml);
+        doc.close();
+        setTimeout(() => {
+          try {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+          } catch {
+            // ignore print issues in restricted iframes
+          }
+          setTimeout(() => {
+            if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe);
+            }
+          }, 3000);
+        }, 500);
+        showToast('Menyiapkan laporan PDF untuk dicetak/diunduh...');
+      } else {
+        showToast('Gagal menyiapkan cetak laporan.', 'error');
+      }
+    } catch {
+      showToast('Gagal mencetak laporan.', 'error');
     }
   };
 
@@ -420,6 +475,126 @@ export const WriterDashboard: React.FC = () => {
               </AreaChart>
             </ResponsiveContainer>
           </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* DEDICATED DRAFTS SECTION (Draf Artikel Tersimpan) */}
+        {/* ========================================================================= */}
+        <div className="p-6 rounded-2xl bg-[#171717] border border-white/[0.08] space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
+            <div>
+              <div className="flex items-center gap-2.5">
+                <h2 className="text-base sm:text-lg font-black text-white tracking-tight flex items-center gap-2.5 font-display">
+                  <FileEdit className="w-5 h-5 text-amber-400" />
+                  <span>Draf Artikel Saya</span>
+                </h2>
+                <span className="text-xs font-mono font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 px-2.5 py-0.5 rounded-full">
+                  {draftArticles.length} Draf Belum Terbit
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Karya tulis yang sedang kamu susun dan belum dipublikasikan. Lanjutkan penulisan kapan saja.
+              </p>
+            </div>
+
+            <button
+              onClick={() => navigateTo('write-article')}
+              className="px-4 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 hover:text-amber-200 border border-amber-500/30 font-semibold text-xs transition-all flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>+ Draf Baru</span>
+            </button>
+          </div>
+
+          {draftArticles.length === 0 ? (
+            <div className="text-center py-12 px-4 rounded-xl bg-black/20 border border-white/[0.04] space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
+                <Bookmark className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-sm font-bold text-white">Tidak ada draf tertunda</h4>
+                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                  Semua artikel yang kamu tulis telah terbit atau belum ada draf tersimpan. Mulai tulis ide barumu sekarang!
+                </p>
+              </div>
+              <button
+                onClick={() => navigateTo('write-article')}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#FF2E7E] hover:bg-[#e0266e] text-white font-semibold text-xs transition-all cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Mulai Tulis Artikel</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {draftArticles.map((draft) => {
+                const words = draft.content ? draft.content.trim().split(/\s+/).filter(Boolean).length : 0;
+                const readingMinutes = Math.max(1, Math.ceil(words / 200));
+
+                return (
+                  <div
+                    key={draft.id}
+                    className="p-4 sm:p-5 rounded-2xl bg-[#0A0A0A] border border-white/[0.08] hover:border-amber-500/40 transition-all flex flex-col justify-between space-y-4 group shadow-md"
+                  >
+                    <div className="space-y-2.5">
+                      {/* Top Badges */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                          Draf
+                        </span>
+                        <span className="text-[11px] font-mono text-slate-400 flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-slate-500" />
+                          <span>~{readingMinutes} mnt baca ({words} kata)</span>
+                        </span>
+                      </div>
+
+                      {/* Title */}
+                      <h3
+                        onClick={() => navigateTo('write-article', { articleId: draft.id })}
+                        className="text-sm sm:text-base font-bold text-white group-hover:text-amber-300 transition-colors line-clamp-2 cursor-pointer font-display leading-snug"
+                        title={draft.title || 'Draf Tanpa Judul'}
+                      >
+                        {draft.title || '(Draf Tanpa Judul)'}
+                      </h3>
+
+                      {/* Excerpt Snippet */}
+                      <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                        {draft.excerpt || draft.content?.slice(0, 120) || 'Belum ada ringkasan atau isi draf...'}
+                      </p>
+                    </div>
+
+                    {/* Footer & Actions */}
+                    <div className="pt-3 border-t border-white/[0.06] flex items-center justify-between gap-2">
+                      <span className="text-[10px] text-slate-500 truncate">
+                        Kategori: <strong className="text-slate-300 uppercase">{draft.category}</strong>
+                      </span>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleDeleteDraft(draft.id, draft.title)}
+                          disabled={deletingDraftId === draft.id}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-colors cursor-pointer disabled:opacity-50"
+                          title="Hapus Draf Ini"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          onClick={() => navigateTo('write-article', { articleId: draft.id })}
+                          className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-black font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                          title="Lanjutkan Menulis Draf"
+                        >
+                          <span>Lanjutkan</span>
+                          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* WordPress-Style CMS Article Workspace */}

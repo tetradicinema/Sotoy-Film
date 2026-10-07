@@ -424,6 +424,16 @@ service cloud.firestore {
         allow create: if isSignedIn() && !isSuspended() && isValidId(commentId) && incoming().userId == request.auth.uid;
         allow update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin() || isWriter());
       }
+
+      match /versions/{versionId} {
+        allow read: if isSignedIn() && (isWriter() || isAdmin());
+        allow create, update, delete: if isSignedIn() && (isWriter() || isAdmin());
+      }
+    }
+
+    match /article_versions/{versionId} {
+      allow read: if isSignedIn() && (isWriter() || isAdmin());
+      allow create, update, delete: if isSignedIn() && (isWriter() || isAdmin());
     }
 
     match /films/{filmId} {

@@ -122,6 +122,7 @@ export interface Article {
   commentsCount: number;
   tags: string[];
   relatedFilmId?: string; // Links directly to a film discussed in this article
+  relatedFilmIds?: string[]; // Links to multiple films discussed in this article
   status?: 'published' | 'draft' | 'scheduled' | 'trash';
   scheduledAt?: string; // ISO date string e.g. "2026-09-25T14:30"
   seoTitle?: string;
@@ -129,6 +130,27 @@ export interface Article {
   ogImage?: string;
   seoKeywords?: string;
   dailyViews?: Record<string, number>;
+  versionsCount?: number;
+}
+
+export interface ArticleVersion {
+  id: string;
+  articleId: string;
+  versionNumber: number;
+  title: string;
+  excerpt: string;
+  content: string;
+  tags?: string[];
+  category?: MainCategory;
+  subCategory?: SubCategory;
+  coverImage?: string;
+  readTime?: string;
+  savedAt: string;
+  authorId?: string;
+  authorName: string;
+  authorAvatar?: string;
+  wordCount: number;
+  summary?: string;
 }
 
 export interface CastMember {

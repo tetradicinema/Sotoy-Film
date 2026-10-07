@@ -302,6 +302,7 @@ export const FilmDetailPage: React.FC = () => {
   // Articles from Penulis Sotoy discussing this film
   const relatedArticles = articles.filter(a =>
     a.relatedFilmId === film.id ||
+    (a.relatedFilmIds && Array.isArray(a.relatedFilmIds) && a.relatedFilmIds.includes(film.id)) ||
     a.title.toLowerCase().includes(film.title.toLowerCase()) ||
     a.tags.some(t => t.toLowerCase() === film.title.toLowerCase()) ||
     (film.id === 'film-1' && a.tags.includes('Sci-Fi')) ||

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   Bold,
   Italic,
@@ -10,13 +10,19 @@ import {
   ListOrdered,
   Code,
   Link,
+  Image as ImageIcon,
   Table as TableIcon,
-  Eye,
-  Edit2,
   HelpCircle,
   Maximize2,
   Minimize2,
+  Loader2,
+  UploadCloud,
+  Clock,
+  Sparkles,
 } from 'lucide-react';
+import { storage } from '../../lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useApp } from '../../context/AppContext';
 
 interface RichTextEditorProps {
   value: string;
@@ -29,16 +35,24 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   value,
   onChange,
   placeholder = 'Mulai menulis artikel...',
-  id,
+  id = 'write-content-textarea',
 }) => {
+  const { currentUser, showToast } = useApp();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [activeTab, setActiveTab] = useState<'write' | 'preview'>('write');
+  const editorRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const isInternalChangeRef = useRef(false);
+
+  // Default to direct visual mode: formatting is directly visible as you type
+  const [editorMode, setEditorMode] = useState<'visual' | 'markdown'>('visual');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
 
-  // Parse a basic subset of markdown into styled HTML for live preview
+  // Parse a basic subset of markdown into styled HTML for live formatted editor
   const parseMarkdown = (md: string) => {
-    if (!md) return '<p class="text-slate-500 italic">Pratinjau kosong...</p>';
+    if (!md || !md.trim()) return '';
     
     let html = md
       .replace(/&/g, '&amp;')
@@ -49,6 +63,9 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     html = html.replace(/^### (.*?)$/gm, '<h3 class="text-base font-black text-white mt-4 mb-2">$1</h3>');
     html = html.replace(/^## (.*?)$/gm, '<h2 class="text-lg font-black text-white mt-5 mb-2">$1</h2>');
     html = html.replace(/^# (.*?)$/gm, '<h1 class="text-xl font-black text-white mt-6 mb-3">$1</h1>');
+
+    // Images: ![alt](url)
+    html = html.replace(/!\[(.*?)\]\((.*?)\)/g, '<figure class="my-5 rounded-2xl overflow-hidden border border-white/10 bg-black/40 shadow-xl"><img src="$2" alt="$1" class="w-full max-h-[480px] object-cover rounded-t-xl" loading="lazy" /><figcaption class="p-2.5 text-center text-xs text-slate-400 italic bg-white/[0.02] border-t border-white/[0.06]">$1</figcaption></figure>');
 
     // Bold & Italic
     html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-white">$1</strong>');
@@ -112,6 +129,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         trimmed.startsWith('<blockquote') ||
         trimmed.startsWith('<pre') ||
         trimmed.startsWith('<li') ||
+        trimmed.startsWith('<figure') ||
         trimmed.startsWith('<div class="overflow-x-auto')
       ) {
         return p;
@@ -120,6 +138,138 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     });
 
     return formattedParagraphs.join('\n');
+  };
+
+  // Sync external markdown changes into editorRef HTML
+  useEffect(() => {
+    if (editorMode === 'visual' && editorRef.current) {
+      if (isInternalChangeRef.current) {
+        isInternalChangeRef.current = false;
+        return;
+      }
+      const html = parseMarkdown(value);
+      if (editorRef.current.innerHTML !== html) {
+        editorRef.current.innerHTML = html;
+      }
+    }
+  }, [value, editorMode]);
+
+  const handleVisualInput = () => {
+    if (!editorRef.current) return;
+    isInternalChangeRef.current = true;
+    const html = editorRef.current.innerHTML;
+    const markdown = convertHtmlToMarkdown(html);
+    onChange(markdown);
+  };
+
+  const handleVisualPaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+      const file = e.clipboardData.files[0];
+      if (file.type.startsWith('image/')) {
+        e.preventDefault();
+        processAndUploadImage(file);
+        return;
+      }
+    }
+
+    const html = e.clipboardData.getData('text/html');
+    const plainText = e.clipboardData.getData('text/plain');
+
+    // If pasting a plain URL while text is selected
+    const selection = window.getSelection();
+    const selectedText = selection?.toString() || '';
+    const isUrl = /^https?:\/\/[^\s]+$/i.test(plainText.trim());
+    if (selectedText.trim() && isUrl) {
+      e.preventDefault();
+      const linkHtml = `<a href="${plainText.trim()}" target="_blank" rel="noopener noreferrer" class="text-[#FF2E7E] hover:underline font-semibold">${selectedText}</a>`;
+      document.execCommand('insertHTML', false, linkHtml);
+      handleVisualInput();
+      return;
+    }
+
+    if (html) {
+      e.preventDefault();
+      const cleanMarkdown = convertHtmlToMarkdown(html);
+      const cleanHtml = parseMarkdown(cleanMarkdown);
+      document.execCommand('insertHTML', false, cleanHtml);
+      handleVisualInput();
+      return;
+    }
+  };
+
+  // Upload image to Firebase Storage and insert tag into editor
+  const processAndUploadImage = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      showToast?.('Hanya format gambar (JPG, PNG, WebP, GIF) yang didukung.', 'error');
+      return;
+    }
+
+    if (file.size > 15 * 1024 * 1024) {
+      showToast?.('Ukuran gambar maksimal 15MB.', 'error');
+      return;
+    }
+
+    try {
+      setIsUploadingImage(true);
+      showToast?.('Mengunggah gambar ke Firebase Storage...', 'info');
+
+      const authorId = currentUser?.id || 'writer';
+      const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const timestamp = Date.now();
+      const storagePath = `articles_media/${authorId}/${timestamp}_${cleanFileName}`;
+      const storageRef = ref(storage, storagePath);
+
+      let downloadUrl = '';
+      try {
+        await uploadBytes(storageRef, file, {
+          contentType: file.type,
+        });
+        downloadUrl = await getDownloadURL(storageRef);
+      } catch (storageErr: any) {
+        console.warn('[Storage] uploadBytes fallback to base64 data url:', storageErr);
+        downloadUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      if (downloadUrl) {
+        const altText = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ') || 'Ilustrasi Gambar';
+        
+        if (editorMode === 'visual' && editorRef.current) {
+          editorRef.current.focus();
+          const figureHtml = `<figure class="my-5 rounded-2xl overflow-hidden border border-white/10 bg-black/40 shadow-xl"><img src="${downloadUrl}" alt="${altText}" class="w-full max-h-[480px] object-cover rounded-t-xl" loading="lazy" /><figcaption class="p-2.5 text-center text-xs text-slate-400 italic bg-white/[0.02] border-t border-white/[0.06]">${altText}</figcaption></figure><p><br></p>`;
+          document.execCommand('insertHTML', false, figureHtml);
+          handleVisualInput();
+        } else {
+          const textarea = textareaRef.current;
+          const markdownImage = `\n\n![${altText}](${downloadUrl})\n\n`;
+          if (textarea) {
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = textarea.value;
+            const newValue = text.substring(0, start) + markdownImage + text.substring(end);
+            onChange(newValue);
+            setTimeout(() => {
+              textarea.focus();
+              textarea.setSelectionRange(start + markdownImage.length, start + markdownImage.length);
+            }, 30);
+          } else {
+            onChange((value ? value + '\n\n' : '') + markdownImage);
+          }
+        }
+
+        showToast?.('Gambar berhasil diunggah dan disisipkan!', 'success');
+      }
+    } catch (err: any) {
+      console.error('[Article Image Upload] Error:', err);
+      showToast?.('Gagal mengunggah gambar. Silakan coba lagi.', 'error');
+    } finally {
+      setIsUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   // Helper to convert rich HTML from clipboard into clean Markdown
@@ -183,74 +333,136 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           return `\n\n${markdownRows.join('\n')}\n\n`;
         }
 
+        // Handle images
+        if (tag === 'img') {
+          const src = el.getAttribute('src');
+          const alt = el.getAttribute('alt') || 'Gambar';
+          if (src && !src.startsWith('data:image/svg')) {
+            return `\n\n![${alt}](${src})\n\n`;
+          }
+          return '';
+        }
+
+        // Check inline style rules on any element (e.g. span, p, div, font, etc.)
+        let isBoldStyle = false;
+        let isItalicStyle = false;
+        let isStrikethrough = false;
+
+        const styleAttr = el.getAttribute('style') || '';
+        if (styleAttr) {
+          const lowerStyle = styleAttr.toLowerCase();
+          if (
+            (lowerStyle.includes('font-weight') && (lowerStyle.includes('bold') || lowerStyle.includes('700') || lowerStyle.includes('800') || lowerStyle.includes('900') || lowerStyle.includes('600')))
+          ) {
+            isBoldStyle = true;
+          }
+          if (lowerStyle.includes('font-style') && (lowerStyle.includes('italic') || lowerStyle.includes('oblique'))) {
+            isItalicStyle = true;
+          }
+          if (lowerStyle.includes('text-decoration') && lowerStyle.includes('line-through')) {
+            isStrikethrough = true;
+          }
+        }
+
         let inner = '';
         node.childNodes.forEach((child) => {
           inner += processNode(child);
         });
 
+        let result = inner;
+
         switch (tag) {
           case 'a': {
             const href = el.getAttribute('href');
             const cleanText = inner.replace(/\s+/g, ' ').trim();
-            if (href && cleanText && !href.startsWith('javascript:')) {
-              return `[${cleanText}](${href})`;
+            if (href && cleanText && !href.startsWith('javascript:') && !href.startsWith('vbscript:')) {
+              result = `[${cleanText}](${href})`;
+            } else {
+              result = inner;
             }
-            return inner;
+            break;
           }
           case 'b':
           case 'strong': {
             const trimmed = inner.trim();
-            return trimmed ? `**${trimmed}**` : '';
+            result = trimmed ? `**${trimmed}**` : '';
+            break;
           }
           case 'i':
           case 'em': {
             const trimmed = inner.trim();
-            return trimmed ? `*${trimmed}*` : '';
+            result = trimmed ? `*${trimmed}*` : '';
+            break;
+          }
+          case 's':
+          case 'del':
+          case 'strike': {
+            const trimmed = inner.trim();
+            result = trimmed ? `~~${trimmed}~~` : '';
+            break;
+          }
+          case 'u': {
+            result = inner;
+            break;
           }
           case 'h1': {
             const trimmed = inner.trim();
-            return trimmed ? `\n\n# ${trimmed}\n\n` : '';
+            result = trimmed ? `\n\n# ${trimmed}\n\n` : '';
+            break;
           }
           case 'h2': {
             const trimmed = inner.trim();
-            return trimmed ? `\n\n## ${trimmed}\n\n` : '';
+            result = trimmed ? `\n\n## ${trimmed}\n\n` : '';
+            break;
           }
           case 'h3':
           case 'h4':
           case 'h5':
           case 'h6': {
             const trimmed = inner.trim();
-            return trimmed ? `\n\n### ${trimmed}\n\n` : '';
+            result = trimmed ? `\n\n### ${trimmed}\n\n` : '';
+            break;
           }
           case 'li': {
             const trimmed = inner.trim();
-            return trimmed ? `\n- ${trimmed}` : '';
+            result = trimmed ? `\n- ${trimmed}` : '';
+            break;
           }
           case 'ul':
           case 'ol': {
-            return `\n${inner}\n`;
+            result = `\n${inner}\n`;
+            break;
           }
           case 'p': {
             const trimmed = inner.trim();
-            return trimmed ? `\n\n${trimmed}\n\n` : '';
+            result = trimmed ? `\n\n${trimmed}\n\n` : '';
+            break;
           }
           case 'blockquote': {
             const lines = inner.trim().split('\n');
-            return `\n\n${lines.map(l => `> ${l}`).join('\n')}\n\n`;
+            result = `\n\n${lines.map(l => `> ${l}`).join('\n')}\n\n`;
+            break;
           }
           case 'code': {
-            return `\`${inner}\``;
+            result = `\`${inner}\``;
+            break;
           }
           case 'pre': {
-            return `\n\`\`\`\n${inner.trim()}\n\`\`\`\n`;
+            result = `\n\`\`\`\n${inner.trim()}\n\`\`\`\n`;
+            break;
           }
           case 'br': {
-            return '\n';
+            result = '\n';
+            break;
           }
           case 'div':
           case 'section':
-          case 'article': {
-            return inner ? `\n${inner}\n` : '';
+          case 'article':
+          case 'main':
+          case 'header':
+          case 'footer': {
+            result = inner ? `\n${inner}\n` : '';
+            break;
           }
           case 'tr':
           case 'thead':
@@ -258,11 +470,26 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           case 'tfoot':
           case 'th':
           case 'td': {
-            return inner.trim();
+            result = inner.trim();
+            break;
           }
           default:
-            return inner;
+            result = inner;
+            break;
         }
+
+        // Apply inline styles detected on span / font / div tags if not already wrapped
+        if (isBoldStyle && !result.startsWith('**') && result.trim()) {
+          result = `**${result.trim()}**`;
+        }
+        if (isItalicStyle && !result.startsWith('*') && result.trim()) {
+          result = `*${result.trim()}*`;
+        }
+        if (isStrikethrough && !result.startsWith('~~') && result.trim()) {
+          result = `~~${result.trim()}~~`;
+        }
+
+        return result;
       };
 
       const result = processNode(doc.body);
@@ -277,6 +504,16 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    // 0. If pasting a local image / screenshot file directly from clipboard
+    if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+      const file = e.clipboardData.files[0];
+      if (file.type.startsWith('image/')) {
+        e.preventDefault();
+        processAndUploadImage(file);
+        return;
+      }
+    }
+
     const html = e.clipboardData.getData('text/html');
     const plainText = e.clipboardData.getData('text/plain');
     const textarea = textareaRef.current;
@@ -300,20 +537,11 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       return;
     }
 
-    // 2. If clipboard contains rich HTML (tables, links, bold, headings, lists)
+    // 2. If clipboard contains rich HTML (tables, images, links, bold, headings, lists, inline styles)
     if (html && (
-      html.includes('<table') ||
-      html.includes('<tr') ||
-      html.includes('<td') ||
-      html.includes('<th') ||
-      html.includes('<a ') ||
-      html.includes('<a\n') ||
-      html.includes('<strong') ||
-      html.includes('<b>') ||
-      html.includes('<h1') ||
-      html.includes('<h2') ||
-      html.includes('<h3') ||
-      html.includes('<li')
+      /<(table|tr|td|th|img|a|strong|b|em|i|s|del|strike|u|h[1-6]|li|ul|ol|p|blockquote|code|pre|div|span)[^>]*>/i.test(html) ||
+      html.includes('style=') ||
+      html.includes('href=')
     )) {
       const markdown = convertHtmlToMarkdown(html);
       if (markdown && markdown.length > 0) {
@@ -434,32 +662,89 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const wordCount = value ? value.trim().split(/\s+/).filter(Boolean).length : 0;
   const charCount = value ? value.length : 0;
 
+  const handleApplyFormatting = (cmd: string) => {
+    if (editorMode === 'visual') {
+      editorRef.current?.focus();
+      if (cmd === 'bold') {
+        document.execCommand('bold', false);
+      } else if (cmd === 'italic') {
+        document.execCommand('italic', false);
+      } else if (cmd === 'h1') {
+        document.execCommand('formatBlock', false, '<h1>');
+      } else if (cmd === 'h2') {
+        document.execCommand('formatBlock', false, '<h2>');
+      } else if (cmd === 'h3') {
+        document.execCommand('formatBlock', false, '<h3>');
+      } else if (cmd === 'quote') {
+        document.execCommand('formatBlock', false, '<blockquote>');
+      } else if (cmd === 'ul') {
+        document.execCommand('insertUnorderedList', false);
+      } else if (cmd === 'ol') {
+        document.execCommand('insertOrderedList', false);
+      } else if (cmd === 'code') {
+        document.execCommand('formatBlock', false, '<pre>');
+      } else if (cmd === 'link') {
+        const url = window.prompt('Masukkan alamat tautan URL (contoh: https://sotoyfilm.id):', 'https://');
+        if (url && url.trim()) {
+          document.execCommand('createLink', false, url.trim());
+        }
+      } else if (cmd === 'table') {
+        const tableHtml = `<div class="overflow-x-auto my-4 rounded-xl border border-white/10 bg-black/40"><table class="w-full border-collapse text-left text-xs"><thead><tr class="bg-white/[0.06] border-b border-white/10"><th class="px-3.5 py-2.5 text-left font-bold text-xs text-white uppercase tracking-wider">Kolom 1</th><th class="px-3.5 py-2.5 text-left font-bold text-xs text-white uppercase tracking-wider">Kolom 2</th><th class="px-3.5 py-2.5 text-left font-bold text-xs text-white uppercase tracking-wider">Kolom 3</th></tr></thead><tbody><tr class="border-b border-white/[0.05]"><td class="px-3.5 py-2 text-xs text-slate-300">Data 1</td><td class="px-3.5 py-2 text-xs text-slate-300">Keterangan A</td><td class="px-3.5 py-2 text-xs text-slate-300">9.0</td></tr><tr class="border-b border-white/[0.05]"><td class="px-3.5 py-2 text-xs text-slate-300">Data 2</td><td class="px-3.5 py-2 text-xs text-slate-300">Keterangan B</td><td class="px-3.5 py-2 text-xs text-slate-300">8.5</td></tr></tbody></table></div><p><br></p>`;
+        document.execCommand('insertHTML', false, tableHtml);
+      }
+      handleVisualInput();
+    } else {
+      if (cmd === 'bold') insertFormatting('**', '**');
+      else if (cmd === 'italic') insertFormatting('*', '*');
+      else if (cmd === 'h1') insertFormatting('# ', '');
+      else if (cmd === 'h2') insertFormatting('## ', '');
+      else if (cmd === 'h3') insertFormatting('### ', '');
+      else if (cmd === 'quote') insertFormatting('> ', '');
+      else if (cmd === 'ul') insertFormatting('- ', '');
+      else if (cmd === 'ol') insertFormatting('1. ', '');
+      else if (cmd === 'code') insertFormatting('`', '`');
+      else if (cmd === 'link') handleInsertLink();
+      else if (cmd === 'table') handleInsertTable();
+    }
+  };
+
   return (
     <div
       className={`flex flex-col bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden transition-all duration-300 ${
         isFullscreen ? 'fixed inset-4 z-50 shadow-2xl' : 'relative w-full'
       }`}
     >
+      {/* Hidden File Input for Image Upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        onChange={(e) => {
+          if (e.target.files && e.target.files.length > 0) {
+            processAndUploadImage(e.target.files[0]);
+          }
+        }}
+        className="hidden"
+      />
+
       {/* 1. EDITOR TOOLBAR & NAVIGATION */}
       <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-slate-950 border-b border-slate-800/80">
         
-        {/* Formatting Buttons (Disabled in Preview Mode) */}
+        {/* Formatting Buttons */}
         <div className="flex items-center gap-1 flex-wrap">
           <button
             type="button"
-            onClick={() => insertFormatting('**', '**')}
-            disabled={activeTab === 'preview'}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer"
-            title="Bold (**tebal**)"
+            onClick={() => handleApplyFormatting('bold')}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Tebal / Bold (Ctrl+B)"
           >
             <Bold className="w-4 h-4" />
           </button>
           <button
             type="button"
-            onClick={() => insertFormatting('*', '*')}
-            disabled={activeTab === 'preview'}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer"
-            title="Italic (*miring*)"
+            onClick={() => handleApplyFormatting('italic')}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Miring / Italic (Ctrl+I)"
           >
             <Italic className="w-4 h-4" />
           </button>
@@ -468,28 +753,25 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
           <button
             type="button"
-            onClick={() => insertFormatting('# ', '')}
-            disabled={activeTab === 'preview'}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer"
-            title="Heading 1 (# Judul)"
+            onClick={() => handleApplyFormatting('h1')}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Heading 1 (Judul Utama)"
           >
             <Heading1 className="w-4 h-4" />
           </button>
           <button
             type="button"
-            onClick={() => insertFormatting('## ', '')}
-            disabled={activeTab === 'preview'}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer"
-            title="Heading 2 (## Subjudul)"
+            onClick={() => handleApplyFormatting('h2')}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Heading 2 (Subjudul)"
           >
             <Heading2 className="w-4 h-4" />
           </button>
           <button
             type="button"
-            onClick={() => insertFormatting('### ', '')}
-            disabled={activeTab === 'preview'}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer"
-            title="Heading 3 (### Sub-bagian)"
+            onClick={() => handleApplyFormatting('h3')}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Heading 3 (Sub-bagian)"
           >
             <Heading3 className="w-4 h-4" />
           </button>
@@ -498,91 +780,97 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
           <button
             type="button"
-            onClick={() => insertFormatting('> ', '')}
-            disabled={activeTab === 'preview'}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer"
-            title="Kutipan (Blockquote)"
+            onClick={() => handleApplyFormatting('quote')}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Kutipan / Blockquote"
           >
             <Quote className="w-4 h-4" />
           </button>
           <button
             type="button"
-            onClick={() => insertFormatting('- ', '')}
-            disabled={activeTab === 'preview'}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer"
-            title="Bullet List (- item)"
+            onClick={() => handleApplyFormatting('ul')}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Daftar Poin (Bullet List)"
           >
             <List className="w-4 h-4" />
           </button>
           <button
             type="button"
-            onClick={() => insertFormatting('1. ', '')}
-            disabled={activeTab === 'preview'}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer"
-            title="Numbered List (1. item)"
+            onClick={() => handleApplyFormatting('ol')}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Daftar Angka (Numbered List)"
           >
             <ListOrdered className="w-4 h-4" />
           </button>
           <button
             type="button"
-            onClick={() => insertFormatting('`', '`')}
-            disabled={activeTab === 'preview'}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer"
-            title="Inline Code (`kode`)"
+            onClick={() => handleApplyFormatting('code')}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Blok Kode"
           >
             <Code className="w-4 h-4" />
           </button>
           <button
             type="button"
-            onClick={handleInsertLink}
-            disabled={activeTab === 'preview'}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer"
-            title="Sisipkan Tautan / Link ([teks](url))"
+            onClick={() => handleApplyFormatting('link')}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Sisipkan Tautan / Link"
           >
             <Link className="w-4 h-4" />
           </button>
           <button
             type="button"
-            onClick={handleInsertTable}
-            disabled={activeTab === 'preview'}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer"
-            title="Buat Tabel Baru (| Kolom | Nilai |)"
+            onClick={() => handleApplyFormatting('table')}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Sisipkan Tabel Baru Langsung"
           >
             <TableIcon className="w-4 h-4 text-[#FF2E7E]" />
           </button>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploadingImage}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:hover:bg-transparent cursor-pointer relative"
+            title="Unggah Gambar Lokal (Firebase Storage)"
+          >
+            {isUploadingImage ? (
+              <Loader2 className="w-4 h-4 text-[#FF2E7E] animate-spin" />
+            ) : (
+              <ImageIcon className="w-4 h-4 text-[#FF2E7E]" />
+            )}
+          </button>
         </div>
 
-        {/* Tab Switchers & Right Actions */}
+        {/* Right Status Indicator & Mode Switcher */}
         <div className="flex items-center gap-2">
-          {/* Write / Preview Tab Toggles */}
-          <div className="bg-black/30 p-0.5 rounded-xl border border-white/10 flex items-center">
-            <button
-              type="button"
-              onClick={() => setActiveTab('write')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'write'
-                  ? 'bg-[#FF2E7E] text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Edit2 className="w-3.5 h-3.5" />
-              <span>Tulis</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('preview')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'preview'
-                  ? 'bg-[#FF2E7E] text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Eye className="w-3.5 h-3.5" />
-              <span>Pratinjau</span>
-            </button>
+          {/* Format Langsung Active Indicator */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-pink-500/10 border border-pink-500/20 text-[#FF2E7E] text-[11px] font-semibold">
+            <Sparkles className="w-3.5 h-3.5 text-[#FF2E7E]" />
+            <span>{editorMode === 'visual' ? 'Format Langsung Terlihat' : 'Mode Markdown Mentah'}</span>
           </div>
 
-          <div className="h-4 w-px bg-white/10 mx-1 hidden sm:block" />
+          {/* Toggle between Direct Visual and Raw Markdown */}
+          <button
+            type="button"
+            onClick={() => {
+              if (editorMode === 'visual') {
+                setEditorMode('markdown');
+              } else {
+                setEditorMode('visual');
+                setTimeout(() => {
+                  if (editorRef.current) {
+                    editorRef.current.innerHTML = parseMarkdown(value);
+                  }
+                }, 10);
+              }
+            }}
+            className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors cursor-pointer"
+            title={editorMode === 'visual' ? 'Beralih ke tampilan teks mentah Markdown' : 'Beralih ke tampilan visual langsung'}
+          >
+            {editorMode === 'visual' ? 'Kode Markdown' : 'Format Langsung'}
+          </button>
+
+          <div className="h-4 w-px bg-white/10 mx-0.5 hidden sm:block" />
 
           {/* Help & Fullscreen Toggles */}
           <button
@@ -591,7 +879,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
               showHelp ? 'text-[#FF2E7E] bg-white/[0.08]' : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
             }`}
-            title="Panduan Format Markdown"
+            title="Panduan Format"
           >
             <HelpCircle className="w-4 h-4" />
           </button>
@@ -610,40 +898,69 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       {showHelp && (
         <div className="p-4 bg-black/40 border-b border-white/[0.08] text-slate-300 text-xs leading-relaxed space-y-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <h4 className="font-semibold text-white mb-1">Teks & Judul</h4>
-            <ul className="space-y-1 list-none">
-              <li><code className="bg-white/[0.06] px-1 py-0.5 rounded text-slate-200">**tebal**</code> &rarr; <strong>Tebal</strong></li>
-              <li><code className="bg-white/[0.06] px-1 py-0.5 rounded text-slate-200">*miring*</code> &rarr; <em>Miring</em></li>
-              <li><code className="bg-white/[0.06] px-1 py-0.5 rounded text-slate-200"># Judul</code> &rarr; Heading Besar</li>
-              <li><code className="bg-white/[0.06] px-1 py-0.5 rounded text-slate-200">## Subjudul</code> &rarr; Heading Medium</li>
-              <li><code className="bg-white/[0.06] px-1 py-0.5 rounded text-slate-200">### Bagian</code> &rarr; Heading Kecil</li>
-            </ul>
+            <h4 className="font-semibold text-white mb-1">Format Teks & Judul</h4>
+            <p className="text-[11px] text-slate-400">
+              Format langsung terlihat saat Anda mengetik atau mengeklik tombol di bilah menu di atas. Anda tidak perlu berpindah ke tab pratinjau.
+            </p>
           </div>
           <div>
-            <h4 className="font-semibold text-white mb-1">Daftar & Tautan</h4>
-            <ul className="space-y-1 list-none">
-              <li><code className="bg-white/[0.06] px-1 py-0.5 rounded text-slate-200">- item</code> &rarr; Bullet Point</li>
-              <li><code className="bg-white/[0.06] px-1 py-0.5 rounded text-slate-200">1. item</code> &rarr; Numbered List</li>
-              <li><code className="bg-white/[0.06] px-1 py-0.5 rounded text-slate-200">`kode`</code> &rarr; Code block</li>
-              <li><code className="bg-white/[0.06] px-1 py-0.5 rounded text-slate-200">[Teks](Link)</code> &rarr; Anchor Link</li>
-              <li><code className="bg-white/[0.06] px-1 py-0.5 rounded text-slate-200">&gt; Kutipan</code> &rarr; Blockquote</li>
-            </ul>
+            <h4 className="font-semibold text-white mb-1">Daftar, Tautan & Gambar</h4>
+            <p className="text-[11px] text-slate-400">
+              Paste tautan, tabel dari Excel/Sheets, atau salinan artikel web berformat: tautan, tabel, dan gambar otomatis tampil berformat rapi di kanvas editor.
+            </p>
           </div>
           <div>
-            <h4 className="font-semibold text-white mb-1">Tabel Data</h4>
-            <div className="bg-white/[0.03] p-2 rounded-lg border border-white/[0.06] font-mono text-[11px] leading-tight space-y-1 text-slate-300">
-              <p>| Kolom 1 | Kolom 2 |</p>
-              <p>| --- | --- |</p>
-              <p>| Data A | Nilai A |</p>
-              <p className="text-[10px] text-slate-500 pt-1 font-sans">💡 Tip: Copy-paste tabel dari Excel/Docs akan otomatis diubah ke format tabel ini.</p>
+            <h4 className="font-semibold text-white mb-1">Tabel & Upload Otomatis</h4>
+            <div className="bg-white/[0.03] p-2 rounded-lg border border-white/[0.06] text-[11px] leading-tight space-y-1 text-slate-300">
+              <p className="text-[10px] text-slate-400 font-sans">💡 Tip: Klik tombol Tabel untuk menyisipkan tabel siap isi, atau seret & lepas berkas gambar langsung ke kanvas editor.</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* 3. WRITING CANVAS */}
-      <div className="flex-1 min-h-[220px] relative">
-        {activeTab === 'write' ? (
+      {/* 3. WRITING CANVAS - DIRECTLY FORMATTED */}
+      <div
+        className="flex-1 min-h-[260px] relative bg-[#171717]"
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDraggingOver(true);
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          setIsDraggingOver(false);
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDraggingOver(false);
+          if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const file = e.dataTransfer.files[0];
+            if (file.type.startsWith('image/')) {
+              processAndUploadImage(file);
+            }
+          }
+        }}
+      >
+        {isDraggingOver && (
+          <div className="absolute inset-0 bg-[#FF2E7E]/15 border-2 border-dashed border-[#FF2E7E] z-20 flex flex-col items-center justify-center backdrop-blur-xs text-white rounded-xl pointer-events-none">
+            <UploadCloud className="w-10 h-10 text-[#FF2E7E] animate-bounce mb-2" />
+            <span className="font-bold text-sm">Lepaskan gambar di sini untuk mengunggah</span>
+            <span className="text-xs text-slate-300">File akan otomatis diunggah ke Firebase Storage</span>
+          </div>
+        )}
+
+        {editorMode === 'visual' ? (
+          <div
+            id={id}
+            ref={editorRef}
+            contentEditable
+            suppressContentEditableWarning
+            onInput={handleVisualInput}
+            onPaste={handleVisualPaste}
+            data-placeholder={placeholder}
+            className="w-full h-full min-h-[260px] p-5 text-slate-100 font-sans text-sm focus:outline-none overflow-y-auto leading-relaxed prose prose-invert max-w-none empty:before:content-[attr(data-placeholder)] empty:before:text-slate-500 empty:before:pointer-events-none"
+            style={{ minHeight: isFullscreen ? 'calc(100vh - 160px)' : '280px' }}
+          />
+        ) : (
           <textarea
             id={id}
             ref={textareaRef}
@@ -651,28 +968,27 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             onChange={(e) => onChange(e.target.value)}
             onPaste={handlePaste}
             placeholder={placeholder}
-            className="w-full h-full min-h-[220px] bg-[#171717] text-slate-100 p-4 font-sans text-sm placeholder-slate-500 focus:outline-none resize-y"
-            style={{ minHeight: isFullscreen ? 'calc(100vh - 150px)' : '240px' }}
-          />
-        ) : (
-          <div
-            className="w-full h-full overflow-y-auto p-4 bg-[#171717] text-slate-100 markdown-body prose prose-invert max-w-none text-sm leading-relaxed"
-            style={{ height: isFullscreen ? 'calc(100vh - 150px)' : '240px', minHeight: '240px' }}
-            dangerouslySetInnerHTML={{ __html: parseMarkdown(value) }}
+            className="w-full h-full min-h-[260px] bg-[#171717] text-slate-100 p-5 font-mono text-xs placeholder-slate-500 focus:outline-none resize-y leading-relaxed"
+            style={{ minHeight: isFullscreen ? 'calc(100vh - 160px)' : '280px' }}
           />
         )}
       </div>
 
       {/* 4. METRICS / STATS FOOTER */}
-      <div className="flex items-center justify-between px-4 py-2 bg-[#171717] border-t border-white/[0.08] text-[10px] font-mono text-slate-400">
-        <div className="flex items-center gap-3">
-          <span className="tabular-nums">{wordCount} Kata</span>
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-[#171717] border-t border-white/[0.08] text-[11px] font-mono text-slate-400">
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="tabular-nums font-semibold text-slate-200">{wordCount} Kata</span>
           <span>•</span>
           <span className="tabular-nums">{charCount} Karakter</span>
+          <span>•</span>
+          <span className="inline-flex items-center gap-1 text-[#FF2E7E] font-semibold bg-[#FF2E7E]/10 px-2 py-0.5 rounded-md border border-[#FF2E7E]/20">
+            <Clock className="w-3 h-3" />
+            <span>~{Math.max(1, Math.ceil(wordCount / 200))} mnt baca</span>
+          </span>
         </div>
-        <div className="flex items-center gap-1.5 text-slate-300">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          <span>Editor Aktif (Markdown + Tabel + Pratinjau)</span>
+        <div className="flex items-center gap-1.5 text-slate-300 font-sans text-xs">
+          <span className={`h-1.5 w-1.5 rounded-full ${isUploadingImage ? 'bg-[#FF2E7E] animate-ping' : 'bg-emerald-500'}`} />
+          <span>{isUploadingImage ? 'Mengunggah Gambar ke Storage...' : 'Format Langsung Aktif (Langsung Terlihat Tanpa Pratinjau)'}</span>
         </div>
       </div>
     </div>

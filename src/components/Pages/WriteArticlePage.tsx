@@ -29,11 +29,20 @@ import {
   Clock,
   Columns,
   CheckCheck,
+  History,
+  FileClock,
+  ChevronDown,
+  ChevronUp,
+  RefreshCw,
+  CheckCircle2,
+  Copy,
+  ExternalLink,
+  Loader2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { MainCategory, SubCategory, FilmItem } from '../../types';
+import { MainCategory, SubCategory, FilmItem, ArticleVersion } from '../../types';
 import { db } from '../../lib/firebase';
-import { doc, setDoc, deleteDoc, onSnapshot, collection } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, onSnapshot, collection, query, where, orderBy } from 'firebase/firestore';
 import { RichTextEditor } from '../CMS/RichTextEditor';
 import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 
@@ -67,6 +76,8 @@ export const WriteArticlePage: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const [title, setTitle] = useState('');
+  const [customSlug, setCustomSlug] = useState('');
+  const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
   const [category, setCategory] = useState<MainCategory>('movies');
   const [subCategory, setSubCategory] = useState<SubCategory>('news');
   const [excerpt, setExcerpt] = useState('');
@@ -74,9 +85,17 @@ export const WriteArticlePage: React.FC = () => {
   const [coverImage, setCoverImage] = useState('https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80');
   const [tagsInput, setTagsInput] = useState('Film, Bioskop, Review');
   const [readTime, setReadTime] = useState('5 mnt baca');
-  const [previewMode, setPreviewMode] = useState(false);
-  const [splitPreview, setSplitPreview] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPublishingLoading, setIsPublishingLoading] = useState(false);
+  const [publishedSuccessModal, setPublishedSuccessModal] = useState<{
+    id: string;
+    title: string;
+    slug: string;
+    coverImage: string;
+    category: string;
+    readTime: string;
+  } | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [articleStatus, setArticleStatus] = useState<'published' | 'draft' | 'scheduled'>('published');
   const [publishOption, setPublishOption] = useState<'now' | 'scheduled' | 'draft'>('now');
   const [scheduledAtDate, setScheduledAtDate] = useState<string>('');
@@ -99,10 +118,69 @@ export const WriteArticlePage: React.FC = () => {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Related Film Selection State
-  const [selectedFilmId, setSelectedFilmId] = useState<string | null>(null);
+  // Related Film Selection State (Multiple Films Supported)
+  const [selectedFilmIds, setSelectedFilmIds] = useState<string[]>([]);
   const [filmSearchQuery, setFilmSearchQuery] = useState('');
   const [isFilmSearchOpen, setIsFilmSearchOpen] = useState(false);
+
+  // Versioning state
+  const [versions, setVersions] = useState<ArticleVersion[]>([]);
+  const [isVersionModalOpen, setIsVersionModalOpen] = useState(false);
+  const [selectedVersionPreview, setSelectedVersionPreview] = useState<ArticleVersion | null>(null);
+  const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
+  const [deletingVersionId, setDeletingVersionId] = useState<string | null>(null);
+
+  // Helper to generate URL-friendly slug
+  const slugify = (text: string) => {
+    return text
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/[\s_-]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  };
+
+  const handleTitleChange = (newTitle: string) => {
+    setTitle(newTitle);
+    if (!isSlugManuallyEdited) {
+      setCustomSlug(slugify(newTitle));
+    }
+  };
+
+  const handleCustomSlugChange = (rawSlug: string) => {
+    setIsSlugManuallyEdited(true);
+    const cleaned = rawSlug.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-');
+    setCustomSlug(cleaned);
+  };
+
+  const handleResetSlugFromTitle = () => {
+    setIsSlugManuallyEdited(false);
+    const generated = slugify(title);
+    setCustomSlug(generated);
+    showToast('Slug disinkronkan ulang dengan judul artikel.');
+  };
+
+  // Dynamic Reading Time & Word Count Stats
+  const readingStats = useMemo(() => {
+    const words = content.trim().split(/\s+/).filter(Boolean).length;
+    const chars = content.length;
+    const paragraphs = content.split(/\n{2,}/).filter(p => p.trim().length > 0).length;
+    const estimatedMinutes = Math.max(1, Math.ceil(words / 200));
+    return {
+      words,
+      chars,
+      paragraphs,
+      estimatedMinutes,
+      formattedTime: `${estimatedMinutes} mnt baca`,
+    };
+  }, [content]);
+
+  // Sync calculated reading time to readTime when content changes
+  useEffect(() => {
+    if (readingStats.words > 0) {
+      setReadTime(`${readingStats.estimatedMinutes} mnt baca`);
+    }
+  }, [readingStats.estimatedMinutes, readingStats.words]);
 
   // Subcategory mapping based on category
   const subCategoryOptions: Record<MainCategory, { id: SubCategory; label: string }[]> = {
@@ -133,11 +211,12 @@ export const WriteArticlePage: React.FC = () => {
     ],
   };
 
-  // Currently selected film object
-  const selectedFilm = useMemo(() => {
-    if (!selectedFilmId) return null;
-    return films.find(f => f.id === selectedFilmId) || null;
-  }, [films, selectedFilmId]);
+  // Currently selected films list
+  const selectedFilms = useMemo(() => {
+    return films.filter(f => selectedFilmIds.includes(f.id));
+  }, [films, selectedFilmIds]);
+
+  const selectedFilm = selectedFilms[0] || null;
 
   // Filtered films for auto-complete search
   const filteredFilms = useMemo(() => {
@@ -149,7 +228,7 @@ export const WriteArticlePage: React.FC = () => {
       f.director.toLowerCase().includes(q) ||
       f.genres.some(g => g.toLowerCase().includes(q)) ||
       f.year.toString().includes(q)
-    ).slice(0, 6);
+    ).slice(0, 8);
   }, [films, filmSearchQuery]);
 
   // Populate data if editing an existing article
@@ -160,6 +239,13 @@ export const WriteArticlePage: React.FC = () => {
         setIsEditMode(true);
         setEditingId(found.id);
         setTitle(found.title || '');
+        if (found.slug) {
+          setCustomSlug(found.slug);
+          setIsSlugManuallyEdited(true);
+        } else {
+          setCustomSlug(slugify(found.title || ''));
+          setIsSlugManuallyEdited(false);
+        }
         setCategory(found.category || 'movies');
         setSubCategory(found.subCategory || 'news');
         setExcerpt(found.excerpt || '');
@@ -185,8 +271,12 @@ export const WriteArticlePage: React.FC = () => {
         setMetaDescription(found.metaDescription || found.excerpt || '');
         setOgImage(found.ogImage || found.coverImage || '');
         setSeoKeywords(found.seoKeywords || (found.tags || []).join(', '));
-        if (found.relatedFilmId) {
-          setSelectedFilmId(found.relatedFilmId);
+        if (found.relatedFilmIds && Array.isArray(found.relatedFilmIds) && found.relatedFilmIds.length > 0) {
+          setSelectedFilmIds(found.relatedFilmIds);
+        } else if (found.relatedFilmId) {
+          setSelectedFilmIds([found.relatedFilmId]);
+        } else {
+          setSelectedFilmIds([]);
         }
         return;
       }
@@ -194,6 +284,10 @@ export const WriteArticlePage: React.FC = () => {
     // Default reset for new article
     setIsEditMode(false);
     setEditingId(null);
+    setTitle('');
+    setCustomSlug('');
+    setIsSlugManuallyEdited(false);
+    setSelectedFilmIds([]);
     setArticleStatus('published');
     setSeoTitle('');
     setMetaDescription('');
@@ -271,13 +365,11 @@ export const WriteArticlePage: React.FC = () => {
           .map(t => t.trim())
           .filter(Boolean);
 
-        const slug = title
-          ? title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-          : `draft-${Date.now()}`;
+        const finalSlug = customSlug.trim() || (title ? slugify(title) : `draft-${Date.now()}`);
 
         const payload: Record<string, any> = {
           title: title.trim() || 'Draf Tanpa Judul',
-          slug,
+          slug: finalSlug,
           excerpt: excerpt || title || 'Draf Otomatis',
           content: content || '',
           coverImage,
@@ -292,8 +384,9 @@ export const WriteArticlePage: React.FC = () => {
           seoKeywords: seoKeywords.trim() || cleanTags.join(', '),
         };
 
-        if (selectedFilmId) {
-          payload.relatedFilmId = selectedFilmId;
+        if (selectedFilmIds.length > 0) {
+          payload.relatedFilmIds = selectedFilmIds;
+          payload.relatedFilmId = selectedFilmIds[0];
         }
 
         if (editingId) {
@@ -344,13 +437,145 @@ export const WriteArticlePage: React.FC = () => {
     coverImage,
     tagsInput,
     readTime,
-    selectedFilmId,
+    selectedFilmIds,
     seoTitle,
     metaDescription,
     ogImage,
     seoKeywords,
     currentUser,
   ]);
+
+  // Realtime Article Versions Listener
+  const activeArticleIdForVersions = editingId || (selectedArticleId ? selectedArticleId : null);
+  useEffect(() => {
+    if (!activeArticleIdForVersions) {
+      setVersions([]);
+      return;
+    }
+
+    try {
+      const versionsRef = collection(db, 'article_versions');
+      const q = query(
+        versionsRef,
+        where('articleId', '==', activeArticleIdForVersions),
+        orderBy('versionNumber', 'desc')
+      );
+
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const list: ArticleVersion[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push({ id: docSnap.id, ...(docSnap.data() as any) });
+          });
+          setVersions(list);
+        },
+        (err) => {
+          console.warn('[Firestore] article_versions subscription warning:', err.message);
+        }
+      );
+
+      return () => unsubscribe();
+    } catch (err) {
+      console.warn('[Versioning] Error subscribing to article versions:', err);
+    }
+  }, [activeArticleIdForVersions]);
+
+  // Helper to create a version snapshot
+  const saveVersionSnapshot = async (summaryText?: string, targetArticleId?: string) => {
+    const artId = targetArticleId || editingId || selectedArticleId;
+    if (!artId || (!title.trim() && !content.trim())) {
+      showToast('Belum ada judul atau isi artikel untuk dibuat versi snapshot.', 'error');
+      return;
+    }
+
+    try {
+      setIsCreatingSnapshot(true);
+      const cleanTags = tagsInput
+        .split(',')
+        .map(t => t.trim())
+        .filter(Boolean);
+
+      const words = content.trim().split(/\s+/).filter(Boolean).length;
+      const currentHighestVersion = versions.length > 0 ? Math.max(...versions.map(v => v.versionNumber || 0)) : 0;
+      const nextVerNum = currentHighestVersion + 1;
+      const verId = `ver_${artId}_${Date.now()}`;
+
+      const versionPayload: ArticleVersion = {
+        id: verId,
+        articleId: artId,
+        versionNumber: nextVerNum,
+        title: title.trim() || 'Draf Tanpa Judul',
+        excerpt: excerpt.trim() || title.trim() || 'Ringkasan Draf',
+        content: content || '',
+        tags: cleanTags,
+        category,
+        subCategory,
+        coverImage,
+        readTime,
+        savedAt: new Date().toISOString(),
+        authorId: currentUser.id,
+        authorName: currentUser.name,
+        authorAvatar: currentUser.avatar,
+        wordCount: words,
+        summary: summaryText || (nextVerNum === 1 ? 'Versi Inisial (Draf Awal)' : `Versi ${nextVerNum} - Checkpoint Manual`),
+      };
+
+      await setDoc(doc(db, 'article_versions', verId), JSON.parse(JSON.stringify(versionPayload)));
+      showToast(`Snapshot Versi v${nextVerNum} berhasil disimpan!`, 'success');
+    } catch (err: any) {
+      console.error('[Versioning] Gagal menyimpan snapshot:', err);
+      showToast('Gagal menyimpan versi snapshot.', 'error');
+    } finally {
+      setIsCreatingSnapshot(false);
+    }
+  };
+
+  // Helper to restore an article version into the editor
+  const handleRestoreVersion = async (ver: ArticleVersion) => {
+    if (!window.confirm(`Pulihkan versi v${ver.versionNumber} ("${ver.title}")? Konten di editor saat ini akan digantikan dengan naskah dari versi tersebut.`)) {
+      return;
+    }
+
+    // First save current editor state as a safety checkpoint if non-empty
+    if (title.trim() || content.trim()) {
+      await saveVersionSnapshot(`Checkpoint Sebelum Restorasi ke v${ver.versionNumber}`);
+    }
+
+    setTitle(ver.title || '');
+    setExcerpt(ver.excerpt || '');
+    setContent(ver.content || '');
+    if (ver.tags && Array.isArray(ver.tags) && ver.tags.length > 0) {
+      setTagsInput(ver.tags.join(', '));
+    }
+    if (ver.category) setCategory(ver.category);
+    if (ver.subCategory) setSubCategory(ver.subCategory);
+    if (ver.coverImage) setCoverImage(ver.coverImage);
+    if (ver.readTime) setReadTime(ver.readTime);
+
+    setIsVersionModalOpen(false);
+    setSelectedVersionPreview(null);
+    showToast(`Berhasil memulihkan versi v${ver.versionNumber} ke editor!`, 'success');
+  };
+
+  // Helper to delete an article version
+  const handleDeleteVersion = async (verId: string, verNum: number) => {
+    if (!window.confirm(`Apakah Anda yakin ingin menghapus catatan versi v${verNum}?`)) {
+      return;
+    }
+    try {
+      setDeletingVersionId(verId);
+      await deleteDoc(doc(db, 'article_versions', verId));
+      showToast(`Versi v${verNum} berhasil dihapus.`, 'success');
+      if (selectedVersionPreview?.id === verId) {
+        setSelectedVersionPreview(null);
+      }
+    } catch (err) {
+      showToast('Gagal menghapus versi.', 'error');
+    } finally {
+      setDeletingVersionId(null);
+    }
+  };
 
   const handleCategoryChange = (newCat: MainCategory) => {
     setCategory(newCat);
@@ -417,12 +642,14 @@ export const WriteArticlePage: React.FC = () => {
     setIsEditMode(false);
     setEditingId(null);
     setTitle('');
+    setCustomSlug('');
+    setIsSlugManuallyEdited(false);
     setExcerpt('');
     setContent('');
     setCoverImage('https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80');
     setTagsInput('Film, Bioskop, Review');
     setReadTime('5 mnt baca');
-    setSelectedFilmId(null);
+    setSelectedFilmIds([]);
     setFilmSearchQuery('');
     setSeoTitle('');
     setMetaDescription('');
@@ -466,12 +693,13 @@ export const WriteArticlePage: React.FC = () => {
       .map(t => t.trim())
       .filter(Boolean);
 
-    const slug = title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
+    const finalSlug = customSlug.trim() || slugify(title) || `artikel-${Date.now()}`;
 
-    setIsSubmitting(true);
+    if (targetStatus === 'published') {
+      setIsPublishingLoading(true);
+    } else {
+      setIsSubmitting(true);
+    }
 
     try {
       let customPublishedAt: string | undefined = undefined;
@@ -492,7 +720,7 @@ export const WriteArticlePage: React.FC = () => {
 
       const payload: Record<string, any> = {
         title,
-        slug,
+        slug: finalSlug,
         excerpt: excerpt || title,
         content,
         coverImage,
@@ -509,37 +737,81 @@ export const WriteArticlePage: React.FC = () => {
         seoKeywords: seoKeywords.trim() || (cleanTags.join(', ')),
       };
 
-      if (selectedFilmId) {
-        payload.relatedFilmId = selectedFilmId;
+      if (selectedFilmIds.length > 0) {
+        payload.relatedFilmIds = selectedFilmIds;
+        payload.relatedFilmId = selectedFilmIds[0];
+      } else {
+        payload.relatedFilmIds = [];
+        delete payload.relatedFilmId;
       }
+
       if (targetStatus === 'scheduled' && scheduledAtDate) {
         payload.scheduledAt = scheduledAtDate;
       }
 
+      // Small delay for smooth publishing feedback
+      if (targetStatus === 'published') {
+        await new Promise(res => setTimeout(res, 500));
+      }
+
       if (isEditMode && editingId) {
+        await saveVersionSnapshot(
+          targetStatus === 'published' ? 'Pembaruan Artikel Terbit' : targetStatus === 'scheduled' ? 'Penjadwalan Terbit' : 'Penyimpanan Draf',
+          editingId
+        );
         const success = await updateArticle(editingId, payload);
         if (success) {
-          navigateTo('writer-dashboard');
+          if (targetStatus === 'published') {
+            setPublishedSuccessModal({
+              id: editingId,
+              title,
+              slug: finalSlug,
+              coverImage,
+              category,
+              readTime,
+            });
+          } else {
+            navigateTo('writer-dashboard');
+          }
         }
       } else {
-        const success = await addArticle({
+        const newArtId = `art-${Date.now()}`;
+        const newArticleData = {
           ...payload,
+          id: newArtId,
           author: {
             id: currentUser.id,
             name: currentUser.name,
             avatar: currentUser.avatar,
             role: currentUser.role,
           },
-        } as any);
+        };
+        await saveVersionSnapshot(
+          targetStatus === 'published' ? 'Publikasi Perdana' : targetStatus === 'scheduled' ? 'Draf Terjadwal' : 'Draf Pertama',
+          newArtId
+        );
+        const success = await addArticle(newArticleData as any);
 
         if (success) {
-          navigateTo('writer-dashboard');
+          if (targetStatus === 'published') {
+            setPublishedSuccessModal({
+              id: newArtId,
+              title,
+              slug: finalSlug,
+              coverImage,
+              category,
+              readTime,
+            });
+          } else {
+            navigateTo('writer-dashboard');
+          }
         }
       }
     } catch (err) {
       showToast('Terjadi kesalahan saat memproses artikel.');
     } finally {
       setIsSubmitting(false);
+      setIsPublishingLoading(false);
     }
   };
 
@@ -598,7 +870,7 @@ export const WriteArticlePage: React.FC = () => {
 
   return (
     <div className="min-h-screen py-8 bg-[#0A0A0A]">
-      <div className={`${splitPreview ? 'max-w-[92rem]' : 'max-w-4xl'} mx-auto px-4 sm:px-6 lg:px-8 space-y-6 transition-all duration-300`}>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 transition-all duration-300">
         
         {/* Header Navigation */}
         <div className="flex flex-wrap items-center justify-between gap-3 bg-[#171717]/80 backdrop-blur-md p-4 rounded-2xl border border-slate-800 shadow-xl">
@@ -623,6 +895,23 @@ export const WriteArticlePage: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            {/* Version History Button with badge count */}
+            <button
+              id="article-version-history-btn"
+              type="button"
+              onClick={() => setIsVersionModalOpen(true)}
+              className="px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 hover:border-amber-500/60 shadow-sm"
+              title="Lihat riwayat dan pulihkan versi artikel"
+            >
+              <History className="w-4 h-4 text-amber-400" />
+              <span>Riwayat Versi</span>
+              {versions.length > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-mono font-bold border border-amber-500/30">
+                  {versions.length}
+                </span>
+              )}
+            </button>
+
             {/* Real-time Auto-Save Status Badge */}
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-medium text-slate-300">
               <CheckCheck className={`w-3.5 h-3.5 ${isAutoSaving ? 'text-amber-400 animate-spin' : lastAutoSavedAt ? 'text-emerald-400' : 'text-slate-500'}`} />
@@ -634,167 +923,67 @@ export const WriteArticlePage: React.FC = () => {
                   : 'Auto-save aktif (30d)'}
               </span>
             </div>
-
-            {/* Split Screen Preview Toggle */}
-            <button
-              type="button"
-              onClick={() => {
-                setSplitPreview(!splitPreview);
-                if (previewMode) setPreviewMode(false);
-              }}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                splitPreview
-                  ? 'bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-white shadow-lg shadow-[#FF2E7E]/20'
-                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
-              }`}
-            >
-              <Columns className="w-4 h-4" />
-              <span>Split Preview</span>
-            </button>
-
-            {/* Full Preview Mode Toggle */}
-            <button
-              type="button"
-              onClick={() => {
-                setPreviewMode(!previewMode);
-                if (splitPreview) setSplitPreview(false);
-              }}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                previewMode
-                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20'
-                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
-              }`}
-            >
-              <Eye className="w-4 h-4" />
-              <span>{previewMode ? 'Mode Edit' : 'Pratinjau Penuh'}</span>
-            </button>
           </div>
         </div>
 
-        {/* Main Editor & Split Preview Container */}
-        <div className={splitPreview ? 'grid grid-cols-1 lg:grid-cols-2 gap-8 items-start' : 'space-y-6'}>
+        {/* Main Editor Form Container */}
+        <div className="space-y-6">
           <div className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-6">
             <div className="flex items-center gap-3 pb-4 border-b border-slate-800">
-            <div className="w-10 h-10 rounded-2xl bg-[#FF2E7E]/20 text-[#FF2E7E] flex items-center justify-center">
-              <PenSquare className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-display font-black text-2xl text-white">
-                  {isEditMode ? 'Sunting Artikel' : 'Studio Editor Penulis Sotoy'}
-                </h1>
-                {isEditMode && (
-                  <span className="px-2 py-0.5 rounded-md bg-[#FF2E7E]/20 border border-[#FF2E7E]/40 text-[#FF2E7E] text-[10px] font-black uppercase tracking-wider">
-                    Mode Edit
-                  </span>
-                )}
+              <div className="w-10 h-10 rounded-2xl bg-[#FF2E7E]/20 text-[#FF2E7E] flex items-center justify-center">
+                <PenSquare className="w-5 h-5" />
               </div>
-              <p className="text-slate-400 text-xs">
-                {isEditMode
-                  ? 'Perbarui konten artikel Anda. Perubahan akan langsung disinkronkan ke pembaca.'
-                  : 'Publikasikan berita, review Skor Sotoy, kurasi daftar, atau modul studi perfilman.'}
-              </p>
-            </div>
-          </div>
-
-          {/* Collaborative Co-Editing Realtime Alert */}
-          {coEditors.length > 0 && (
-            <div className="bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-red-500/20 border-2 border-amber-500/50 rounded-2xl p-4 flex items-center justify-between text-amber-200 shadow-xl shadow-amber-950/40 animate-pulse">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
-                  <Users className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
-                    <AlertTriangle className="w-4 h-4 text-amber-400" />
-                    Peringatan Editor Kolaboratif Aktif
-                  </h4>
-                  <p className="text-xs text-slate-200 mt-0.5">
-                    <strong className="text-amber-300">{coEditors.map(e => e.userName).join(', ')}</strong> sedang membuka & menyunting artikel ini secara bersamaan! Harap berhati-hati agar naskah tidak saling menimpa.
-                  </p>
-                </div>
-              </div>
-              <div className="flex -space-x-2 shrink-0">
-                {coEditors.map((editor, idx) => (
-                  <img
-                    key={idx}
-                    src={editor.userAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}
-                    alt={editor.userName}
-                    title={`${editor.userName} (${editor.roleTitle || 'Editor'})`}
-                    className="w-8 h-8 rounded-full border-2 border-amber-500 object-cover ring-2 ring-black"
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {previewMode ? (
-            /* Live Preview Mode */
-            <div className="space-y-6 bg-slate-900/50 p-6 sm:p-8 rounded-2xl border border-slate-800">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black text-[#FF2E7E] uppercase tracking-wider px-2.5 py-0.5 rounded bg-pink-500/10 border border-pink-500/30">
-                  {category} • {subCategory}
-                </span>
-                {selectedFilm && (
-                  <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider px-2.5 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30 flex items-center gap-1">
-                    <Film className="w-3 h-3" />
-                     membahas: {selectedFilm.title} ({selectedFilm.year})
-                  </span>
-                )}
-              </div>
-
-              <h2 className="font-display font-black text-2xl sm:text-3xl text-white leading-tight">
-                {title || 'Judul Artikel Kamu'}
-              </h2>
-
-              {coverImage?.trim() ? (
-                <div className="relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-900">
-                  <img src={coverImage.trim()} alt="Cover preview" className="w-full max-h-96 object-cover" />
-                </div>
-              ) : null}
-
-              {/* Linked Film Feature Card Preview */}
-              {selectedFilm && (
-                <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800/80 to-slate-900 border border-cyan-500/30 flex items-center gap-4">
-                  {selectedFilm.poster?.trim() ? (
-                    <img
-                      src={selectedFilm.poster.trim()}
-                      alt={selectedFilm.title}
-                      className="w-14 h-20 rounded-xl object-cover border border-slate-700 shrink-0"
-                    />
-                  ) : (
-                    <div className="w-14 h-20 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 text-slate-500">
-                      <Film className="w-6 h-6" />
-                    </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="font-display font-black text-2xl text-white">
+                    {isEditMode ? 'Sunting Artikel' : 'Studio Editor Penulis Sotoy'}
+                  </h1>
+                  {isEditMode && (
+                    <span className="px-2 py-0.5 rounded-md bg-[#FF2E7E]/20 border border-[#FF2E7E]/40 text-[#FF2E7E] text-[10px] font-black uppercase tracking-wider">
+                      Mode Edit
+                    </span>
                   )}
+                </div>
+                <p className="text-slate-400 text-xs">
+                  {isEditMode
+                    ? 'Perbarui konten artikel Anda. Format isi artikel langsung terlihat tanpa perlu berpindah ke pratinjau.'
+                    : 'Publikasikan berita, review Skor Sotoy, kurasi daftar, atau modul studi perfilman. Format langsung terlihat di editor.'}
+                </p>
+              </div>
+            </div>
+
+            {/* Collaborative Co-Editing Realtime Alert */}
+            {coEditors.length > 0 && (
+              <div className="bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-red-500/20 border-2 border-amber-500/50 rounded-2xl p-4 flex items-center justify-between text-amber-200 shadow-xl shadow-amber-950/40 animate-pulse">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
+                    <Users className="w-5 h-5" />
+                  </div>
                   <div>
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1 mb-1">
-                      <Film className="w-3 h-3" />
-                      <span>Film yang Dibahas Dalam Artikel Ini</span>
-                    </div>
-                    <div className="text-base font-bold text-white flex items-center gap-2">
-                      {selectedFilm.title}
-                      <span className="text-xs text-slate-400">({selectedFilm.year})</span>
-                    </div>
-                    <div className="text-xs text-slate-400 mt-0.5">Sutradara: {selectedFilm.director}</div>
-                    <div className="flex items-center gap-1.5 mt-1 text-xs text-amber-400 font-bold">
-                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                      <span>Skor Sotoy: {selectedFilm.skorSotoy} / 10.0</span>
-                    </div>
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-400" />
+                      Peringatan Editor Kolaboratif Aktif
+                    </h4>
+                    <p className="text-xs text-slate-200 mt-0.5">
+                      <strong className="text-amber-300">{coEditors.map(e => e.userName).join(', ')}</strong> sedang membuka & menyunting artikel ini secara bersamaan! Harap berhati-hati agar naskah tidak saling menimpa.
+                    </p>
                   </div>
                 </div>
-              )}
-
-              <p className="text-slate-300 text-sm italic font-medium border-l-2 border-[#FF2E7E] pl-4 py-1">
-                {excerpt || 'Ringkasan artikel...'}
-              </p>
-
-              <div className="prose prose-invert text-slate-200 text-sm leading-relaxed whitespace-pre-line pt-2">
-                {content || 'Isi artikel akan tampil di sini...'}
+                <div className="flex -space-x-2 shrink-0">
+                  {coEditors.map((editor, idx) => (
+                    <img
+                      key={idx}
+                      src={editor.userAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}
+                      alt={editor.userName}
+                      title={`${editor.userName} (${editor.roleTitle || 'Editor'})`}
+                      className="w-8 h-8 rounded-full border-2 border-amber-500 object-cover ring-2 ring-black"
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          ) : (
-            /* Editor Form */
+            )}
+
+            {/* Direct Form */}
             <form onSubmit={(e) => { e.preventDefault(); handleSaveArticle('published'); }} className="space-y-6">
               {/* Title */}
               <div>
@@ -805,11 +994,56 @@ export const WriteArticlePage: React.FC = () => {
                   id="write-title-input"
                   type="text"
                   value={title}
-                  onChange={e => setTitle(e.target.value)}
+                  onChange={e => handleTitleChange(e.target.value)}
                   placeholder="Contoh: Bedah Sinematografi Film Joker: Folie à Deux..."
                   required
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] focus:ring-1 focus:ring-[#FF2E7E]"
                 />
+              </div>
+
+              {/* Custom Slug Setting */}
+              <div className="p-4 rounded-2xl bg-slate-950/90 border border-slate-800 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-200 flex items-center gap-2">
+                    <Link className="w-3.5 h-3.5 text-[#FF2E7E]" />
+                    <span>Pengaturan Custom Slug (URL Artikel)</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-500/10 text-[#FF2E7E] border border-pink-500/20">
+                      SEO Friendly
+                    </span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleResetSlugFromTitle}
+                    className="text-[11px] text-cyan-400 hover:text-cyan-300 hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                    title="Generate ulang slug otomatis dari judul artikel"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Reset dari Judul</span>
+                  </button>
+                </div>
+                
+                <div className="flex items-stretch rounded-xl bg-slate-900 border border-slate-700 focus-within:border-[#FF2E7E] focus-within:ring-1 focus-within:ring-[#FF2E7E] overflow-hidden text-xs transition-all">
+                  <div className="px-3.5 py-2.5 text-slate-400 bg-slate-950/70 font-mono text-[11px] border-r border-slate-800 select-none flex items-center gap-1.5 shrink-0">
+                    <Globe className="w-3 h-3 text-[#FF2E7E]" />
+                    <span>sotoyfilm.id/artikel/</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={customSlug}
+                    onChange={e => handleCustomSlugChange(e.target.value)}
+                    placeholder="custom-slug-artikel"
+                    className="flex-1 bg-transparent px-3 py-2.5 text-white font-mono text-xs placeholder-slate-500 focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
+                  <p>
+                    Pratinjau URL: <span className="text-[#FF2E7E] font-mono font-semibold">https://sotoyfilm.id/artikel/{customSlug || 'judul-artikel'}</span>
+                  </p>
+                  <span className="font-mono text-[10px] text-slate-400">
+                    {customSlug.length} karakter
+                  </span>
+                </div>
               </div>
 
               {/* Category & SubCategory Selectors */}
@@ -952,95 +1186,136 @@ export const WriteArticlePage: React.FC = () => {
                 ) : null}
               </div>
 
-              {/* Tag Film Terkait / Film yang Dibahas Section */}
+              {/* Tag Film Terkait / Film yang Dibahas Section (Mendukung Beberapa Film) */}
               <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-white flex items-center gap-2">
-                    <Film className="w-4 h-4 text-cyan-400" />
-                    <span>Tambahkan Film yang Dibahas dalam Artikel (Pencarian Database)</span>
-                  </label>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    Tautkan film dari database Sotoy Film agar pembaca dapat langsung melihat skor, trailer, dan detail film terkait.
-                  </p>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <label className="block text-xs font-bold text-white flex items-center gap-2">
+                      <Film className="w-4 h-4 text-cyan-400" />
+                      <span>Film yang Dibahas dalam Artikel (Bisa Pilih Beberapa Film)</span>
+                    </label>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Tautkan satu atau beberapa film dari database Sotoy Film untuk menampilkan poster, trailer, dan detail film terkait kepada pembaca.
+                    </p>
+                  </div>
+                  {selectedFilmIds.length > 0 && (
+                    <span className="px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-bold font-mono">
+                      {selectedFilmIds.length} Film Ditautkan
+                    </span>
+                  )}
                 </div>
 
-                {/* Currently Linked Film Card or Search Input */}
-                {selectedFilm ? (
-                  <div className="p-4 rounded-2xl bg-[#0A0A0A] border border-cyan-500/40 flex items-center justify-between gap-4 shadow-lg">
-                    <div className="flex items-center gap-3.5">
-                      {selectedFilm.poster?.trim() ? (
-                        <img
-                          src={selectedFilm.poster.trim()}
-                          alt={selectedFilm.title}
-                          className="w-12 h-16 rounded-xl object-cover border border-slate-700 shrink-0"
-                        />
-                      ) : (
-                        <div className="w-12 h-16 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 text-slate-500">
-                          <Film className="w-5 h-5" />
+                {/* List of currently linked films */}
+                {selectedFilms.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {selectedFilms.map((film, idx) => (
+                      <div
+                        key={film.id}
+                        className="p-3.5 rounded-2xl bg-[#0A0A0A] border border-cyan-500/30 flex items-center justify-between gap-3 shadow-md hover:border-cyan-400 transition-colors"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          {film.poster?.trim() ? (
+                            <img
+                              src={film.poster.trim()}
+                              alt={film.title}
+                              className="w-11 h-16 rounded-xl object-cover border border-slate-700 shrink-0"
+                            />
+                          ) : (
+                            <div className="w-11 h-16 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 text-slate-500">
+                              <Film className="w-5 h-5" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[9px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-400 px-1.5 py-0.5 rounded border border-cyan-500/30">
+                                {film.type}
+                              </span>
+                              <span className="text-[11px] font-mono text-slate-400">{film.year}</span>
+                              {idx === 0 && (
+                                <span className="text-[9px] font-bold bg-[#FF2E7E]/20 text-[#FF2E7E] px-1.5 py-0.5 rounded border border-[#FF2E7E]/30">
+                                  Utama
+                                </span>
+                              )}
+                            </div>
+                            <h4 className="text-xs font-bold text-white truncate mt-1">{film.title}</h4>
+                            <div className="text-[10px] text-slate-400 truncate">Sutradara: {film.director}</div>
+                            {film.skorSotoy && (
+                              <div className="flex items-center gap-1 text-[11px] text-amber-400 font-bold mt-0.5">
+                                <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                                <span>{film.skorSotoy}/10</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-400 px-2 py-0.5 rounded border border-cyan-500/30">
-                            {selectedFilm.type}
-                          </span>
-                          <span className="text-xs font-mono text-slate-400">{selectedFilm.year}</span>
-                        </div>
-                        <h4 className="text-sm font-bold text-white mt-1">{selectedFilm.title}</h4>
-                        <div className="text-[11px] text-slate-400">Sutradara: {selectedFilm.director}</div>
-                      </div>
-                    </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setSelectedFilmId(null)}
-                      className="p-2 rounded-xl bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-slate-700 hover:border-rose-500/30 transition-colors flex items-center gap-1.5 text-xs font-bold cursor-pointer"
-                      title="Lepas Kaitan Film"
-                    >
-                      <X className="w-4 h-4" />
-                      <span className="hidden sm:inline">Lepas Film</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="relative space-y-2">
-                    <div className="relative">
-                      <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        value={filmSearchQuery}
-                        onChange={e => {
-                          setFilmSearchQuery(e.target.value);
-                          setIsFilmSearchOpen(true);
-                        }}
-                        onFocus={() => setIsFilmSearchOpen(true)}
-                        placeholder="Cari judul film, sutradara, atau genre di database Sotoy Film..."
-                        className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-10 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
-                      />
-                      {filmSearchQuery && (
                         <button
                           type="button"
-                          onClick={() => setFilmSearchQuery('')}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                          onClick={() => {
+                            setSelectedFilmIds(prev => prev.filter(id => id !== film.id));
+                            showToast(`Film "${film.title}" dilepas.`);
+                          }}
+                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-slate-700 hover:border-rose-500/30 transition-colors shrink-0 cursor-pointer"
+                          title="Hapus film dari daftar kaitan artikel"
                         >
                           <X className="w-4 h-4" />
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-400 text-xs italic">
+                    Belum ada film yang ditautkan ke artikel ini. Anda dapat menambahkan beberapa film di bawah.
+                  </div>
+                )}
 
-                    {/* Auto-complete Search Results Dropdown */}
-                    {isFilmSearchOpen && filmSearchQuery.trim().length > 0 && (
-                      <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#171717] border border-slate-700 rounded-2xl shadow-2xl max-h-64 overflow-y-auto divide-y divide-slate-800">
-                        {filteredFilms.length > 0 ? (
-                          filteredFilms.map(film => (
+                {/* Film Search Input to add films */}
+                <div className="relative space-y-2">
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={filmSearchQuery}
+                      onChange={e => {
+                        setFilmSearchQuery(e.target.value);
+                        setIsFilmSearchOpen(true);
+                      }}
+                      onFocus={() => setIsFilmSearchOpen(true)}
+                      placeholder={selectedFilmIds.length > 0 ? "Cari dan tambah film lain yang dibahas..." : "Cari judul film, sutradara, atau genre di database Sotoy Film..."}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-10 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+                    />
+                    {filmSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setFilmSearchQuery('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Auto-complete Search Results Dropdown */}
+                  {isFilmSearchOpen && filmSearchQuery.trim().length > 0 && (
+                    <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#171717] border border-slate-700 rounded-2xl shadow-2xl max-h-64 overflow-y-auto divide-y divide-slate-800">
+                      {filteredFilms.length > 0 ? (
+                        filteredFilms.map(film => {
+                          const isAlreadySelected = selectedFilmIds.includes(film.id);
+                          return (
                             <div
                               key={film.id}
                               onClick={() => {
-                                setSelectedFilmId(film.id);
-                                setIsFilmSearchOpen(false);
+                                if (isAlreadySelected) {
+                                  showToast('Film ini sudah ditautkan ke artikel.');
+                                  return;
+                                }
+                                setSelectedFilmIds(prev => [...prev, film.id]);
                                 setFilmSearchQuery('');
-                                showToast(`Film "${film.title}" berhasil ditautkan!`);
+                                setIsFilmSearchOpen(false);
+                                showToast(`Film "${film.title}" berhasil ditambahkan!`, 'success');
                               }}
-                              className="p-3 hover:bg-cyan-500/10 cursor-pointer flex items-center justify-between transition-colors group"
+                              className={`p-3 cursor-pointer flex items-center justify-between transition-colors group ${
+                                isAlreadySelected ? 'bg-slate-900/50 opacity-60' : 'hover:bg-cyan-500/10'
+                              }`}
                             >
                               <div className="flex items-center gap-3">
                                 {film.poster?.trim() ? (
@@ -1063,20 +1338,27 @@ export const WriteArticlePage: React.FC = () => {
                                   </div>
                                 </div>
                               </div>
-                              <span className="px-2.5 py-1 rounded-lg bg-cyan-500/20 text-cyan-400 text-[10px] font-bold border border-cyan-500/30 group-hover:bg-cyan-500 group-hover:text-slate-950 transition-colors">
-                                + Pilih Film
-                              </span>
+                              {isAlreadySelected ? (
+                                <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30 flex items-center gap-1">
+                                  <Check className="w-3 h-3" />
+                                  <span>Ditautkan</span>
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-1 rounded-lg bg-cyan-500/20 text-cyan-400 text-[10px] font-bold border border-cyan-500/30 group-hover:bg-cyan-500 group-hover:text-slate-950 transition-colors">
+                                  + Tambah Film
+                                </span>
+                              )}
                             </div>
-                          ))
-                        ) : (
-                          <div className="p-4 text-center text-xs text-slate-400">
-                            Tidak ditemukan film yang cocok dengan "{filmSearchQuery}"
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
+                          );
+                        })
+                      ) : (
+                        <div className="p-4 text-center text-xs text-slate-400">
+                          Tidak ditemukan film yang cocok dengan "{filmSearchQuery}"
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Excerpt */}
@@ -1093,24 +1375,75 @@ export const WriteArticlePage: React.FC = () => {
                 />
               </div>
 
-              {/* Read Time */}
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                  Estimasi Waktu Baca
-                </label>
-                <input
-                  type="text"
-                  value={readTime}
-                  onChange={e => setReadTime(e.target.value)}
-                  placeholder="Contoh: 6 mnt baca"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
-                />
+              {/* Live Reading Time Calculator & Content Metrics Widget */}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-slate-800 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-[#FF2E7E]/20 text-[#FF2E7E] flex items-center justify-center">
+                      <Clock className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <span>Kalkulator Waktu Baca (Reading Time)</span>
+                        <span className="text-[10px] font-mono bg-pink-500/15 text-[#FF2E7E] px-2 py-0.5 rounded-full border border-pink-500/30">
+                          Otomatis Terhitung
+                        </span>
+                      </label>
+                      <p className="text-[11px] text-slate-400">
+                        Dihitung berdasarkan jumlah kata dan standar kecepatan baca ~200 kata/menit.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setReadTime(readingStats.formattedTime)}
+                    className="px-3 py-1.5 rounded-xl bg-pink-500/10 hover:bg-pink-500/20 text-[#FF2E7E] border border-pink-500/30 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 self-start sm:self-auto"
+                    title="Reset ke estimasi otomatis"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Sinkronkan ({readingStats.formattedTime})</span>
+                  </button>
+                </div>
+
+                {/* Metrics Stats Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono text-xs">
+                  <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col">
+                    <span className="text-[10px] text-slate-400 uppercase">Estimasi Baca</span>
+                    <span className="text-sm font-bold text-[#FF2E7E] tabular-nums mt-0.5">~{readingStats.estimatedMinutes} menit</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col">
+                    <span className="text-[10px] text-slate-400 uppercase">Total Kata</span>
+                    <span className="text-sm font-bold text-white tabular-nums mt-0.5">{readingStats.words.toLocaleString('id-ID')} kata</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col">
+                    <span className="text-[10px] text-slate-400 uppercase">Karakter</span>
+                    <span className="text-sm font-bold text-slate-300 tabular-nums mt-0.5">{readingStats.chars.toLocaleString('id-ID')} char</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col">
+                    <span className="text-[10px] text-slate-400 uppercase">Paragraf</span>
+                    <span className="text-sm font-bold text-slate-300 tabular-nums mt-0.5">{readingStats.paragraphs} paragraf</span>
+                  </div>
+                </div>
+
+                <div className="pt-1">
+                  <input
+                    type="text"
+                    value={readTime}
+                    onChange={e => setReadTime(e.target.value)}
+                    placeholder="Contoh: 5 mnt baca"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
+                  />
+                </div>
               </div>
 
               {/* Content Editor */}
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                  Isi Konten Artikel (Mendukung Markdown ### Heading) <span className="text-[#FF2E7E]">*</span>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5 flex items-center justify-between">
+                  <span>Isi Konten Artikel (Mendukung Markdown, Tabel, Link, & Gambar) <span className="text-[#FF2E7E]">*</span></span>
+                  <span className="text-[11px] font-mono text-slate-400">
+                    {readingStats.words} kata • ~{readingStats.estimatedMinutes} mnt baca
+                  </span>
                 </label>
                 <RichTextEditor
                   id="write-content-textarea"
@@ -1469,7 +1802,7 @@ export const WriteArticlePage: React.FC = () => {
               </div>
 
               {/* Action Buttons */}
-              <div className="pt-6 border-t border-slate-800 flex flex-wrap items-center justify-between gap-4">
+              <div className="pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -1478,9 +1811,27 @@ export const WriteArticlePage: React.FC = () => {
                   >
                     Batal
                   </button>
+
+                  {/* Manual Snapshot Checkpoint Button */}
+                  <button
+                    type="button"
+                    disabled={isCreatingSnapshot || (!title.trim() && !content.trim())}
+                    onClick={() => saveVersionSnapshot('Checkpoint Manual dari Editor')}
+                    className="px-4 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+                    title="Simpan salinan versi saat ini tanpa mengubah status publikasi"
+                  >
+                    <FileClock className="w-4 h-4 text-amber-400" />
+                    <span>{isCreatingSnapshot ? 'Menyimpan Versi...' : 'Snapshot Versi'}</span>
+                  </button>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap justify-end">
+                  {/* Reading Time Summary Indicator before Publishing */}
+                  <div className="flex items-center gap-2 text-xs font-mono text-slate-300 bg-slate-900 border border-slate-800 px-3 py-2 rounded-xl">
+                    <Clock className="w-4 h-4 text-[#FF2E7E]" />
+                    <span>Estimasi: <strong className="text-white">~{readingStats.estimatedMinutes} mnt baca</strong> ({readingStats.words} kata)</span>
+                  </div>
+
                   {/* Save as Draft Button */}
                   <button
                     id="save-draft-btn"
@@ -1515,7 +1866,7 @@ export const WriteArticlePage: React.FC = () => {
                       type="button"
                       disabled={isSubmitting}
                       onClick={() => handleSaveArticle('published')}
-                      className="bg-gradient-to-r from-[#FF2E7E] via-[#FF2E7E] to-[#FF2E7E] hover:brightness-110 text-slate-950 font-black text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl flex items-center gap-2 shadow-lg shadow-[#FF2E7E]/30 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+                      className="bg-gradient-to-r from-[#FF2E7E] via-[#FF2E7E] to-[#FF2E7E] hover:brightness-110 text-white font-black text-xs uppercase tracking-wider px-6 py-2.5 rounded-xl flex items-center gap-2 shadow-lg shadow-[#FF2E7E]/30 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
                     >
                       <Send className="w-4 h-4" />
                       <span>
@@ -1530,87 +1881,389 @@ export const WriteArticlePage: React.FC = () => {
                 </div>
               </div>
             </form>
-          )}
+          </div>
         </div>
+      </div>
 
-        {/* Right Split Live Preview Panel */}
-        {splitPreview && (
-          <div className="sticky top-20 bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto custom-scrollbar">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-              <div className="flex items-center gap-2 text-xs font-black text-white uppercase tracking-wider">
-                <Eye className="w-4 h-4 text-[#FF2E7E]" />
-                <span>Live Pratinjau Artikel</span>
+      {/* ========================================================================= */}
+      {/* VERSION HISTORY MODAL (Riwayat & Pemulihan Versi Naskah) */}
+      {/* ========================================================================= */}
+      {isVersionModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-4xl max-h-[90vh] bg-[#171717] border border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-5 sm:p-6 border-b border-slate-800 flex items-center justify-between gap-4 bg-slate-950/60">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center">
+                  <History className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-display font-black text-lg sm:text-xl text-white flex items-center gap-2">
+                    <span>Riwayat Versi Artikel</span>
+                    <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      {versions.length} Versi Tersimpan
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Lihat rekam jejak revisi naskah Anda dan pulihkan ke versi terdahulu kapan saja.
+                  </p>
+                </div>
               </div>
-              <span className="text-[10px] bg-[#FF2E7E]/20 border border-[#FF2E7E]/40 text-[#FF2E7E] px-2.5 py-1 rounded-full font-mono font-bold">
-                REAL-TIME
-              </span>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={isCreatingSnapshot || (!title.trim() && !content.trim())}
+                  onClick={() => saveVersionSnapshot('Snapshot Checkpoint Manual')}
+                  className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+                  title="Simpan kondisi artikel saat ini sebagai versi baru"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>+ Buat Versi Baru</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsVersionModalOpen(false);
+                    setSelectedVersionPreview(null);
+                  }}
+                  className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
-            {/* Rendered Live Article */}
-            <div className="space-y-5">
-              {coverImage?.trim() ? (
-                <div className="relative rounded-2xl overflow-hidden aspect-video border border-slate-800 shadow-xl">
-                  <img src={coverImage.trim()} alt={title || 'Cover'} className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                  <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2">
-                    <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-[#FF2E7E] text-white">
-                      {category}
-                    </span>
-                    <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-900/90 text-slate-300 border border-slate-700">
-                      {subCategory}
-                    </span>
+            {/* Modal Body: Versions List & Preview */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+              {versions.length === 0 ? (
+                <div className="text-center py-16 px-4 bg-slate-900/40 rounded-2xl border border-slate-800 space-y-4">
+                  <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
+                    <FileClock className="w-7 h-7" />
                   </div>
+                  <div className="space-y-1">
+                    <h4 className="text-base font-bold text-white">Belum ada catatan riwayat versi</h4>
+                    <p className="text-xs text-slate-400 max-w-md mx-auto">
+                      Sistem akan mencatat versi secara otomatis setiap kali Anda menyimpan draf atau menerbitkan artikel. Anda juga bisa membuat checkpoint versi pertama sekarang.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isCreatingSnapshot || (!title.trim() && !content.trim())}
+                    onClick={() => saveVersionSnapshot('Versi Awal Naskah')}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-all cursor-pointer disabled:opacity-40"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Buat Versi Checkpoint Pertama</span>
+                  </button>
                 </div>
-              ) : null}
+              ) : (
+                <div className="space-y-4">
+                  {versions.map((ver) => {
+                    const isSelected = selectedVersionPreview?.id === ver.id;
+                    const savedDate = ver.savedAt ? new Date(ver.savedAt) : new Date();
+                    const formattedDate = savedDate.toLocaleDateString('id-ID', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    });
+                    const formattedTime = savedDate.toLocaleTimeString('id-ID', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    });
 
-              <div>
-                <h2 className="text-xl sm:text-2xl font-black text-white leading-snug">
-                  {title || 'Judul Artikel Anda...'}
-                </h2>
-                <div className="flex items-center gap-3 mt-3 text-xs text-slate-400">
-                  <img src={currentUser.avatar?.trim() || DEFAULT_AVATAR} alt={currentUser.name} className="w-8 h-8 rounded-full object-cover ring-2 ring-[#FF2E7E]" />
-                  <div>
-                    <div className="font-bold text-white">{currentUser.name}</div>
-                    <div className="text-[11px] text-slate-500">
-                      {readTime} • {publishOption === 'scheduled' ? `Jadwal Terbit: ${scheduledAtDate ? new Date(scheduledAtDate).toLocaleDateString('id-ID') : 'Belum diatur'}` : 'Terbit Langsung'}
-                    </div>
-                  </div>
+                    return (
+                      <div
+                        key={ver.id}
+                        className={`rounded-2xl border transition-all overflow-hidden ${
+                          isSelected
+                            ? 'bg-slate-900/90 border-amber-500/60 shadow-lg shadow-amber-950/20'
+                            : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="flex items-start sm:items-center gap-3.5">
+                            <div className="w-11 h-11 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 font-mono font-black text-sm flex items-center justify-center shrink-0">
+                              v{ver.versionNumber}
+                            </div>
+
+                            <div className="space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-sm font-bold text-white font-display">
+                                  {ver.title || '(Tanpa Judul)'}
+                                </span>
+                                {ver.summary && (
+                                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/[0.06] text-slate-300 border border-white/[0.08]">
+                                    {ver.summary}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                                <span className="flex items-center gap-1 font-mono text-[11px]">
+                                  <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                                  <span>{formattedDate}, {formattedTime} WIB</span>
+                                </span>
+                                <span>•</span>
+                                <span className="flex items-center gap-1 font-mono text-[11px] text-amber-300">
+                                  <Clock className="w-3.5 h-3.5" />
+                                  <span>~{Math.max(1, Math.ceil((ver.wordCount || 0) / 200))} mnt ({ver.wordCount || 0} kata)</span>
+                                </span>
+                                <span>•</span>
+                                <span className="text-[11px] text-slate-400">
+                                  Penulis: <strong className="text-slate-200">{ver.authorName}</strong>
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                            {/* Toggle Preview Button */}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedVersionPreview(isSelected ? null : ver)}
+                              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                              <span>{isSelected ? 'Tutup Pratinjau' : 'Pratinjau'}</span>
+                              {isSelected ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                            </button>
+
+                            {/* Restore Button */}
+                            <button
+                              type="button"
+                              onClick={() => handleRestoreVersion(ver)}
+                              className="px-3.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-black font-bold text-xs border border-amber-500/40 transition-all flex items-center gap-1.5 cursor-pointer"
+                              title="Muat naskah versi ini kembali ke editor aktif"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              <span>Pulihkan Versi Ini</span>
+                            </button>
+
+                            {/* Delete Version Button */}
+                            <button
+                              type="button"
+                              disabled={deletingVersionId === ver.id}
+                              onClick={() => handleDeleteVersion(ver.id, ver.versionNumber)}
+                              className="p-1.5 rounded-xl text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-40"
+                              title="Hapus versi ini"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Expanded Version Content Inspector */}
+                        {isSelected && (
+                          <div className="p-5 border-t border-slate-800 bg-slate-950/70 space-y-4 animate-in fade-in duration-200">
+                            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                              <span className="font-bold text-amber-300 flex items-center gap-1.5">
+                                <FileText className="w-4 h-4" />
+                                <span>Isi Lengkap Versi v{ver.versionNumber}:</span>
+                              </span>
+                              <span className="text-[11px] font-mono text-slate-400 bg-black/40 px-2.5 py-1 rounded-lg border border-slate-800">
+                                Kategori: {ver.category || '-'} / {ver.subCategory || '-'}
+                              </span>
+                            </div>
+
+                            {ver.excerpt && (
+                              <div className="p-3 rounded-xl bg-slate-900 border-l-2 border-amber-500 text-xs text-slate-300 italic">
+                                "{ver.excerpt}"
+                              </div>
+                            )}
+
+                            <div className="p-4 rounded-xl bg-black/50 border border-slate-800 text-xs text-slate-200 whitespace-pre-wrap leading-relaxed max-h-72 overflow-y-auto font-sans custom-scrollbar">
+                              {ver.content || '(Konten kosong...)'}
+                            </div>
+
+                            <div className="flex items-center justify-between pt-2">
+                              <span className="text-[11px] text-slate-400">
+                                Tags: {(ver.tags || []).join(', ') || '-'}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleRestoreVersion(ver)}
+                                className="px-4 py-2 rounded-xl bg-amber-500 text-black font-bold text-xs hover:bg-amber-400 transition-colors flex items-center gap-1.5 cursor-pointer shadow-md"
+                              >
+                                <Check className="w-4 h-4" />
+                                <span>Terapkan & Pulihkan ke Editor</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between text-xs text-slate-400">
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>Memulihkan versi akan membuat salinan pengaman otomatis dari naskah saat ini.</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsVersionModalOpen(false);
+                  setSelectedVersionPreview(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lightweight Loading Indicator during Publishing */}
+      {isPublishingLoading && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[#171717] border border-pink-500/30 rounded-3xl p-8 max-w-sm w-full text-center space-y-4 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 rounded-3xl bg-pink-500/10 border border-pink-500/30 flex items-center justify-center mx-auto text-[#FF2E7E]">
+              <Loader2 className="w-8 h-8 animate-spin" />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-white">Mempublikasikan Artikel...</h3>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                Menyimpan naskah, merekam checkpoint versi, dan menyiapkan halaman artikel untuk pembaca.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pop-up Notification / Confirmation Modal for Published Article */}
+      {publishedSuccessModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-gradient-to-b from-[#1c1c1c] to-[#121212] border border-emerald-500/40 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl space-y-6 relative animate-in zoom-in-95 duration-200">
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={() => setPublishedSuccessModal(null)}
+              className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              title="Tutup notifikasi"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Header with celebration icon */}
+            <div className="text-center space-y-2">
+              <div className="w-16 h-16 rounded-3xl bg-emerald-500/20 border-2 border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/10">
+                <CheckCircle2 className="w-9 h-9" />
+              </div>
+              <h2 className="text-2xl font-black text-white tracking-tight">
+                Artikel Berhasil Dipublikasikan! 🎉
+              </h2>
+              <p className="text-xs text-slate-300 max-w-sm mx-auto">
+                Artikel Anda sudah live di Sotoy Film dan dapat langsung dibaca oleh seluruh sinefil & komunitas.
+              </p>
+            </div>
+
+            {/* Article Card Preview */}
+            <div className="p-4 rounded-2xl bg-black/50 border border-white/10 flex items-center gap-4">
+              {publishedSuccessModal.coverImage?.trim() ? (
+                <img
+                  src={publishedSuccessModal.coverImage.trim()}
+                  alt={publishedSuccessModal.title}
+                  className="w-16 h-20 rounded-xl object-cover border border-white/10 shrink-0"
+                />
+              ) : (
+                <div className="w-16 h-20 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 text-slate-500">
+                  <FileText className="w-6 h-6" />
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-pink-500/20 text-[#FF2E7E] px-2 py-0.5 rounded border border-pink-500/30">
+                    {publishedSuccessModal.category}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    {publishedSuccessModal.readTime}
+                  </span>
+                </div>
+                <h3 className="text-sm font-bold text-white mt-1.5 line-clamp-2">
+                  {publishedSuccessModal.title}
+                </h3>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-[11px] font-mono text-cyan-400 truncate">
+                    sotoyfilm.id/artikel/{publishedSuccessModal.slug}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = `https://sotoyfilm.id/artikel/${publishedSuccessModal.slug}`;
+                      navigator.clipboard.writeText(url);
+                      setCopiedLink(true);
+                      setTimeout(() => setCopiedLink(false), 2000);
+                      showToast('Tautan artikel disalin ke papan klip!', 'success');
+                    }}
+                    className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors text-[10px] flex items-center gap-1 cursor-pointer shrink-0"
+                    title="Salin Tautan Artikel"
+                  >
+                    {copiedLink ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    <span>{copiedLink ? 'Tersalin' : 'Salin'}</span>
+                  </button>
                 </div>
               </div>
+            </div>
 
-              {excerpt && (
-                <div className="p-3.5 bg-slate-900/80 rounded-2xl border-l-4 border-[#FF2E7E] border-slate-800 text-xs text-slate-300 italic">
-                  "{excerpt}"
-                </div>
-              )}
+            {/* Action Buttons */}
+            <div className="space-y-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const targetId = publishedSuccessModal.id;
+                  setPublishedSuccessModal(null);
+                  navigateTo('article-detail', { articleId: targetId });
+                }}
+                className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] hover:from-[#ff408a] hover:to-[#FF2E7E] text-white font-bold text-sm shadow-xl shadow-[#FF2E7E]/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <Eye className="w-4 h-4" />
+                <span>Lihat Artikel yang Sudah Terbit</span>
+              </button>
 
-              {/* Tagged Film Card */}
-              {selectedFilm && (
-                <div className="p-3 bg-slate-900/90 rounded-2xl border border-slate-800 flex items-center gap-3.5">
-                  {selectedFilm.poster?.trim() ? (
-                    <img src={selectedFilm.poster.trim()} alt={selectedFilm.title} className="w-12 h-16 rounded-xl object-cover shrink-0" />
-                  ) : (
-                    <div className="w-12 h-16 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 text-slate-500">
-                      <Film className="w-5 h-5" />
-                    </div>
-                  )}
-                  <div>
-                    <div className="text-xs font-black text-white">{selectedFilm.title} ({selectedFilm.year})</div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">{selectedFilm.director} • {selectedFilm.genres.slice(0, 2).join(', ')}</div>
-                    <div className="text-[11px] text-[#FFD000] font-bold mt-1">★ {selectedFilm.skorSotoy} Skor Sotoy</div>
-                  </div>
-                </div>
-              )}
-
-              {/* Article Content Preview */}
-              <div className="text-xs sm:text-sm text-slate-300 leading-relaxed space-y-3 whitespace-pre-wrap font-sans border-t border-slate-800/80 pt-4">
-                {content || 'Mulai mengetik di panel kiri untuk melihat pratinjau langsung konten artikel Anda di sini...'}
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPublishedSuccessModal(null);
+                    navigateTo('writer-dashboard');
+                  }}
+                  className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-slate-700 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Dashboard Penulis</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPublishedSuccessModal(null);
+                    setIsEditMode(false);
+                    setEditingId(null);
+                    setTitle('');
+                    setCustomSlug('');
+                    setIsSlugManuallyEdited(false);
+                    setExcerpt('');
+                    setContent('');
+                    setSelectedFilmIds([]);
+                    setTagsInput('Film, Bioskop, Review');
+                    showToast('Form artikel siap untuk penulisan artikel baru.');
+                  }}
+                  className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-slate-700 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Tulis Artikel Baru</span>
+                </button>
               </div>
             </div>
           </div>
-        )}
-      </div>
-      </div>
+        </div>
+      )}
     </div>
   );
 };

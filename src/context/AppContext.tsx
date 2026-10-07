@@ -3596,7 +3596,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return false;
     }
 
-    const articleId = `art-${Date.now()}`;
+    const articleId = (newArticle as any).id || `art-${Date.now()}`;
     const status = newArticle.status || 'published';
     const now = new Date();
     const publishedAtTimestamp = (newArticle as any).publishedAtTimestamp || (

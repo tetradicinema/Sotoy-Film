@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { collection, doc, setDoc, onSnapshot, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
@@ -28,6 +28,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { FilmItem } from '../../types';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
 import { SEOHead } from '../SEO/SEOHead';
 import { createArticleSchemaFromArticle, generateBreadcrumbSchema } from '../../utils/schemaHelpers';
@@ -166,14 +167,32 @@ export const ArticleDetailPage: React.FC = () => {
     );
   }
 
-  // Cari film yang dibahas dalam artikel ini
-  const discussedFilm = article.relatedFilmId
-    ? films.find(f => f.id === article.relatedFilmId)
-    : films.find(f =>
+  // Cari daftar film yang dibahas dalam artikel ini
+  const discussedFilms = useMemo(() => {
+    const list: FilmItem[] = [];
+    if (article.relatedFilmIds && Array.isArray(article.relatedFilmIds)) {
+      article.relatedFilmIds.forEach(id => {
+        const found = films.find(f => f.id === id);
+        if (found && !list.some(item => item.id === found.id)) list.push(found);
+      });
+    }
+    if (article.relatedFilmId) {
+      const found = films.find(f => f.id === article.relatedFilmId);
+      if (found && !list.some(item => item.id === found.id)) list.push(found);
+    }
+    if (list.length === 0) {
+      const fallback = films.find(f =>
         article.title.toLowerCase().includes(f.title.toLowerCase()) ||
         article.tags.some(t => t.toLowerCase() === f.title.toLowerCase()) ||
         (f.id === 'film-1' && (article.category === 'movies' || article.title.includes('Dune')))
       );
+      if (fallback) list.push(fallback);
+    }
+    return list;
+  }, [article, films]);
+
+  const [activeDiscussedFilmIndex, setActiveDiscussedFilmIndex] = useState(0);
+  const discussedFilm = discussedFilms[activeDiscussedFilmIndex] || discussedFilms[0] || null;
 
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -475,10 +494,11 @@ export const ArticleDetailPage: React.FC = () => {
               }
 
               interface ArticleContentBlock {
-                type: 'h1' | 'h2' | 'h3' | 'callout' | 'list' | 'table' | 'p';
+                type: 'h1' | 'h2' | 'h3' | 'callout' | 'list' | 'table' | 'image' | 'p';
                 text?: string;
                 items?: string[];
                 tableData?: TableData;
+                imageUrl?: string;
               }
 
               const blocks: ArticleContentBlock[] = [];
@@ -488,7 +508,14 @@ export const ArticleDetailPage: React.FC = () => {
                 const trimmed = rawPara.trim();
                 if (!trimmed) continue;
 
-                if (trimmed.startsWith('### ')) {
+                const imgMatch = trimmed.match(/^!\[(.*?)\]\((.*?)\)$/);
+                if (imgMatch) {
+                  blocks.push({
+                    type: 'image',
+                    text: imgMatch[1].trim(),
+                    imageUrl: imgMatch[2].trim(),
+                  });
+                } else if (trimmed.startsWith('### ')) {
                   blocks.push({
                     type: 'h3',
                     text: trimmed.slice(4).trim(),
@@ -716,6 +743,23 @@ export const ArticleDetailPage: React.FC = () => {
                     </div>
                   );
                 }
+                if (block.type === 'image' && block.imageUrl) {
+                  return (
+                    <figure key={idx} className="my-6 rounded-2xl overflow-hidden border border-slate-800 bg-neutral-950/80 shadow-xl group">
+                      <img
+                        src={block.imageUrl}
+                        alt={block.text || 'Ilustrasi Artikel'}
+                        className="w-full max-h-[540px] object-cover rounded-t-xl transition-transform duration-300 group-hover:scale-[1.01]"
+                        loading="lazy"
+                      />
+                      {block.text && (
+                        <figcaption className="p-3 text-center text-xs text-slate-400 italic bg-neutral-900/50 border-t border-slate-800">
+                          {block.text}
+                        </figcaption>
+                      )}
+                    </figure>
+                  );
+                }
                 return (
                   <p key={idx} className="text-slate-300 leading-relaxed whitespace-pre-line">
                     {renderInline(block.text || '')}
@@ -765,14 +809,14 @@ export const ArticleDetailPage: React.FC = () => {
             id="article-discussed-film-box"
             className="bg-[#171717] border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden"
           >
-            <div className="flex items-center justify-between pb-4 mb-6 border-b border-white/10 flex-wrap gap-2">
+            <div className="flex items-center justify-between pb-4 mb-4 border-b border-white/10 flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-[#FF2E7E]/20 flex items-center justify-center text-[#FF2E7E]">
                   <Film className="w-4 h-4" />
                 </div>
                 <div>
                   <span className="text-[10px] font-black uppercase tracking-widest text-[#FF2E7E] block">
-                    Film yang Dibahas dalam Artikel Ini
+                    {discussedFilms.length > 1 ? `Film yang Dibahas (${discussedFilms.length} Film)` : 'Film yang Dibahas dalam Artikel Ini'}
                   </span>
                   <h3 className="font-display font-black text-xl text-white">
                     {discussedFilm.title} ({discussedFilm.year})
@@ -790,6 +834,27 @@ export const ArticleDetailPage: React.FC = () => {
                 </button>
               </div>
             </div>
+
+            {/* If multiple films are discussed, show selector chips */}
+            {discussedFilms.length > 1 && (
+              <div className="flex items-center gap-2 flex-wrap mb-6 pb-3 border-b border-white/5">
+                <span className="text-xs text-slate-400 font-semibold mr-1">Pilih Film:</span>
+                {discussedFilms.map((df: FilmItem, idx: number) => (
+                  <button
+                    key={df.id}
+                    onClick={() => setActiveDiscussedFilmIndex(idx)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      activeDiscussedFilmIndex === idx
+                        ? 'bg-[#FF2E7E] text-white shadow-md'
+                        : 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'
+                    }`}
+                  >
+                    <span>{df.title}</span>
+                    <span className="opacity-70 font-mono text-[11px]">({df.year})</span>
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
               {/* Poster Film */}
@@ -824,7 +889,7 @@ export const ArticleDetailPage: React.FC = () => {
                   </div>
 
                   <div className="flex flex-wrap gap-1.5 my-2">
-                    {discussedFilm.genres.map(g => (
+                    {discussedFilm.genres.map((g: string) => (
                       <span
                         key={g}
                         className="bg-slate-800/90 text-slate-300 text-[11px] font-semibold px-2.5 py-0.5 rounded-full border border-slate-700"
