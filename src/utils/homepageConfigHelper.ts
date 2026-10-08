@@ -274,6 +274,15 @@ export function setCachedHomepageLayout(layout: CachedHomepageLayout): void {
   }
 }
 
+export function clearCachedHomepageLayout(): void {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    window.localStorage.removeItem(HOMEPAGE_LAYOUT_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 export const ALL_ARTICLE_CATEGORIES: MainCategory[] = [
   'movies',
   'series',

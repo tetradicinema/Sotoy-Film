@@ -82,21 +82,43 @@ const HomeView: React.FC = () => {
   // Try reading cached layout synchronously so repeat visits render without flash
   const cachedLayout = React.useMemo(() => getCachedHomepageLayout(), []);
 
-  // Active configuration: live config preferred, fallback to cachedLayout, fallback to defaults
-  const rawBlockOrder = homepageSectionsConfig?.blockOrder ?? cachedLayout?.blockOrder;
-  const rawSidebarPos = homepageSectionsConfig?.sidebarPosition ?? cachedLayout?.sidebarPosition;
-  const rawWidgetOrder = homepageSectionsConfig?.sidebarWidgetOrder ?? cachedLayout?.sidebarWidgetOrder;
-  const rawHiddenBlocks = homepageSectionsConfig?.hiddenBlocks ?? cachedLayout?.hiddenBlocks;
+  // Cap initial skeleton to at most 1500ms if not loaded and no cache exists
+  const [skeletonTimedOut, setSkeletonTimedOut] = React.useState(false);
 
-  const fullBlockOrder = resolveBlockOrder(rawBlockOrder);
-  const hiddenBlocksSet = new Set(resolveHiddenBlocks(rawHiddenBlocks));
+  React.useEffect(() => {
+    if (homepageConfigLoaded || cachedLayout) return;
+    const timer = setTimeout(() => {
+      setSkeletonTimedOut(true);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [homepageConfigLoaded, cachedLayout]);
 
-  // Filter out hidden blocks so they are completely skipped from render
-  const visibleBlockOrder = fullBlockOrder.filter((key) => !hiddenBlocksSet.has(key));
+  // Active configuration: use cachedLayout ONLY while !homepageConfigLoaded.
+  // Once the config has loaded, use only live values (falling back to defaults, not cache).
+  const rawBlockOrder = homepageConfigLoaded
+    ? homepageSectionsConfig?.blockOrder
+    : (homepageSectionsConfig?.blockOrder ?? cachedLayout?.blockOrder);
+  const rawSidebarPos = homepageConfigLoaded
+    ? homepageSectionsConfig?.sidebarPosition
+    : (homepageSectionsConfig?.sidebarPosition ?? cachedLayout?.sidebarPosition);
+  const rawWidgetOrder = homepageConfigLoaded
+    ? homepageSectionsConfig?.sidebarWidgetOrder
+    : (homepageSectionsConfig?.sidebarWidgetOrder ?? cachedLayout?.sidebarWidgetOrder);
+  const rawHiddenBlocks = homepageConfigLoaded
+    ? homepageSectionsConfig?.hiddenBlocks
+    : (homepageSectionsConfig?.hiddenBlocks ?? cachedLayout?.hiddenBlocks);
 
-  // Fallback: If all blocks were somehow hidden, ensure at least the hero or first block is rendered
-  const effectiveBlockOrder =
-    visibleBlockOrder.length > 0 ? visibleBlockOrder : [fullBlockOrder[0] || 'hero'];
+  // String deps for memoization stability
+  const rawBlockOrderKey = rawBlockOrder ? rawBlockOrder.join(',') : '';
+  const rawHiddenBlocksKey = rawHiddenBlocks ? rawHiddenBlocks.join(',') : '';
+
+  // Wrap effectiveBlockOrder in useMemo so segments actually memoizes
+  const effectiveBlockOrder = React.useMemo(() => {
+    const fullBlockOrder = resolveBlockOrder(rawBlockOrder);
+    const hiddenBlocksSet = new Set(resolveHiddenBlocks(rawHiddenBlocks));
+    const visibleBlockOrder = fullBlockOrder.filter((key) => !hiddenBlocksSet.has(key));
+    return visibleBlockOrder.length > 0 ? visibleBlockOrder : [fullBlockOrder[0] || 'hero'];
+  }, [rawBlockOrderKey, rawHiddenBlocksKey]);
 
   const sidebarPosition = rawSidebarPos || 'right';
   const sidebarWidgetOrder = rawWidgetOrder ? resolveSidebarWidgetOrder(rawWidgetOrder) : undefined;
@@ -139,9 +161,9 @@ const HomeView: React.FC = () => {
     return result;
   }, [effectiveBlockOrder]);
 
-  // Show a lightweight skeleton on first load if we don't even have a cached layout
+  // Show a lightweight skeleton on first load if we don't even have a cached layout (for at most 1500ms)
   // (Ensuring all hooks execute in identical order on every render)
-  if (!homepageConfigLoaded && !cachedLayout) {
+  if (!homepageConfigLoaded && !cachedLayout && !skeletonTimedOut) {
     return <GenericPageSkeleton />;
   }
 

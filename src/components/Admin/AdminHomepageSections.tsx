@@ -487,6 +487,7 @@ export const AdminHomepageSections: React.FC = () => {
     updateHomepageSectionConfig,
     updateHomepageSectionOrder,
     updateHomepageLayout,
+    showToast,
   } = useApp();
 
   // Layout Reordering States (9 Blocks & Sidebar)
@@ -507,6 +508,10 @@ export const AdminHomepageSections: React.FC = () => {
   });
 
   const [isSavingLayout, setIsSavingLayout] = useState(false);
+
+  // Keep a ref to the latest updateHomepageLayout to avoid re-triggering effects and stale closures
+  const updateHomepageLayoutRef = useRef(updateHomepageLayout);
+  updateHomepageLayoutRef.current = updateHomepageLayout;
 
   // Debounced auto-save queue refs
   const pendingLayoutUpdatesRef = useRef<{
@@ -549,7 +554,7 @@ export const AdminHomepageSections: React.FC = () => {
     }
   }, [homepageSectionsConfig?.hiddenBlocks]);
 
-  // Flush pending changes to Firestore
+  // Flush pending changes to Firestore using the current ref to updateHomepageLayout
   const flushPendingLayoutSave = useCallback(async () => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
@@ -564,7 +569,7 @@ export const AdminHomepageSections: React.FC = () => {
 
     try {
       setIsSavingLayout(true);
-      await updateHomepageLayout(payload);
+      await updateHomepageLayoutRef.current(payload);
       // Succeeded, clear rollback reference
       rollbackStateRef.current = {};
     } catch (err) {
@@ -577,22 +582,24 @@ export const AdminHomepageSections: React.FC = () => {
     } finally {
       setIsSavingLayout(false);
     }
-  }, [updateHomepageLayout]);
+  }, []);
 
-  // Flush on unmount if any pending saves remain
+  // Flush on unmount if any pending saves remain (runs once with [] deps)
   useEffect(() => {
     return () => {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
-        const payload = { ...pendingLayoutUpdatesRef.current };
-        if (Object.keys(payload).length > 0) {
-          updateHomepageLayout(payload).catch((err) => {
-            console.error('[AdminHomepageSections] Flush on unmount failed:', err);
-          });
-        }
+        debounceTimerRef.current = null;
+      }
+      const payload = { ...pendingLayoutUpdatesRef.current };
+      if (Object.keys(payload).length > 0) {
+        pendingLayoutUpdatesRef.current = {};
+        updateHomepageLayoutRef.current(payload).catch((err) => {
+          console.error('[AdminHomepageSections] Flush on unmount failed:', err);
+        });
       }
     };
-  }, [updateHomepageLayout]);
+  }, []);
 
   // Queue a change and debounce save by 800ms
   const queueLayoutFieldSave = useCallback((
@@ -654,6 +661,7 @@ export const AdminHomepageSections: React.FC = () => {
       // Hide - verify at least one visible block remains
       const visibleCount = orderedBlockKeys.filter((k) => !hiddenBlocks.includes(k)).length;
       if (visibleCount <= 1) {
+        showToast('Minimal satu blok harus tetap tampil', 'error');
         return; // Don't allow hiding all blocks
       }
       const next = [...hiddenBlocks, blockKey];

@@ -33,7 +33,7 @@ import {
   HomeBlockKey,
   HomeSidebarWidgetKey,
 } from '../types';
-import { setCachedHomepageLayout } from '../utils/homepageConfigHelper';
+import { setCachedHomepageLayout, clearCachedHomepageLayout } from '../utils/homepageConfigHelper';
 import {
   DEFAULT_FALLBACK_AUTHOR,
   INITIAL_ARTICLES,
@@ -1198,6 +1198,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
         } else {
           setHomepageSectionsConfig(null);
+          try {
+            clearCachedHomepageLayout();
+          } catch (e) {
+            console.warn('[AppContext] Failed to clear cached homepage layout:', e);
+          }
         }
         setHomepageConfigLoaded(true);
       },
