@@ -320,6 +320,16 @@ export const AdminDashboard: React.FC = () => {
               <ScrollText className="w-4 h-4" />
               <span>Audit Log Moderasi</span>
             </Link>
+
+            {/* Link 7: Standalone Page for Homepage Sections */}
+            <Link
+              to="/admin/homepage"
+              id="admin-tab-homepage-sections"
+              className="px-4 py-3 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 min-h-[44px] active:scale-95 text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent"
+            >
+              <Layout className="w-4 h-4 text-[#FF2E7E]" />
+              <span>Pengaturan Seksi Beranda →</span>
+            </Link>
           </nav>
           {/* Subtle Right Shadow/Gradient indicator to show there is overflow */}
           <div className="absolute right-0 top-0 bottom-3 w-10 bg-gradient-to-l from-[#0A0A0A] to-transparent pointer-events-none opacity-80" />

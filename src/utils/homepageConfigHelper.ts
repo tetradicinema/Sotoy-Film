@@ -237,7 +237,10 @@ export function resolveConfigArticles(
   }
   if (config.subCategory && config.subCategory.trim()) {
     const sub = config.subCategory.trim().toLowerCase();
-    filtered = filtered.filter(a => (a.subCategory || '').toLowerCase() === sub);
+    filtered = filtered.filter(a =>
+      (a.subCategory || '').trim().toLowerCase() === sub ||
+      a.tags?.some(tag => tag.trim().toLowerCase() === sub)
+    );
   }
   if (config.tag && config.tag.trim()) {
     const t = config.tag.trim().toLowerCase();

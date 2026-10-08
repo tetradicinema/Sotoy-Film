@@ -13,8 +13,26 @@ import {
   Check, 
   Layers,
   Film,
-  FileText
+  FileText,
+  GripVertical
 } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useApp } from '../../context/AppContext';
 import { HomepageSectionKey, SectionConfig, MainCategory } from '../../types';
 import { HOMEPAGE_SECTIONS_META, SectionMeta, DEFAULT_SECTION_ORDER } from '../../utils/homepageConfigHelper';
@@ -41,6 +59,179 @@ const SUBCATEGORY_LABELS: Record<string, string> = {
   'post-production': 'Post-Production / Editing & VFX',
 };
 
+const CATEGORY_SPECIFIC_SUBCATEGORIES: Record<string, { val: string; label: string }[]> = {
+  movies: [
+    { val: 'reviews', label: 'Reviews / Ulasan Film' },
+    { val: 'lists', label: 'Lists / Rekomendasi & Daftar' },
+    { val: 'news', label: 'News / Kabar Film' },
+    { val: 'features', label: 'Features / Artikel Khusus' },
+    { val: 'interviews', label: 'Interviews / Wawancara' },
+  ],
+  series: [
+    { val: 'reviews', label: 'Reviews / Ulasan Serial' },
+    { val: 'lists', label: 'Lists / Rekomendasi Serial' },
+    { val: 'news', label: 'News / Kabar Serial' },
+    { val: 'features', label: 'Features / Bahasan Serial' },
+  ],
+  anime: [
+    { val: 'news', label: 'News / Kabar Anime' },
+    { val: 'reviews', label: 'Reviews / Ulasan Anime' },
+    { val: 'lists', label: 'Lists / Rekomendasi Anime' },
+    { val: 'features', label: 'Features / Bahasan Khusus' },
+  ],
+  'cinema-gear': [
+    { val: 'gear-reviews', label: 'Gear Reviews / Ulasan Alat & Kamera' },
+    { val: 'gear-news', label: 'Gear News / Kabar Alat & Tek' },
+    { val: 'tech-guides', label: 'Tech Guides / Panduan Teknikal' },
+    { val: 'reviews', label: 'Reviews / Ulasan Peralatan' },
+  ],
+  'film-studies': [
+    { val: 'directing', label: 'Directing / Sutradara' },
+    { val: 'producing', label: 'Producing / Manajemen & Produksi' },
+    { val: 'cinematography', label: 'Cinematography / Sinematografi' },
+    { val: 'lighting', label: 'Lighting / Tata Cahaya' },
+    { val: 'post-production', label: 'Post-Production / Editing & VFX' },
+  ],
+};
+
+interface SortableSectionItemProps {
+  keyId: HomepageSectionKey;
+  idx: number;
+  activeSectionKey: HomepageSectionKey;
+  setActiveSectionKey: (key: HomepageSectionKey) => void;
+  setSearchQuery: (q: string) => void;
+  draftConfigs: Partial<Record<HomepageSectionKey, SectionConfig>>;
+  homepageSectionsConfig: any;
+  handleMoveSectionOrder: (index: number, direction: 'up' | 'down') => void;
+  orderedLength: number;
+}
+
+const SortableSectionItem: React.FC<SortableSectionItemProps> = ({
+  keyId,
+  idx,
+  activeSectionKey,
+  setActiveSectionKey,
+  setSearchQuery,
+  draftConfigs,
+  homepageSectionsConfig,
+  handleMoveSectionOrder,
+  orderedLength,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: keyId });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 20 : 1,
+    opacity: isDragging ? 0.6 : 1,
+  };
+
+  const meta = HOMEPAGE_SECTIONS_META.find((m) => m.key === keyId) || HOMEPAGE_SECTIONS_META[0];
+  const active = keyId === activeSectionKey;
+  const sectionConfig = draftConfigs[keyId] || homepageSectionsConfig?.sections?.[keyId];
+  const isManual = sectionConfig?.sourceType === 'manual';
+  const hasCustomTitle = !!sectionConfig?.title && sectionConfig.title.trim().length > 0;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`p-2.5 rounded-2xl transition-all flex items-center justify-between gap-2 border ${
+        active
+          ? 'bg-white/[0.12] border-white/20 text-white shadow-sm'
+          : 'hover:bg-white/[0.04] text-slate-300 border-white/[0.04]'
+      }`}
+    >
+      {/* Drag Handle Button */}
+      <button
+        type="button"
+        className="p-1 cursor-grab active:cursor-grabbing text-slate-500 hover:text-white transition-colors shrink-0 touch-none"
+        title="Tarik untuk menggeser posisi seksi"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="w-4 h-4" />
+      </button>
+
+      {/* Position Index Badge */}
+      <span className="w-5 text-center font-mono font-bold text-[11px] text-slate-500 shrink-0">
+        #{idx + 1}
+      </span>
+
+      {/* Section Title & Info */}
+      <button
+        id={`admin-section-tab-${keyId}`}
+        type="button"
+        onClick={() => {
+          setActiveSectionKey(keyId);
+          setSearchQuery('');
+        }}
+        className="min-w-0 flex-1 text-left cursor-pointer"
+      >
+        <div className="flex items-center gap-1.5 mb-0.5">
+          {meta.targetType === 'films' ? (
+            <Film className="w-3.5 h-3.5 text-[#FF2E7E] shrink-0" />
+          ) : (
+            <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+          )}
+          <span className="font-semibold text-xs truncate">
+            {meta.label}
+          </span>
+        </div>
+
+        <div className="text-[11px] text-slate-400 truncate">
+          {hasCustomTitle ? `"${sectionConfig?.title}"` : meta.defaultTitle}
+        </div>
+      </button>
+
+      {/* Reorder Up/Down Controls & Mode Indicator */}
+      <div className="flex items-center gap-1 shrink-0">
+        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${
+          isManual 
+            ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' 
+            : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+        }`}>
+          {isManual ? 'Manual' : 'Auto'}
+        </span>
+
+        <div className="flex flex-col gap-0.5 ml-1">
+          <button
+            type="button"
+            disabled={idx === 0}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleMoveSectionOrder(idx, 'up');
+            }}
+            className="p-0.5 rounded-md text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-20 transition-colors cursor-pointer"
+            title="Geser Seksi ke Atas"
+          >
+            <ChevronUp className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            disabled={idx === orderedLength - 1}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleMoveSectionOrder(idx, 'down');
+            }}
+            className="p-0.5 rounded-md text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-20 transition-colors cursor-pointer"
+            title="Geser Seksi ke Bawah"
+          >
+            <ChevronDown className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const AdminHomepageSections: React.FC = () => {
   const {
     films,
@@ -57,14 +248,45 @@ export const AdminHomepageSections: React.FC = () => {
 
   const [isSavingOrder, setIsSavingOrder] = useState(false);
 
-  // Keep orderedKeys synced with remote config unless user is actively dragging/reordering
+  // Keep orderedKeys synced with remote config
   useEffect(() => {
     if (homepageSectionsConfig?.sectionOrder && homepageSectionsConfig.sectionOrder.length > 0) {
       setOrderedKeys(homepageSectionsConfig.sectionOrder);
     }
   }, [homepageSectionsConfig?.sectionOrder]);
 
-  const handleMoveSectionOrder = (index: number, direction: 'up' | 'down') => {
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = orderedKeys.indexOf(active.id as HomepageSectionKey);
+      const newIndex = orderedKeys.indexOf(over.id as HomepageSectionKey);
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const nextOrder = arrayMove(orderedKeys, oldIndex, newIndex);
+        setOrderedKeys(nextOrder);
+        try {
+          setIsSavingOrder(true);
+          await updateHomepageSectionOrder(nextOrder);
+        } catch (err) {
+          console.error('Failed to save section order:', err);
+        } finally {
+          setIsSavingOrder(false);
+        }
+      }
+    }
+  };
+
+  const handleMoveSectionOrder = async (index: number, direction: 'up' | 'down') => {
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= orderedKeys.length) return;
     const next = [...orderedKeys];
@@ -72,6 +294,14 @@ export const AdminHomepageSections: React.FC = () => {
     next[index] = next[targetIndex];
     next[targetIndex] = temp;
     setOrderedKeys(next);
+    try {
+      setIsSavingOrder(true);
+      await updateHomepageSectionOrder(next);
+    } catch (err) {
+      console.error('Failed to save section order:', err);
+    } finally {
+      setIsSavingOrder(false);
+    }
   };
 
   const handleSaveSectionOrder = async () => {
@@ -229,6 +459,15 @@ export const AdminHomepageSections: React.FC = () => {
     updateCurrentDraft({ itemIds: currentList });
   };
 
+  // Subcategory options based on currently selected category
+  const availableSubCategories = useMemo(() => {
+    const selectedCategory = currentConfig.category;
+    if (selectedCategory && CATEGORY_SPECIFIC_SUBCATEGORIES[selectedCategory]) {
+      return CATEGORY_SPECIFIC_SUBCATEGORIES[selectedCategory];
+    }
+    return Object.entries(SUBCATEGORY_LABELS).map(([val, label]) => ({ val, label }));
+  }, [currentConfig.category]);
+
   return (
     <div className="space-y-6">
       {/* Top Banner */}
@@ -248,7 +487,7 @@ export const AdminHomepageSections: React.FC = () => {
                 </span>
               </div>
               <p className="text-slate-400 text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
-                Kustomisasi judul, mode kurasi otomatis (kategori & filter), atau pilih item manual secara spesifik untuk tiap seksi di halaman beranda. Perubahan tersimpan secara realtime di Firestore.
+                Kustomisasi judul, mode kurasi otomatis (kategori & sub-kategori), atau pilih item manual secara spesifik untuk tiap seksi di halaman beranda. Geser urutan seksi dengan drag-and-drop. Perubahan tersimpan secara realtime di Firestore.
               </p>
             </div>
           </div>
@@ -265,12 +504,12 @@ export const AdminHomepageSections: React.FC = () => {
       {/* Main Grid: Left Navigation / Right Config Form */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* Left Column: 11 Section Navigation & Reordering List (4 cols) */}
+        {/* Left Column: 11 Section Drag-and-Drop Reordering List (4 cols) */}
         <div className="lg:col-span-4 bg-[#171717] border border-white/[0.08] rounded-3xl p-3.5 sm:p-4 space-y-3 shadow-lg">
           <div className="px-2 py-1 flex items-center justify-between">
             <div>
               <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">Urutan Seksi Beranda</span>
-              <span className="text-[10px] text-slate-500">Gunakan panah ↑ ↓ untuk mengatur posisi</span>
+              <span className="text-[10px] text-slate-500">Tarik ikon ⋮⋮ atau gunakan panah ↑ ↓</span>
             </div>
             <button
               type="button"
@@ -290,95 +529,33 @@ export const AdminHomepageSections: React.FC = () => {
             </button>
           </div>
 
-          <div className="space-y-1.5 max-h-[660px] overflow-y-auto pr-1">
-            {orderedKeys.map((key, idx) => {
-              const meta = HOMEPAGE_SECTIONS_META.find(m => m.key === key) || HOMEPAGE_SECTIONS_META[0];
-              const active = key === activeSectionKey;
-              const sectionConfig = draftConfigs[key] || homepageSectionsConfig?.sections?.[key];
-              const isManual = sectionConfig?.sourceType === 'manual';
-              const hasCustomTitle = !!sectionConfig?.title && sectionConfig.title.trim().length > 0;
-
-              return (
-                <div
-                  key={key}
-                  className={`p-2.5 rounded-2xl transition-all flex items-center justify-between gap-2.5 border ${
-                    active
-                      ? 'bg-white/[0.12] border-white/20 text-white shadow-sm'
-                      : 'hover:bg-white/[0.04] text-slate-300 border-white/[0.04]'
-                  }`}
-                >
-                  {/* Position Index Badge */}
-                  <span className="w-5 text-center font-mono font-bold text-[11px] text-slate-500 shrink-0">
-                    #{idx + 1}
-                  </span>
-
-                  {/* Section Title & Info */}
-                  <button
-                    id={`admin-section-tab-${key}`}
-                    type="button"
-                    onClick={() => {
-                      setActiveSectionKey(key);
-                      setSearchQuery('');
-                    }}
-                    className="min-w-0 flex-1 text-left cursor-pointer"
-                  >
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      {meta.targetType === 'films' ? (
-                        <Film className="w-3.5 h-3.5 text-[#FF2E7E] shrink-0" />
-                      ) : (
-                        <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                      )}
-                      <span className="font-semibold text-xs truncate">
-                        {meta.label}
-                      </span>
-                    </div>
-
-                    <div className="text-[11px] text-slate-400 truncate">
-                      {hasCustomTitle ? `"${sectionConfig?.title}"` : meta.defaultTitle}
-                    </div>
-                  </button>
-
-                  {/* Reorder Up/Down Controls & Mode Indicator */}
-                  <div className="flex items-center gap-1 shrink-0">
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${
-                      isManual 
-                        ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' 
-                        : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                    }`}>
-                      {isManual ? 'Manual' : 'Auto'}
-                    </span>
-
-                    <div className="flex flex-col gap-0.5 ml-1">
-                      <button
-                        type="button"
-                        disabled={idx === 0}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMoveSectionOrder(idx, 'up');
-                        }}
-                        className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-20 transition-colors"
-                        title="Geser Seksi ke Atas"
-                      >
-                        <ChevronUp className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={idx === orderedKeys.length - 1}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMoveSectionOrder(idx, 'down');
-                        }}
-                        className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-20 transition-colors"
-                        title="Geser Seksi ke Bawah"
-                      >
-                        <ChevronDown className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={orderedKeys}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-1.5 max-h-[660px] overflow-y-auto pr-1">
+                {orderedKeys.map((key, idx) => (
+                  <SortableSectionItem
+                    key={key}
+                    keyId={key}
+                    idx={idx}
+                    activeSectionKey={activeSectionKey}
+                    setActiveSectionKey={setActiveSectionKey}
+                    setSearchQuery={setSearchQuery}
+                    draftConfigs={draftConfigs}
+                    homepageSectionsConfig={homepageSectionsConfig}
+                    handleMoveSectionOrder={handleMoveSectionOrder}
+                    orderedLength={orderedKeys.length}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         </div>
 
         {/* Right Column: Configuration Form for Active Section (8 cols) */}
@@ -493,7 +670,7 @@ export const AdminHomepageSections: React.FC = () => {
                   <select
                     id="select-category-auto"
                     value={currentConfig.category || ''}
-                    onChange={(e) => updateCurrentDraft({ category: (e.target.value as any) || '' })}
+                    onChange={(e) => updateCurrentDraft({ category: (e.target.value as any) || undefined })}
                     className="w-full px-3 py-2 rounded-xl bg-[#171717] border border-white/[0.1] text-white text-xs outline-none focus:border-[#FF2E7E] transition-colors"
                   >
                     <option value="">Semua kategori</option>
@@ -517,7 +694,7 @@ export const AdminHomepageSections: React.FC = () => {
                     className="w-full px-3 py-2 rounded-xl bg-[#171717] border border-white/[0.1] text-white text-xs outline-none focus:border-[#FF2E7E] transition-colors"
                   >
                     <option value="">Semua sub-kategori</option>
-                    {Object.entries(SUBCATEGORY_LABELS).map(([val, label]) => (
+                    {availableSubCategories.map(({ val, label }) => (
                       <option key={val} value={val}>
                         {label}
                       </option>
@@ -598,52 +775,48 @@ export const AdminHomepageSections: React.FC = () => {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder={`Ketik judul ${currentMeta.targetType === 'films' ? 'film' : 'artikel'} untuk mencari...`}
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#171717] border border-white/[0.1] focus:border-[#FF2E7E] text-white text-xs placeholder:text-slate-600 outline-none transition-colors"
+                    placeholder={`Ketik judul ${currentMeta.targetType === 'films' ? 'film/serial' : 'artikel'} untuk menambah...`}
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#171717] border border-white/[0.1] text-white text-xs outline-none focus:border-[#FF2E7E] placeholder:text-slate-600 transition-colors"
                   />
                 </div>
 
-                {/* Search Results Dropdown List */}
+                {/* Dropdown Suggestions */}
                 {searchResults.length > 0 && (
-                  <div className="bg-[#171717] border border-white/20 rounded-2xl p-2 space-y-1 shadow-2xl max-h-56 overflow-y-auto">
-                    <div className="px-2 py-1 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                      Hasil Pencarian:
-                    </div>
+                  <div className="bg-[#171717] border border-white/10 rounded-2xl p-2 space-y-1 shadow-2xl max-h-56 overflow-y-auto">
                     {searchResults.map((item: any) => {
-                      const alreadyAdded = (currentConfig.itemIds || []).includes(item.id);
+                      const isAdded = (currentConfig.itemIds || []).includes(item.id);
                       return (
                         <div
                           key={item.id}
-                          className="flex items-center justify-between gap-3 p-2 rounded-xl hover:bg-white/[0.04] transition-colors"
+                          className="flex items-center justify-between p-2 rounded-xl hover:bg-white/[0.06] transition-colors text-xs"
                         >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <img
-                              src={item.poster || item.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=100&q=80'}
-                              alt={item.title}
-                              className="w-8 h-10 object-cover rounded-lg shrink-0 bg-slate-900 border border-white/10"
-                            />
-                            <div className="min-w-0">
-                              <h5 className="text-xs font-bold text-white truncate">
-                                {item.title}
-                              </h5>
-                              <span className="text-[10px] text-slate-400 capitalize">
-                                {item.type || item.category} {item.year ? `· ${item.year}` : ''}
-                              </span>
+                          <div className="min-w-0 flex-1 pr-3">
+                            <div className="font-semibold text-white truncate">{item.title}</div>
+                            <div className="text-[10px] text-slate-400 truncate">
+                              ID: {item.id} {item.category ? `· ${item.category}` : ''}
                             </div>
                           </div>
-
                           <button
                             type="button"
-                            disabled={alreadyAdded}
+                            disabled={isAdded}
                             onClick={() => handleAddItem(item.id)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shrink-0 ${
-                              alreadyAdded
-                                ? 'bg-white/[0.04] text-slate-500 cursor-not-allowed'
-                                : 'bg-[#FF2E7E] hover:bg-[#FF2E7E]/80 text-white cursor-pointer'
+                            className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                              isAdded
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                                : 'bg-[#FF2E7E] hover:bg-[#FF2E7E]/90 text-white shadow-sm'
                             }`}
                           >
-                            <Plus className="w-3 h-3" />
-                            <span>{alreadyAdded ? 'Sudah Ada' : 'Tambah'}</span>
+                            {isAdded ? (
+                              <>
+                                <Check className="w-3 h-3" />
+                                <span>Terpilih</span>
+                              </>
+                            ) : (
+                              <>
+                                <Plus className="w-3 h-3" />
+                                <span>Tambah</span>
+                              </>
+                            )}
                           </button>
                         </div>
                       );
@@ -652,66 +825,54 @@ export const AdminHomepageSections: React.FC = () => {
                 )}
               </div>
 
-              {/* Ordered Selected Items List */}
+              {/* Selected List with Reordering */}
               <div className="space-y-2 pt-2">
                 {selectedItemsData.length === 0 ? (
-                  <div className="p-6 text-center rounded-2xl bg-[#171717]/60 border border-dashed border-white/[0.08] text-xs text-slate-500">
-                    Belum ada item dipilih. Gunakan kotak pencarian di atas untuk menambahkan {currentMeta.targetType === 'films' ? 'film' : 'artikel'} ke daftar manual.
+                  <div className="text-center py-6 border border-dashed border-white/10 rounded-2xl text-slate-500 text-xs">
+                    Belum ada item manual yang dipilih. Gunakan pencarian di atas untuk menambahkan.
                   </div>
                 ) : (
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
                     {selectedItemsData.map((item: any, idx) => (
                       <div
                         key={item.id}
-                        className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-[#171717] border border-white/[0.08] group"
+                        className="flex items-center justify-between p-2.5 rounded-xl bg-[#171717] border border-white/[0.06] hover:border-white/20 transition-all text-xs"
                       >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          {/* Rank indicator */}
-                          <span className="w-5 text-center font-mono font-bold text-xs text-slate-500">
-                            {String(idx + 1).padStart(2, '0')}
-                          </span>
+                        <span className="w-5 font-mono text-[11px] font-bold text-slate-500 shrink-0">
+                          #{idx + 1}
+                        </span>
 
-                          <img
-                            src={item.poster || item.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=100&q=80'}
-                            alt={item.title}
-                            className="w-9 h-11 object-cover rounded-lg shrink-0 bg-slate-900 border border-white/10"
-                          />
-
-                          <div className="min-w-0">
-                            <h5 className="text-xs font-bold text-white truncate">
-                              {item.title}
-                            </h5>
-                            <span className="text-[10px] text-slate-400 capitalize">
-                              {item.type || item.category} {item.year ? `· ${item.year}` : ''}
-                            </span>
+                        <div className="min-w-0 flex-1 px-2">
+                          <div className="font-semibold text-white truncate">{item.title}</div>
+                          <div className="text-[10px] text-slate-400 truncate">
+                            ID: {item.id}
                           </div>
                         </div>
 
-                        {/* Controls: Up, Down, Remove */}
                         <div className="flex items-center gap-1 shrink-0">
                           <button
                             type="button"
                             disabled={idx === 0}
                             onClick={() => handleMoveItem(idx, 'up')}
-                            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.08] disabled:opacity-30 disabled:hover:bg-transparent"
-                            title="Pindah ke Atas"
+                            className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-20 transition-colors"
+                            title="Geser item ke atas"
                           >
-                            <ChevronUp className="w-4 h-4" />
+                            <ChevronUp className="w-3.5 h-3.5" />
                           </button>
                           <button
                             type="button"
                             disabled={idx === selectedItemsData.length - 1}
                             onClick={() => handleMoveItem(idx, 'down')}
-                            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.08] disabled:opacity-30 disabled:hover:bg-transparent"
-                            title="Pindah ke Bawah"
+                            className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-20 transition-colors"
+                            title="Geser item ke bawah"
                           >
-                            <ChevronDown className="w-4 h-4" />
+                            <ChevronDown className="w-3.5 h-3.5" />
                           </button>
                           <button
                             type="button"
                             onClick={() => handleRemoveItem(item.id)}
-                            className="p-1 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 ml-1"
-                            title="Hapus dari Daftar"
+                            className="p-1 rounded-md text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors ml-1"
+                            title="Hapus dari daftar manual"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -724,51 +885,47 @@ export const AdminHomepageSections: React.FC = () => {
             </div>
           )}
 
-          {/* Action Buttons: Save & Reset */}
-          <div className="pt-4 border-t border-white/[0.08] flex items-center justify-between gap-3">
+          {/* Action Buttons: Save / Reset */}
+          <div className="pt-4 border-t border-white/[0.08] flex items-center justify-between gap-4">
             <button
               type="button"
               id="reset-section-btn"
-              onClick={() => handleResetSection(currentMeta.key)}
-              disabled={isSavingKey === currentMeta.key}
-              className="px-4 py-2.5 rounded-xl border border-white/[0.1] hover:border-white/20 text-slate-400 hover:text-white text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              onClick={() => handleResetSection(activeSectionKey)}
+              disabled={isSavingKey === activeSectionKey}
+              className="px-4 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset ke Default</span>
+              <span>Reset ke Bawaan Kode</span>
             </button>
 
             <button
               type="button"
-              id={`save-section-btn-${currentMeta.key}`}
-              onClick={() => handleSaveSection(currentMeta.key)}
-              disabled={isSavingKey === currentMeta.key}
-              className={`px-6 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-lg active:scale-95 disabled:opacity-50 ${
-                savedSuccessKey === currentMeta.key
-                  ? 'bg-emerald-600 text-white shadow-emerald-600/30'
-                  : 'bg-[#FF2E7E] hover:bg-[#FF2E7E]/90 text-white shadow-[#FF2E7E]/30'
-              }`}
+              id="save-section-config-btn"
+              onClick={() => handleSaveSection(activeSectionKey)}
+              disabled={isSavingKey === activeSectionKey}
+              className="px-6 py-2.5 rounded-xl bg-[#FF2E7E] hover:bg-[#FF2E7E]/90 text-white text-xs font-bold transition-all shadow-lg shadow-[#FF2E7E]/25 flex items-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
             >
-              {isSavingKey === currentMeta.key ? (
+              {isSavingKey === activeSectionKey ? (
+                <span>Menyimpan ke Firestore...</span>
+              ) : savedSuccessKey === activeSectionKey ? (
                 <>
-                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Menyimpan...</span>
-                </>
-              ) : savedSuccessKey === currentMeta.key ? (
-                <>
-                  <Check className="w-4 h-4" />
+                  <Check className="w-4 h-4 text-emerald-300" />
                   <span>Tersimpan!</span>
                 </>
               ) : (
                 <>
                   <Save className="w-4 h-4" />
-                  <span>Simpan Seksi Ini</span>
+                  <span>Simpan Konfigurasi Seksi ({currentMeta.key})</span>
                 </>
               )}
             </button>
           </div>
 
         </div>
+
       </div>
     </div>
   );
 };
+
+export default AdminHomepageSections;
