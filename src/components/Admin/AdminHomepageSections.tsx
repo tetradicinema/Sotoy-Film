@@ -19,6 +19,15 @@ import { useApp } from '../../context/AppContext';
 import { HomepageSectionKey, SectionConfig, MainCategory } from '../../types';
 import { HOMEPAGE_SECTIONS_META, SectionMeta } from '../../utils/homepageConfigHelper';
 
+const CATEGORY_LABELS: Record<string, string> = {
+  movies: 'Movies',
+  series: 'Series',
+  anime: 'Anime',
+  'cinema-gear': 'Cinema Gear',
+  'film-studies': 'Film Studies',
+  movie: 'Movies',
+};
+
 export const AdminHomepageSections: React.FC = () => {
   const {
     films,
@@ -48,18 +57,22 @@ export const AdminHomepageSections: React.FC = () => {
 
   // Current working section config (draft or from firestore or default)
   const currentConfig: SectionConfig = useMemo(() => {
-    const draft = draftConfigs[activeSectionKey];
-    if (draft) return draft;
-    const fromRemote = homepageSectionsConfig?.sections?.[activeSectionKey];
-    if (fromRemote) return fromRemote;
-    return {
+    const defaultVal: SectionConfig = {
       title: '',
       sourceType: 'auto',
-      category: undefined,
+      category: '',
       tag: '',
       sortBy: 'newest',
       limit: 5,
       itemIds: [],
+    };
+    const draft = draftConfigs[activeSectionKey];
+    const fromRemote = homepageSectionsConfig?.sections?.[activeSectionKey];
+    const base = draft || fromRemote || {};
+    return {
+      ...defaultVal,
+      ...base,
+      itemIds: base.itemIds || [],
     };
   }, [draftConfigs, homepageSectionsConfig, activeSectionKey]);
 
@@ -78,6 +91,10 @@ export const AdminHomepageSections: React.FC = () => {
       setIsSavingKey(key);
       const configToSave = draftConfigs[key] || currentConfig;
       await updateHomepageSectionConfig(key, configToSave);
+      setDraftConfigs(prev => ({
+        ...prev,
+        [key]: configToSave,
+      }));
       setSavedSuccessKey(key);
       setTimeout(() => setSavedSuccessKey(null), 3000);
     } catch (err) {
@@ -91,7 +108,7 @@ export const AdminHomepageSections: React.FC = () => {
     const defaultReset: SectionConfig = {
       title: '',
       sourceType: 'auto',
-      category: undefined,
+      category: '',
       tag: '',
       sortBy: 'newest',
       limit: 5,
@@ -241,6 +258,10 @@ export const AdminHomepageSections: React.FC = () => {
                     <div className="text-[11px] text-slate-400 truncate">
                       {hasCustomTitle ? `"${sectionConfig?.title}"` : meta.defaultTitle}
                     </div>
+
+                    <div className="text-[10px] text-slate-500 truncate mt-0.5">
+                      Default saat belum diatur: {meta.defaultRule}
+                    </div>
                   </div>
 
                   <div className="flex flex-col items-end gap-1 shrink-0">
@@ -278,6 +299,10 @@ export const AdminHomepageSections: React.FC = () => {
               </h3>
               <p className="text-slate-400 text-xs mt-1">
                 {currentMeta.description}
+              </p>
+              <p className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1.5">
+                <span className="font-semibold text-slate-400">Default saat belum diatur:</span>
+                <span className="text-slate-400/90">{currentMeta.defaultRule}</span>
               </p>
             </div>
 
@@ -366,13 +391,13 @@ export const AdminHomepageSections: React.FC = () => {
                   <select
                     id="select-category-auto"
                     value={currentConfig.category || ''}
-                    onChange={(e) => updateCurrentDraft({ category: (e.target.value as any) || undefined })}
+                    onChange={(e) => updateCurrentDraft({ category: (e.target.value as any) || '' })}
                     className="w-full px-3 py-2 rounded-xl bg-[#171717] border border-white/[0.1] text-white text-xs outline-none focus:border-[#FF2E7E] transition-colors"
                   >
-                    <option value="">Semua Kategori Diperbolehkan</option>
+                    <option value="">Semua kategori</option>
                     {currentMeta.allowedCategories.map(cat => (
                       <option key={cat} value={cat}>
-                        {cat}
+                        {CATEGORY_LABELS[cat] || cat}
                       </option>
                     ))}
                   </select>

@@ -1191,7 +1191,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const configDocRef = doc(db, 'siteConfig', 'homepageSections');
     const now = new Date().toISOString();
     const existingSection = homepageSectionsConfig?.sections?.[sectionKey] || { sourceType: 'auto' };
-    const mergedSection = { ...existingSection, ...config };
+    const rawMerged = { ...existingSection, ...config };
+    const mergedSection: Record<string, any> = {};
+    for (const [k, v] of Object.entries(rawMerged)) {
+      if (v === undefined) {
+        if (k === 'itemIds') mergedSection[k] = [];
+        else if (k === 'limit') mergedSection[k] = 5;
+        else mergedSection[k] = '';
+      } else {
+        mergedSection[k] = v;
+      }
+    }
 
     await setDoc(
       configDocRef,

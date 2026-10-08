@@ -6,8 +6,23 @@ export interface SectionMeta {
   defaultTitle: string;
   targetType: 'films' | 'articles';
   description: string;
+  defaultRule: string;
   allowedCategories: (MainCategory | 'movie' | 'series' | 'anime')[];
 }
+
+export const ALL_ARTICLE_CATEGORIES: MainCategory[] = [
+  'movies',
+  'series',
+  'anime',
+  'cinema-gear',
+  'film-studies',
+];
+
+export const ALL_FILM_CATEGORIES: ('movie' | 'series' | 'anime')[] = [
+  'movie',
+  'series',
+  'anime',
+];
 
 export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
   {
@@ -15,88 +30,99 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     label: 'Hero: To Watch Tab',
     defaultTitle: 'To Watch',
     targetType: 'films',
-    description: 'Daftar rekomendasi tontonan film/serial di panel hero samping kanan.',
-    allowedCategories: ['movie', 'series', 'anime'],
+    description: 'Panel hero, tab rekomendasi tontonan (kanan hero banner)',
+    defaultRule: 'Film/serial rekomendasi rating tertinggi (skor sotoy ≥ 4.5)',
+    allowedCategories: ALL_FILM_CATEGORIES,
   },
   {
     key: 'recent',
     label: 'Hero: Recent Articles Tab',
     defaultTitle: 'Recent',
     targetType: 'articles',
-    description: 'Daftar artikel terbitan terbaru di panel hero samping kanan.',
-    allowedCategories: ['movies', 'series', 'anime', 'cinema-gear', 'film-studies'],
+    description: 'Panel hero, tab artikel terbaru (kanan hero banner)',
+    defaultRule: 'Artikel terbaru dari semua kategori',
+    allowedCategories: ALL_ARTICLE_CATEGORIES,
   },
   {
     key: 'gear',
     label: 'Hero: Gear Addict Tab',
     defaultTitle: 'Gear',
     targetType: 'articles',
-    description: 'Daftar perangkat sinema & tech di panel hero samping kanan.',
-    allowedCategories: ['cinema-gear', 'movies', 'series', 'anime', 'film-studies'],
+    description: 'Panel hero, tab kurasi ketiga (kanan hero banner)',
+    defaultRule: 'Artikel kategori Cinema Gear & Tech',
+    allowedCategories: ALL_ARTICLE_CATEGORIES,
   },
   {
     key: 'movie_list',
     label: 'Seksi 1: Movie Lists',
     defaultTitle: 'Movie Lists',
     targetType: 'articles',
-    description: 'Kolom daftar kurasi film layar lebar di Seksi 1.',
-    allowedCategories: ['movies'],
+    description: 'Seksi 1, kolom 1 (daftar vertikal dengan poster)',
+    defaultRule: 'Artikel kategori Movies (urutan terbaru)',
+    allowedCategories: ALL_ARTICLE_CATEGORIES,
   },
   {
     key: 'series_list',
     label: 'Seksi 1: Series Lists',
     defaultTitle: 'Series Lists',
     targetType: 'articles',
-    description: 'Kolom daftar kurasi serial tv & streaming di Seksi 1.',
-    allowedCategories: ['series'],
+    description: 'Seksi 1, kolom 2 (daftar vertikal dengan poster)',
+    defaultRule: 'Artikel kategori Series (urutan terbaru)',
+    allowedCategories: ALL_ARTICLE_CATEGORIES,
   },
   {
     key: 'anime_list',
     label: 'Seksi 1: Anime Lists',
     defaultTitle: 'Anime Lists',
     targetType: 'articles',
-    description: 'Kolom daftar kurasi anime pilihan di Seksi 1.',
-    allowedCategories: ['anime'],
+    description: 'Seksi 1, kolom 3 (daftar vertikal dengan poster)',
+    defaultRule: 'Artikel kategori Anime (urutan terbaru)',
+    allowedCategories: ALL_ARTICLE_CATEGORIES,
   },
   {
     key: 'cinema_gear_articles',
     label: 'Seksi 2: Cinema Gear & Tech',
     defaultTitle: 'Cinema Gear & Filmmaking Tech',
     targetType: 'articles',
-    description: 'Artikel ulasan perlengkapan sinema di Seksi 2 (carousel & hero banner).',
-    allowedCategories: ['cinema-gear'],
+    description: 'Seksi 2, carousel besar',
+    defaultRule: 'Artikel kategori Cinema Gear & Tech',
+    allowedCategories: ALL_ARTICLE_CATEGORIES,
   },
   {
     key: 'reviews_movie',
     label: 'Seksi 3: Movie Reviews',
     defaultTitle: 'Review Film Bioskop',
     targetType: 'articles',
-    description: 'Kolom ulasan jujur film bioskop di Seksi 3.',
-    allowedCategories: ['movies'],
+    description: 'Seksi 3, grid 2-kolom sebelah kiri',
+    defaultRule: 'Artikel kategori Movies (ulasan & review film)',
+    allowedCategories: ALL_ARTICLE_CATEGORIES,
   },
   {
     key: 'reviews_series',
     label: 'Seksi 3: Series Reviews',
     defaultTitle: 'Review Serial Streaming',
     targetType: 'articles',
-    description: 'Kolom ulasan jujur serial streaming di Seksi 3.',
-    allowedCategories: ['series'],
+    description: 'Seksi 3, grid 2-kolom sebelah kanan',
+    defaultRule: 'Artikel kategori Series (ulasan & review serial)',
+    allowedCategories: ALL_ARTICLE_CATEGORIES,
   },
   {
     key: 'anime_news',
     label: 'Seksi 4: Anime News Wire',
     defaultTitle: 'Anime News & Season Updates',
     targetType: 'articles',
-    description: 'Kabar dan update anime di Seksi 4 (news ticker style).',
-    allowedCategories: ['anime'],
+    description: 'Seksi 4, grid artikel gaya news ticker',
+    defaultRule: 'Artikel kategori Anime (kabar & berita terkini)',
+    allowedCategories: ALL_ARTICLE_CATEGORIES,
   },
   {
     key: 'film_studies',
     label: 'Seksi 5: Film Studies & Essays',
     defaultTitle: 'Film Studies & Cinematic Analysis',
     targetType: 'articles',
-    description: 'Esai kajian film mendalam di Seksi 5.',
-    allowedCategories: ['film-studies'],
+    description: 'Seksi 5, kartu esai sinematik vertikal & mendalam',
+    defaultRule: 'Artikel kategori Film Studies (kajian sinema)',
+    allowedCategories: ALL_ARTICLE_CATEGORIES,
   },
 ];
 
@@ -125,15 +151,21 @@ export function resolveConfigFilms(
 
   // Auto mode
   let filtered = [...allFilms];
-  if (config.category) {
-    filtered = filtered.filter(f => f.type === config.category);
+  if (config.category && config.category.trim()) {
+    const cat = config.category.trim().toLowerCase();
+    filtered = filtered.filter(f => {
+      const filmType = (f.type || f.category || '').toLowerCase();
+      if (cat === 'movie' || cat === 'movies') {
+        return filmType === 'movie' || filmType === 'movies' || !filmType;
+      }
+      return filmType === cat;
+    });
   }
   if (config.tag && config.tag.trim()) {
     const t = config.tag.trim().toLowerCase();
     filtered = filtered.filter(f => 
-      f.genres?.some((g: string) => g.toLowerCase().includes(t)) ||
-      f.tags?.some((tag: string) => tag.toLowerCase().includes(t)) ||
-      f.title?.toLowerCase().includes(t)
+      f.genres?.some((g: string) => g.trim().toLowerCase() === t) ||
+      f.tags?.some((tag: string) => tag.trim().toLowerCase() === t)
     );
   }
 
@@ -148,7 +180,8 @@ export function resolveConfigFilms(
   }
 
   const limit = config.limit && config.limit > 0 ? config.limit : 5;
-  return filtered.slice(0, limit);
+  const sliced = filtered.slice(0, limit);
+  return sliced.length > 0 ? sliced : defaultFilms;
 }
 
 /**
@@ -176,15 +209,15 @@ export function resolveConfigArticles(
 
   // Auto mode
   let filtered = [...allArticles];
-  if (config.category) {
-    filtered = filtered.filter(a => a.category === config.category);
+  if (config.category && config.category.trim()) {
+    const cat = config.category.trim().toLowerCase();
+    filtered = filtered.filter(a => (a.category || '').toLowerCase() === cat);
   }
   if (config.tag && config.tag.trim()) {
     const t = config.tag.trim().toLowerCase();
     filtered = filtered.filter(a =>
-      a.subCategory?.toLowerCase().includes(t) ||
-      a.tags?.some(tag => tag.toLowerCase().includes(t)) ||
-      a.title?.toLowerCase().includes(t)
+      (a.subCategory && a.subCategory.trim().toLowerCase() === t) ||
+      a.tags?.some(tag => tag.trim().toLowerCase() === t)
     );
   }
 
@@ -207,5 +240,6 @@ export function resolveConfigArticles(
   }
 
   const limit = config.limit && config.limit > 0 ? config.limit : 5;
-  return filtered.slice(0, limit);
+  const sliced = filtered.slice(0, limit);
+  return sliced.length > 0 ? sliced : defaultArticles;
 }
