@@ -33,6 +33,7 @@ import {
   HomeBlockKey,
   HomeSidebarWidgetKey,
 } from '../types';
+import { setCachedHomepageLayout } from '../utils/homepageConfigHelper';
 import {
   DEFAULT_FALLBACK_AUTHOR,
   INITIAL_ARTICLES,
@@ -275,12 +276,14 @@ interface AppContextType {
   refreshFilms: () => Promise<void>;
   refreshArticles: () => Promise<void>;
   homepageSectionsConfig: HomepageSectionsConfig | null;
+  homepageConfigLoaded: boolean;
   updateHomepageSectionConfig: (sectionKey: HomepageSectionKey, config: Partial<SectionConfig>) => Promise<void>;
   updateHomepageSectionOrder: (newOrder: HomepageSectionKey[]) => Promise<void>;
   updateHomepageLayout: (partial: {
     blockOrder?: HomeBlockKey[];
     sidebarPosition?: 'right' | 'left' | 'hidden';
     sidebarWidgetOrder?: HomeSidebarWidgetKey[];
+    hiddenBlocks?: HomeBlockKey[];
   }) => Promise<void>;
   criticSubmissions: CriticSubmission[];
   addCriticSubmission: (sub: Omit<CriticSubmission, 'id' | 'status' | 'date'>) => Promise<boolean>;
@@ -541,6 +544,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(INITIAL_AUDIT_LOGS);
   const [userProfilesCache, setUserProfilesCache] = useState<Record<string, any>>({});
   const [homepageSectionsConfig, setHomepageSectionsConfig] = useState<HomepageSectionsConfig | null>(null);
+  const [homepageConfigLoaded, setHomepageConfigLoaded] = useState<boolean>(false);
 
   const cacheUserProfile = useCallback((userId: string, profile: any) => {
     setUserProfilesCache(prev => {
@@ -1183,13 +1187,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       configDocRef,
       (docSnap) => {
         if (docSnap.exists()) {
-          setHomepageSectionsConfig(docSnap.data() as HomepageSectionsConfig);
+          const data = docSnap.data() as HomepageSectionsConfig;
+          setHomepageSectionsConfig(data);
+          // Cache the latest layout fields in localStorage
+          setCachedHomepageLayout({
+            blockOrder: data.blockOrder,
+            sidebarPosition: data.sidebarPosition,
+            sidebarWidgetOrder: data.sidebarWidgetOrder,
+            hiddenBlocks: data.hiddenBlocks,
+          });
         } else {
           setHomepageSectionsConfig(null);
         }
+        setHomepageConfigLoaded(true);
       },
       (err) => {
         console.warn('[Firestore] homepageSections subscription error:', err?.message || err);
+        setHomepageConfigLoaded(true);
       }
     );
     return () => unsub();
@@ -1260,26 +1274,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       blockOrder?: HomeBlockKey[];
       sidebarPosition?: 'right' | 'left' | 'hidden';
       sidebarWidgetOrder?: HomeSidebarWidgetKey[];
+      hiddenBlocks?: HomeBlockKey[];
     }
   ) => {
     if (!isAdmin && currentUser.role !== 'admin') {
       showToast('Hanya administrator yang memiliki izin untuk mengubah tata letak beranda.', 'error');
       throw new Error('Unauthorized: Admin access required');
     }
-    const configDocRef = doc(db, 'siteConfig', 'homepageSections');
-    const now = new Date().toISOString();
-    await setDoc(
-      configDocRef,
-      {
-        ...partial,
-        updatedAt: now,
-        updatedBy: currentUser.id || currentUser.email || 'admin',
-      },
-      { merge: true }
-    );
+    try {
+      const configDocRef = doc(db, 'siteConfig', 'homepageSections');
+      const now = new Date().toISOString();
+      await setDoc(
+        configDocRef,
+        {
+          ...partial,
+          updatedAt: now,
+          updatedBy: currentUser.id || currentUser.email || 'admin',
+        },
+        { merge: true }
+      );
 
-    showToast('Tata letak susunan beranda berhasil disimpan!', 'success');
-  }, [isAdmin, currentUser, showToast]);
+      // Also update local cache immediately on successful save
+      setCachedHomepageLayout({
+        blockOrder: partial.blockOrder ?? homepageSectionsConfig?.blockOrder,
+        sidebarPosition: partial.sidebarPosition ?? homepageSectionsConfig?.sidebarPosition,
+        sidebarWidgetOrder: partial.sidebarWidgetOrder ?? homepageSectionsConfig?.sidebarWidgetOrder,
+        hiddenBlocks: partial.hiddenBlocks ?? homepageSectionsConfig?.hiddenBlocks,
+      });
+
+      showToast('Tata letak susunan beranda berhasil disimpan!', 'success');
+    } catch (err: any) {
+      console.error('[Firestore] updateHomepageLayout error:', err);
+      showToast('Gagal menyimpan tata letak, coba lagi', 'error');
+      throw err;
+    }
+  }, [isAdmin, currentUser, homepageSectionsConfig, showToast]);
 
   // Merge private emails onto users for admin viewer, and currentUser's auth email for currentUser
   const resolvedAllUsers = useMemo(() => {
@@ -5676,6 +5705,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         refreshFilms,
         refreshArticles,
         homepageSectionsConfig,
+        homepageConfigLoaded,
         updateHomepageSectionConfig,
         updateHomepageSectionOrder,
         updateHomepageLayout,

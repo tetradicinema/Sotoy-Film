@@ -178,6 +178,102 @@ export function resolveSidebarWidgetOrder(saved?: HomeSidebarWidgetKey[]): HomeS
   return result;
 }
 
+export const WIDE_BLOCK_KEYS: Set<HomeBlockKey> = new Set(['hero', 'featured_news', 'film_recommendations']);
+
+export function isBlockWide(key: HomeBlockKey): boolean {
+  return WIDE_BLOCK_KEYS.has(key);
+}
+
+export function resolveHiddenBlocks(saved?: HomeBlockKey[]): HomeBlockKey[] {
+  if (!Array.isArray(saved) || saved.length === 0) {
+    return [];
+  }
+  const validSet = new Set<HomeBlockKey>(DEFAULT_BLOCK_ORDER);
+  const result: HomeBlockKey[] = [];
+  const seen = new Set<HomeBlockKey>();
+
+  for (const key of saved) {
+    if (validSet.has(key) && !seen.has(key)) {
+      result.push(key);
+      seen.add(key);
+    }
+  }
+  return result;
+}
+
+/**
+ * Computes column blocks that appear in subsequent bands (i.e. separated from the
+ * first column band by a wide block). These blocks render without sidebar at container width.
+ */
+export function getSplitColumnBlocks(
+  blockOrder: HomeBlockKey[],
+  hiddenBlocks: HomeBlockKey[] = []
+): HomeBlockKey[] {
+  const hiddenSet = new Set(hiddenBlocks);
+  const visibleBlocks = blockOrder.filter(k => !hiddenSet.has(k));
+
+  let sawFirstBand = false;
+  let sawWideAfterFirstBand = false;
+  const splitBlocks: HomeBlockKey[] = [];
+
+  let inBand = false;
+
+  for (const key of visibleBlocks) {
+    if (isBlockWide(key)) {
+      if (inBand) {
+        sawFirstBand = true;
+        inBand = false;
+      }
+      if (sawFirstBand) {
+        sawWideAfterFirstBand = true;
+      }
+    } else {
+      // Column block
+      if (!sawFirstBand) {
+        inBand = true;
+      } else if (sawWideAfterFirstBand) {
+        splitBlocks.push(key);
+      }
+    }
+  }
+
+  return splitBlocks;
+}
+
+// LocalStorage cache helpers for instantaneous initial render
+const HOMEPAGE_LAYOUT_STORAGE_KEY = 'sotoy_homepage_layout_cache_v1';
+
+export interface CachedHomepageLayout {
+  blockOrder?: HomeBlockKey[];
+  sidebarPosition?: 'right' | 'left' | 'hidden';
+  sidebarWidgetOrder?: HomeSidebarWidgetKey[];
+  hiddenBlocks?: HomeBlockKey[];
+}
+
+export function getCachedHomepageLayout(): CachedHomepageLayout | null {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return null;
+    const raw = window.localStorage.getItem(HOMEPAGE_LAYOUT_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') {
+      return parsed as CachedHomepageLayout;
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+export function setCachedHomepageLayout(layout: CachedHomepageLayout): void {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    window.localStorage.setItem(HOMEPAGE_LAYOUT_STORAGE_KEY, JSON.stringify(layout));
+  } catch {
+    // ignore
+  }
+}
+
 export const ALL_ARTICLE_CATEGORIES: MainCategory[] = [
   'movies',
   'series',

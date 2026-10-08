@@ -511,6 +511,7 @@ export interface HomepageSectionsConfig {
   blockOrder?: HomeBlockKey[];
   sidebarPosition?: 'right' | 'left' | 'hidden';
   sidebarWidgetOrder?: HomeSidebarWidgetKey[];
+  hiddenBlocks?: HomeBlockKey[];
   updatedAt?: string;
   updatedBy?: string;
 }

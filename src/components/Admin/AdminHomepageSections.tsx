@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { 
   Layout, 
   Sparkles, 
@@ -14,7 +14,10 @@ import {
   Layers,
   Film,
   FileText,
-  GripVertical
+  GripVertical,
+  Eye,
+  EyeOff,
+  AlertTriangle
 } from 'lucide-react';
 import {
   DndContext,
@@ -51,6 +54,8 @@ import {
   SIDEBAR_WIDGETS_META,
   resolveBlockOrder,
   resolveSidebarWidgetOrder,
+  resolveHiddenBlocks,
+  getSplitColumnBlocks,
 } from '../../utils/homepageConfigHelper';
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -115,6 +120,9 @@ interface SortableBlockItemProps {
   idx: number;
   handleMoveBlock: (index: number, direction: 'up' | 'down') => void;
   totalLength: number;
+  isHidden: boolean;
+  onToggleHidden: (key: HomeBlockKey) => void;
+  canHide: boolean;
 }
 
 const SortableBlockItem: React.FC<SortableBlockItemProps> = ({
@@ -122,6 +130,9 @@ const SortableBlockItem: React.FC<SortableBlockItemProps> = ({
   idx,
   handleMoveBlock,
   totalLength,
+  isHidden,
+  onToggleHidden,
+  canHide,
 }) => {
   const {
     attributes,
@@ -136,7 +147,7 @@ const SortableBlockItem: React.FC<SortableBlockItemProps> = ({
     transform: CSS.Transform.toString(transform),
     transition,
     zIndex: isDragging ? 20 : 1,
-    opacity: isDragging ? 0.6 : 1,
+    opacity: isDragging ? 0.6 : isHidden ? 0.55 : 1,
   };
 
   const meta = HOME_BLOCKS_META.find((m) => m.key === blockKey) || HOME_BLOCKS_META[0];
@@ -146,7 +157,11 @@ const SortableBlockItem: React.FC<SortableBlockItemProps> = ({
     <div
       ref={setNodeRef}
       style={style}
-      className="p-2.5 sm:p-3 rounded-2xl transition-all flex items-center justify-between gap-2.5 border bg-white/[0.03] hover:bg-white/[0.06] border-white/[0.06] text-slate-200"
+      className={`p-2.5 sm:p-3 rounded-2xl transition-all flex items-center justify-between gap-2.5 border ${
+        isHidden
+          ? 'bg-black/40 border-white/[0.04] text-slate-500'
+          : 'bg-white/[0.03] hover:bg-white/[0.06] border-white/[0.06] text-slate-200'
+      }`}
     >
       <div className="flex items-center gap-2.5 min-w-0">
         <button
@@ -165,7 +180,7 @@ const SortableBlockItem: React.FC<SortableBlockItemProps> = ({
 
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-xs text-white truncate">
+            <span className={`font-semibold text-xs truncate ${isHidden ? 'text-slate-400 line-through' : 'text-white'}`}>
               {meta.label}
             </span>
             <span
@@ -177,6 +192,11 @@ const SortableBlockItem: React.FC<SortableBlockItemProps> = ({
             >
               {isWide ? 'Lebar Penuh' : 'Kolom Utama'}
             </span>
+            {isHidden && (
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 bg-red-500/15 text-red-400 border border-red-500/30">
+                Disembunyikan
+              </span>
+            )}
           </div>
           <p className="text-[10px] text-slate-400 line-clamp-1 mt-0.5">
             {meta.description}
@@ -184,25 +204,52 @@ const SortableBlockItem: React.FC<SortableBlockItemProps> = ({
         </div>
       </div>
 
-      <div className="flex items-center gap-0.5 shrink-0">
+      <div className="flex items-center gap-1 shrink-0">
+        {/* Toggle Show/Hide Button */}
         <button
           type="button"
-          disabled={idx === 0}
-          onClick={() => handleMoveBlock(idx, 'up')}
-          className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-20 transition-colors cursor-pointer"
-          title="Geser ke Atas"
+          onClick={() => onToggleHidden(blockKey)}
+          disabled={!isHidden && !canHide}
+          className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+            isHidden
+              ? 'bg-white/[0.05] border-white/10 text-slate-400 hover:text-white hover:bg-white/10'
+              : 'bg-white/[0.03] border-white/[0.06] text-slate-400 hover:text-white hover:bg-white/10'
+          } disabled:opacity-30 disabled:cursor-not-allowed`}
+          title={
+            isHidden
+              ? 'Tampilkan blok ini di beranda'
+              : !canHide
+              ? 'Minimal 1 blok harus tetap tampil'
+              : 'Sembunyikan blok ini dari beranda'
+          }
         >
-          <ChevronUp className="w-3.5 h-3.5" />
+          {isHidden ? (
+            <EyeOff className="w-3.5 h-3.5 text-red-400" />
+          ) : (
+            <Eye className="w-3.5 h-3.5 text-slate-400 hover:text-white" />
+          )}
         </button>
-        <button
-          type="button"
-          disabled={idx === totalLength - 1}
-          onClick={() => handleMoveBlock(idx, 'down')}
-          className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-20 transition-colors cursor-pointer"
-          title="Geser ke Bawah"
-        >
-          <ChevronDown className="w-3.5 h-3.5" />
-        </button>
+
+        <div className="flex items-center gap-0.5 ml-0.5">
+          <button
+            type="button"
+            disabled={idx === 0}
+            onClick={() => handleMoveBlock(idx, 'up')}
+            className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-20 transition-colors cursor-pointer"
+            title="Geser ke Atas"
+          >
+            <ChevronUp className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            disabled={idx === totalLength - 1}
+            onClick={() => handleMoveBlock(idx, 'down')}
+            className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-20 transition-colors cursor-pointer"
+            title="Geser ke Bawah"
+          >
+            <ChevronDown className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -455,7 +502,28 @@ export const AdminHomepageSections: React.FC = () => {
     return resolveSidebarWidgetOrder(homepageSectionsConfig?.sidebarWidgetOrder);
   });
 
+  const [hiddenBlocks, setHiddenBlocks] = useState<HomeBlockKey[]>(() => {
+    return resolveHiddenBlocks(homepageSectionsConfig?.hiddenBlocks);
+  });
+
   const [isSavingLayout, setIsSavingLayout] = useState(false);
+
+  // Debounced auto-save queue refs
+  const pendingLayoutUpdatesRef = useRef<{
+    blockOrder?: HomeBlockKey[];
+    sidebarPosition?: 'right' | 'left' | 'hidden';
+    sidebarWidgetOrder?: HomeSidebarWidgetKey[];
+    hiddenBlocks?: HomeBlockKey[];
+  }>({});
+
+  const rollbackStateRef = useRef<{
+    blockOrder?: HomeBlockKey[];
+    sidebarPosition?: 'right' | 'left' | 'hidden';
+    sidebarWidgetOrder?: HomeSidebarWidgetKey[];
+    hiddenBlocks?: HomeBlockKey[];
+  }>({});
+
+  const debounceTimerRef = useRef<any>(null);
 
   useEffect(() => {
     if (homepageSectionsConfig?.blockOrder) {
@@ -475,149 +543,230 @@ export const AdminHomepageSections: React.FC = () => {
     }
   }, [homepageSectionsConfig?.sidebarWidgetOrder]);
 
-  const handleBlockDragEnd = async (event: DragEndEvent) => {
+  useEffect(() => {
+    if (homepageSectionsConfig?.hiddenBlocks !== undefined) {
+      setHiddenBlocks(resolveHiddenBlocks(homepageSectionsConfig.hiddenBlocks));
+    }
+  }, [homepageSectionsConfig?.hiddenBlocks]);
+
+  // Flush pending changes to Firestore
+  const flushPendingLayoutSave = useCallback(async () => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+
+    const payload = { ...pendingLayoutUpdatesRef.current };
+    if (Object.keys(payload).length === 0) return;
+
+    pendingLayoutUpdatesRef.current = {};
+    const rollback = { ...rollbackStateRef.current };
+
+    try {
+      setIsSavingLayout(true);
+      await updateHomepageLayout(payload);
+      // Succeeded, clear rollback reference
+      rollbackStateRef.current = {};
+    } catch (err) {
+      console.error('[AdminHomepageSections] Failed to save debounced layout:', err);
+      // Rollback optimistic states to previous snapshot
+      if (rollback.blockOrder) setOrderedBlockKeys(rollback.blockOrder);
+      if (rollback.sidebarPosition) setSidebarPosition(rollback.sidebarPosition);
+      if (rollback.sidebarWidgetOrder) setOrderedWidgetKeys(rollback.sidebarWidgetOrder);
+      if (rollback.hiddenBlocks) setHiddenBlocks(rollback.hiddenBlocks);
+    } finally {
+      setIsSavingLayout(false);
+    }
+  }, [updateHomepageLayout]);
+
+  // Flush on unmount if any pending saves remain
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        const payload = { ...pendingLayoutUpdatesRef.current };
+        if (Object.keys(payload).length > 0) {
+          updateHomepageLayout(payload).catch((err) => {
+            console.error('[AdminHomepageSections] Flush on unmount failed:', err);
+          });
+        }
+      }
+    };
+  }, [updateHomepageLayout]);
+
+  // Queue a change and debounce save by 800ms
+  const queueLayoutFieldSave = useCallback((
+    field: 'blockOrder' | 'sidebarPosition' | 'sidebarWidgetOrder' | 'hiddenBlocks',
+    nextValue: any,
+    previousValue: any
+  ) => {
+    // Record rollback state if not already set for this batch
+    if (!(field in rollbackStateRef.current)) {
+      rollbackStateRef.current[field] = previousValue;
+    }
+    pendingLayoutUpdatesRef.current[field] = nextValue;
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      flushPendingLayoutSave();
+    }, 800);
+  }, [flushPendingLayoutSave]);
+
+  const handleBlockDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
       const oldIndex = orderedBlockKeys.indexOf(active.id as HomeBlockKey);
       const newIndex = orderedBlockKeys.indexOf(over.id as HomeBlockKey);
       if (oldIndex !== -1 && newIndex !== -1) {
+        const prev = [...orderedBlockKeys];
         const next = arrayMove(orderedBlockKeys, oldIndex, newIndex);
         setOrderedBlockKeys(next);
-        try {
-          setIsSavingLayout(true);
-          await updateHomepageLayout({
-            blockOrder: next,
-            sidebarPosition,
-            sidebarWidgetOrder: orderedWidgetKeys,
-          });
-        } catch (err) {
-          console.error('Failed to save layout:', err);
-        } finally {
-          setIsSavingLayout(false);
-        }
+        queueLayoutFieldSave('blockOrder', next, prev);
       }
     }
   };
 
-  const handleMoveBlock = async (index: number, direction: 'up' | 'down') => {
+  const handleMoveBlock = (index: number, direction: 'up' | 'down') => {
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= orderedBlockKeys.length) return;
+    const prev = [...orderedBlockKeys];
     const next = [...orderedBlockKeys];
     const temp = next[index];
     next[index] = next[targetIndex];
     next[targetIndex] = temp;
     setOrderedBlockKeys(next);
-    try {
-      setIsSavingLayout(true);
-      await updateHomepageLayout({
-        blockOrder: next,
-        sidebarPosition,
-        sidebarWidgetOrder: orderedWidgetKeys,
-      });
-    } catch (err) {
-      console.error('Failed to save layout:', err);
-    } finally {
-      setIsSavingLayout(false);
+    queueLayoutFieldSave('blockOrder', next, prev);
+  };
+
+  const handleToggleBlockHidden = (blockKey: HomeBlockKey) => {
+    const prev = [...hiddenBlocks];
+    const isCurrentlyHidden = hiddenBlocks.includes(blockKey);
+
+    if (isCurrentlyHidden) {
+      // Unhide
+      const next = hiddenBlocks.filter((k) => k !== blockKey);
+      setHiddenBlocks(next);
+      queueLayoutFieldSave('hiddenBlocks', next, prev);
+    } else {
+      // Hide - verify at least one visible block remains
+      const visibleCount = orderedBlockKeys.filter((k) => !hiddenBlocks.includes(k)).length;
+      if (visibleCount <= 1) {
+        return; // Don't allow hiding all blocks
+      }
+      const next = [...hiddenBlocks, blockKey];
+      setHiddenBlocks(next);
+      queueLayoutFieldSave('hiddenBlocks', next, prev);
     }
   };
 
-  const handleWidgetDragEnd = async (event: DragEndEvent) => {
+  const handleWidgetDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
       const oldIndex = orderedWidgetKeys.indexOf(active.id as HomeSidebarWidgetKey);
       const newIndex = orderedWidgetKeys.indexOf(over.id as HomeSidebarWidgetKey);
       if (oldIndex !== -1 && newIndex !== -1) {
+        const prev = [...orderedWidgetKeys];
         const next = arrayMove(orderedWidgetKeys, oldIndex, newIndex);
         setOrderedWidgetKeys(next);
-        try {
-          setIsSavingLayout(true);
-          await updateHomepageLayout({
-            blockOrder: orderedBlockKeys,
-            sidebarPosition,
-            sidebarWidgetOrder: next,
-          });
-        } catch (err) {
-          console.error('Failed to save layout:', err);
-        } finally {
-          setIsSavingLayout(false);
-        }
+        queueLayoutFieldSave('sidebarWidgetOrder', next, prev);
       }
     }
   };
 
-  const handleMoveWidget = async (index: number, direction: 'up' | 'down') => {
+  const handleMoveWidget = (index: number, direction: 'up' | 'down') => {
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= orderedWidgetKeys.length) return;
+    const prev = [...orderedWidgetKeys];
     const next = [...orderedWidgetKeys];
     const temp = next[index];
     next[index] = next[targetIndex];
     next[targetIndex] = temp;
     setOrderedWidgetKeys(next);
-    try {
-      setIsSavingLayout(true);
-      await updateHomepageLayout({
-        blockOrder: orderedBlockKeys,
-        sidebarPosition,
-        sidebarWidgetOrder: next,
-      });
-    } catch (err) {
-      console.error('Failed to save layout:', err);
-    } finally {
-      setIsSavingLayout(false);
-    }
+    queueLayoutFieldSave('sidebarWidgetOrder', next, prev);
   };
 
-  const handleSidebarPositionChange = async (pos: 'right' | 'left' | 'hidden') => {
+  const handleSidebarPositionChange = (pos: 'right' | 'left' | 'hidden') => {
+    if (pos === sidebarPosition) return;
+    const prev = sidebarPosition;
     setSidebarPosition(pos);
-    try {
-      setIsSavingLayout(true);
-      await updateHomepageLayout({
-        blockOrder: orderedBlockKeys,
-        sidebarPosition: pos,
-        sidebarWidgetOrder: orderedWidgetKeys,
-      });
-    } catch (err) {
-      console.error('Failed to save sidebar position:', err);
-    } finally {
-      setIsSavingLayout(false);
-    }
+    queueLayoutFieldSave('sidebarPosition', pos, prev);
   };
 
+  // Immediate save on click "Simpan Sekarang" button (flushes any debounce)
   const handleSaveLayout = async () => {
-    try {
-      setIsSavingLayout(true);
-      await updateHomepageLayout({
-        blockOrder: orderedBlockKeys,
-        sidebarPosition,
-        sidebarWidgetOrder: orderedWidgetKeys,
-      });
-    } catch (err) {
-      console.error('Failed to save layout:', err);
-    } finally {
-      setIsSavingLayout(false);
+    if (debounceTimerRef.current) {
+      await flushPendingLayoutSave();
+    } else {
+      try {
+        setIsSavingLayout(true);
+        await updateHomepageLayout({
+          blockOrder: orderedBlockKeys,
+          sidebarPosition,
+          sidebarWidgetOrder: orderedWidgetKeys,
+          hiddenBlocks,
+        });
+      } catch (err) {
+        console.error('[AdminHomepageSections] Failed to manual save layout:', err);
+      } finally {
+        setIsSavingLayout(false);
+      }
     }
   };
 
   const handleResetLayoutToDefault = async () => {
+    const confirmed = window.confirm(
+      'Kembalikan seluruh susunan beranda (urutan 9 blok, posisi sidebar, dan widget) ke setelan bawaan?'
+    );
+    if (!confirmed) return;
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+    pendingLayoutUpdatesRef.current = {};
+
+    const prevBlocks = [...orderedBlockKeys];
+    const prevPos = sidebarPosition;
+    const prevWidgets = [...orderedWidgetKeys];
+    const prevHidden = [...hiddenBlocks];
+
     const defaultBlocks = [...DEFAULT_BLOCK_ORDER];
     const defaultPosition = 'right';
     const defaultWidgets = [...DEFAULT_SIDEBAR_WIDGET_ORDER];
+    const defaultHidden: HomeBlockKey[] = [];
+
     setOrderedBlockKeys(defaultBlocks);
     setSidebarPosition(defaultPosition);
     setOrderedWidgetKeys(defaultWidgets);
+    setHiddenBlocks(defaultHidden);
+
     try {
       setIsSavingLayout(true);
       await updateHomepageLayout({
         blockOrder: defaultBlocks,
         sidebarPosition: defaultPosition,
         sidebarWidgetOrder: defaultWidgets,
+        hiddenBlocks: defaultHidden,
       });
     } catch (err) {
       console.error('Failed to reset layout:', err);
+      // Rollback to previous state
+      setOrderedBlockKeys(prevBlocks);
+      setSidebarPosition(prevPos);
+      setOrderedWidgetKeys(prevWidgets);
+      setHiddenBlocks(prevHidden);
     } finally {
       setIsSavingLayout(false);
     }
   };
+
+  // Compute split column blocks that render without sidebar
+  const splitColumnBlocks = useMemo(() => {
+    return getSplitColumnBlocks(orderedBlockKeys, hiddenBlocks);
+  }, [orderedBlockKeys, hiddenBlocks]);
 
   // Ordered list of section keys
   const [orderedKeys, setOrderedKeys] = useState<HomepageSectionKey[]>(() => {
@@ -932,6 +1081,34 @@ export const AdminHomepageSections: React.FC = () => {
           </div>
         </div>
 
+        {/* WARNING BANNER: Split Column Blocks */}
+        {splitColumnBlocks.length > 0 && (
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-3 text-amber-300">
+            <AlertTriangle className="w-5 h-5 shrink-0 text-amber-400 mt-0.5" />
+            <div className="text-xs space-y-1">
+              <span className="font-bold text-amber-200 block">
+                Perhatian: Sebagian blok Kolom Utama terpisah dari grup utama
+              </span>
+              <p className="text-amber-300/90 leading-relaxed">
+                Blok ini terpisah dari grup utama, sehingga tampil tanpa sidebar dan selebar container:
+              </p>
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {splitColumnBlocks.map((key) => {
+                  const meta = HOME_BLOCKS_META.find((m) => m.key === key);
+                  return (
+                    <span
+                      key={key}
+                      className="px-2 py-0.5 rounded-lg bg-amber-500/20 text-amber-200 border border-amber-500/30 font-semibold text-[11px]"
+                    >
+                      {meta?.label || key}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 2-Column Inside Layout Card: Left 9 Blocks (7 cols), Right Sidebar Settings (5 cols) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
@@ -943,11 +1120,11 @@ export const AdminHomepageSections: React.FC = () => {
                   Urutan 9 Blok Beranda
                 </span>
                 <span className="text-[11px] text-slate-500">
-                  Tarik ikon ⋮⋮ atau gunakan panah ↑ ↓ untuk mengatur posisi
+                  Tarik ikon ⋮⋮ atau panah ↑ ↓, serta gunakan ikon mata untuk menampilkan/menyembunyikan
                 </span>
               </div>
               <span className="text-[10px] font-mono text-slate-400 bg-white/[0.04] px-2 py-0.5 rounded-lg border border-white/[0.06]">
-                {orderedBlockKeys.length} Blok
+                {orderedBlockKeys.length - hiddenBlocks.length} Aktif / {orderedBlockKeys.length} Total
               </span>
             </div>
 
@@ -968,6 +1145,9 @@ export const AdminHomepageSections: React.FC = () => {
                       idx={idx}
                       handleMoveBlock={handleMoveBlock}
                       totalLength={orderedBlockKeys.length}
+                      isHidden={hiddenBlocks.includes(key)}
+                      onToggleHidden={handleToggleBlockHidden}
+                      canHide={orderedBlockKeys.filter((k) => !hiddenBlocks.includes(k)).length > 1}
                     />
                   ))}
                 </div>

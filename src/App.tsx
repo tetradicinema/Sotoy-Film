@@ -16,7 +16,12 @@ import { HomeFilmStudiesBlock } from './components/Home/HomeFilmStudiesBlock';
 import { HomeExploreBlock } from './components/Home/HomeExploreBlock';
 import { EditorialSidebar } from './components/Common/EditorialSidebar';
 import { HomeBlockKey } from './types';
-import { resolveBlockOrder } from './utils/homepageConfigHelper';
+import {
+  resolveBlockOrder,
+  resolveHiddenBlocks,
+  resolveSidebarWidgetOrder,
+  getCachedHomepageLayout,
+} from './utils/homepageConfigHelper';
 import { CategoryPage } from './components/Pages/CategoryPage';
 import { FilmDatabasePage } from './components/Pages/FilmDatabasePage';
 import { FilmDetailPage } from './components/Pages/FilmDetailPage';
@@ -72,14 +77,29 @@ const WIDE_BLOCK_KEYS: Set<HomeBlockKey> = new Set(['hero', 'featured_news', 'fi
 
 // Dynamic Home Page view rendering sections according to saved layout order
 const HomeView: React.FC = () => {
-  const { homepageSectionsConfig } = useApp();
+  const { homepageSectionsConfig, homepageConfigLoaded } = useApp();
 
-  const blockOrder = React.useMemo(() => {
-    return resolveBlockOrder(homepageSectionsConfig?.blockOrder);
-  }, [homepageSectionsConfig?.blockOrder]);
+  // Try reading cached layout synchronously so repeat visits render without flash
+  const cachedLayout = React.useMemo(() => getCachedHomepageLayout(), []);
 
-  const sidebarPosition = homepageSectionsConfig?.sidebarPosition || 'right';
-  const sidebarWidgetOrder = homepageSectionsConfig?.sidebarWidgetOrder;
+  // Active configuration: live config preferred, fallback to cachedLayout, fallback to defaults
+  const rawBlockOrder = homepageSectionsConfig?.blockOrder ?? cachedLayout?.blockOrder;
+  const rawSidebarPos = homepageSectionsConfig?.sidebarPosition ?? cachedLayout?.sidebarPosition;
+  const rawWidgetOrder = homepageSectionsConfig?.sidebarWidgetOrder ?? cachedLayout?.sidebarWidgetOrder;
+  const rawHiddenBlocks = homepageSectionsConfig?.hiddenBlocks ?? cachedLayout?.hiddenBlocks;
+
+  const fullBlockOrder = resolveBlockOrder(rawBlockOrder);
+  const hiddenBlocksSet = new Set(resolveHiddenBlocks(rawHiddenBlocks));
+
+  // Filter out hidden blocks so they are completely skipped from render
+  const visibleBlockOrder = fullBlockOrder.filter((key) => !hiddenBlocksSet.has(key));
+
+  // Fallback: If all blocks were somehow hidden, ensure at least the hero or first block is rendered
+  const effectiveBlockOrder =
+    visibleBlockOrder.length > 0 ? visibleBlockOrder : [fullBlockOrder[0] || 'hero'];
+
+  const sidebarPosition = rawSidebarPos || 'right';
+  const sidebarWidgetOrder = rawWidgetOrder ? resolveSidebarWidgetOrder(rawWidgetOrder) : undefined;
 
   // Group items into segments: either a single wide block or a band of consecutive column blocks
   const segments = React.useMemo(() => {
@@ -91,7 +111,7 @@ const HomeView: React.FC = () => {
     let currentBand: HomeBlockKey[] = [];
     let firstBandCreated = false;
 
-    for (const key of blockOrder) {
+    for (const key of effectiveBlockOrder) {
       if (WIDE_BLOCK_KEYS.has(key)) {
         if (currentBand.length > 0) {
           result.push({
@@ -117,7 +137,13 @@ const HomeView: React.FC = () => {
     }
 
     return result;
-  }, [blockOrder]);
+  }, [effectiveBlockOrder]);
+
+  // Show a lightweight skeleton on first load if we don't even have a cached layout
+  // (Ensuring all hooks execute in identical order on every render)
+  if (!homepageConfigLoaded && !cachedLayout) {
+    return <GenericPageSkeleton />;
+  }
 
   const renderSingleBlock = (key: HomeBlockKey) => {
     switch (key) {
@@ -194,14 +220,14 @@ const HomeView: React.FC = () => {
           );
         }
 
-        // Secondary / Later bands without sidebar
+        // Secondary / Later bands without sidebar: wrapped in max-w-4xl so column blocks don't stretch awkwardly
         return (
           <section
             key={`band-${idx}`}
             className="py-6 sm:py-8"
           >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="space-y-12">
+              <div className="max-w-4xl mx-auto space-y-12">
                 {segment.keys.map((key) => (
                   <div key={`col-${key}`}>
                     {renderSingleBlock(key)}
