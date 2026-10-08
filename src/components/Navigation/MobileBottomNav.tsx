@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Film, MessageSquare, LogIn, Plus } from 'lucide-react';
+import { Home, Film, MessageSquare, LogIn, Plus, HelpCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useApp } from '../../context/AppContext';
 import { DEFAULT_AVATAR } from '../../data/mockData';
@@ -39,6 +39,7 @@ export const MobileBottomNav: React.FC = () => {
   const isFilmActive = currentView === 'film-database' || currentView === 'film-detail' || currentView === 'film-recommendations';
   const isBuzzActive = currentView === 'community-feed' || currentView === 'buzz-detail';
   const isProfileActive = currentView === 'user-profile' && activeUserTab !== 'watchlist';
+  const isGuideActive = currentView === 'faq-guide';
 
   return (
     <nav
@@ -146,6 +147,31 @@ export const MobileBottomNav: React.FC = () => {
           </div>
           <span className={`text-[10px] md:text-xs mt-1 md:mt-1.5 tracking-tight font-semibold ${isBuzzActive ? 'text-white' : 'text-slate-400'}`}>
             Buzz
+          </span>
+        </button>
+
+        {/* 4.5. Panduan FAQ Guide */}
+        <button
+          id="mobile-bottom-nav-guide"
+          onClick={() => navigateTo('faq-guide')}
+          className={`flex flex-col items-center justify-center flex-1 min-w-[56px] md:min-w-[80px] shrink-0 py-1 px-1 rounded-lg transition-all duration-200 min-h-[44px] md:min-h-[52px] ${
+            isGuideActive
+              ? 'text-[#FF2E7E]'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <div className="relative">
+            <HelpCircle className={`w-5 h-5 md:w-6 md:h-6 transition-transform ${isGuideActive ? 'scale-110 stroke-[2.5]' : 'stroke-2'}`} />
+            {isGuideActive && (
+              <motion.span
+                layoutId="mobileActiveIndicatorDot"
+                className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#FF2E7E]"
+                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+              />
+            )}
+          </div>
+          <span className={`text-[10px] md:text-xs mt-1 md:mt-1.5 tracking-tight font-semibold ${isGuideActive ? 'text-white' : 'text-slate-400'}`}>
+            Panduan
           </span>
         </button>
 

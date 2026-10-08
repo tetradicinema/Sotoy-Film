@@ -352,7 +352,7 @@ export const HeroSection: React.FC = () => {
               {/* Tab Content 1: RECENT ARTICLES */}
               {activeTab === 'trending' && (
                 <div className="flex-1 flex flex-col justify-between min-h-0">
-                  <div className="divide-y divide-white/[0.06] flex-1 flex flex-col justify-between">
+                  <div className="divide-y divide-white/[0.06] flex-1 flex flex-col justify-start">
                     {recentArticles.map((art, index) => (
                       <div
                         key={art.id}
@@ -411,7 +411,7 @@ export const HeroSection: React.FC = () => {
               {/* Tab Content 2: TO WATCH */}
               {activeTab === 'to-watch' && (
                 <div className="flex-1 flex flex-col justify-between min-h-0">
-                  <div className="divide-y divide-white/[0.06] flex-1 flex flex-col justify-between">
+                  <div className="divide-y divide-white/[0.06] flex-1 flex flex-col justify-start">
                     {toWatchFilms.map(film => (
                       <div
                         key={film.id}
@@ -466,7 +466,7 @@ export const HeroSection: React.FC = () => {
               {/* Tab Content 3: GEAR ADDICT */}
               {activeTab === 'gear-addict' && (
                 <div className="flex-1 flex flex-col justify-between min-h-0">
-                  <div className="divide-y divide-white/[0.06] flex-1 flex flex-col justify-between">
+                  <div className="divide-y divide-white/[0.06] flex-1 flex flex-col justify-start">
                     {heroGearArticles.length > 0 ? (
                       heroGearArticles.map((art, index) => (
                         <div

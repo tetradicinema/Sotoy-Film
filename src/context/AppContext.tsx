@@ -230,6 +230,7 @@ export type AppView =
   | 'critic-submission'
   | 'critic-criteria'
   | 'panduan-leaderboard'
+  | 'faq-guide'
   | 'admin-critic-submissions'
   | 'admin-homepage-sections'
   | 'admin-dashboard'
@@ -766,6 +767,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentView('critic-submission');
     } else if (path === '/kriteria-kritikus' || path === '/critic-criteria') {
       setCurrentView('critic-criteria');
+    } else if (path === '/panduan-leaderboard') {
+      setCurrentView('panduan-leaderboard');
+    } else if (path === '/panduan' || path === '/guide' || path === '/faq') {
+      setCurrentView('faq-guide');
     } else if (path === '/admin/submissions') {
       setCurrentView('admin-critic-submissions');
     } else if (path === '/admin/homepage' || path === '/admin/beranda' || path === '/admin/seksi-beranda') {
@@ -3700,6 +3705,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         break;
       case 'panduan-leaderboard':
         targetPath = '/panduan-leaderboard';
+        break;
+      case 'faq-guide':
+        targetPath = '/panduan';
         break;
       case 'admin-critic-submissions':
         targetPath = '/admin/submissions';

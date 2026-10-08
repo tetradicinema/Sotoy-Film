@@ -2,6 +2,13 @@
 
 Selamat datang di **Sotoy Film**! Platform ini adalah rumah hangat bagi seluruh pencinta film, serial TV, dan anime di Indonesia. Di sini, siapa saja bisa menyalurkan opini sinematik mereka, membaca kajian mendalam, berdiskusi di forum komunitas, hingga berpartisipasi dalam menentukan rating film terdemokratis.
 
+### 🖼️ Pratinjau Antarmuka & Panduan Lengkap
+| 🌟 Tampilan Portal Panduan Utama | 💬 Forum Buzz & Rating Interaktif |
+| :---: | :---: |
+| ![Sotoy Film Guide Hero](src/assets/images/sotoy_guide_hero_1791455336765.jpg) | ![Buzz Community Feed](src/assets/images/sotoy_buzz_guide_1791455357223.jpg) |
+| **⭐ Panduan Rating Desimal (1.0-10.0)** | **🔗 Panduan Berbagi Konten (Share)** |
+| ![Sotoy Film Rating Guide](src/assets/images/sotoy_rating_guide_1791455879959.jpg) | ![Sotoy Film Share Guide](src/assets/images/sotoy_share_guide_1791455895956.jpg) |
+
 ---
 
 ## 📑 Daftar Panduan

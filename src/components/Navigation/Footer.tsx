@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clapperboard, Star, Info, Shield, Scale, Briefcase } from 'lucide-react';
+import { Clapperboard, Star, Info, Shield, Scale, Briefcase, HelpCircle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 export const Footer: React.FC = () => {
@@ -157,6 +157,17 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <button
+                  onClick={() => navigateTo('faq-guide')}
+                  className={`hover:text-white transition-colors flex items-center gap-1.5 ${
+                    currentView === 'faq-guide' ? 'text-[#FF2E7E] font-semibold' : ''
+                  }`}
+                >
+                  <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Panduan Lengkap (FAQ)</span>
+                </button>
+              </li>
+              <li>
+                <button
                   onClick={() => navigateTo('privacy-policy')}
                   className={`hover:text-white transition-colors flex items-center gap-1.5 ${
                     currentView === 'privacy-policy' ? 'text-[#FF2E7E] font-semibold' : ''
@@ -214,6 +225,19 @@ export const Footer: React.FC = () => {
               >
                 <Info className="w-3.5 h-3.5" />
                 <span>About Us</span>
+              </button>
+
+              <button
+                id="bottom-menu-guide"
+                onClick={() => navigateTo('faq-guide')}
+                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-xs font-semibold ${
+                  currentView === 'faq-guide'
+                    ? 'bg-[#FF2E7E] text-white shadow-sm'
+                    : 'text-slate-300 hover:text-white hover:bg-white/[0.04]'
+                }`}
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+                <span>Panduan Lengkap (FAQ)</span>
               </button>
 
               <button
