@@ -236,7 +236,10 @@ export type AppView =
   | 'collection-detail'
   | 'onboarding';
 
+export type AuthStatus = 'loading' | 'authenticated' | 'guest';
+
 interface AppContextType {
+  authStatus: AuthStatus;
   currentUser: User;
   isLoggedIn: boolean;
   isAdmin: boolean;
@@ -485,11 +488,16 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Authentication & Session States
+  const [authStatus, setAuthStatus] = useState<AuthStatus>('loading');
   const [currentUser, setCurrentUser] = useState<User>(() => GUEST_USER);
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    const saved = localStorage.getItem('sotoy_is_logged_in');
-    return saved !== null ? saved === 'true' : false;
-  });
+
+  const isLoggedIn = useMemo(() => {
+    return authStatus === 'authenticated' && !!currentUser?.id && currentUser.id !== 'guest' && currentUser.id !== 'system-redaksi';
+  }, [authStatus, currentUser?.id]);
+
+  const setIsLoggedIn = useCallback((loggedIn: boolean) => {
+    setAuthStatus(loggedIn ? 'authenticated' : 'guest');
+  }, []);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [isComposeBuzzOpen, setIsComposeBuzzOpen] = useState(false);
   const [buzzPrefill, setBuzzPrefill] = useState<{
@@ -764,10 +772,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem('sotoy_user_settings', JSON.stringify(userSettings));
   }, [userSettings]);
-
-  useEffect(() => {
-    localStorage.setItem('sotoy_is_logged_in', String(isLoggedIn));
-  }, [isLoggedIn]);
 
   const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToastType(type);
@@ -1523,36 +1527,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setWatchlist([]);
             setSavedArticles([]);
           }
-          setIsLoggedIn(true);
+          setAuthStatus('authenticated');
         } catch (err) {
-          console.warn('[Auth] Error getting user profile (quota/network fallback): ', err);
-          const isAdminRole = isUserAdmin(null, uid, fbUser.email || undefined, fbUser.emailVerified);
-          const fallbackUser: User = {
-            id: uid,
-            name: fbUser.displayName || (isAdminRole ? 'Admin Utama' : 'Warga Sotoy'),
-            handle: '@' + (fbUser.displayName ? fbUser.displayName.toLowerCase().replace(/[^a-z0-9_]/g, '') : (fbUser.email ? fbUser.email.split('@')[0] : 'user_' + uid.slice(0, 4))),
-            avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-            role: isAdminRole ? 'admin' : 'warga_sotoy',
-            roleTitle: isAdminRole ? 'Head Admin & Lead Editor' : 'Warga Sotoy (Penonton Santai)',
-            bio: 'Anggota Sotoy Film',
-            createdAt: new Date().toISOString(),
-            totalReviews: 0,
-            totalBuzz: 0,
-            followers: [],
-            following: [],
-            followersCount: 0,
-            followingCount: 0,
-            hasFinishedOnboarding: true,
-            email: fbUser.email || '',
-          };
-          setCurrentUser(fallbackUser);
-          setIsEmailVerified(computeIsEmailVerified(fallbackUser, fbUser));
-          setIsLoggedIn(true);
+          console.warn('[Auth] Error getting user profile: ', err);
+          setAuthStatus('guest');
+          setCurrentUser(GUEST_USER);
         }
       } else {
         // Visitor / Not logged in
         console.log('[Auth] onAuthStateChanged: fbUser is null (visitor/unauthenticated)');
-        setIsLoggedIn(false);
+        setAuthStatus('guest');
         setCurrentUser(GUEST_USER);
         setIsEmailVerified(true);
         setFollowingIds([]);
@@ -2833,37 +2817,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         refreshAllUsers();
         // Fetch profile
         const userDocRef = doc(db, 'users', userCredential.user.uid);
-        let userSnap: any = null;
-        try {
-          userSnap = await getDoc(userDocRef);
-        } catch (snapErr) {
-          console.warn('[Auth] Firestore getDoc notice during email login (quota/network):', snapErr);
-        }
-
-        if (userSnap && userSnap.exists()) {
+        const userSnap = await getDoc(userDocRef);
+        if (userSnap.exists()) {
           setCurrentUser({ ...(userSnap.data() as User), email: userCredential.user.email || email.trim() });
-        } else {
-          const uid = userCredential.user.uid;
-          const isAdminRole = isUserAdmin(null, uid, email.trim(), userCredential.user.emailVerified);
-          const fallbackUser: User = {
-            id: uid,
-            name: email.split('@')[0],
-            handle: '@' + (email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '')),
-            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-            role: isAdminRole ? 'admin' : 'warga_sotoy',
-            roleTitle: isAdminRole ? 'Head Admin & Lead Editor' : 'Warga Sotoy (Penonton Santai)',
-            bio: 'Anggota Sotoy Film',
-            createdAt: new Date().toISOString(),
-            totalReviews: 0,
-            totalBuzz: 0,
-            followers: [],
-            following: [],
-            followersCount: 0,
-            followingCount: 0,
-            hasFinishedOnboarding: true,
-            email: email.trim(),
-          };
-          setCurrentUser(fallbackUser);
         }
         if (userCredential.user.email) {
           try {
@@ -2874,7 +2830,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           } catch (e) {}
         }
         setIsLoggedIn(true);
-        localStorage.setItem('sotoy_is_logged_in', 'true');
         showToast('Login berhasil! Selamat datang kembali. 🎉');
         setLoginModalOpen(false);
         return true;
@@ -2969,7 +2924,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsEmailVerified(computeIsEmailVerified(newUser, userCredential.user));
         setIsLoggedIn(true);
         refreshAllUsers();
-        localStorage.setItem('sotoy_is_logged_in', 'true');
         showToast('Akun berhasil dibuat! Mari lengkapi profilmu. 🎬');
         setLoginModalOpen(false);
         setCurrentView('onboarding');
@@ -3003,14 +2957,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       refreshAllUsers();
       const uid = fbUser.uid;
       const userDocRef = doc(db, 'users', uid);
-      let userSnap: any = null;
-      try {
-        userSnap = await getDoc(userDocRef);
-      } catch (getSnapErr) {
-        console.warn('[Auth] Firestore getDoc notice during Google Auth (quota/network):', getSnapErr);
-      }
+      const userSnap = await getDoc(userDocRef);
       
-      if (userSnap && userSnap.exists()) {
+      if (userSnap.exists()) {
         const existingData = userSnap.data() as User;
         if (fbUser.email) {
           try {
@@ -3027,7 +2976,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setCurrentView('onboarding');
         }
       } else {
-        // First-time signup with Google OR quota/network fallback!
+        // First-time signup with Google! Clean, fresh new account
         const isAdminRole = isUserAdmin(null, uid, fbUser.email || undefined, fbUser.emailVerified);
         const isWriterRole = !isAdminRole && isUserWriter(null, uid);
         const isCriticRole = !isAdminRole && !isWriterRole && isUserCritic(null, uid);
@@ -3080,40 +3029,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCurrentView('onboarding');
       }
       setIsLoggedIn(true);
-      localStorage.setItem('sotoy_is_logged_in', 'true');
       showToast('Berhasil masuk dengan Google! 🎉');
       setLoginModalOpen(false);
       return true;
     } catch (err) {
-      console.warn('[Auth] Post-login processing fallback:', err);
-      if (fbUser) {
-        const uid = fbUser.uid;
-        const isAdminRole = isUserAdmin(null, uid, fbUser.email || undefined, fbUser.emailVerified);
-        const fallbackUser: User = {
-          id: uid,
-          name: fbUser.displayName || (isAdminRole ? 'Admin Utama' : 'Warga Sotoy'),
-          handle: '@' + (fbUser.displayName ? fbUser.displayName.toLowerCase().replace(/[^a-z0-9_]/g, '') : (fbUser.email ? fbUser.email.split('@')[0] : 'user_' + uid.slice(0, 4))),
-          avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-          role: isAdminRole ? 'admin' : 'warga_sotoy',
-          roleTitle: isAdminRole ? 'Head Admin & Lead Editor' : 'Warga Sotoy (Penonton Santai)',
-          bio: 'Anggota Sotoy Film',
-          createdAt: new Date().toISOString(),
-          totalReviews: 0,
-          totalBuzz: 0,
-          followers: [],
-          following: [],
-          followersCount: 0,
-          followingCount: 0,
-          hasFinishedOnboarding: true,
-          email: fbUser.email || '',
-        };
-        setCurrentUser(fallbackUser);
-        setIsLoggedIn(true);
-        localStorage.setItem('sotoy_is_logged_in', 'true');
-        showToast('Berhasil masuk! 🎉');
-        setLoginModalOpen(false);
-        return true;
-      }
+      console.error('[Auth] Error during post-login processing:', err);
       return false;
     }
   };
@@ -3169,7 +3089,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       showToast('Sedang keluar...');
       await signOut(auth);
       setIsLoggedIn(false);
-      localStorage.setItem('sotoy_is_logged_in', 'false');
       setCurrentUser(GUEST_USER);
       setIsEmailVerified(true);
       setFollowingIds([]);
@@ -5662,6 +5581,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider
       value={{
+        authStatus,
         currentUser,
         isLoggedIn,
         isAdmin,
