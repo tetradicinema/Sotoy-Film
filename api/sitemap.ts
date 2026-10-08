@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import fs from 'fs';
 import path from 'path';
-import { INITIAL_ARTICLES, INITIAL_FILMS } from '../src/data/mockData';
+import { INITIAL_ARTICLES, INITIAL_FILMS } from '../src/data/mockData.ts';
 
 function escapeXml(unsafe: string): string {
   if (!unsafe) return '';
@@ -109,6 +109,9 @@ export async function handleSitemapRequest(req: any, res: any) {
   const candidatePaths = [
     path.join(process.cwd(), 'dist', 'sitemap.xml'),
     path.join(process.cwd(), 'public', 'sitemap.xml'),
+    path.join(process.cwd(), 'sitemap.xml'),
+    path.join(__dirname, '..', 'public', 'sitemap.xml'),
+    path.join(__dirname, '..', 'dist', 'sitemap.xml'),
   ];
 
   for (const p of candidatePaths) {

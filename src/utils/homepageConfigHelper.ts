@@ -1,4 +1,4 @@
-import { FilmItem, Article, SectionConfig, HomepageSectionKey, MainCategory } from '../types';
+import { FilmItem, Article, SectionConfig, HomepageSectionKey, MainCategory, HomeBlockKey, HomeSidebarWidgetKey } from '../types';
 
 export interface SectionMeta {
   key: HomepageSectionKey;
@@ -8,6 +8,174 @@ export interface SectionMeta {
   description: string;
   defaultRule: string;
   allowedCategories: (MainCategory | 'movie' | 'series' | 'anime')[];
+}
+
+export interface HomeBlockMeta {
+  key: HomeBlockKey;
+  label: string;
+  type: 'wide' | 'column';
+  description: string;
+}
+
+export interface SidebarWidgetMeta {
+  key: HomeSidebarWidgetKey;
+  label: string;
+  description: string;
+}
+
+export const DEFAULT_BLOCK_ORDER: HomeBlockKey[] = [
+  'hero',
+  'featured_news',
+  'film_recommendations',
+  'watchlists',
+  'cinema_gear',
+  'reviews',
+  'anime_news',
+  'film_studies',
+  'explore',
+];
+
+export const DEFAULT_SIDEBAR_WIDGET_ORDER: HomeSidebarWidgetKey[] = [
+  'live_buzz',
+  'leaderboard',
+  'recommended_articles',
+  'cta',
+  'ad',
+];
+
+export const HOME_BLOCKS_META: HomeBlockMeta[] = [
+  {
+    key: 'hero',
+    label: 'Hero (Slider + Recent / To Watch / Gear)',
+    type: 'wide',
+    description: 'Header sinematik dengan slider artikel unggulan dan tab kurasi (Recent, To Watch, Gear)',
+  },
+  {
+    key: 'featured_news',
+    label: 'Featured News & Top Stories',
+    type: 'wide',
+    description: 'Baris 5 kartu berita industri sinema global dan sorotan festival',
+  },
+  {
+    key: 'film_recommendations',
+    label: 'Curated Film Recommendations',
+    type: 'wide',
+    description: 'Koleksi poster film kurasi dengan filter Semua / Terbaru / Populer',
+  },
+  {
+    key: 'watchlists',
+    label: 'Curated Watchlists: Movies, Series & Anime',
+    type: 'column',
+    description: 'Daftar vertikal berisi daftar tontonan kurasi untuk film, serial, dan anime',
+  },
+  {
+    key: 'cinema_gear',
+    label: 'Cinema Gear & Filmmaking Tech',
+    type: 'column',
+    description: 'Carousel interaktif ulasan kamera sinema, lensa, dan teknologi produksi film',
+  },
+  {
+    key: 'reviews',
+    label: 'Honest Reviews: Movies & Series',
+    type: 'column',
+    description: 'Dua kolom ulasan mendalam & objektif untuk rilisan bioskop dan serial streaming',
+  },
+  {
+    key: 'anime_news',
+    label: 'Anime News & Season Updates',
+    type: 'column',
+    description: 'Kawat berita compact dengan update musim anime dan jadwal rilis terkini',
+  },
+  {
+    key: 'film_studies',
+    label: 'Film Studies & Cinematic Essays',
+    type: 'column',
+    description: 'Esai panjang majalah sinematik, teori montase, dan analisis visual',
+  },
+  {
+    key: 'explore',
+    label: 'Explore Categories & Archives',
+    type: 'column',
+    description: 'Navigasi tab kategori, drawer mobile, daftar artikel, dan slot iklan infeed',
+  },
+];
+
+export const SIDEBAR_WIDGETS_META: SidebarWidgetMeta[] = [
+  {
+    key: 'live_buzz',
+    label: 'Live Buzz & Opini',
+    description: 'Feed interaktif opini kilat dan reaksi warga terhadap sinema',
+  },
+  {
+    key: 'leaderboard',
+    label: 'Sotoy Leaderboard',
+    description: 'Peringkat warga dan kritikus teraktif di platform',
+  },
+  {
+    key: 'recommended_articles',
+    label: 'Artikel Rekomendasi',
+    description: 'Daftar artikel pilihan redaksi dengan nomor urut',
+  },
+  {
+    key: 'cta',
+    label: 'CTA Box',
+    description: 'Kotak pendaftaran newsletter Warga Sotoy Club',
+  },
+  {
+    key: 'ad',
+    label: 'Banner Iklan',
+    description: 'Slot iklan banner sponsor di sidebar',
+  },
+];
+
+export function resolveBlockOrder(saved?: HomeBlockKey[]): HomeBlockKey[] {
+  if (!Array.isArray(saved) || saved.length === 0) {
+    return [...DEFAULT_BLOCK_ORDER];
+  }
+  const validSet = new Set<HomeBlockKey>(DEFAULT_BLOCK_ORDER);
+  const result: HomeBlockKey[] = [];
+  const seen = new Set<HomeBlockKey>();
+
+  for (const key of saved) {
+    if (validSet.has(key) && !seen.has(key)) {
+      result.push(key);
+      seen.add(key);
+    }
+  }
+
+  for (const defKey of DEFAULT_BLOCK_ORDER) {
+    if (!seen.has(defKey)) {
+      result.push(defKey);
+      seen.add(defKey);
+    }
+  }
+
+  return result;
+}
+
+export function resolveSidebarWidgetOrder(saved?: HomeSidebarWidgetKey[]): HomeSidebarWidgetKey[] {
+  if (!Array.isArray(saved) || saved.length === 0) {
+    return [...DEFAULT_SIDEBAR_WIDGET_ORDER];
+  }
+  const validSet = new Set<HomeSidebarWidgetKey>(DEFAULT_SIDEBAR_WIDGET_ORDER);
+  const result: HomeSidebarWidgetKey[] = [];
+  const seen = new Set<HomeSidebarWidgetKey>();
+
+  for (const key of saved) {
+    if (validSet.has(key) && !seen.has(key)) {
+      result.push(key);
+      seen.add(key);
+    }
+  }
+
+  for (const defKey of DEFAULT_SIDEBAR_WIDGET_ORDER) {
+    if (!seen.has(defKey)) {
+      result.push(defKey);
+      seen.add(defKey);
+    }
+  }
+
+  return result;
 }
 
 export const ALL_ARTICLE_CATEGORIES: MainCategory[] = [

@@ -476,6 +476,24 @@ export type HomepageSectionKey =
   | 'anime_news'
   | 'film_studies';
 
+export type HomeBlockKey =
+  | 'hero'
+  | 'featured_news'
+  | 'film_recommendations'
+  | 'watchlists'
+  | 'cinema_gear'
+  | 'reviews'
+  | 'anime_news'
+  | 'film_studies'
+  | 'explore';
+
+export type HomeSidebarWidgetKey =
+  | 'live_buzz'
+  | 'leaderboard'
+  | 'recommended_articles'
+  | 'cta'
+  | 'ad';
+
 export interface SectionConfig {
   title?: string;
   sourceType: 'auto' | 'manual';
@@ -490,6 +508,9 @@ export interface SectionConfig {
 export interface HomepageSectionsConfig {
   sections?: Partial<Record<HomepageSectionKey, SectionConfig>>;
   sectionOrder?: HomepageSectionKey[];
+  blockOrder?: HomeBlockKey[];
+  sidebarPosition?: 'right' | 'left' | 'hidden';
+  sidebarWidgetOrder?: HomeSidebarWidgetKey[];
   updatedAt?: string;
   updatedBy?: string;
 }

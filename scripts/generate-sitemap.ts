@@ -112,50 +112,55 @@ async function run() {
     });
   }
 
-  // 2. Connect to Firestore using client configuration (Read-only)
-  const configPath = path.join(rootDir, 'firebase-applet-config.json');
-  if (!fs.existsSync(configPath)) {
-    throw new Error(`[Sitemap Builder] Configuration not found at: ${configPath}`);
-  }
-
-  const firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-  const app = initializeApp(firebaseConfig, `sitemap-builder-${Date.now()}`);
-  const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-
   const seenArticleSlugs = new Set<string>();
   const seenFilmSlugs = new Set<string>();
   const removedMockFilmIds = new Set<string>();
   let articlesCount = 0;
   let filmsCount = 0;
 
+  let app: any = null;
+  let db: any = null;
+
   try {
-    // 3. Fetch Published Articles from Firestore
-    console.log('[Sitemap Builder] Querying articles from Firestore...');
-    const articlesCol = collection(db, 'articles');
-    const articlesSnap = await getDocs(articlesCol);
+    // 2. Connect to Firestore using client configuration (Read-only)
+    const configPath = path.join(rootDir, 'firebase-applet-config.json');
+    if (!fs.existsSync(configPath)) {
+      console.warn(`[Sitemap Builder] Config not found at: ${configPath}. Falling back to static catalog entries.`);
+    } else {
+      const firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      app = initializeApp(firebaseConfig, `sitemap-builder-${Date.now()}`);
+      db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+    }
 
-    articlesSnap.forEach(docSnap => {
-      const article = docSnap.data();
-      if (article.status === 'trash' || article.status === 'draft') return;
-      if (article.status === 'scheduled') {
-        if (!article.scheduledAt) return;
-        const schedTime = new Date(article.scheduledAt).getTime();
-        if (isNaN(schedTime) || schedTime > nowMs) return;
-      }
+    if (db) {
+      // 3. Fetch Published Articles from Firestore
+      console.log('[Sitemap Builder] Querying articles from Firestore...');
+      const articlesCol = collection(db, 'articles');
+      const articlesSnap = await getDocs(articlesCol);
 
-      const slug = article.slug || slugify(article.title) || docSnap.id;
-      if (!slug || seenArticleSlugs.has(slug)) return;
+      articlesSnap.forEach(docSnap => {
+        const article = docSnap.data();
+        if (article.status === 'trash' || article.status === 'draft') return;
+        if (article.status === 'scheduled') {
+          if (!article.scheduledAt) return;
+          const schedTime = new Date(article.scheduledAt).getTime();
+          if (isNaN(schedTime) || schedTime > nowMs) return;
+        }
 
-      seenArticleSlugs.add(slug);
-      const lastmod = formatDateToYMD(article.updatedAt || article.publishedAt, today);
-      entries.push({
-        loc: `${baseUrl}/artikel/${encodeURIComponent(slug)}`,
-        lastmod,
-        changefreq: 'weekly',
-        priority: '0.8',
+        const slug = article.slug || slugify(article.title) || docSnap.id;
+        if (!slug || seenArticleSlugs.has(slug)) return;
+
+        seenArticleSlugs.add(slug);
+        const lastmod = formatDateToYMD(article.updatedAt || article.publishedAt, today);
+        entries.push({
+          loc: `${baseUrl}/artikel/${encodeURIComponent(slug)}`,
+          lastmod,
+          changefreq: 'weekly',
+          priority: '0.8',
+        });
+        articlesCount++;
       });
-      articlesCount++;
-    });
+    }
 
     // Also include published articles from INITIAL_ARTICLES if not yet written to Firestore
     for (const item of INITIAL_ARTICLES) {
@@ -181,51 +186,53 @@ async function run() {
 
     console.log(`[Sitemap Builder] Indexed ${articlesCount} published articles.`);
 
-    // 4. Fetch Removed Mock Films markers from Firestore
-    console.log('[Sitemap Builder] Querying removedMockFilms markers from Firestore...');
-    const removedMockFilmsCol = collection(db, 'removedMockFilms');
-    const removedMockFilmsSnap = await getDocs(removedMockFilmsCol);
+    if (db) {
+      // 4. Fetch Removed Mock Films markers from Firestore
+      console.log('[Sitemap Builder] Querying removedMockFilms markers from Firestore...');
+      const removedMockFilmsCol = collection(db, 'removedMockFilms');
+      const removedMockFilmsSnap = await getDocs(removedMockFilmsCol);
 
-    removedMockFilmsSnap.forEach(docSnap => {
-      removedMockFilmIds.add(docSnap.id);
-      const data = docSnap.data();
-      if (data?.id) removedMockFilmIds.add(String(data.id));
-      if (data?.slug) removedMockFilmIds.add(String(data.slug));
-    });
-    console.log(`[Sitemap Builder] Found ${removedMockFilmIds.size} removed mock film markers.`);
-
-    // 5. Fetch Films Catalog from Firestore
-    console.log('[Sitemap Builder] Querying films catalog from Firestore...');
-    const filmsCol = collection(db, 'films');
-    const filmsSnap = await getDocs(filmsCol);
-
-    filmsSnap.forEach(docSnap => {
-      const film = docSnap.data();
-      const docId = docSnap.id;
-      const filmId = film.id || docId;
-      const slug = film.slug || slugify(film.title) || docId;
-
-      // Skip if marked as removed mock film
-      if (
-        removedMockFilmIds.has(docId) ||
-        (filmId && removedMockFilmIds.has(filmId)) ||
-        (slug && removedMockFilmIds.has(slug))
-      ) {
-        return;
-      }
-
-      if (!slug || seenFilmSlugs.has(slug)) return;
-
-      seenFilmSlugs.add(slug);
-      const lastmod = formatDateToYMD(film.updatedAt || film.createdAt, today);
-      entries.push({
-        loc: `${baseUrl}/film/${encodeURIComponent(slug)}`,
-        lastmod,
-        changefreq: 'monthly',
-        priority: '0.9',
+      removedMockFilmsSnap.forEach(docSnap => {
+        removedMockFilmIds.add(docSnap.id);
+        const data = docSnap.data();
+        if (data?.id) removedMockFilmIds.add(String(data.id));
+        if (data?.slug) removedMockFilmIds.add(String(data.slug));
       });
-      filmsCount++;
-    });
+      console.log(`[Sitemap Builder] Found ${removedMockFilmIds.size} removed mock film markers.`);
+
+      // 5. Fetch Films Catalog from Firestore
+      console.log('[Sitemap Builder] Querying films catalog from Firestore...');
+      const filmsCol = collection(db, 'films');
+      const filmsSnap = await getDocs(filmsCol);
+
+      filmsSnap.forEach(docSnap => {
+        const film = docSnap.data();
+        const docId = docSnap.id;
+        const filmId = film.id || docId;
+        const slug = film.slug || slugify(film.title) || docId;
+
+        // Skip if marked as removed mock film
+        if (
+          removedMockFilmIds.has(docId) ||
+          (filmId && removedMockFilmIds.has(filmId)) ||
+          (slug && removedMockFilmIds.has(slug))
+        ) {
+          return;
+        }
+
+        if (!slug || seenFilmSlugs.has(slug)) return;
+
+        seenFilmSlugs.add(slug);
+        const lastmod = formatDateToYMD(film.updatedAt || film.createdAt, today);
+        entries.push({
+          loc: `${baseUrl}/film/${encodeURIComponent(slug)}`,
+          lastmod,
+          changefreq: 'monthly',
+          priority: '0.9',
+        });
+        filmsCount++;
+      });
+    }
 
     // Fallback/merge with INITIAL_FILMS, excluding any mock films in removedMockFilms
     for (const film of INITIAL_FILMS) {
@@ -305,8 +312,8 @@ async function run() {
     }
   } finally {
     try {
-      await terminate(db);
-      await deleteApp(app);
+      if (db) await terminate(db);
+      if (app) await deleteApp(app);
     } catch {
       // ignore
     }

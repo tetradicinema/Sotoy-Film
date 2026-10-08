@@ -34,8 +34,24 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useApp } from '../../context/AppContext';
-import { HomepageSectionKey, SectionConfig, MainCategory } from '../../types';
-import { HOMEPAGE_SECTIONS_META, SectionMeta, DEFAULT_SECTION_ORDER } from '../../utils/homepageConfigHelper';
+import {
+  HomepageSectionKey,
+  SectionConfig,
+  MainCategory,
+  HomeBlockKey,
+  HomeSidebarWidgetKey,
+} from '../../types';
+import {
+  HOMEPAGE_SECTIONS_META,
+  SectionMeta,
+  DEFAULT_SECTION_ORDER,
+  DEFAULT_BLOCK_ORDER,
+  DEFAULT_SIDEBAR_WIDGET_ORDER,
+  HOME_BLOCKS_META,
+  SIDEBAR_WIDGETS_META,
+  resolveBlockOrder,
+  resolveSidebarWidgetOrder,
+} from '../../utils/homepageConfigHelper';
 
 const CATEGORY_LABELS: Record<string, string> = {
   movies: 'Movies',
@@ -92,6 +108,190 @@ const CATEGORY_SPECIFIC_SUBCATEGORIES: Record<string, { val: string; label: stri
     { val: 'lighting', label: 'Lighting / Tata Cahaya' },
     { val: 'post-production', label: 'Post-Production / Editing & VFX' },
   ],
+};
+
+interface SortableBlockItemProps {
+  blockKey: HomeBlockKey;
+  idx: number;
+  handleMoveBlock: (index: number, direction: 'up' | 'down') => void;
+  totalLength: number;
+}
+
+const SortableBlockItem: React.FC<SortableBlockItemProps> = ({
+  blockKey,
+  idx,
+  handleMoveBlock,
+  totalLength,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: blockKey });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 20 : 1,
+    opacity: isDragging ? 0.6 : 1,
+  };
+
+  const meta = HOME_BLOCKS_META.find((m) => m.key === blockKey) || HOME_BLOCKS_META[0];
+  const isWide = meta.type === 'wide';
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="p-2.5 sm:p-3 rounded-2xl transition-all flex items-center justify-between gap-2.5 border bg-white/[0.03] hover:bg-white/[0.06] border-white/[0.06] text-slate-200"
+    >
+      <div className="flex items-center gap-2.5 min-w-0">
+        <button
+          type="button"
+          className="p-1 cursor-grab active:cursor-grabbing text-slate-500 hover:text-white transition-colors shrink-0 touch-none"
+          title="Tarik untuk menggeser susunan blok"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="w-4 h-4" />
+        </button>
+
+        <span className="w-5 text-center font-mono font-bold text-[11px] text-slate-500 shrink-0">
+          #{idx + 1}
+        </span>
+
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-xs text-white truncate">
+              {meta.label}
+            </span>
+            <span
+              className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 ${
+                isWide
+                  ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
+                  : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+              }`}
+            >
+              {isWide ? 'Lebar Penuh' : 'Kolom Utama'}
+            </span>
+          </div>
+          <p className="text-[10px] text-slate-400 line-clamp-1 mt-0.5">
+            {meta.description}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-0.5 shrink-0">
+        <button
+          type="button"
+          disabled={idx === 0}
+          onClick={() => handleMoveBlock(idx, 'up')}
+          className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-20 transition-colors cursor-pointer"
+          title="Geser ke Atas"
+        >
+          <ChevronUp className="w-3.5 h-3.5" />
+        </button>
+        <button
+          type="button"
+          disabled={idx === totalLength - 1}
+          onClick={() => handleMoveBlock(idx, 'down')}
+          className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-20 transition-colors cursor-pointer"
+          title="Geser ke Bawah"
+        >
+          <ChevronDown className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+interface SortableSidebarWidgetItemProps {
+  widgetKey: HomeSidebarWidgetKey;
+  idx: number;
+  handleMoveWidget: (index: number, direction: 'up' | 'down') => void;
+  totalLength: number;
+}
+
+const SortableSidebarWidgetItem: React.FC<SortableSidebarWidgetItemProps> = ({
+  widgetKey,
+  idx,
+  handleMoveWidget,
+  totalLength,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: widgetKey });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 20 : 1,
+    opacity: isDragging ? 0.6 : 1,
+  };
+
+  const meta = SIDEBAR_WIDGETS_META.find((m) => m.key === widgetKey) || SIDEBAR_WIDGETS_META[0];
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="p-2 sm:p-2.5 rounded-xl transition-all flex items-center justify-between gap-2 border bg-black/40 hover:bg-white/[0.04] border-white/[0.06] text-slate-200"
+    >
+      <div className="flex items-center gap-2 min-w-0">
+        <button
+          type="button"
+          className="p-1 cursor-grab active:cursor-grabbing text-slate-500 hover:text-white transition-colors shrink-0 touch-none"
+          title="Tarik untuk menggeser posisi widget"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="w-3.5 h-3.5" />
+        </button>
+
+        <span className="w-4 text-center font-mono font-bold text-[10px] text-slate-500 shrink-0">
+          #{idx + 1}
+        </span>
+
+        <div className="min-w-0">
+          <span className="font-semibold text-xs text-white truncate block">
+            {meta.label}
+          </span>
+          <span className="text-[10px] text-slate-400 line-clamp-1">
+            {meta.description}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-0.5 shrink-0">
+        <button
+          type="button"
+          disabled={idx === 0}
+          onClick={() => handleMoveWidget(idx, 'up')}
+          className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-20 transition-colors cursor-pointer"
+          title="Geser ke Atas"
+        >
+          <ChevronUp className="w-3 h-3" />
+        </button>
+        <button
+          type="button"
+          disabled={idx === totalLength - 1}
+          onClick={() => handleMoveWidget(idx, 'down')}
+          className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-20 transition-colors cursor-pointer"
+          title="Geser ke Bawah"
+        >
+          <ChevronDown className="w-3 h-3" />
+        </button>
+      </div>
+    </div>
+  );
 };
 
 interface SortableSectionItemProps {
@@ -239,7 +439,185 @@ export const AdminHomepageSections: React.FC = () => {
     homepageSectionsConfig,
     updateHomepageSectionConfig,
     updateHomepageSectionOrder,
+    updateHomepageLayout,
   } = useApp();
+
+  // Layout Reordering States (9 Blocks & Sidebar)
+  const [orderedBlockKeys, setOrderedBlockKeys] = useState<HomeBlockKey[]>(() => {
+    return resolveBlockOrder(homepageSectionsConfig?.blockOrder);
+  });
+
+  const [sidebarPosition, setSidebarPosition] = useState<'right' | 'left' | 'hidden'>(() => {
+    return homepageSectionsConfig?.sidebarPosition || 'right';
+  });
+
+  const [orderedWidgetKeys, setOrderedWidgetKeys] = useState<HomeSidebarWidgetKey[]>(() => {
+    return resolveSidebarWidgetOrder(homepageSectionsConfig?.sidebarWidgetOrder);
+  });
+
+  const [isSavingLayout, setIsSavingLayout] = useState(false);
+
+  useEffect(() => {
+    if (homepageSectionsConfig?.blockOrder) {
+      setOrderedBlockKeys(resolveBlockOrder(homepageSectionsConfig.blockOrder));
+    }
+  }, [homepageSectionsConfig?.blockOrder]);
+
+  useEffect(() => {
+    if (homepageSectionsConfig?.sidebarPosition) {
+      setSidebarPosition(homepageSectionsConfig.sidebarPosition);
+    }
+  }, [homepageSectionsConfig?.sidebarPosition]);
+
+  useEffect(() => {
+    if (homepageSectionsConfig?.sidebarWidgetOrder) {
+      setOrderedWidgetKeys(resolveSidebarWidgetOrder(homepageSectionsConfig.sidebarWidgetOrder));
+    }
+  }, [homepageSectionsConfig?.sidebarWidgetOrder]);
+
+  const handleBlockDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = orderedBlockKeys.indexOf(active.id as HomeBlockKey);
+      const newIndex = orderedBlockKeys.indexOf(over.id as HomeBlockKey);
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const next = arrayMove(orderedBlockKeys, oldIndex, newIndex);
+        setOrderedBlockKeys(next);
+        try {
+          setIsSavingLayout(true);
+          await updateHomepageLayout({
+            blockOrder: next,
+            sidebarPosition,
+            sidebarWidgetOrder: orderedWidgetKeys,
+          });
+        } catch (err) {
+          console.error('Failed to save layout:', err);
+        } finally {
+          setIsSavingLayout(false);
+        }
+      }
+    }
+  };
+
+  const handleMoveBlock = async (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= orderedBlockKeys.length) return;
+    const next = [...orderedBlockKeys];
+    const temp = next[index];
+    next[index] = next[targetIndex];
+    next[targetIndex] = temp;
+    setOrderedBlockKeys(next);
+    try {
+      setIsSavingLayout(true);
+      await updateHomepageLayout({
+        blockOrder: next,
+        sidebarPosition,
+        sidebarWidgetOrder: orderedWidgetKeys,
+      });
+    } catch (err) {
+      console.error('Failed to save layout:', err);
+    } finally {
+      setIsSavingLayout(false);
+    }
+  };
+
+  const handleWidgetDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = orderedWidgetKeys.indexOf(active.id as HomeSidebarWidgetKey);
+      const newIndex = orderedWidgetKeys.indexOf(over.id as HomeSidebarWidgetKey);
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const next = arrayMove(orderedWidgetKeys, oldIndex, newIndex);
+        setOrderedWidgetKeys(next);
+        try {
+          setIsSavingLayout(true);
+          await updateHomepageLayout({
+            blockOrder: orderedBlockKeys,
+            sidebarPosition,
+            sidebarWidgetOrder: next,
+          });
+        } catch (err) {
+          console.error('Failed to save layout:', err);
+        } finally {
+          setIsSavingLayout(false);
+        }
+      }
+    }
+  };
+
+  const handleMoveWidget = async (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= orderedWidgetKeys.length) return;
+    const next = [...orderedWidgetKeys];
+    const temp = next[index];
+    next[index] = next[targetIndex];
+    next[targetIndex] = temp;
+    setOrderedWidgetKeys(next);
+    try {
+      setIsSavingLayout(true);
+      await updateHomepageLayout({
+        blockOrder: orderedBlockKeys,
+        sidebarPosition,
+        sidebarWidgetOrder: next,
+      });
+    } catch (err) {
+      console.error('Failed to save layout:', err);
+    } finally {
+      setIsSavingLayout(false);
+    }
+  };
+
+  const handleSidebarPositionChange = async (pos: 'right' | 'left' | 'hidden') => {
+    setSidebarPosition(pos);
+    try {
+      setIsSavingLayout(true);
+      await updateHomepageLayout({
+        blockOrder: orderedBlockKeys,
+        sidebarPosition: pos,
+        sidebarWidgetOrder: orderedWidgetKeys,
+      });
+    } catch (err) {
+      console.error('Failed to save sidebar position:', err);
+    } finally {
+      setIsSavingLayout(false);
+    }
+  };
+
+  const handleSaveLayout = async () => {
+    try {
+      setIsSavingLayout(true);
+      await updateHomepageLayout({
+        blockOrder: orderedBlockKeys,
+        sidebarPosition,
+        sidebarWidgetOrder: orderedWidgetKeys,
+      });
+    } catch (err) {
+      console.error('Failed to save layout:', err);
+    } finally {
+      setIsSavingLayout(false);
+    }
+  };
+
+  const handleResetLayoutToDefault = async () => {
+    const defaultBlocks = [...DEFAULT_BLOCK_ORDER];
+    const defaultPosition = 'right';
+    const defaultWidgets = [...DEFAULT_SIDEBAR_WIDGET_ORDER];
+    setOrderedBlockKeys(defaultBlocks);
+    setSidebarPosition(defaultPosition);
+    setOrderedWidgetKeys(defaultWidgets);
+    try {
+      setIsSavingLayout(true);
+      await updateHomepageLayout({
+        blockOrder: defaultBlocks,
+        sidebarPosition: defaultPosition,
+        sidebarWidgetOrder: defaultWidgets,
+      });
+    } catch (err) {
+      console.error('Failed to reset layout:', err);
+    } finally {
+      setIsSavingLayout(false);
+    }
+  };
 
   // Ordered list of section keys
   const [orderedKeys, setOrderedKeys] = useState<HomepageSectionKey[]>(() => {
@@ -501,14 +879,202 @@ export const AdminHomepageSections: React.FC = () => {
         </div>
       </div>
 
+      {/* CARD 1: SUSUNAN BERANDA (REORDER BLOCKS & SIDEBAR) */}
+      <div className="bg-[#171717] border border-white/[0.08] rounded-3xl p-5 sm:p-6 shadow-xl space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.08]">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-[#FF2E7E]/15 border border-[#FF2E7E]/30 flex items-center justify-center text-[#FF2E7E] shrink-0">
+              <Layers className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-display font-black text-white text-lg tracking-tight">
+                  Susunan Beranda
+                </h3>
+                <span className="px-2 py-0.5 rounded-full bg-white/[0.08] text-slate-300 text-[10px] font-bold uppercase tracking-wider">
+                  Layout Builder
+                </span>
+              </div>
+              <p className="text-slate-400 text-xs mt-0.5 leading-relaxed">
+                Atur urutan tampilan blok di halaman beranda dengan drag-and-drop. Blok <strong>Lebar penuh</strong> membentang penuh, sedangkan blok <strong>Kolom utama</strong> akan berdampingan dengan Sidebar.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+            <button
+              type="button"
+              id="reset-homepage-layout-btn"
+              onClick={handleResetLayoutToDefault}
+              disabled={isSavingLayout}
+              className="px-3.5 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 hover:text-white text-xs font-bold transition-all border border-white/[0.08] cursor-pointer disabled:opacity-50 flex items-center gap-1.5 active:scale-95"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset ke Default</span>
+            </button>
+
+            <button
+              type="button"
+              id="save-homepage-layout-btn"
+              onClick={handleSaveLayout}
+              disabled={isSavingLayout}
+              className="px-4 py-2 rounded-xl bg-[#FF2E7E] hover:bg-[#FF2E7E]/90 text-white text-xs font-bold transition-all shadow-md shadow-[#FF2E7E]/20 cursor-pointer disabled:opacity-50 flex items-center gap-1.5 active:scale-95"
+            >
+              {isSavingLayout ? (
+                <span>Menyimpan...</span>
+              ) : (
+                <>
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Simpan Susunan Beranda</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* 2-Column Inside Layout Card: Left 9 Blocks (7 cols), Right Sidebar Settings (5 cols) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          {/* Left: 9 Blocks Drag-and-Drop */}
+          <div className="lg:col-span-7 space-y-3">
+            <div className="flex items-center justify-between pb-1">
+              <div>
+                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                  Urutan 9 Blok Beranda
+                </span>
+                <span className="text-[11px] text-slate-500">
+                  Tarik ikon ⋮⋮ atau gunakan panah ↑ ↓ untuk mengatur posisi
+                </span>
+              </div>
+              <span className="text-[10px] font-mono text-slate-400 bg-white/[0.04] px-2 py-0.5 rounded-lg border border-white/[0.06]">
+                {orderedBlockKeys.length} Blok
+              </span>
+            </div>
+
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleBlockDragEnd}
+            >
+              <SortableContext
+                items={orderedBlockKeys}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-2">
+                  {orderedBlockKeys.map((key, idx) => (
+                    <SortableBlockItem
+                      key={key}
+                      blockKey={key}
+                      idx={idx}
+                      handleMoveBlock={handleMoveBlock}
+                      totalLength={orderedBlockKeys.length}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          </div>
+
+          {/* Right: Sidebar Settings Sub-Card */}
+          <div className="lg:col-span-5 bg-black/30 border border-white/[0.08] rounded-2xl p-4 sm:p-5 space-y-4">
+            <div>
+              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                Pengaturan Sidebar Beranda
+              </span>
+              <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                Sidebar duduk berdampingan dengan kelompok pertama dari blok-blok <strong className="text-slate-200">Kolom Utama</strong>. Jika disembunyikan, kolom utama akan tampil selebar layar container.
+              </p>
+            </div>
+
+            {/* Position Selector */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+                Posisi Sidebar
+              </label>
+              <div className="grid grid-cols-3 gap-1.5 p-1 bg-black/50 rounded-xl border border-white/[0.08]">
+                <button
+                  type="button"
+                  id="sidebar-pos-right-btn"
+                  onClick={() => handleSidebarPositionChange('right')}
+                  className={`py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    sidebarPosition === 'right'
+                      ? 'bg-white/[0.15] text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Kanan
+                </button>
+                <button
+                  type="button"
+                  id="sidebar-pos-left-btn"
+                  onClick={() => handleSidebarPositionChange('left')}
+                  className={`py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    sidebarPosition === 'left'
+                      ? 'bg-white/[0.15] text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Kiri
+                </button>
+                <button
+                  type="button"
+                  id="sidebar-pos-hidden-btn"
+                  onClick={() => handleSidebarPositionChange('hidden')}
+                  className={`py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    sidebarPosition === 'hidden'
+                      ? 'bg-white/[0.15] text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Sembunyikan
+                </button>
+              </div>
+            </div>
+
+            {/* Reorderable Sidebar Widgets List */}
+            <div className="space-y-2 pt-2 border-t border-white/[0.06]">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+                  Urutan Widget Sidebar (5 Item)
+                </span>
+                <span className="text-[10px] text-slate-500">Tarik ⋮⋮</span>
+              </div>
+
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleWidgetDragEnd}
+              >
+                <SortableContext
+                  items={orderedWidgetKeys}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-2">
+                    {orderedWidgetKeys.map((key, idx) => (
+                      <SortableSidebarWidgetItem
+                        key={key}
+                        widgetKey={key}
+                        idx={idx}
+                        handleMoveWidget={handleMoveWidget}
+                        totalLength={orderedWidgetKeys.length}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Main Grid: Left Navigation / Right Config Form */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* Left Column: 11 Section Drag-and-Drop Reordering List (4 cols) */}
+        {/* Left Column: 11 Section Content Source List (4 cols) */}
         <div className="lg:col-span-4 bg-[#171717] border border-white/[0.08] rounded-3xl p-3.5 sm:p-4 space-y-3 shadow-lg">
           <div className="px-2 py-1 flex items-center justify-between">
             <div>
-              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">Urutan Seksi Beranda</span>
+              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">Sumber Konten Seksi</span>
               <span className="text-[10px] text-slate-500">Tarik ikon ⋮⋮ atau gunakan panah ↑ ↓</span>
             </div>
             <button

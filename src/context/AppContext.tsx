@@ -30,6 +30,8 @@ import {
   HomepageSectionKey,
   SectionConfig,
   HomepageSectionsConfig,
+  HomeBlockKey,
+  HomeSidebarWidgetKey,
 } from '../types';
 import {
   DEFAULT_FALLBACK_AUTHOR,
@@ -275,6 +277,11 @@ interface AppContextType {
   homepageSectionsConfig: HomepageSectionsConfig | null;
   updateHomepageSectionConfig: (sectionKey: HomepageSectionKey, config: Partial<SectionConfig>) => Promise<void>;
   updateHomepageSectionOrder: (newOrder: HomepageSectionKey[]) => Promise<void>;
+  updateHomepageLayout: (partial: {
+    blockOrder?: HomeBlockKey[];
+    sidebarPosition?: 'right' | 'left' | 'hidden';
+    sidebarWidgetOrder?: HomeSidebarWidgetKey[];
+  }) => Promise<void>;
   criticSubmissions: CriticSubmission[];
   addCriticSubmission: (sub: Omit<CriticSubmission, 'id' | 'status' | 'date'>) => Promise<boolean>;
   updateCriticSubmissionStatus: (id: string, status: 'approved' | 'rejected') => Promise<void>;
@@ -1246,6 +1253,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     showToast('Susunan seksi beranda berhasil disimpan!', 'success');
+  }, [isAdmin, currentUser, showToast]);
+
+  const updateHomepageLayout = useCallback(async (
+    partial: {
+      blockOrder?: HomeBlockKey[];
+      sidebarPosition?: 'right' | 'left' | 'hidden';
+      sidebarWidgetOrder?: HomeSidebarWidgetKey[];
+    }
+  ) => {
+    if (!isAdmin && currentUser.role !== 'admin') {
+      showToast('Hanya administrator yang memiliki izin untuk mengubah tata letak beranda.', 'error');
+      throw new Error('Unauthorized: Admin access required');
+    }
+    const configDocRef = doc(db, 'siteConfig', 'homepageSections');
+    const now = new Date().toISOString();
+    await setDoc(
+      configDocRef,
+      {
+        ...partial,
+        updatedAt: now,
+        updatedBy: currentUser.id || currentUser.email || 'admin',
+      },
+      { merge: true }
+    );
+
+    showToast('Tata letak susunan beranda berhasil disimpan!', 'success');
   }, [isAdmin, currentUser, showToast]);
 
   // Merge private emails onto users for admin viewer, and currentUser's auth email for currentUser
@@ -5645,6 +5678,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         homepageSectionsConfig,
         updateHomepageSectionConfig,
         updateHomepageSectionOrder,
+        updateHomepageLayout,
         criticSubmissions,
         addCriticSubmission,
         updateCriticSubmissionStatus,

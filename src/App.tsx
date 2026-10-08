@@ -8,7 +8,15 @@ import { Footer } from './components/Navigation/Footer';
 import { HeroSection } from './components/Home/HeroSection';
 import { FeaturedNews } from './components/Home/FeaturedNews';
 import { HomeFilmRecommendations } from './components/Home/HomeFilmRecommendations';
-import { HomeCategorySection } from './components/Home/HomeCategorySection';
+import { HomeWatchlistsBlock } from './components/Home/HomeWatchlistsBlock';
+import { HomeCinemaGearBlock } from './components/Home/HomeCinemaGearBlock';
+import { HomeReviewsBlock } from './components/Home/HomeReviewsBlock';
+import { HomeAnimeNewsBlock } from './components/Home/HomeAnimeNewsBlock';
+import { HomeFilmStudiesBlock } from './components/Home/HomeFilmStudiesBlock';
+import { HomeExploreBlock } from './components/Home/HomeExploreBlock';
+import { EditorialSidebar } from './components/Common/EditorialSidebar';
+import { HomeBlockKey } from './types';
+import { resolveBlockOrder } from './utils/homepageConfigHelper';
 import { CategoryPage } from './components/Pages/CategoryPage';
 import { FilmDatabasePage } from './components/Pages/FilmDatabasePage';
 import { FilmDetailPage } from './components/Pages/FilmDetailPage';
@@ -60,15 +68,153 @@ import { GenericPageSkeleton } from './components/Skeletons';
 // Fallback loader matching Sotoy Film aesthetic using structured skeleton
 const PageLoadingFallback: React.FC = () => <GenericPageSkeleton />;
 
-// Standard Home Page view aggregating hero, news, recommendations, and categories
-const HomeView: React.FC = () => (
-  <>
-    <HeroSection />
-    <FeaturedNews />
-    <HomeFilmRecommendations />
-    <HomeCategorySection />
-  </>
-);
+const WIDE_BLOCK_KEYS: Set<HomeBlockKey> = new Set(['hero', 'featured_news', 'film_recommendations']);
+
+// Dynamic Home Page view rendering sections according to saved layout order
+const HomeView: React.FC = () => {
+  const { homepageSectionsConfig } = useApp();
+
+  const blockOrder = React.useMemo(() => {
+    return resolveBlockOrder(homepageSectionsConfig?.blockOrder);
+  }, [homepageSectionsConfig?.blockOrder]);
+
+  const sidebarPosition = homepageSectionsConfig?.sidebarPosition || 'right';
+  const sidebarWidgetOrder = homepageSectionsConfig?.sidebarWidgetOrder;
+
+  // Group items into segments: either a single wide block or a band of consecutive column blocks
+  const segments = React.useMemo(() => {
+    type Segment =
+      | { type: 'wide'; key: HomeBlockKey }
+      | { type: 'band'; keys: HomeBlockKey[]; isFirstBand: boolean };
+
+    const result: Segment[] = [];
+    let currentBand: HomeBlockKey[] = [];
+    let firstBandCreated = false;
+
+    for (const key of blockOrder) {
+      if (WIDE_BLOCK_KEYS.has(key)) {
+        if (currentBand.length > 0) {
+          result.push({
+            type: 'band',
+            keys: currentBand,
+            isFirstBand: !firstBandCreated,
+          });
+          firstBandCreated = true;
+          currentBand = [];
+        }
+        result.push({ type: 'wide', key });
+      } else {
+        currentBand.push(key);
+      }
+    }
+
+    if (currentBand.length > 0) {
+      result.push({
+        type: 'band',
+        keys: currentBand,
+        isFirstBand: !firstBandCreated,
+      });
+    }
+
+    return result;
+  }, [blockOrder]);
+
+  const renderSingleBlock = (key: HomeBlockKey) => {
+    switch (key) {
+      case 'hero':
+        return <HeroSection key="hero" />;
+      case 'featured_news':
+        return <FeaturedNews key="featured_news" />;
+      case 'film_recommendations':
+        return <HomeFilmRecommendations key="film_recommendations" />;
+      case 'watchlists':
+        return <HomeWatchlistsBlock key="watchlists" />;
+      case 'cinema_gear':
+        return <HomeCinemaGearBlock key="cinema_gear" />;
+      case 'reviews':
+        return <HomeReviewsBlock key="reviews" />;
+      case 'anime_news':
+        return <HomeAnimeNewsBlock key="anime_news" />;
+      case 'film_studies':
+        return <HomeFilmStudiesBlock key="film_studies" />;
+      case 'explore':
+        return <HomeExploreBlock key="explore" />;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <>
+      {segments.map((segment, idx) => {
+        if (segment.type === 'wide') {
+          return (
+            <div key={`wide-${segment.key}`}>
+              {renderSingleBlock(segment.key)}
+            </div>
+          );
+        }
+
+        // Column band segment
+        if (segment.isFirstBand) {
+          return (
+            <section
+              key={`band-${idx}`}
+              id="category-articles-section"
+              className="py-6 sm:py-8"
+            >
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                  <div
+                    className={`${
+                      sidebarPosition === 'hidden'
+                        ? 'lg:col-span-12'
+                        : 'lg:col-span-8'
+                    } space-y-12`}
+                  >
+                    {segment.keys.map((key) => (
+                      <div key={`col-${key}`}>
+                        {renderSingleBlock(key)}
+                      </div>
+                    ))}
+                  </div>
+
+                  {sidebarPosition !== 'hidden' && (
+                    <div
+                      className={`lg:col-span-4 lg:sticky lg:top-24 self-start space-y-6 ${
+                        sidebarPosition === 'left' ? 'lg:order-first' : ''
+                      }`}
+                    >
+                      <EditorialSidebar widgetOrder={sidebarWidgetOrder} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+          );
+        }
+
+        // Secondary / Later bands without sidebar
+        return (
+          <section
+            key={`band-${idx}`}
+            className="py-6 sm:py-8"
+          >
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="space-y-12">
+                {segment.keys.map((key) => (
+                  <div key={`col-${key}`}>
+                    {renderSingleBlock(key)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        );
+      })}
+    </>
+  );
+};
 
 const AppContent: React.FC = () => {
   const { toastMessage, toastType } = useApp();
