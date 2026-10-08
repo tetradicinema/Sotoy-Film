@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Layout, 
   Sparkles, 
@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { HomepageSectionKey, SectionConfig, MainCategory } from '../../types';
-import { HOMEPAGE_SECTIONS_META, SectionMeta } from '../../utils/homepageConfigHelper';
+import { HOMEPAGE_SECTIONS_META, SectionMeta, DEFAULT_SECTION_ORDER } from '../../utils/homepageConfigHelper';
 
 const CATEGORY_LABELS: Record<string, string> = {
   movies: 'Movies',
@@ -28,13 +28,62 @@ const CATEGORY_LABELS: Record<string, string> = {
   movie: 'Movies',
 };
 
+const SUBCATEGORY_LABELS: Record<string, string> = {
+  news: 'News / Kabar Utama',
+  lists: 'Lists / Rekomendasi & Daftar',
+  reviews: 'Reviews / Ulasan Mendalam',
+  'gear-news': 'Gear News / Kabar Alat & Tek',
+  'gear-reviews': 'Gear Reviews / Ulasan Alat & Kamera',
+  producing: 'Producing / Manajemen & Produksi',
+  directing: 'Directing / Sutradara',
+  cinematography: 'Cinematography / Sinematografi',
+  lighting: 'Lighting / Tata Cahaya',
+  'post-production': 'Post-Production / Editing & VFX',
+};
+
 export const AdminHomepageSections: React.FC = () => {
   const {
     films,
     publishedArticles,
     homepageSectionsConfig,
     updateHomepageSectionConfig,
+    updateHomepageSectionOrder,
   } = useApp();
+
+  // Ordered list of section keys
+  const [orderedKeys, setOrderedKeys] = useState<HomepageSectionKey[]>(() => {
+    return homepageSectionsConfig?.sectionOrder || DEFAULT_SECTION_ORDER;
+  });
+
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
+
+  // Keep orderedKeys synced with remote config unless user is actively dragging/reordering
+  useEffect(() => {
+    if (homepageSectionsConfig?.sectionOrder && homepageSectionsConfig.sectionOrder.length > 0) {
+      setOrderedKeys(homepageSectionsConfig.sectionOrder);
+    }
+  }, [homepageSectionsConfig?.sectionOrder]);
+
+  const handleMoveSectionOrder = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= orderedKeys.length) return;
+    const next = [...orderedKeys];
+    const temp = next[index];
+    next[index] = next[targetIndex];
+    next[targetIndex] = temp;
+    setOrderedKeys(next);
+  };
+
+  const handleSaveSectionOrder = async () => {
+    try {
+      setIsSavingOrder(true);
+      await updateHomepageSectionOrder(orderedKeys);
+    } catch (err) {
+      console.error('Failed to save section order:', err);
+    } finally {
+      setIsSavingOrder(false);
+    }
+  };
 
   // Selected section to edit in focus, default to the first one
   const [activeSectionKey, setActiveSectionKey] = useState<HomepageSectionKey>('hero_to_watch');
@@ -61,6 +110,7 @@ export const AdminHomepageSections: React.FC = () => {
       title: '',
       sourceType: 'auto',
       category: undefined,
+      subCategory: '',
       tag: '',
       sortBy: 'newest',
       limit: 5,
@@ -109,6 +159,7 @@ export const AdminHomepageSections: React.FC = () => {
       title: '',
       sourceType: 'auto',
       category: undefined,
+      subCategory: '',
       tag: '',
       sortBy: 'newest',
       limit: 5,
@@ -214,36 +265,63 @@ export const AdminHomepageSections: React.FC = () => {
       {/* Main Grid: Left Navigation / Right Config Form */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* Left Column: 11 Section Navigation List (4 cols) */}
-        <div className="lg:col-span-4 bg-[#171717] border border-white/[0.08] rounded-3xl p-3.5 sm:p-4 space-y-1.5 shadow-lg">
-          <div className="px-2.5 py-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-            <span>Daftar Seksi Beranda</span>
-            <span className="text-[10px] font-mono text-slate-500">{HOMEPAGE_SECTIONS_META.length} seksi</span>
+        {/* Left Column: 11 Section Navigation & Reordering List (4 cols) */}
+        <div className="lg:col-span-4 bg-[#171717] border border-white/[0.08] rounded-3xl p-3.5 sm:p-4 space-y-3 shadow-lg">
+          <div className="px-2 py-1 flex items-center justify-between">
+            <div>
+              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">Urutan Seksi Beranda</span>
+              <span className="text-[10px] text-slate-500">Gunakan panah ↑ ↓ untuk mengatur posisi</span>
+            </div>
+            <button
+              type="button"
+              id="save-section-order-btn"
+              onClick={handleSaveSectionOrder}
+              disabled={isSavingOrder}
+              className="px-3 py-1.5 rounded-xl bg-[#FF2E7E] hover:bg-[#FF2E7E]/90 text-white text-[11px] font-bold transition-all shadow-md cursor-pointer disabled:opacity-50 flex items-center gap-1 shrink-0 active:scale-95"
+            >
+              {isSavingOrder ? (
+                <span>Menyimpan...</span>
+              ) : (
+                <>
+                  <Save className="w-3 h-3" />
+                  <span>Simpan Urutan</span>
+                </>
+              )}
+            </button>
           </div>
 
-          <div className="space-y-1 max-h-[640px] overflow-y-auto pr-1">
-            {HOMEPAGE_SECTIONS_META.map((meta) => {
-              const active = meta.key === activeSectionKey;
-              const sectionConfig = draftConfigs[meta.key] || homepageSectionsConfig?.sections?.[meta.key];
+          <div className="space-y-1.5 max-h-[660px] overflow-y-auto pr-1">
+            {orderedKeys.map((key, idx) => {
+              const meta = HOMEPAGE_SECTIONS_META.find(m => m.key === key) || HOMEPAGE_SECTIONS_META[0];
+              const active = key === activeSectionKey;
+              const sectionConfig = draftConfigs[key] || homepageSectionsConfig?.sections?.[key];
               const isManual = sectionConfig?.sourceType === 'manual';
               const hasCustomTitle = !!sectionConfig?.title && sectionConfig.title.trim().length > 0;
 
               return (
-                <button
-                  key={meta.key}
-                  id={`admin-section-tab-${meta.key}`}
-                  type="button"
-                  onClick={() => {
-                    setActiveSectionKey(meta.key);
-                    setSearchQuery('');
-                  }}
-                  className={`w-full text-left p-3 rounded-2xl transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                <div
+                  key={key}
+                  className={`p-2.5 rounded-2xl transition-all flex items-center justify-between gap-2.5 border ${
                     active
-                      ? 'bg-white/[0.12] border border-white/20 text-white shadow-sm'
-                      : 'hover:bg-white/[0.04] text-slate-300 border border-transparent'
+                      ? 'bg-white/[0.12] border-white/20 text-white shadow-sm'
+                      : 'hover:bg-white/[0.04] text-slate-300 border-white/[0.04]'
                   }`}
                 >
-                  <div className="min-w-0 flex-1">
+                  {/* Position Index Badge */}
+                  <span className="w-5 text-center font-mono font-bold text-[11px] text-slate-500 shrink-0">
+                    #{idx + 1}
+                  </span>
+
+                  {/* Section Title & Info */}
+                  <button
+                    id={`admin-section-tab-${key}`}
+                    type="button"
+                    onClick={() => {
+                      setActiveSectionKey(key);
+                      setSearchQuery('');
+                    }}
+                    className="min-w-0 flex-1 text-left cursor-pointer"
+                  >
                     <div className="flex items-center gap-1.5 mb-0.5">
                       {meta.targetType === 'films' ? (
                         <Film className="w-3.5 h-3.5 text-[#FF2E7E] shrink-0" />
@@ -258,22 +336,46 @@ export const AdminHomepageSections: React.FC = () => {
                     <div className="text-[11px] text-slate-400 truncate">
                       {hasCustomTitle ? `"${sectionConfig?.title}"` : meta.defaultTitle}
                     </div>
+                  </button>
 
-                    <div className="text-[10px] text-slate-500 truncate mt-0.5">
-                      Default saat belum diatur: {meta.defaultRule}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-end gap-1 shrink-0">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                  {/* Reorder Up/Down Controls & Mode Indicator */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${
                       isManual 
                         ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' 
                         : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                     }`}>
                       {isManual ? 'Manual' : 'Auto'}
                     </span>
+
+                    <div className="flex flex-col gap-0.5 ml-1">
+                      <button
+                        type="button"
+                        disabled={idx === 0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMoveSectionOrder(idx, 'up');
+                        }}
+                        className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-20 transition-colors"
+                        title="Geser Seksi ke Atas"
+                      >
+                        <ChevronUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={idx === orderedKeys.length - 1}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMoveSectionOrder(idx, 'down');
+                        }}
+                        className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-20 transition-colors"
+                        title="Geser Seksi ke Bawah"
+                      >
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>
@@ -386,7 +488,7 @@ export const AdminHomepageSections: React.FC = () => {
                 {/* Category Dropdown */}
                 <div className="space-y-1.5">
                   <label className="block text-[11px] font-semibold text-slate-400">
-                    Kategori Konten
+                    Kategori Utama Konten
                   </label>
                   <select
                     id="select-category-auto"
@@ -398,6 +500,26 @@ export const AdminHomepageSections: React.FC = () => {
                     {currentMeta.allowedCategories.map(cat => (
                       <option key={cat} value={cat}>
                         {CATEGORY_LABELS[cat] || cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Sub-Category Dropdown */}
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-semibold text-slate-400">
+                    Sub-Kategori Konten (Opsional)
+                  </label>
+                  <select
+                    id="select-subcategory-auto"
+                    value={currentConfig.subCategory || ''}
+                    onChange={(e) => updateCurrentDraft({ subCategory: e.target.value || '' })}
+                    className="w-full px-3 py-2 rounded-xl bg-[#171717] border border-white/[0.1] text-white text-xs outline-none focus:border-[#FF2E7E] transition-colors"
+                  >
+                    <option value="">Semua sub-kategori</option>
+                    {Object.entries(SUBCATEGORY_LABELS).map(([val, label]) => (
+                      <option key={val} value={val}>
+                        {label}
                       </option>
                     ))}
                   </select>

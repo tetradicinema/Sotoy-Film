@@ -228,6 +228,7 @@ export type AppView =
   | 'critic-criteria'
   | 'panduan-leaderboard'
   | 'admin-critic-submissions'
+  | 'admin-homepage-sections'
   | 'admin-dashboard'
   | 'writer-dashboard'
   | 'critic-dashboard'
@@ -273,6 +274,7 @@ interface AppContextType {
   refreshArticles: () => Promise<void>;
   homepageSectionsConfig: HomepageSectionsConfig | null;
   updateHomepageSectionConfig: (sectionKey: HomepageSectionKey, config: Partial<SectionConfig>) => Promise<void>;
+  updateHomepageSectionOrder: (newOrder: HomepageSectionKey[]) => Promise<void>;
   criticSubmissions: CriticSubmission[];
   addCriticSubmission: (sub: Omit<CriticSubmission, 'id' | 'status' | 'date'>) => Promise<boolean>;
   updateCriticSubmissionStatus: (id: string, status: 'approved' | 'rejected') => Promise<void>;
@@ -755,6 +757,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentView('critic-criteria');
     } else if (path === '/admin/submissions') {
       setCurrentView('admin-critic-submissions');
+    } else if (path === '/admin/homepage' || path === '/admin/beranda' || path === '/admin/seksi-beranda') {
+      setCurrentView('admin-homepage-sections');
     } else if (path === '/cms' || path === '/workspace' || path === '/admin/cms') {
       setCurrentView('cms-workspace');
     } else if (path === '/admin' || path.startsWith('/admin/')) {
@@ -1221,6 +1225,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     showToast(`Konfigurasi seksi "${sectionKey}" berhasil disimpan.`, 'success');
   }, [isAdmin, currentUser, homepageSectionsConfig, showToast]);
+
+  const updateHomepageSectionOrder = useCallback(async (
+    newOrder: HomepageSectionKey[]
+  ) => {
+    if (!isAdmin && currentUser.role !== 'admin') {
+      showToast('Hanya administrator yang memiliki izin untuk mengubah susunan seksi beranda.', 'error');
+      throw new Error('Unauthorized: Admin access required');
+    }
+    const configDocRef = doc(db, 'siteConfig', 'homepageSections');
+    const now = new Date().toISOString();
+    await setDoc(
+      configDocRef,
+      {
+        sectionOrder: newOrder,
+        updatedAt: now,
+        updatedBy: currentUser.id || currentUser.email || 'admin',
+      },
+      { merge: true }
+    );
+
+    showToast('Susunan seksi beranda berhasil disimpan!', 'success');
+  }, [isAdmin, currentUser, showToast]);
 
   // Merge private emails onto users for admin viewer, and currentUser's auth email for currentUser
   const resolvedAllUsers = useMemo(() => {
@@ -5618,6 +5644,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         refreshArticles,
         homepageSectionsConfig,
         updateHomepageSectionConfig,
+        updateHomepageSectionOrder,
         criticSubmissions,
         addCriticSubmission,
         updateCriticSubmissionStatus,

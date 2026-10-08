@@ -51,6 +51,9 @@ const CriticDashboard = React.lazy(() =>
 const CMSPage = React.lazy(() =>
   import('./components/Pages/CMSPage').then(m => ({ default: m.CMSPage }))
 );
+const AdminHomepageSectionsPage = React.lazy(() =>
+  import('./components/Pages/AdminHomepageSectionsPage').then(m => ({ default: m.AdminHomepageSectionsPage }))
+);
 
 import { GenericPageSkeleton } from './components/Skeletons';
 
@@ -251,7 +254,7 @@ const AppContent: React.FC = () => {
             path="/admin/homepage"
             element={
               <React.Suspense fallback={<PageLoadingFallback />}>
-                <AdminDashboard />
+                <AdminHomepageSectionsPage />
               </React.Suspense>
             }
           />
@@ -259,7 +262,15 @@ const AppContent: React.FC = () => {
             path="/admin/beranda"
             element={
               <React.Suspense fallback={<PageLoadingFallback />}>
-                <AdminDashboard />
+                <AdminHomepageSectionsPage />
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/admin/seksi-beranda"
+            element={
+              <React.Suspense fallback={<PageLoadingFallback />}>
+                <AdminHomepageSectionsPage />
               </React.Suspense>
             }
           />

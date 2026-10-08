@@ -479,7 +479,8 @@ export type HomepageSectionKey =
 export interface SectionConfig {
   title?: string;
   sourceType: 'auto' | 'manual';
-  category?: MainCategory | 'movie' | 'series' | 'anime' | '';
+  category?: MainCategory | 'movie' | 'series' | 'anime';
+  subCategory?: SubCategory | string;
   tag?: string;
   sortBy?: 'newest' | 'rating' | 'views';
   limit?: number;
@@ -488,6 +489,7 @@ export interface SectionConfig {
 
 export interface HomepageSectionsConfig {
   sections?: Partial<Record<HomepageSectionKey, SectionConfig>>;
+  sectionOrder?: HomepageSectionKey[];
   updatedAt?: string;
   updatedBy?: string;
 }

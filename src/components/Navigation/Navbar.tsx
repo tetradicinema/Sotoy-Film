@@ -656,6 +656,19 @@ export const Navbar: React.FC = () => {
                             <span className="text-xs text-slate-400">→</span>
                           </Link>
                           <Link
+                            to="/admin/homepage"
+                            id="menu-admin-homepage-sections-btn"
+                            onClick={() => setRoleDropdownOpen(false)}
+                            className={`w-full text-left p-2 rounded-lg text-xs flex items-center justify-between transition-colors ${
+                              currentView === 'admin-homepage-sections' || location.pathname === '/admin/homepage' || location.pathname === '/admin/beranda'
+                                ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] border border-[#FF2E7E]/30 font-semibold'
+                                : 'hover:bg-white/[0.05] text-slate-200'
+                            }`}
+                          >
+                            <span>Seksi Beranda</span>
+                            <span className="text-xs text-slate-400">→</span>
+                          </Link>
+                          <Link
                             to="/admin/cms"
                             id="menu-admin-full-cms-btn"
                             onClick={() => setRoleDropdownOpen(false)}

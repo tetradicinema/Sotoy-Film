@@ -24,6 +24,20 @@ export const ALL_FILM_CATEGORIES: ('movie' | 'series' | 'anime')[] = [
   'anime',
 ];
 
+export const DEFAULT_SECTION_ORDER: HomepageSectionKey[] = [
+  'hero_to_watch',
+  'recent',
+  'gear',
+  'movie_list',
+  'series_list',
+  'anime_list',
+  'cinema_gear_articles',
+  'reviews_movie',
+  'reviews_series',
+  'anime_news',
+  'film_studies',
+];
+
 export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
   {
     key: 'hero_to_watch',
@@ -161,6 +175,14 @@ export function resolveConfigFilms(
       return filmType === cat;
     });
   }
+  if (config.subCategory && config.subCategory.trim()) {
+    const sub = config.subCategory.trim().toLowerCase();
+    filtered = filtered.filter(f => 
+      f.genres?.some((g: string) => g.trim().toLowerCase() === sub) ||
+      f.tags?.some((tag: string) => tag.trim().toLowerCase() === sub) ||
+      f.type?.toLowerCase() === sub
+    );
+  }
   if (config.tag && config.tag.trim()) {
     const t = config.tag.trim().toLowerCase();
     filtered = filtered.filter(f => 
@@ -212,6 +234,10 @@ export function resolveConfigArticles(
   if (config.category && config.category.trim()) {
     const cat = config.category.trim().toLowerCase();
     filtered = filtered.filter(a => (a.category || '').toLowerCase() === cat);
+  }
+  if (config.subCategory && config.subCategory.trim()) {
+    const sub = config.subCategory.trim().toLowerCase();
+    filtered = filtered.filter(a => (a.subCategory || '').toLowerCase() === sub);
   }
   if (config.tag && config.tag.trim()) {
     const t = config.tag.trim().toLowerCase();
