@@ -1,266 +1,114 @@
-# 🎬 Sotoy Film — Indonesian Film Community & Pop-Culture Media Platform
+# 🎬 Sotoy Film — Platform Media Pop-Culture & Komunitas Film Indonesia
 
-[![React](https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4.0-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![Firebase](https://img.shields.io/badge/Firebase-Firestore_%26_Auth-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
-[![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Express](https://img.shields.io/badge/Express-5.0-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
-[![Recharts](https://img.shields.io/badge/Recharts-3.0-22c55e?style=for-the-badge&logo=recharts&logoColor=white)](https://recharts.org/)
-
-> **Sotoy Film** adalah platform media pop-culture dan komunitas film terpadu di Indonesia. Menggabungkan sistem penilaian ulasan ganda (**Skor Sotoy Warga & Kritikus**), forum diskusi interaktif (**Buzz**), penerbitan editorial film (**CMS & Film Studies**), serta dasbor analitik dan moderasi komprehensif.
+Selamat datang di **Sotoy Film**! Platform ini adalah rumah hangat bagi seluruh pencinta film, serial TV, dan anime di Indonesia. Di sini, siapa saja bisa menyalurkan opini sinematik mereka, membaca kajian mendalam, berdiskusi di forum komunitas, hingga berpartisipasi dalam menentukan rating film terdemokratis.
 
 ---
 
-## 📑 Daftar Isi
-
-- [Fitur Utama](#-fitur-utama)
-- [Teknologi & Arsitektur](#-teknologi--arsitektur)
-- [Struktur Peran Akun (RBAC)](#-struktur-peran-akun-rbac)
-- [Struktur Direktori Proyek](#-struktur-direktori-proyek)
-- [Panduan Instalasi & Menjalankan Lokal](#-panduan-instalasi--menjalankan-lokal)
-- [Daftar Skrip (NPM Scripts)](#-daftar-skrip-npm-scripts)
-- [Variabel Lingkungan (Environment Variables)](#-variabel-lingkungan-environment-variables)
-- [Skema Database & Keamanan Firebase](#-skema-database--keamanan-firebase)
-- [Middleware & SEO Meta-Injection](#-middleware--seo-meta-injection)
-- [Panduan Deployment (Vercel & Docker/Cloud Run)](#-panduan-deployment)
-- [Lisensi](#-lisensi)
+## 📑 Daftar Panduan
+- [✨ Fitur Unggulan untuk Warga](#-fitur-unggulan-untuk-warga)
+- [👥 Mengenal Peran Anggota (Sistem Akun)](#-mengenal-peran-anggota-sistem-akun)
+- [📝 Panduan Menulis & Publikasi Artikel (Khusus Penulis & Admin)](#-panduan-menulis--publikasi-artikel-khusus-penulis--admin)
+- [🎛️ Panduan Mengatur Susunan Beranda (Khusus Admin)](#️-panduan-mengatur-susunan-beranda-khusus-admin)
+- [🛡️ Panduan Moderasi & Pengawasan Komunitas (Khusus Admin)](#️-panduan-moderasi--pengawasan-komunitas-khusus-admin)
 
 ---
 
-## ✨ Fitur Utama
+## ✨ Fitur Unggulan untuk Warga
 
-### 1. 🎞️ Database Film, Series & Anime
-- Katalog lengkap film layar lebar, serial TV, dan anime.
-- Sinkronisasi metadata otomatis via server-side **TMDB Proxy** (sinopsis, sutradara, pemeran, poster, backdrop, dan rekomendasi tontonan).
-- Informasi platform streaming legal di Indonesia (*Netflix, Disney+ Hotstar, Prime Video, Vidio, Bioskop*).
+### 1. 🎞️ Katalog Film & Informasi Streaming Lengkap
+* **Metadata Akurat:** Temukan informasi sinopsis resmi, sutradara, deretan pemeran, poster, hingga rekomendasi film serupa yang disesuaikan untuk penonton Indonesia.
+* **Di Mana Menonton?** Cek langsung ketersediaan film atau serial di platform streaming legal yang beroperasi di Indonesia seperti *Netflix, Disney+ Hotstar, Prime Video, Vidio, Bioskop*, dan lainnya.
 
 ### 2. ⭐ Sistem Penilaian Ganda (Skor Sotoy)
-- **Skor Warga:** Rata-rata skor demokratis dari seluruh anggota komunitas terdaftar (*skala 1.0 - 10.0*).
-- **Skor Kritikus Terverifikasi:** Penilaian mendalam dari kritikus film terverifikasi (**Si Paling Sotoy**).
-- Ulasan berbasis teks lengkap dengan *headline*, argumen, sistem upvote ulasan, dan lencana verifikasi.
+Kami percaya opini penonton umum sama berharganya dengan ulasan kritikus. Oleh karena itu, kami menghadirkan dua metrik penilaian:
+* **Skor Warga:** Rating murni dan demokratis yang dihitung secara rata-rata dari seluruh anggota komunitas terdaftar (*skala 1.0 - 10.0*).
+* **Skor Kritikus Terverifikasi:** Ulasan mendalam yang ditulis oleh para kritikus terpercaya (**Si Paling Sotoy**).
+* **Interaksi Ulasan:** Berikan suara setuju (*upvote*) pada ulasan yang menurut Anda bermanfaat atau menarik.
 
 ### 3. 💬 Forum Komunitas "Buzz"
-- Ruang obrolan mikro dan ruang diskusi film instan (*micro-blogging*).
-- **Lampiran Foto:** Pengguna dapat melampirkan 1 foto per postingan dengan kompresi otomatis client-side (*browser-image-compression*) sebelum diunggah ke Firebase Storage, dilengkapi pratinjau thumbnail dan mode lightbox interaktif.
-- Fitur *tagging* film atau artikel terkait ke dalam postingan.
-- Utas percakapan bersarang (*threaded replies*), sistem vote skor/reaksi, dan *anti-spam client safeguards*.
+Buzz adalah ruang obrolan kilat (*micro-blogging*) tempat warga berkumpul untuk berbagi pemikiran instan:
+* **Bagikan Foto:** Unggah foto atau tangkapan layar film favorit Anda (sistem kami akan mengoptimalkan ukuran gambar secara otomatis agar hemat kuota).
+* **Tagging Film & Artikel:** Hubungkan postingan Buzz Anda dengan film atau artikel editorial terkait agar anggota lain bisa langsung mengaksesnya.
+* **Diskusi Bersarang:** Lakukan diskusi seru lewat balasan komentar bertingkat, berikan reaksi/reputasi, dan dukung iklim komunitas yang sehat.
 
-### 4. 📰 Editorial Magazine & Full Control CMS
-- Penerbitan artikel mendalam: *Ulasan Editorial, Kajian Sinema (Film Studies), Bedah Alat Sinema (Cinema Gear), Berita Industri, dan Listicle*.
-- Manajemen status publikasi: *Draft, Terjadwal (Scheduled Publishing), dan Published*.
-- Pengaturan SEO on-page: *Custom SEO Title, Meta Description, OpenGraph Preview Image, dan Target Keywords*.
-
-### 5. 📊 Admin Control Center & Analytics Dashboard
-- **Visualisasi Recharts:** Grafik pertumbuhan harian (*Daily Active Users* / DAU), pendaftaran baru, dan pertumbuhan kumulatif.
-- **User Retention & Community Health Breakdown:** Lacak pengguna kembali (*returning users*), laju retensi harian, dan analisis kohort (*Day 1, Day 7, Day 30 Retention*).
-- **Manajemen Pengguna Massal (*Bulk Actions*):** Hapus atau tangguhkan beberapa akun sekaligus.
-- **Moderasi & Banding Akun:** Verifikasi laporan pelanggaran komunitas dan evaluasi banding suspensi akun secara transparan.
-- **Audit Log Moderasi:** Jejak rekam seluruh keputusan admin untuk akuntabilitas.
-- **Ekspor Laporan CSV:** Unduh ringkasan performa komunitas dengan satu klik.
-
-### 6. 🌐 Optimasi Mesin Pencari (SEO) & Bot Pre-rendering
-- Serverless Middleware di Node.js runtime untuk mendeteksi *crawler* media sosial (*WhatsApp, Facebook, Twitter/X, Discord, LinkedIn*) dan mesin pencari (*Googlebot, Bingbot*).
-- Injeksi tag OpenGraph (`og:title`, `og:image`, `og:description`) secara dinamis langsung dari Firestore REST API.
-- Generator sitemap otomatis (`/sitemap.xml`) yang dieksekusi setiap proses build.
+### 4. 📰 Editorial Magazine & Kajian Sinema
+Nikmati berbagai bacaan berkualitas dari tim penulis kami:
+* **Ulasan Editorial & Kajian Sinema (Film Studies):** Analisis mendalam tentang makna film, sinematografi, dan teori sinema.
+* **Bedah Alat Sinema (Cinema Gear):** Rekomendasi alat dan ulasan teknologi produksi film.
+* **Berita Industri & Listicle:** Kabar terbaru seputar dunia perfilman lokal dan global serta rekomendasi daftar tontonan terbaik.
 
 ---
 
-## 🛠️ Teknologi & Arsitektur
+## 👥 Mengenal Peran Anggota (Sistem Akun)
 
-```
-┌───────────────────────────────────────────────────────────────┐
-│                      Client Layer (SPA)                       │
-│     React 19 • TypeScript • Tailwind CSS v4 • Recharts        │
-│          React Router v7 • Motion • Lucide React              │
-└───────────────────────────────┬───────────────────────────────┘
-                                │
-        ┌───────────────────────┴───────────────────────┐
-        ▼                                               ▼
-┌───────────────────────────────┐       ┌───────────────────────────────┐
-│       Node.js Middleware      │       │     Express Backend Proxy     │
-│   Crawler & Bot Detection     │       │  TMDB Proxy • Healthcheck     │
-│   Dynamic OpenGraph Injection │       │  Static SPA Asset Serving     │
-└───────────────┬───────────────┘       └───────────────┬───────────────┘
-                │                                       │
-                └───────────────────┬───────────────────┘
-                                    ▼
-┌───────────────────────────────────────────────────────────────┐
-│                   Firebase Cloud Services                     │
-│  Firestore (NoSQL DB) • Firebase Auth • Firebase Storage      │
-└───────────────────────────────────────────────────────────────┘
-```
+Setiap anggota di Sotoy Film memiliki kontribusi unik berdasarkan peran (*role*) akun mereka:
 
-| Komponen | Teknologi | Keterangan |
+| Lencana & Peran | Siapa Mereka? | Hak Akses Utama |
 | :--- | :--- | :--- |
-| **Frontend** | React 19, TypeScript, Vite 6 | Arsitektur SPA cepat dengan HMR dan optimalisasi bundle |
-| **Styling** | Tailwind CSS v4 | Styling modern utility-first dengan dark theme premium |
-| **Charts** | Recharts 3.x | Visualisasi analitik retensi, DAU, dan demografi role |
-| **State / DB** | Firebase Firestore (v12 SDK) | Penyimpanan dokumen realtime dengan offline persistence |
-| **Autentikasi** | Firebase Authentication | Login email & Google OAuth |
-| **Penyimpanan** | Firebase Storage | Media upload avatar profil aman berorientasi user-ID |
-| **Backend / API** | Express 5, Node.js | Reverse proxy TMDB dan server berkas produksi |
-| **Middleware** | Vercel Edge / Node.js Middleware | Transformasi HTML responsif untuk bot & crawler media sosial |
+| **🧑 Warga Sotoy** | Anggota umum komunitas film. | Menulis ulasan film, membuat postingan Buzz, berkomentar di forum, dan memberikan voting. |
+| **🏆 Si Paling Sotoy** | Kritikus film terverifikasi & kurator. | Seluruh akses Warga, ditambah ulasan mereka secara otomatis masuk ke perhitungan khusus *Skor Kritikus*. |
+| **✍️ Penulis Sotoy** | Redaktur & jurnalis internal media. | Akses ke halaman CMS (sistem menulis) untuk merancang, menjadwalkan, dan mempublikasikan artikel editorial. |
+| **👑 Admin Utama** | Pengelola platform & moderator tertinggi. | Akses penuh ke Panel Kontrol Admin, manajemen tata letak beranda, persetujuan kritikus, moderasi laporan, dan grafik statistik. |
 
 ---
 
-## 👥 Struktur Peran Akun (RBAC)
+## 📝 Panduan Menulis & Publikasi Artikel (Khusus Penulis & Admin)
 
-Platform menggunakan kontrol akses berbasis peran (*Role-Based Access Control*) yang divalidasi di sisi klien dan aturan keamanan Firestore:
+Untuk Penulis dan Admin, Anda memiliki akses ke **CMS (Content Management System)** untuk memproduksi artikel berkualitas:
 
-1. **🧑 Warga Sotoy (`warga_sotoy`)**: Anggota umum komunitas. Dapat memberikan rating, ulasan, membuat postingan Buzz, berkomentar, dan mengedit profil sendiri.
-2. **🏆 Si Paling Sotoy (`si_paling_sotoy`)**: Kritikus film terverifikasi melalui jalur pengajuan kurasi. Memiliki lencana khusus dan ulasannya dihitung pada *Skor Kritikus*.
-3. **✍️ Penulis Sotoy (`penulis_sotoy`)**: Jurnalis/editor media. Memiliki akses ke antarmuka CMS untuk menulis dan mengelola draf artikel editorial.
-4. **👑 Admin Utama (`admin`)**: Akses menyeluruh ke Panel Admin, verifikasi kritikus, moderasi konten, manajemen pengguna, inspeksi berkas, dan grafik analitik.
-
----
-
-## 📁 Struktur Direktori Proyek
-
-```text
-sotoy-film/
-├── api/                        # Serverless function handlers (e.g. TMDB API proxy)
-│   └── tmdb.ts
-├── public/                     # Aset statis publik, logo, icon, dan robots.txt
-├── scripts/                    # Skrip otomasi & utilitas
-│   ├── generate-sitemap.ts     # Pembangkit sitemap.xml otomatis
-│   └── test-middleware.ts      # Suite pengujian crawler middleware
-├── src/
-│   ├── components/             # Komponen UI modular
-│   │   ├── Admin/              # Dasbor Admin (Analytics, Users, Moderasi, Audit, dll.)
-│   │   ├── Articles/           # Komponen daftar dan pembaca artikel
-│   │   ├── Auth/               # Modal login & registrasi
-│   │   ├── Buzz/               # Forum diskusi buzz komunitas
-│   │   ├── CMS/                # Editor artikel & analitik editorial
-│   │   ├── Films/              # Halaman detail film, ulasan, & trailer modal
-│   │   ├── Layout/             # Navbar, Footer, Sidebar, BottomNav
-│   │   └── Profile/            # Halaman profil user & pengaturan
-│   ├── context/                # AppContext global & Firebase state bridge
-│   ├── lib/
-│   │   ├── edge/               # Logika middleware bot detection & OpenGraph injection
-│   │   └── firebase.ts         # Inisialisasi Firebase Web SDK
-│   ├── types/                  # Definisi antarmuka TypeScript
-│   ├── utils/                  # Format tanggal, role style, slug generator
-│   ├── App.tsx                 # Routing & konfigurasi halaman
-│   ├── main.tsx                # Entry point React
-│   └── index.css               # Global Tailwind CSS v4 imports
-├── firestore.rules             # Aturan keamanan database Firestore
-├── storage.rules               # Aturan keamanan penyimpanan berkas
-├── firebase-blueprint.json     # Blueprint skema entitas database
-├── middleware.ts               # Root middleware untuk SSR meta injection
-├── server.ts                   # Express server entry point untuk produksi
-├── vercel.json                 # Konfigurasi deployment Vercel
-├── vite.config.ts              # Konfigurasi bundler Vite
-└── package.json
-```
+1. **Membuat Draft:** Masuk ke menu CMS, tulis artikel Anda dengan editor teks yang nyaman.
+2. **Pengaturan SEO & Pratinjau Gambar:**
+   * Tentukan *Judul SEO* dan *Meta Deskripsi* agar artikel Anda mudah ditemukan di Google.
+   * Unggah gambar sampul utama (*Cover Image*) yang menarik.
+   * Masukkan kata kunci target (*Keywords*) yang relevan.
+3. **Status Publikasi:**
+   * **Draft:** Simpan pekerjaan Anda untuk dilanjutkan nanti.
+   * **Terjadwal (Scheduled):** Atur tanggal dan jam spesifik kapan artikel harus terbit secara otomatis.
+   * **Published:** Publikasikan artikel secara langsung agar langsung terbaca oleh seluruh warga.
 
 ---
 
-## 🚀 Panduan Instalasi & Menjalankan Lokal
+## 🎛️ Panduan Mengatur Susunan Beranda (Khusus Admin)
 
-### Prasyarat
-- **Node.js**: Versi `20.x` atau lebih baru
-- **NPM** atau **Bun**
+Sebagai Admin, Anda dapat mengontrol penuh apa saja yang tampil di halaman depan aplikasi melalui menu **Panel Admin > Susunan Beranda**:
 
-### 1. Kloning Repositori
-```bash
-git clone https://github.com/username/sotoy-film.git
-cd sotoy-film
-```
+### 1. Mengubah Urutan Bagian (Sections)
+* **Drag & Drop:** Cukup klik dan tahan ikon titik-titik di samping baris blok, lalu geser ke atas atau ke bawah untuk menentukan posisi blok di halaman depan.
+* **Tombol Cepat:** Anda juga dapat menggunakan tombol tanda panah (▲/▼) untuk memindahkan baris demi baris secara presisi.
 
-### 2. Instal Dependensi
-```bash
-npm install
-```
+### 2. Visibilitas Blok (Tampilkan/Sembunyikan)
+* Klik ikon **Mata (👁️/👁️-off)** pada baris blok untuk menyembunyikan atau menampilkan bagian tersebut di beranda.
+* *Aturan Keselamatan:* Sistem tidak mengizinkan Anda menyembunyikan semua blok. Minimal harus ada 1 blok konten yang tetap aktif agar halaman utama tidak kosong.
 
-### 3. Konfigurasi Lingkungan (.env)
-Salin contoh environment file dan sesuaikan kredensial:
-```bash
-cp .env.example .env
-```
+### 3. Mengatur Posisi Sidebar & Urutan Widget
+* **Posisi Sidebar:** Pilih posisi bilah samping kanan/kiri melalui menu drop-down yang disediakan.
+* **Urutan Widget:** Anda dapat mengatur urutan widget sidebar (seperti widget Buzz Terbaru, Penulis Populer, Film Populer, dsb.) dengan cara yang sama seperti memindahkan blok beranda.
 
-Isi variabel `.env`:
-```env
-# TMDB API Read Access Key (Opsional untuk impor metadata katalog film)
-TMDB_API_KEY=your_tmdb_api_key_here
-```
+### 4. Peringatan Cerdas Tata Letak (*Split-Column Warning*)
+* Jika Anda menempatkan blok jenis "Lebar Penuh" (seperti banner atau galeri besar) di tengah-tengah kelompok blok "Kolom Utama" (yang memiliki sidebar), sistem akan mendeteksi ini sebagai susunan terpisah.
+* Sebuah **kotak peringatan kuning** akan muncul untuk memberi tahu Anda bahwa beberapa blok akan melebar penuh secara dinamis demi kenyamanan visual pembaca. Anda dapat menyusun kembali urutannya jika ingin sidebar tetap tampil sejajar.
 
-> **Catatan:** Konfigurasi Firebase client telah terhubung secara bawaan di `src/lib/firebase.ts` menggunakan konfigurasi proyek aktif.
-
-### 4. Jalankan Server Pengembangan
-```bash
-npm run dev
-```
-Aplikasi akan berjalan di `http://localhost:3000`.
+### 5. Keamanan Penyimpanan & Fitur Reset
+* **Simpan Otomatis & Ter-Debounce:** Perubahan tata letak yang Anda buat akan disimpan secara aman ke database dengan penundaan beberapa milidetik secara otomatis (untuk mencegah beban server yang berlebihan).
+* **Reset ke Default:** Jika Anda ingin mengembalikan susunan beranda seperti semula kala, klik tombol **"Reset ke Default"** dan konfirmasikan tindakan Anda pada jendela peringatan yang muncul.
 
 ---
 
-## 📜 Daftar Skrip (NPM Scripts)
+## 🛡️ Panduan Moderasi & Pengawasan Komunitas (Khusus Admin)
 
-| Perintah | Deskripsi |
-| :--- | :--- |
-| `npm run dev` | Menjalankan Express dev server dengan Vite middleware terintegrasi (`port 3000`) |
-| `npm run build` | Membuat sitemap, membangun aset client Vite, dan membundel `server.ts` ke `dist/server.cjs` |
-| `npm start` | Menjalankan server Express pada mode produksi (`NODE_ENV=production`) |
-| `npm run lint` | Menjalankan validasi type checking TypeScript tanpa kompilasi berkas (`tsc --noEmit`) |
-| `npm run test:middleware` | Menjalankan suite pengujian kompatibilitas bot crawler dan meta injection |
-| `npm run generate:sitemap` | Menghasilkan berkas `public/sitemap.xml` dinamis dari koleksi rute |
+Untuk menjaga ekosistem komunitas agar tetap aman, ramah, dan bebas dari spam, Admin dibekali peralatan moderasi lengkap di **Panel Admin**:
 
----
-
-## 🔒 Skema Database & Keamanan Firebase
-
-Aturan keamanan telah dirancang dengan prinsip hak akses minimal (*least privilege*):
-
-- **Firestore (`firestore.rules`):**
-  - Koleksi publik (`films`, `articles`, `buzz`, `ratings`) dapat dibaca oleh publik (*read: if true*).
-  - Penulisan hanya diizinkan untuk pengguna terautentikasi sesuai kepemilikan dokumen (`request.auth.uid == resource.data.userId`).
-  - Dokumen administratif dan laporan moderasi (`moderation_reports`, `audit_logs`) hanya dapat dimanipulasi oleh akun dengan role `admin`.
-- **Firebase Storage (`storage.rules`):**
-  - Berkas avatar profil tersimpan pada path `profile_photos/{userId}/{fileName}` dengan validasi ukuran (< 5MB) dan tipe konten gambar (*image/*).
-  - Catch-all write dinonaktifkan (`allow write: if false;`) untuk mencegah unggahan berkas tidak berizin.
+1. **Dashboard Analitik:** Pantau pertumbuhan harian pengguna aktif (*DAU*), retensi komunitas, dan demografi peran warga melalui grafik visual yang interaktif.
+2. **Evaluasi Laporan Laporan Laporan:** Tinjau setiap laporan pelanggaran (ulasan kasar, komentar SARA, atau konten Buzz yang tidak relevan) yang diadukan oleh warga.
+3. **Tindakan Cepat (Bulk Actions):** Tangguhkan (*suspend*) beberapa akun pelanggar aturan sekaligus, atau hapus konten bermasalah dalam satu klik.
+4. **Evaluasi Banding Akun:** Pengguna yang ditangguhkan dapat mengajukan surat banding. Admin dapat membaca argumen mereka dan memutuskan untuk menerima banding (mengaktifkan kembali akun) atau menolaknya.
+5. **Jejak Audit (Audit Logs):** Seluruh tindakan admin dicatat secara otomatis dalam sistem riwayat aktivitas agar pengelolaan platform tetap transparan dan akuntabel.
 
 ---
 
-## 🤖 Middleware & SEO Meta-Injection
+## 💡 Tips Berinteraksi untuk Warga Baru
+* **Lengkapi Profil:** Unggah foto profil terbaik Anda dan tulis bio singkat tentang selera film Anda di halaman Pengaturan Profil.
+* **Gunakan Filter Buzz:** Cari diskusi seru di forum Buzz menggunakan filter "Terbaru", "Terpopuler", atau cari berdasarkan tag film tertentu.
+* **Patuhi Pedoman Komunitas:** Saling menghargai perbedaan opini sinematik. Gunakan fitur laporan jika Anda menemukan pelanggaran di dalam aplikasi.
 
-File `middleware.ts` berjalan pada Node.js runtime untuk memastikan crawler media sosial membaca pratinjau konten dinamis secara akurat tanpa memerlukan SSR penuh:
-
-- Mengintersepsi permintaan dari agen: `WhatsApp`, `Twitterbot`, `facebookexternalhit`, `LinkedInBot`, `Googlebot`, `TelegramBot`, `Discordbot`, dll.
-- Mengambil judul, gambar sampul, dan sinopsis langsung dari Firestore REST API untuk rute `/article/:slug` dan `/film/:id`.
-- Menyuntikkan tag `<meta property="og:title">`, `<meta property="og:image">`, dan `<meta name="twitter:card">` ke dalam dokumen HTML mentah sebelum dikirim ke crawler.
-
----
-
-## 🚢 Panduan Deployment
-
-### Opsi A: Deployment ke Vercel (Rekomendasi)
-
-1. Hubungkan repositori GitHub Anda ke **Vercel Dashboard**.
-2. Vercel akan mendeteksi konfigurasi `vercel.json` secara otomatis.
-3. Tambahkan environment variable jika diperlukan (`TMDB_API_KEY`).
-4. Klik **Deploy**. File `middleware.ts` dan `api/tmdb.ts` akan berjalan otomatis sebagai Serverless Functions.
-
-### Opsi B: Deployment Server Sendiri (Docker / Cloud Run / VPS)
-
-1. Jalankan kompilasi produksi:
-   ```bash
-   npm run build
-   ```
-2. Jalankan server Node.js:
-   ```bash
-   npm start
-   ```
-3. Server Express akan melayani berkas statis `dist/` dan API proxy pada port `3000`.
-
-### Opsi C: Deploy Firebase Rules
-Jika Anda mengubah berkas aturan keamanan, deploy langsung menggunakan Firebase CLI:
-```bash
-firebase deploy --only firestore:rules,storage
-```
-
----
-
-## 📄 Lisensi
-
-Didistribusikan di bawah Lisensi **MIT**. Hak Cipta © 2026 **Sotoy Film**. Seluruh aset dan merek dagang film adalah milik masing-masing pemegang hak cipta.
+Selamat bersenang-senang dan mari menjadi **Si Paling Sotoy** di komunitas film terbaik Indonesia! 🎬🍿
