@@ -154,7 +154,7 @@ export function resolveConfigFilms(
   if (config.category && config.category.trim()) {
     const cat = config.category.trim().toLowerCase();
     filtered = filtered.filter(f => {
-      const filmType = (f.type || f.category || '').toLowerCase();
+      const filmType = (f.type || '').toLowerCase();
       if (cat === 'movie' || cat === 'movies') {
         return filmType === 'movie' || filmType === 'movies' || !filmType;
       }

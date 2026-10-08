@@ -479,7 +479,7 @@ export type HomepageSectionKey =
 export interface SectionConfig {
   title?: string;
   sourceType: 'auto' | 'manual';
-  category?: MainCategory | 'movie' | 'series' | 'anime';
+  category?: MainCategory | 'movie' | 'series' | 'anime' | '';
   tag?: string;
   sortBy?: 'newest' | 'rating' | 'views';
   limit?: number;

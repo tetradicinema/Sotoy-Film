@@ -72,6 +72,8 @@ async function testConnection() {
   } catch (error) {
     if (error instanceof Error && error.message.includes('the client is offline')) {
       console.error("Please check your Firebase configuration.");
+    } else {
+      console.warn("Firestore connection check notice:", error instanceof Error ? error.message : error);
     }
   }
 }

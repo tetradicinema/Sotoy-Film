@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useApp } from '../context/AppContext';
 import { UserRole } from '../types';
@@ -34,13 +34,16 @@ export const FALLBACK_AUTHOR: DynamicAuthor = {
   loading: false,
 };
 
+// Global in-flight promises map to deduplicate concurrent requests for the same authorId across components
+const inFlightRequests = new Map<string, Promise<DynamicAuthor | null>>();
+
 export function useDynamicArticleAuthor(authorId?: string, initialData?: any): DynamicAuthor {
   const { userProfilesCache, cacheUserProfile, allUsers, publishedArticles } = useApp();
 
-  // Calculate article count for given authorId
-  const computedArticleCount = authorId
-    ? (publishedArticles || []).filter(a => a.authorId === authorId || a.author?.id === authorId).length
-    : 0;
+  // Compute article count dynamically without tying author profile fetching to publishedArticles state
+  const computedArticleCount = (!authorId || authorId === 'system-redaksi')
+    ? ((publishedArticles || []).length || 5)
+    : (publishedArticles || []).filter(a => a.authorId === authorId || a.author?.id === authorId).length;
 
   const getBadgeForRole = (role?: UserRole, customBadge?: string): string | undefined => {
     if (customBadge) return customBadge;
@@ -54,7 +57,7 @@ export function useDynamicArticleAuthor(authorId?: string, initialData?: any): D
     if (!authorId || authorId === 'system-redaksi') {
       return {
         ...FALLBACK_AUTHOR,
-        articleCount: (publishedArticles || []).length || 5,
+        articleCount: computedArticleCount,
       };
     }
     if (userProfilesCache && userProfilesCache[authorId]) {
@@ -113,11 +116,13 @@ export function useDynamicArticleAuthor(authorId?: string, initialData?: any): D
     if (!authorId || authorId === 'system-redaksi') {
       setAuthor({
         ...FALLBACK_AUTHOR,
-        articleCount: (publishedArticles || []).length || 5,
+        articleCount: 0,
+        loading: false,
       });
       return;
     }
 
+    // 1. Check local cache
     if (userProfilesCache && userProfilesCache[authorId]) {
       const cached = userProfilesCache[authorId];
       setAuthor({
@@ -131,48 +136,88 @@ export function useDynamicArticleAuthor(authorId?: string, initialData?: any): D
         customBadge: cached.customBadge || getBadgeForRole(cached.role, cached.badge),
         roleBadge: cached.roleBadge || cached.customBadge || getBadgeForRole(cached.role),
         bio: cached.bio,
-        articleCount: computedArticleCount,
+        articleCount: 0,
         loading: false,
       });
       return;
     }
 
-    const userDocRef = doc(db, 'users', authorId);
-    const unsubscribe = onSnapshot(
-      userDocRef,
-      (snapshot) => {
-        if (snapshot.exists()) {
-          const u = snapshot.data();
-          const profileData: DynamicAuthor = {
-            id: snapshot.id,
-            name: u.name || u.displayName || 'Tim Redaksi',
-            displayName: u.displayName || u.name || 'Tim Redaksi',
-            avatar: u.avatar || u.avatarURL || u.photoURL || FALLBACK_AUTHOR.avatar,
-            avatarURL: u.avatarURL || u.avatar || u.photoURL || FALLBACK_AUTHOR.avatar,
-            role: u.role || 'warga_sotoy',
-            roleTitle: u.roleTitle || u.role,
-            customBadge: u.customBadge || u.badge || getBadgeForRole(u.role),
-            roleBadge: u.roleBadge || u.customBadge || getBadgeForRole(u.role),
-            bio: u.bio,
-            articleCount: computedArticleCount,
-            loading: false,
-          };
-          setAuthor(profileData);
-          if (cacheUserProfile) {
-            cacheUserProfile(authorId, profileData);
+    // 2. Check allUsers list
+    const found = allUsers?.find(u => u.id === authorId);
+    if (found) {
+      setAuthor({
+        id: found.id,
+        name: found.name || 'Tim Redaksi',
+        displayName: found.name || 'Tim Redaksi',
+        avatar: found.avatar || FALLBACK_AUTHOR.avatar,
+        avatarURL: found.avatar || FALLBACK_AUTHOR.avatar,
+        role: found.role || 'warga_sotoy',
+        roleTitle: found.roleTitle,
+        customBadge: found.customBadge || getBadgeForRole(found.role),
+        roleBadge: found.roleBadge || getBadgeForRole(found.role),
+        bio: found.bio,
+        articleCount: 0,
+        loading: false,
+      });
+      return;
+    }
+
+    // 3. One-time fetch via getDoc with in-flight deduplication
+    let isCancelled = false;
+    let promise = inFlightRequests.get(authorId);
+
+    if (!promise) {
+      promise = (async () => {
+        try {
+          const userDocRef = doc(db, 'users', authorId);
+          const snapshot = await getDoc(userDocRef);
+          if (snapshot.exists()) {
+            const u = snapshot.data();
+            const profileData: DynamicAuthor = {
+              id: snapshot.id,
+              name: u.name || u.displayName || 'Tim Redaksi',
+              displayName: u.displayName || u.name || 'Tim Redaksi',
+              avatar: u.avatar || u.avatarURL || u.photoURL || FALLBACK_AUTHOR.avatar,
+              avatarURL: u.avatarURL || u.avatar || u.photoURL || FALLBACK_AUTHOR.avatar,
+              role: u.role || 'warga_sotoy',
+              roleTitle: u.roleTitle || u.role,
+              customBadge: u.customBadge || u.badge || getBadgeForRole(u.role),
+              roleBadge: u.roleBadge || u.customBadge || getBadgeForRole(u.role),
+              bio: u.bio,
+              articleCount: 0,
+              loading: false,
+            };
+            return profileData;
           }
-        } else {
-          setAuthor({ ...FALLBACK_AUTHOR, id: authorId, articleCount: computedArticleCount, loading: false });
+        } catch (err) {
+          console.warn(`[useDynamicArticleAuthor] Error loading user ${authorId}:`, err);
         }
-      },
-      (err) => {
-        console.warn(`[useDynamicArticleAuthor] Error loading user ${authorId}:`, err);
-        setAuthor({ ...FALLBACK_AUTHOR, id: authorId, articleCount: computedArticleCount, loading: false });
+        return null;
+      })();
+
+      inFlightRequests.set(authorId, promise);
+    }
+
+    promise.then((profileData) => {
+      inFlightRequests.delete(authorId);
+      if (isCancelled) return;
+      if (profileData) {
+        setAuthor(profileData);
+        if (cacheUserProfile) {
+          cacheUserProfile(authorId, profileData);
+        }
+      } else {
+        setAuthor({ ...FALLBACK_AUTHOR, id: authorId, articleCount: 0, loading: false });
       }
-    );
+    });
 
-    return () => unsubscribe();
-  }, [authorId, userProfilesCache, publishedArticles, computedArticleCount]);
+    return () => {
+      isCancelled = true;
+    };
+  }, [authorId]);
 
-  return author;
+  return {
+    ...author,
+    articleCount: computedArticleCount,
+  };
 }

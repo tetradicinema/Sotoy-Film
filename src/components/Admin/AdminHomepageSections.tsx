@@ -60,7 +60,7 @@ export const AdminHomepageSections: React.FC = () => {
     const defaultVal: SectionConfig = {
       title: '',
       sourceType: 'auto',
-      category: '',
+      category: undefined,
       tag: '',
       sortBy: 'newest',
       limit: 5,
@@ -72,7 +72,7 @@ export const AdminHomepageSections: React.FC = () => {
     return {
       ...defaultVal,
       ...base,
-      itemIds: base.itemIds || [],
+      itemIds: (base as SectionConfig).itemIds || [],
     };
   }, [draftConfigs, homepageSectionsConfig, activeSectionKey]);
 
@@ -108,7 +108,7 @@ export const AdminHomepageSections: React.FC = () => {
     const defaultReset: SectionConfig = {
       title: '',
       sourceType: 'auto',
-      category: '',
+      category: undefined,
       tag: '',
       sortBy: 'newest',
       limit: 5,
