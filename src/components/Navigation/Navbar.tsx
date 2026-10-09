@@ -306,18 +306,6 @@ export const Navbar: React.FC = () => {
               >
                 <span>{t('nav.buzzFeed', 'Buzz Feed')}</span>
               </button>
-
-              <button
-                id="nav-guide"
-                onClick={() => navigateTo('faq-guide')}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
-                  currentView === 'faq-guide'
-                    ? 'bg-[#FF2E7E] text-white shadow-sm'
-                    : 'text-slate-300 hover:text-white hover:bg-white/[0.04]'
-                }`}
-              >
-                <span>Panduan</span>
-              </button>
             </div>
 
             {/* Right Controls: Search & User Profile */}

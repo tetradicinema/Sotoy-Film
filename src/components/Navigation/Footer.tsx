@@ -237,7 +237,7 @@ export const Footer: React.FC = () => {
                 }`}
               >
                 <HelpCircle className="w-3.5 h-3.5" />
-                <span>Panduan Lengkap (FAQ)</span>
+                <span>Panduan</span>
               </button>
 
               <button
