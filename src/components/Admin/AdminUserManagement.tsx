@@ -60,7 +60,7 @@ export const AdminUserManagement: React.FC = () => {
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await refreshAllUsers();
+      await refreshAllUsers({ force: true });
       showToast('Data pengguna berhasil diperbarui! 🔄');
     } catch {
       showToast('Gagal memperbarui data pengguna.');

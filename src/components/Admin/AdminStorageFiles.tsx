@@ -19,7 +19,11 @@ import { User, UploadedFile } from '../../types';
 import { RoleBadge } from '../Common/RoleBadge';
 
 export const AdminStorageFiles: React.FC = () => {
-  const { allUsers, files } = useApp();
+  const { allUsers, files, fetchAdminFiles, hasMoreFiles } = useApp();
+
+  useEffect(() => {
+    fetchAdminFiles();
+  }, [fetchAdminFiles]);
 
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -228,7 +232,7 @@ export const AdminStorageFiles: React.FC = () => {
                           ) : (
                             <FileText className="w-6 h-6 text-cyan-400" />
                           )}
-                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity">
+                          <div className="hidden md:flex absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 items-center justify-center gap-2 transition-opacity">
                             {file.type.startsWith('image/') && (
                               <button
                                 onClick={() => setActiveLightboxFile(file)}
@@ -248,6 +252,26 @@ export const AdminStorageFiles: React.FC = () => {
                               <ExternalLink className="w-3.5 h-3.5" />
                             </a>
                           </div>
+                        </div>
+                        <div className="flex md:hidden items-center justify-center gap-2 py-1.5 bg-slate-950 border-t border-slate-800">
+                          {file.type.startsWith('image/') && (
+                            <button
+                              onClick={() => setActiveLightboxFile(file)}
+                              className="w-7 h-7 rounded-full bg-cyan-400 text-slate-950 flex items-center justify-center"
+                              title="Lihat Foto"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <a
+                            href={file.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="w-7 h-7 rounded-full bg-slate-800 text-white flex items-center justify-center"
+                            title="Tautan Langsung"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
                         </div>
                         <div className="p-2.5 space-y-1">
                           <p className="text-[10px] font-bold text-white truncate" title={file.name}>

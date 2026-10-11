@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { FilmItem } from '../../types';
+import { isArticleUnpublished } from '../../utils/articleHelpers';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
 import { SEOHead } from '../SEO/SEOHead';
 import { createArticleSchemaFromArticle, generateBreadcrumbSchema } from '../../utils/schemaHelpers';
@@ -69,11 +70,16 @@ export const ArticleDetailPage: React.FC = () => {
 
   const { slug } = useParams<{ slug?: string }>();
 
-  const article = (slug ? (articles.find(a => (a.slug && a.slug === slug) || a.id === slug || slugify(a.title) === slug) || INITIAL_ARTICLES.find(a => (a.slug && a.slug === slug) || a.id === slug || slugify(a.title) === slug)) : null)
+  const rawArticle = (slug ? (articles.find(a => (a.slug && a.slug === slug) || a.id === slug || slugify(a.title) === slug) || INITIAL_ARTICLES.find(a => (a.slug && a.slug === slug) || a.id === slug || slugify(a.title) === slug)) : null)
     || articles.find(a => a.id === selectedArticleId)
     || INITIAL_ARTICLES.find(a => a.id === selectedArticleId)
     || articles[0]
     || INITIAL_ARTICLES[0];
+
+  const unpublished = isArticleUnpublished(rawArticle);
+  const isOwner = currentUser?.id && (rawArticle?.author?.id === currentUser.id || rawArticle?.authorId === currentUser.id);
+  const isAuthorized = isOwner || isAdmin || isWriter;
+  const article = (rawArticle && (!unpublished || isAuthorized)) ? rawArticle : null;
   const author = useDynamicArticleAuthor(article?.authorId || article?.author?.id, article?.author);
   const [commentText, setCommentText] = useState('');
   const [rateModalOpen, setRateModalOpen] = useState(false);

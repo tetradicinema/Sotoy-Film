@@ -8,6 +8,7 @@ import { isBotUserAgent } from "./src/lib/edge/botDetection";
 import { injectMetaTags, FALLBACK_HTML_TEMPLATE } from "./src/lib/edge/metaInjection";
 import { buildRouteMetadata } from "./src/utils/seoMetadata";
 import { fetchEntityData } from "./src/lib/edge/firestoreRest";
+import { isArticleUnpublished } from "./src/utils/articleHelpers";
 
 async function startServer() {
   const app = express();
@@ -124,7 +125,7 @@ async function startServer() {
           } else if (pathname.startsWith("/artikel/") || pathname.startsWith("/article/")) {
             const slug = decodeURIComponent(pathname.replace(/^\/(?:artikel|article)\/?/, "")).replace(/\/$/, "");
             const data = await fetchEntityData("articles", slug);
-            if (data) {
+            if (data && !isArticleUnpublished(data)) {
               title = `${data.seoTitle || data.title || "Artikel"} — Sotoy Film`;
               description = data.metaDescription || data.excerpt || (typeof data.content === "string" ? data.content.slice(0, 160) : "");
               image = data.ogImage || data.coverImage || "";

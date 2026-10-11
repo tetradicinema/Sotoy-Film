@@ -37,6 +37,10 @@ export const FALLBACK_AUTHOR: DynamicAuthor = {
 // Global in-flight promises map to deduplicate concurrent requests for the same authorId across components
 const inFlightRequests = new Map<string, Promise<DynamicAuthor | null>>();
 
+// Module-level cache of authorIds already looked up (including ones that returned null = "does not exist")
+// Ensures missing author costs at most one getDoc per session instead of one per card mount
+const authorLookupCache = new Map<string, DynamicAuthor | null>();
+
 export function useDynamicArticleAuthor(authorId?: string, initialData?: any): DynamicAuthor {
   const { userProfilesCache, cacheUserProfile, allUsers, publishedArticles } = useApp();
 
@@ -58,6 +62,22 @@ export function useDynamicArticleAuthor(authorId?: string, initialData?: any): D
       return {
         ...FALLBACK_AUTHOR,
         articleCount: computedArticleCount,
+      };
+    }
+    if (authorLookupCache.has(authorId)) {
+      const cached = authorLookupCache.get(authorId);
+      if (cached) {
+        return {
+          ...cached,
+          articleCount: computedArticleCount,
+          loading: false,
+        };
+      }
+      return {
+        ...FALLBACK_AUTHOR,
+        id: authorId,
+        articleCount: computedArticleCount,
+        loading: false,
       };
     }
     if (userProfilesCache && userProfilesCache[authorId]) {
@@ -119,6 +139,17 @@ export function useDynamicArticleAuthor(authorId?: string, initialData?: any): D
         articleCount: 0,
         loading: false,
       });
+      return;
+    }
+
+    // 0. Check module-level lookup cache (including "does not exist")
+    if (authorLookupCache.has(authorId)) {
+      const cached = authorLookupCache.get(authorId);
+      if (cached) {
+        setAuthor({ ...cached, articleCount: 0, loading: false });
+      } else {
+        setAuthor({ ...FALLBACK_AUTHOR, id: authorId, articleCount: 0, loading: false });
+      }
       return;
     }
 
@@ -200,6 +231,8 @@ export function useDynamicArticleAuthor(authorId?: string, initialData?: any): D
 
     promise.then((profileData) => {
       inFlightRequests.delete(authorId);
+      // Cache result in module-level cache (null means "does not exist")
+      authorLookupCache.set(authorId, profileData);
       if (isCancelled) return;
       if (profileData) {
         setAuthor(profileData);

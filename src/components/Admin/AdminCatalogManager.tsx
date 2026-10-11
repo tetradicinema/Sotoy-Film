@@ -34,6 +34,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { FilmItem, CastMember } from '../../types';
 import { AdminBatchTmdbModal } from './AdminBatchTmdbModal';
+import { slugify } from '../../utils/slugify';
 import { 
   formatDuration, 
   generateSuggestedTags, 
@@ -522,6 +523,7 @@ export const AdminCatalogManager: React.FC = () => {
       const filmPayload = {
         title: formData.title.trim(),
         originalTitle: formData.originalTitle.trim() || undefined,
+        slug: ((formData as any).slug?.trim()) || slugify(formData.title.trim()),
         type: formData.type,
         year: parsedYear,
         releaseDate: formData.releaseDate ? formData.releaseDate.trim() : undefined,
@@ -1381,7 +1383,7 @@ export const AdminCatalogManager: React.FC = () => {
                                 castDetails: prev.castDetails.filter((_, i) => i !== idx)
                               }));
                             }}
-                            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                            className="absolute -top-1.5 -right-1.5 w-7 h-7 md:w-5 md:h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shadow-md"
                             title="Hapus pemeran ini"
                           >
                             <X className="w-3 h-3" />

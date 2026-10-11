@@ -100,6 +100,7 @@ export const FilmDetailPage: React.FC = () => {
     selectedFilmId,
     films,
     articles,
+    publishedArticles,
     ratings,
     getRatingsForFilm,
     toggleWatchlist,
@@ -301,7 +302,7 @@ export const FilmDetailPage: React.FC = () => {
       ];
 
   // Articles from Penulis Sotoy discussing this film
-  const relatedArticles = articles.filter(a =>
+  const relatedArticles = publishedArticles.filter(a =>
     a.relatedFilmId === film.id ||
     (a.relatedFilmIds && Array.isArray(a.relatedFilmIds) && a.relatedFilmIds.includes(film.id)) ||
     a.title.toLowerCase().includes(film.title.toLowerCase()) ||

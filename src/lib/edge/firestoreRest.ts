@@ -87,6 +87,8 @@ const META_FIELD_PATHS = [
   'coverImage',
   'ogImage',
   'type',
+  'status',
+  'scheduledAt',
 ];
 
 /**
@@ -202,15 +204,34 @@ export async function fetchCollectionDocuments(
 }
 
 /**
- * Fetches content from Firestore REST API by direct ID or by searching collection with 3-way slug matching:
- * 1. Direct document GET by ID (fast path)
- * 2. Full collection in-memory matching: (f.slug === slug || slugify(f.title) === slug || f.id === slug)
+ * Module-level negative cache for slugs that were not found (30-minute TTL).
+ * Prevents repeated crawls of unknown or nonexistent URLs from triggering expensive collection scans.
+ */
+const NEGATIVE_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const negativeCache = new Map<string, number>();
+
+/**
+ * Fetches content from Firestore REST API by direct ID or by searching collection with slug matching:
+ * 1. Negative cache check (0 reads if known missing slug)
+ * 2. Direct document GET if slug is the document ID (fast path: 1 read)
+ * 3. Firestore REST runQuery with where slug == X and limit 1 (targeted query: 1 read)
+ * 4. Full collection in-memory scan fallback only if runQuery returns nothing
+ * 5. Negative cache recording if entity was not found
  */
 export async function fetchEntityData(
   collection: 'films' | 'articles',
   slug: string
 ): Promise<Record<string, any> | null> {
-  // 1. Direct document GET if slug happens to be the document ID
+  const cacheKey = `${collection}:${slug}`;
+  const now = Date.now();
+
+  // 1. Negative cache check: skip immediately if recently proven not to exist
+  const negativeCachedAt = negativeCache.get(cacheKey);
+  if (negativeCachedAt && now - negativeCachedAt < NEGATIVE_CACHE_TTL_MS) {
+    return null;
+  }
+
+  // 2. Direct document GET if slug happens to be the document ID
   try {
     const directRes = await fetchWithTimeout(
       `${FIRESTORE_DOCUMENTS_URL}/${collection}/${encodeURIComponent(slug)}?key=${FIRESTORE_API_KEY}`,
@@ -221,14 +242,59 @@ export async function fetchEntityData(
       const doc = await directRes.json();
       const parsed = parseFirestoreFields(doc);
       if (parsed && Object.keys(parsed).length > 0) {
+        negativeCache.delete(cacheKey);
         return parsed;
       }
     }
   } catch {
-    // Non-fatal, proceed to collection search
+    // Non-fatal, proceed to query search
   }
 
-  // 2. Full collection fetch & in-memory match (same 3-way matching logic as FilmDetailPage & ArticleDetailPage)
+  // 3. Fast targeted query: runQuery with where slug == X and limit 1 (1 read)
+  try {
+    const queryRes = await fetchWithTimeout(
+      `${FIRESTORE_DOCUMENTS_URL}:runQuery?key=${FIRESTORE_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          structuredQuery: {
+            from: [{ collectionId: collection }],
+            where: {
+              fieldFilter: {
+                field: { fieldPath: 'slug' },
+                op: 'EQUAL',
+                value: { stringValue: slug },
+              },
+            },
+            select: {
+              fields: META_FIELD_PATHS.map((fieldPath) => ({ fieldPath })),
+            },
+            limit: 1,
+          },
+        }),
+      },
+      2000
+    );
+
+    if (queryRes.ok) {
+      const queryResults = await queryRes.json();
+      if (Array.isArray(queryResults)) {
+        const matchedDoc = queryResults.find((r: any) => r && r.document)?.document;
+        if (matchedDoc) {
+          const parsed = parseFirestoreFields(matchedDoc);
+          if (parsed && Object.keys(parsed).length > 0) {
+            negativeCache.delete(cacheKey);
+            return parsed;
+          }
+        }
+      }
+    }
+  } catch (queryErr) {
+    console.warn('[Edge Firestore] runQuery targeted search fallback notice:', queryErr);
+  }
+
+  // 4. Full collection fetch & in-memory match (fallback only if runQuery returned nothing)
   try {
     const docs = await fetchCollectionDocuments(collection);
     for (const doc of docs) {
@@ -243,6 +309,7 @@ export async function fetchEntityData(
         docId === slug;
 
       if (isMatch) {
+        negativeCache.delete(cacheKey);
         return parsed;
       }
     }
@@ -250,5 +317,7 @@ export async function fetchEntityData(
     console.error('[Edge Firestore] Entity lookup error:', err);
   }
 
+  // 5. Store in negative cache so repeated crawls of unknown URLs do not trigger scans
+  negativeCache.set(cacheKey, Date.now());
   return null;
 }

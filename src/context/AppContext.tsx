@@ -126,6 +126,8 @@ import {
   where,
   orderBy,
   limit,
+  startAfter,
+  QueryDocumentSnapshot,
   increment,
   writeBatch,
   runTransaction,
@@ -363,7 +365,7 @@ interface AppContextType {
   followingIds: string[];
   followersIds: string[];
   allUsers: User[];
-  refreshAllUsers: () => Promise<void>;
+  refreshAllUsers: (opts?: { force?: boolean }) => Promise<void>;
   toggleFollowUser: (userId: string) => void;
   isFollowing: (userId: string) => boolean;
   getUserById: (userId: string) => User | undefined;
@@ -495,9 +497,42 @@ interface AppContextType {
   // Dynamic user profile cache
   userProfilesCache: Record<string, any>;
   cacheUserProfile: (userId: string, profile: any) => void;
+  // On-demand bounded admin fetchers with manual refresh
+  fetchAdminUserEmails: (opts?: { force?: boolean }) => Promise<void>;
+  fetchAuditLogs: (opts?: { loadMore?: boolean; force?: boolean }) => Promise<void>;
+  hasMoreAuditLogs: boolean;
+  fetchAdminAppeals: (opts?: { loadMore?: boolean; force?: boolean }) => Promise<void>;
+  hasMoreAppeals: boolean;
+  fetchAdminReports: (opts?: { loadMore?: boolean; force?: boolean }) => Promise<void>;
+  hasMoreReports: boolean;
+  fetchAdminFiles: (opts?: { loadMore?: boolean; force?: boolean }) => Promise<void>;
+  hasMoreFiles: boolean;
+  fetchAdminCriticSubmissions: (opts?: { loadMore?: boolean; force?: boolean }) => Promise<void>;
+  hasMoreCriticSubmissions: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+
+const USERS_CACHE_KEY = 'sotoy_cached_all_users';
+const USERS_CACHE_TS_KEY = 'sotoy_cached_all_users_ts';
+const USERS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+const hydrateCachedUsers = (): { users: User[]; ts: number } | null => {
+  try {
+    const raw = localStorage.getItem(USERS_CACHE_KEY);
+    const rawTs = localStorage.getItem(USERS_CACHE_TS_KEY);
+    if (!raw || !rawTs) return null;
+    const ts = parseInt(rawTs, 10);
+    if (Date.now() - ts > USERS_CACHE_TTL_MS) return null; // Expired
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return { users: parsed, ts };
+    }
+  } catch {
+    // If parsing fails, ignore the cache silently
+  }
+  return null;
+};
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Authentication & Session States
@@ -539,11 +574,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isLoadingBuzz, setIsLoadingBuzz] = useState<boolean>(true);
   const [ratings, setRatings] = useState<UserRating[]>(INITIAL_RATINGS);
   const [criticSubmissions, setCriticSubmissions] = useState<CriticSubmission[]>([]);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
+
+  // Hydrate allUsers from localStorage cache on load so repeat visits within 10 minutes cost 0 reads
+  const initialCachedUsers = useMemo(() => hydrateCachedUsers(), []);
+  const [allUsers, setAllUsers] = useState<User[]>(() => initialCachedUsers?.users || []);
+  const lastUsersFetchTsRef = useRef<number>(initialCachedUsers?.ts || 0);
+  const inFlightUsersFetchRef = useRef<Promise<void> | null>(null);
+
   const [appeals, setAppeals] = useState<AccountAppeal[]>([]);
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(INITIAL_AUDIT_LOGS);
-  const [userProfilesCache, setUserProfilesCache] = useState<Record<string, any>>({});
+  const [userProfilesCache, setUserProfilesCache] = useState<Record<string, any>>(() => {
+    const cache: Record<string, any> = {};
+    if (initialCachedUsers?.users) {
+      initialCachedUsers.users.forEach(u => {
+        cache[u.id] = u;
+      });
+    }
+    return cache;
+  });
   const [homepageSectionsConfig, setHomepageSectionsConfig] = useState<HomepageSectionsConfig | null>(null);
   const [homepageConfigLoaded, setHomepageConfigLoaded] = useState<boolean>(false);
 
@@ -597,17 +646,55 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  // One-time fetch for all users without permanent real-time snapshot overhead (capped at 500)
-  const refreshAllUsers = useCallback(async () => {
-    try {
-      const snapshot = await getDocs(query(collection(db, 'users'), limit(500)));
-      mapRawUsers(snapshot.docs);
-    } catch (err: any) {
-      console.warn('[Firestore] users fetch fallback notice:', err?.message || err);
+  // One-time fetch for all users with 10-minute caching and concurrent in-flight deduplication
+  const refreshAllUsers = useCallback(async (opts?: { force?: boolean }): Promise<void> => {
+    const now = Date.now();
+    const isForced = Boolean(opts?.force);
+
+    // Skip fetch if successful within last 10 minutes, unless force is true
+    if (!isForced && (now - lastUsersFetchTsRef.current < USERS_CACHE_TTL_MS)) {
+      return;
     }
+
+    // Dedupe concurrent calls (share one in-flight promise)
+    if (inFlightUsersFetchRef.current) {
+      return inFlightUsersFetchRef.current;
+    }
+
+    const fetchPromise = (async () => {
+      try {
+        const snapshot = await getDocs(query(collection(db, 'users'), limit(500)));
+        mapRawUsers(snapshot.docs);
+        lastUsersFetchTsRef.current = Date.now();
+
+        // Persist plain JSON-safe fields in localStorage with timestamp
+        try {
+          const userMap = new Map<string, User>();
+          snapshot.docs.forEach(docSnap => {
+            const data = docSnap.data() as User;
+            const id = data.id || docSnap.id;
+            if (id) {
+              userMap.set(id, { ...data, id });
+            }
+          });
+          const plainUsers = Array.from(userMap.values());
+          localStorage.setItem(USERS_CACHE_KEY, JSON.stringify(plainUsers));
+          localStorage.setItem(USERS_CACHE_TS_KEY, String(Date.now()));
+        } catch {
+          // silently ignore storage errors
+        }
+      } catch (err: any) {
+        console.warn('[Firestore] users fetch fallback notice:', err?.message || err);
+      } finally {
+        inFlightUsersFetchRef.current = null;
+      }
+    })();
+
+    inFlightUsersFetchRef.current = fetchPromise;
+    return fetchPromise;
   }, [mapRawUsers]);
 
-  // One-time getDocs on mount (periodic 3-minute interval removed to eliminate unnecessary reads)
+  // One-time getDocs on mount (hydrated from cache if within 10 minutes)
   useEffect(() => {
     refreshAllUsers();
   }, [refreshAllUsers]);
@@ -1072,91 +1159,284 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [isAdmin, currentView, refreshAllUsers]);
 
-  // Admin-only realtime subscription to userPrivate collection to join emails in memory
+  // Admin on-demand loader for userPrivate collection (joined into memory when user management opens)
   const [adminUserEmails, setAdminUserEmails] = useState<Record<string, string>>({});
+  const lastAdminEmailsFetchTsRef = useRef<number>(0);
+  const inFlightAdminEmailsRef = useRef<Promise<void> | null>(null);
 
-  useEffect(() => {
-    if (!isAdmin) {
-      setAdminUserEmails({});
+  const fetchAdminUserEmails = useCallback(async (opts?: { force?: boolean }) => {
+    if (!isAdmin) return;
+    const now = Date.now();
+    if (!opts?.force && (now - lastAdminEmailsFetchTsRef.current < 10 * 60 * 1000) && Object.keys(adminUserEmails).length > 0) {
       return;
     }
-    const unsub = onSnapshot(
-      collection(db, 'userPrivate'),
-      (snapshot) => {
+    if (inFlightAdminEmailsRef.current) return inFlightAdminEmailsRef.current;
+
+    const promise = (async () => {
+      try {
+        const snap = await getDocs(
+          query(collection(db, 'userPrivate'), orderBy('updatedAt', 'desc'), limit(100))
+        );
         const map: Record<string, string> = {};
-        snapshot.forEach((docSnap) => {
+        snap.forEach((docSnap) => {
           const data = docSnap.data() as UserPrivate;
           if (data?.email) {
             map[docSnap.id] = data.email;
           }
         });
-        setAdminUserEmails(map);
-      },
-      (err) => {
-        console.warn('[Firestore] userPrivate admin subscription notice:', err.message);
+        setAdminUserEmails(prev => ({ ...prev, ...map }));
+        lastAdminEmailsFetchTsRef.current = Date.now();
+      } catch (err: any) {
+        console.warn('[Firestore] userPrivate fetch notice:', err?.message || err);
+      } finally {
+        inFlightAdminEmailsRef.current = null;
       }
-    );
-    return () => unsub();
-  }, [isAdmin]);
+    })();
+    inFlightAdminEmailsRef.current = promise;
+    return promise;
+  }, [isAdmin, adminUserEmails]);
 
-  // Scoped subscriptions for administrative collections: appeals, auditLogs, reports
+  // Bounded on-demand fetchers for auditLogs with manual refresh and startAfter pagination
+  const [hasMoreAuditLogs, setHasMoreAuditLogs] = useState<boolean>(false);
+  const lastAuditDocRef = useRef<QueryDocumentSnapshot | null>(null);
+  const isFetchingAuditLogsRef = useRef<boolean>(false);
+
+  const fetchAuditLogs = useCallback(async (opts?: { loadMore?: boolean; force?: boolean }) => {
+    if (!isAdmin && !isWriter) return;
+    if (isFetchingAuditLogsRef.current) return;
+    isFetchingAuditLogsRef.current = true;
+    try {
+      const constraints: any[] = [orderBy('timestamp', 'desc')];
+      if (opts?.loadMore && lastAuditDocRef.current) {
+        constraints.push(startAfter(lastAuditDocRef.current));
+      }
+      constraints.push(limit(100));
+
+      const q = query(collection(db, 'auditLogs'), ...constraints);
+      const snap = await getDocs(q);
+      const items: AuditLog[] = [];
+      snap.forEach(docSnap => {
+        items.push({ ...docSnap.data() as AuditLog, id: docSnap.id });
+      });
+
+      if (snap.docs.length > 0) {
+        lastAuditDocRef.current = snap.docs[snap.docs.length - 1];
+      }
+      setHasMoreAuditLogs(snap.docs.length === 100);
+
+      if (opts?.loadMore) {
+        setAuditLogs(prev => {
+          const map = new Map<string, AuditLog>();
+          prev.forEach(l => map.set(l.id, l));
+          items.forEach(l => map.set(l.id, l));
+          return Array.from(map.values()).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        });
+      } else {
+        setAuditLogs(items.length > 0 ? items : INITIAL_AUDIT_LOGS);
+      }
+    } catch (err: any) {
+      console.warn('[Firestore] fetchAuditLogs error:', err?.message || err);
+    } finally {
+      isFetchingAuditLogsRef.current = false;
+    }
+  }, [isAdmin, isWriter]);
+
+  // Bounded on-demand fetcher for admin appeals
+  const [hasMoreAppeals, setHasMoreAppeals] = useState<boolean>(false);
+  const lastAppealDocRef = useRef<QueryDocumentSnapshot | null>(null);
+  const isFetchingAppealsRef = useRef<boolean>(false);
+
+  const fetchAdminAppeals = useCallback(async (opts?: { loadMore?: boolean; force?: boolean }) => {
+    if (!isAdmin && !isWriter) return;
+    if (isFetchingAppealsRef.current) return;
+    isFetchingAppealsRef.current = true;
+    try {
+      const constraints: any[] = [orderBy('createdAt', 'desc')];
+      if (opts?.loadMore && lastAppealDocRef.current) {
+        constraints.push(startAfter(lastAppealDocRef.current));
+      }
+      constraints.push(limit(100));
+
+      const q = query(collection(db, 'appeals'), ...constraints);
+      const snap = await getDocs(q);
+      const items: AccountAppeal[] = [];
+      snap.forEach(docSnap => {
+        items.push({ ...docSnap.data() as AccountAppeal, id: docSnap.id });
+      });
+
+      if (snap.docs.length > 0) {
+        lastAppealDocRef.current = snap.docs[snap.docs.length - 1];
+      }
+      setHasMoreAppeals(snap.docs.length === 100);
+
+      if (opts?.loadMore) {
+        setAppeals(prev => {
+          const map = new Map<string, AccountAppeal>();
+          prev.forEach(a => map.set(a.id, a));
+          items.forEach(a => map.set(a.id, a));
+          return Array.from(map.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        });
+      } else {
+        setAppeals(items);
+      }
+    } catch (err: any) {
+      console.warn('[Firestore] fetchAdminAppeals error:', err?.message || err);
+    } finally {
+      isFetchingAppealsRef.current = false;
+    }
+  }, [isAdmin, isWriter]);
+
+  // Bounded on-demand fetcher for admin files
+  const [hasMoreFiles, setHasMoreFiles] = useState<boolean>(false);
+  const lastFileDocRef = useRef<QueryDocumentSnapshot | null>(null);
+  const isFetchingFilesRef = useRef<boolean>(false);
+
+  const fetchAdminFiles = useCallback(async (opts?: { loadMore?: boolean; force?: boolean }) => {
+    if (!isLoggedIn) return;
+    if (isFetchingFilesRef.current) return;
+    isFetchingFilesRef.current = true;
+    try {
+      const isAdminUser = isUserAdmin(currentUser) || isUserWriter(currentUser) || currentUser.role === 'penulis_sotoy' || currentUser.role === 'admin';
+      const constraints: any[] = [orderBy('uploadedAt', 'desc')];
+      if (opts?.loadMore && lastFileDocRef.current) {
+        constraints.push(startAfter(lastFileDocRef.current));
+      }
+      constraints.push(limit(100));
+
+      const filesQuery = isAdminUser
+        ? query(collection(db, 'files'), ...constraints)
+        : query(collection(db, 'files'), where('userId', '==', currentUser.id), ...constraints);
+
+      const snap = await getDocs(filesQuery);
+      const items: UploadedFile[] = [];
+      snap.forEach(docSnap => {
+        items.push({ ...docSnap.data() as UploadedFile, id: docSnap.id });
+      });
+
+      if (snap.docs.length > 0) {
+        lastFileDocRef.current = snap.docs[snap.docs.length - 1];
+      }
+      setHasMoreFiles(snap.docs.length === 100);
+
+      if (opts?.loadMore) {
+        setFiles(prev => {
+          const map = new Map<string, UploadedFile>();
+          prev.forEach(f => map.set(f.id, f));
+          items.forEach(f => map.set(f.id, f));
+          return Array.from(map.values()).sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
+        });
+      } else {
+        setFiles(items);
+      }
+    } catch (err: any) {
+      console.warn('[Firestore] fetchAdminFiles error:', err?.message || err);
+    } finally {
+      isFetchingFilesRef.current = false;
+    }
+  }, [isLoggedIn, currentUser?.id, isUserAdmin, isUserWriter, currentUser?.role]);
+
+  // Bounded on-demand fetcher for moderation reports
+  const [hasMoreReports, setHasMoreReports] = useState<boolean>(false);
+  const lastReportDocRef = useRef<QueryDocumentSnapshot | null>(null);
+  const isFetchingReportsRef = useRef<boolean>(false);
+
+  const fetchAdminReports = useCallback(async (opts?: { loadMore?: boolean; force?: boolean }) => {
+    if (!isAdmin && !isWriter) return;
+    if (isFetchingReportsRef.current) return;
+    isFetchingReportsRef.current = true;
+    try {
+      const constraints: any[] = [orderBy('createdAt', 'desc')];
+      if (opts?.loadMore && lastReportDocRef.current) {
+        constraints.push(startAfter(lastReportDocRef.current));
+      }
+      constraints.push(limit(100));
+
+      const q = query(collection(db, 'reports'), ...constraints);
+      const snap = await getDocs(q);
+      const items: ModerationReport[] = [];
+      snap.forEach(docSnap => {
+        items.push({ ...docSnap.data() as ModerationReport, id: docSnap.id });
+      });
+
+      if (snap.docs.length > 0) {
+        lastReportDocRef.current = snap.docs[snap.docs.length - 1];
+      }
+      setHasMoreReports(snap.docs.length === 100);
+
+      if (opts?.loadMore) {
+        setModerationReports(prev => {
+          const map = new Map<string, ModerationReport>();
+          prev.forEach(r => map.set(r.id, r));
+          items.forEach(r => map.set(r.id, r));
+          return Array.from(map.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        });
+      } else {
+        setModerationReports(items);
+      }
+    } catch (err: any) {
+      console.warn('[Firestore] fetchAdminReports error:', err?.message || err);
+    } finally {
+      isFetchingReportsRef.current = false;
+    }
+  }, [isAdmin, isWriter]);
+
+  // Bounded on-demand fetcher for admin critic submissions
+  const [hasMoreCriticSubmissions, setHasMoreCriticSubmissions] = useState<boolean>(false);
+  const lastCriticDocRef = useRef<QueryDocumentSnapshot | null>(null);
+  const isFetchingCriticSubmissionsRef = useRef<boolean>(false);
+
+  const fetchAdminCriticSubmissions = useCallback(async (opts?: { loadMore?: boolean; force?: boolean }) => {
+    if (!isLoggedIn) return;
+    if (isFetchingCriticSubmissionsRef.current) return;
+    isFetchingCriticSubmissionsRef.current = true;
+    try {
+      const isAdminUser = isUserAdmin(currentUser) || isUserWriter(currentUser) || currentUser.role === 'penulis_sotoy' || currentUser.role === 'admin';
+      const constraints: any[] = [orderBy('id', 'desc')];
+      if (opts?.loadMore && lastCriticDocRef.current) {
+        constraints.push(startAfter(lastCriticDocRef.current));
+      }
+      constraints.push(limit(100));
+
+      const criticQuery = isAdminUser
+        ? query(collection(db, 'criticSubmissions'), ...constraints)
+        : query(collection(db, 'criticSubmissions'), where('userId', '==', currentUser.id), ...constraints);
+
+      const snap = await getDocs(criticQuery);
+      const items: CriticSubmission[] = [];
+      snap.forEach(docSnap => {
+        items.push({ ...docSnap.data() as CriticSubmission, id: docSnap.id });
+      });
+
+      if (snap.docs.length > 0) {
+        lastCriticDocRef.current = snap.docs[snap.docs.length - 1];
+      }
+      setHasMoreCriticSubmissions(snap.docs.length === 100);
+
+      if (opts?.loadMore) {
+        setCriticSubmissions(prev => {
+          const map = new Map<string, CriticSubmission>();
+          prev.forEach(c => map.set(c.id, c));
+          items.forEach(c => map.set(c.id, c));
+          return Array.from(map.values()).sort((a, b) => b.id.localeCompare(a.id));
+        });
+      } else {
+        setCriticSubmissions(items);
+      }
+    } catch (err: any) {
+      console.warn('[Firestore] fetchAdminCriticSubmissions error:', err?.message || err);
+    } finally {
+      isFetchingCriticSubmissionsRef.current = false;
+    }
+  }, [isLoggedIn, currentUser?.id, isUserAdmin, isUserWriter, currentUser?.role]);
+
+  // Regular logged-in users only listen to their own appeal status
   useEffect(() => {
-    let unsubAppeals = () => {};
-    let unsubAudit = () => {};
-    let unsubReports = () => {};
-
-    if (isAdmin || isWriter) {
-      // Admins and Writers listen to all appeals, audit logs, and reports
-      unsubAppeals = onSnapshot(
-        collection(db, 'appeals'),
-        (snapshot) => {
-          const items: AccountAppeal[] = [];
-          snapshot.forEach(docSnap => {
-            items.push({ ...docSnap.data() as AccountAppeal, id: docSnap.id });
-          });
-          setAppeals(items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-        },
-        (err) => {
-          console.warn('[Firestore] appeals subscription error:', err.message);
-        }
-      );
-
-      unsubAudit = onSnapshot(
-        collection(db, 'auditLogs'),
-        (snapshot) => {
-          const items: AuditLog[] = [];
-          snapshot.forEach(docSnap => {
-            items.push({ ...docSnap.data() as AuditLog, id: docSnap.id });
-          });
-          if (items.length > 0) {
-            setAuditLogs(items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
-          }
-        },
-        (err) => {
-          console.warn('[Firestore] auditLogs subscription notice:', err.message);
-        }
-      );
-
-      unsubReports = onSnapshot(
-        collection(db, 'reports'),
-        (snapshot) => {
-          const items: ModerationReport[] = [];
-          snapshot.forEach(doc => items.push(doc.data() as ModerationReport));
-          if (items.length > 0) {
-            setModerationReports(items.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
-          }
-        },
-        (err) => {
-          console.warn('[Firestore] reports subscription fallback:', err.message);
-        }
-      );
-    } else if (isLoggedIn && currentUser?.id) {
-      // Regular logged-in users only listen to their own appeal status
+    if (!isAdmin && !isWriter && isLoggedIn && currentUser?.id) {
       const userAppealQuery = query(
         collection(db, 'appeals'),
         where('userId', '==', currentUser.id)
       );
-      unsubAppeals = onSnapshot(
+      const unsub = onSnapshot(
         userAppealQuery,
         (snapshot) => {
           const items: AccountAppeal[] = [];
@@ -1169,20 +1449,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           console.warn('[Firestore] user appeal subscription notice:', err.message);
         }
       );
-      setAuditLogs([]);
-      setModerationReports([]);
-    } else {
-      // Guests don't subscribe to appeals, audit logs, or reports
-      setAppeals([]);
-      setAuditLogs([]);
-      setModerationReports([]);
+      return () => unsub();
     }
-
-    return () => {
-      unsubAppeals();
-      unsubAudit();
-      unsubReports();
-    };
   }, [isAdmin, isWriter, isLoggedIn, currentUser?.id]);
 
   // Homepage Sections Real-time Config Subscription (siteConfig/homepageSections)
@@ -2049,58 +2317,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [isLoggedIn, currentUser?.id, currentUser?.lastInterestDecay, decayInterestProfile]);
 
   // Real-time listener for files and critic submissions based on user role
-  useEffect(() => {
-    let unsubFiles = () => {};
-    let unsubCritic = () => {};
-
-    if (isLoggedIn && currentUser?.id) {
-      const isAdminUser = isUserAdmin(currentUser) || isUserWriter(currentUser) || currentUser.role === 'penulis_sotoy' || currentUser.role === 'admin';
-      // Admin and Writer query all files, regular users query only their own files
-      const filesQuery = isAdminUser
-        ? collection(db, 'files')
-        : query(collection(db, 'files'), where('userId', '==', currentUser.id));
-
-      unsubFiles = onSnapshot(
-        filesQuery,
-        (snapshot) => {
-          const items: UploadedFile[] = [];
-          snapshot.forEach((doc) => {
-            items.push(doc.data() as UploadedFile);
-          });
-          setFiles(items.sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt)));
-        },
-        (err) => {
-          console.warn('[Firestore] files subscription restricted/unavailable:', err.message);
-        }
-      );
-
-      // Admin queries all critic submissions, regular users query only their own submissions
-      const criticQuery = isAdminUser
-        ? collection(db, 'criticSubmissions')
-        : query(collection(db, 'criticSubmissions'), where('userId', '==', currentUser.id));
-
-      unsubCritic = onSnapshot(
-        criticQuery,
-        (snapshot) => {
-          const items: CriticSubmission[] = [];
-          snapshot.forEach((doc) => {
-            items.push(doc.data() as CriticSubmission);
-          });
-          setCriticSubmissions(items.sort((a, b) => b.id.localeCompare(a.id)));
-        },
-        (err) => {
-          console.warn('[Firestore] criticSubmissions subscription restricted/unavailable:', err.message);
-        }
-      );
-    } else {
-      setFiles([]);
-      setCriticSubmissions([]);
-    }
-    return () => {
-      unsubFiles();
-      unsubCritic();
-    };
-  }, [isLoggedIn, currentUser?.id, currentUser?.role, currentUser?.email]);
+  // useEffect removed for Firestore read optimization; use on-demand fetchers instead.
 
   const getOrCreateDefaultCollection = async (): Promise<UserCollection | null> => {
     if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') {
@@ -4735,6 +4952,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (currentUser.id === userId) {
         setCurrentUser(prev => ({ ...prev, role: newRole, roleTitle: title }));
       }
+      refreshAllUsers({ force: true });
 
       await recordAuditLog({
         action: 'role_override',
@@ -4769,6 +4987,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         suspendedAt: isSuspended ? new Date().toISOString() : null,
       });
       setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, isSuspended, suspendedAt: isSuspended ? new Date().toISOString() : undefined } : u));
+      refreshAllUsers({ force: true });
       
       // Notify the user about their account status change
       await sendNotification({
@@ -4884,6 +5103,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // 7. Update in-memory state instantly
       setAllUsers(prev => prev.filter(u => u.id !== userId));
+      refreshAllUsers({ force: true });
       setRatings(prev => prev.filter(r => r.userId !== userId));
       setRawBuzzList(prev => prev.filter(b => b.author?.id !== userId && (b as any).authorId !== userId));
       setNotifications(prev => prev.filter(n => n.userId !== userId));
@@ -5088,6 +5308,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (userIds.includes(currentUser.id)) {
         setCurrentUser(prev => ({ ...prev, role: newRole, roleTitle: title }));
       }
+      refreshAllUsers({ force: true });
 
       await recordAuditLog({
         action: 'bulk_roles_override',
@@ -5116,6 +5337,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       );
 
       setAllUsers(prev => prev.map(u => userIds.includes(u.id) ? { ...u, isSuspended, suspendedAt: isSuspended ? new Date().toISOString() : undefined } : u));
+      refreshAllUsers({ force: true });
 
       await recordAuditLog({
         action: isSuspended ? 'bulk_accounts_suspended' : 'bulk_accounts_unsuspended',
@@ -5311,6 +5533,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const filmId = `film-${Date.now()}`;
     const newFilm: FilmItem = {
       ...filmData,
+      slug: filmData.slug?.trim() || slugify(filmData.title) || filmId,
       id: filmId,
       createdAt: (filmData as any).createdAt || new Date().toISOString(),
     };
@@ -5846,6 +6069,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         recordAuditLog,
         deleteAuditLog,
         clearAuditLogs,
+        fetchAdminFiles,
+        hasMoreFiles,
+        fetchAdminCriticSubmissions,
+        hasMoreCriticSubmissions,
         userProfilesCache,
         cacheUserProfile,
         updateCollectionDetails,

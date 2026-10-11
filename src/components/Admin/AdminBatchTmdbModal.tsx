@@ -21,6 +21,7 @@ import {
   Info
 } from 'lucide-react';
 import { fetchTmdbDetails, mapTmdbDetailsToFilm, fetchTmdbList, MappedTmdbFilm } from '../../utils/tmdbHelper';
+import { slugify } from '../../utils/slugify';
 import { FilmItem } from '../../types';
 import { useApp } from '../../context/AppContext';
 
@@ -172,6 +173,7 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
         const newFilmData: Omit<FilmItem, 'id'> = {
           title: mapped.title,
           originalTitle: mapped.originalTitle || undefined,
+          slug: mapped.slug || slugify(mapped.title),
           type: mapped.type,
           year: mapped.year,
           releaseDate: mapped.releaseDate || undefined,

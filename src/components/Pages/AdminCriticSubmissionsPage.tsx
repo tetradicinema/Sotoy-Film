@@ -60,8 +60,12 @@ const mockSubmissions: Submission[] = [
 ];
 
 export const AdminCriticSubmissionsPage: React.FC = () => {
-  const { currentUser, showToast, criticSubmissions, updateCriticSubmissionStatus, isAdmin } = useApp();
+  const { currentUser, showToast, criticSubmissions, updateCriticSubmissionStatus, isAdmin, fetchAdminCriticSubmissions, hasMoreCriticSubmissions } = useApp();
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
+
+  useEffect(() => {
+    fetchAdminCriticSubmissions();
+  }, [fetchAdminCriticSubmissions]);
 
   if (!isAdmin && !isUserAdmin(currentUser)) {
     return (

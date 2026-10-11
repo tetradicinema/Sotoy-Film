@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
+import { isArticleUnpublished } from '../../utils/articleHelpers';
 import {
   User as UserIcon,
   Star,
@@ -457,7 +458,12 @@ export const UserPage: React.FC = () => {
            (targetUser.name && r.userName && r.userName.toLowerCase() === targetUser.name.toLowerCase())
     );
   }, [isOwnProfile, ratings, targetUserRatings, targetUser.id, targetUser.name]);
-  const myArticles = articles.filter(a => a.author.id === targetUser.id || a.author.name === targetUser.name);
+  const myArticles = articles.filter(a => {
+    const isAuthorMatch = a.author.id === targetUser.id || a.author.name === targetUser.name;
+    if (!isAuthorMatch) return false;
+    if (isOwnProfile || isAdmin) return true;
+    return !isArticleUnpublished(a);
+  });
 
   // Derived lists for Replies and Reposts
   const myReplies = React.useMemo(() => {
