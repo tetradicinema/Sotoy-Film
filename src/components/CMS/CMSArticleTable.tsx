@@ -257,19 +257,16 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
       tags: parsedTags,
       featured: quickForm.isFeatured,
       content: quickForm.content,
-    };
-    if (quickForm.status === 'scheduled' && quickForm.scheduledAt) {
-      updates.scheduledAt = quickForm.scheduledAt;
-    }
-
-    if (isAdminView) {
-      updates.authorId = foundAuthor.id;
-      updates.author = {
+      authorId: foundAuthor.id,
+      author: {
         id: foundAuthor.id,
         name: foundAuthor.name.replace(' (Saya)', ''),
         avatar: foundAuthor.avatar,
         role: foundAuthor.role as UserRole,
-      };
+      },
+    };
+    if (quickForm.status === 'scheduled' && quickForm.scheduledAt) {
+      updates.scheduledAt = quickForm.scheduledAt;
     }
 
     const success = await updateArticle(id, updates);
