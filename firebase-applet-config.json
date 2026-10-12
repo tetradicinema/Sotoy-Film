@@ -3,10 +3,10 @@
   "appId": "1:398712749395:web:155a4790642af5e88775a6",
   "apiKey": "AIzaSyCJPXxHQZ8hEdRHIfSGNzU6Z8rqUJZVVs4",
   "authDomain": "gen-lang-client-0523736875.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3",
   "storageBucket": "gen-lang-client-0523736875.firebasestorage.app",
   "messagingSenderId": "398712749395",
   "measurementId": "",
   "oAuthClientId": "398712749395-2kgfg7e4pqcn9omko5doa1mcrbjpa2or.apps.googleusercontent.com",
-  "recaptchaSiteKey": ""
+  "recaptchaSiteKey": "",
+  "firestoreDatabaseId": "ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3"
 }

@@ -343,6 +343,7 @@ async function run() {
   fs.writeFileSync(sitemapDest, xml, 'utf-8');
 
   console.log(`[Sitemap Builder] Successfully wrote ${entries.length} URLs (${articlesCount} articles, ${filmsCount} films) to ${sitemapDest}`);
+
 }
 
 run().catch(err => {

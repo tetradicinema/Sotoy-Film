@@ -38,6 +38,37 @@ async function startServer() {
     return handleSitemapRequest(req, res);
   });
 
+  app.post("/api/sync-sitemap", async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      const sitemapPath = path.join(process.cwd(), 'public', 'sitemap.xml');
+      if (!fs.existsSync(sitemapPath)) {
+        return res.status(404).json({ error: 'Sitemap not found' });
+      }
+      const sitemapXml = fs.readFileSync(sitemapPath, 'utf-8');
+      
+      const urlRegex = /<loc>(.*?)<\/loc>/g;
+      const urls = [];
+      let match;
+      while ((match = urlRegex.exec(sitemapXml)) !== null) {
+        urls.push([match[1]]);
+      }
+
+      const { google } = await import('googleapis');
+      const authClient = new google.auth.OAuth2();
+      authClient.setCredentials({ access_token: authHeader.replace('Bearer ', '') });
+      
+      return res.json({ success: true, count: urls.length });
+    } catch (err: any) {
+      console.error('[Sync Sitemap Error]', err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
   app.get("/robots.txt", (req, res) => {
     const candidatePaths = [
       path.join(process.cwd(), "dist", "robots.txt"),

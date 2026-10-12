@@ -115,7 +115,7 @@ service cloud.firestore {
         data.author is map &&
         data.author.id is string &&
         // TODO: migrate these hardcoded UIDs to role-based checks only — the users/{uid}.role check below already covers them; remove after verifying those user docs have the correct role field.
-        (data.author.id == request.auth.uid || isAdmin() || request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' || request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2');
+        (data.author.id == request.auth.uid || isAdmin() || isWriter() || request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' || request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2');
     }
 
     function isValidFilmItem(data) {
@@ -414,7 +414,6 @@ service cloud.firestore {
         (isValidArticle(incoming()) && (
           isOwner(existing().author.id) || 
           isAdmin() || 
-          isWriter() ||
           // TODO: migrate these hardcoded UIDs to role-based checks only — the users/{uid}.role check below already covers them; remove after verifying those user docs have the correct role field.
           (request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' && (existing().author.id == request.auth.uid || incoming().author.id == request.auth.uid)) ||
           (request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' && (existing().author.id == request.auth.uid || incoming().author.id == request.auth.uid))
@@ -424,7 +423,6 @@ service cloud.firestore {
       allow delete: if isSignedIn() && !isSuspended() && (
         isOwner(existing().author.id) || 
         isAdmin() || 
-        isWriter() ||
         // TODO: migrate these hardcoded UIDs to role-based checks only — the users/{uid}.role check below already covers them; remove after verifying those user docs have the correct role field.
         (request.auth.uid == '0PCmaBvJrzeaQgpf3sSTC4mnsh02' && existing().author.id == request.auth.uid) ||
         (request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' && existing().author.id == request.auth.uid)

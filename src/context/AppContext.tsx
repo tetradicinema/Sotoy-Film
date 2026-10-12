@@ -4311,10 +4311,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Update Article in Firestore
   const updateArticle = async (id: string, updatedFields: Partial<Article>): Promise<boolean> => {
     if (!requireVerified()) return false;
-    const targetArticle = articles.find(a => a.id === id);
-    const isAuthor = targetArticle?.author?.id === currentUser.id;
+    const targetArticle = resolvedArticles.find(a => a.id === id);
+    const isAuthor = targetArticle?.author?.id === currentUser.id || targetArticle?.authorId === currentUser.id;
     const isPermitted = isAuthor || currentUser.role === 'admin' || isUserAdmin(currentUser) || isUserWriter(currentUser);
     if (!isPermitted) {
+      console.error('[Article] Permission denied for update:', { id, currentUser: currentUser.id, role: currentUser.role });
       showToast('Hanya Penulis pemilik artikel atau Admin yang dapat menyunting artikel.', 'error');
       return false;
     }
@@ -4327,6 +4328,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       // Remove any undefined properties which crash Firestore updateDoc
       const sanitizedUpdates = JSON.parse(JSON.stringify(updatesToSave));
+      console.log('[Article] Updating document:', id, sanitizedUpdates);
       await updateDoc(doc(db, 'articles', id), sanitizedUpdates);
       refreshArticles();
       const toastMsg = updatedFields.status === 'draft'
@@ -4337,7 +4339,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       showToast(toastMsg, 'success');
       return true;
     } catch (error: any) {
-      console.error('[Article] Error updating article:', error);
+      console.error('[Article] Error updating article:', id, error);
       const reason = error?.code === 'permission-denied'
         ? 'Akses ditolak: Anda tidak memiliki izin.'
         : 'Gagal memperbarui artikel.';
