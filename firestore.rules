@@ -77,12 +77,21 @@ service cloud.firestore {
       return resource.data;
     }
 
+    // DEPLOY ONLY AFTER backfill-handles.ts --apply has completed, otherwise legacy users with non-conforming handles cannot update their own profile.
+    match /handles/{h} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.keys().hasOnly(['uid','createdAt']) && request.resource.data.uid == request.auth.uid && h.matches('^[a-z0-9_]{3,30}$');
+      allow update: if false;
+      allow delete: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+    }
+
     // Entity validations
     function isValidUser(data) {
       return data.keys().hasAll(['id', 'name', 'handle', 'role']) &&
         data.id is string && data.id.size() <= 128 &&
         data.name is string && data.name.size() <= 128 &&
         data.handle is string && data.handle.size() <= 128 &&
+        data.handle.matches('^@[a-z0-9_]{3,30}$') &&
         data.role in ['warga_sotoy', 'si_paling_sotoy', 'penulis_sotoy', 'admin'];
     }
 
@@ -331,6 +340,8 @@ service cloud.firestore {
           !('following' in incoming().diff(existing()).affectedKeys()) || isValidFollowingArrayUpdate()
         ) && (
           !('followers' in incoming().diff(existing()).affectedKeys()) || isValidFollowersArrayUpdate()
+        ) && (
+          !('handle' in incoming().diff(existing()).affectedKeys()) || incoming().handle == existing().handle || getAfter(/databases/$(database)/documents/handles/$(incoming().handle.replace('@',''))).data.uid == request.auth.uid
         )) ||
         // Non-Owner (e.g. User A) updating User B's followersCount or followers array
         (!isOwner(userId) && isVerifiedUser() && incoming().diff(existing()).affectedKeys().hasOnly(['followersCount', 'followers']) && (

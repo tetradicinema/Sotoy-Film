@@ -143,7 +143,8 @@ import {
   signInWithRedirect,
   getRedirectResult,
   browserPopupRedirectResolver,
-  sendEmailVerification
+  sendEmailVerification,
+  deleteUser
 } from 'firebase/auth';
 import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { fetchTmdbDetails, mapTmdbDetailsToFilm, TmdbSearchResultItem } from '../utils/tmdbHelper';
@@ -531,28 +532,16 @@ const normalizeUserRecords = (inputUsers: User[]): User[] => {
   const items = Array.from(userMap.values());
   if (items.length === 0) return [];
 
-  const seenHandles = new Set<string>();
   return items.map(u => {
     let handle = normalizeHandle(u.handle);
     // Disambiguate legacy collision: CsG2CY2TaIZmG7yuPfzAxmRYrlY2 (Tony Tofani Admin whose buzz handle is @admin_sotoyfilm)
     if (u.id === 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' && handle === '@tonytfani') {
       handle = '@admin_sotoyfilm';
     }
-    if (!handle || seenHandles.has(handle)) {
-      let base = handle ? handle.replace(/^@/, '') : 'user';
-      let counter = 1;
-      let candidate = `@${base}${counter}`;
-      while (seenHandles.has(candidate)) {
-        counter++;
-        candidate = `@${base}${counter}`;
-      }
-      handle = candidate;
-    }
-    seenHandles.add(handle);
 
     const updatedUser: User = {
       ...u,
-      handle,
+      handle: handle || '',
     };
 
     if (u.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02' || WRITER_UIDS.includes(u.id)) {
@@ -1802,7 +1791,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     lastAuthErrorCodeRef.current = null;
   }, []);
 
-  // Checks if a handle is available (unique across all users, case-insensitive)
+  // Checks if a handle is available (unique across registry collection)
   const isHandleAvailable = useCallback(async (
     targetHandle: string,
     excludeUserId?: string
@@ -1813,61 +1802,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { available: false, normalized: clean, reason: validation.error };
     }
 
-    // 1. In-memory check against loaded allUsers list (case-insensitive)
-    const inMemoryCollision = allUsers.some(u => {
-      if (excludeUserId && u.id === excludeUserId) return false;
-      return normalizeHandle(u.handle) === clean;
-    });
-
-    if (inMemoryCollision) {
-      return {
-        available: false,
-        normalized: clean,
-        reason: `Handle ${clean} sudah digunakan oleh pengguna lain. Silakan pilih handle yang berbeda.`
-      };
-    }
-
-    // 2. Direct Firestore query check for live database accuracy
+    const hId = clean.replace(/^@/, '');
     try {
-      const q = query(collection(db, 'users'), where('handle', '==', clean), limit(5));
-      const snap = await getDocs(q);
-      const isTaken = snap.docs.some(docSnap => {
-        if (excludeUserId && docSnap.id === excludeUserId) return false;
-        return true;
-      });
+      const handleDocRef = doc(db, 'handles', hId);
+      const snap = await getDoc(handleDocRef);
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data?.uid && data.uid !== excludeUserId) {
+          return {
+            available: false,
+            normalized: clean,
+            reason: `Handle ${clean} sudah digunakan oleh pengguna lain. Silakan pilih handle yang berbeda.`
+          };
+        }
+      } else {
+        // Fallback query against users collection until backfill is run
+        const q = query(collection(db, 'users'), where('handle', '==', clean), limit(5));
+        const userSnap = await getDocs(q);
+        const isTaken = userSnap.docs.some(docSnap => {
+          if (excludeUserId && docSnap.id === excludeUserId) return false;
+          return true;
+        });
+        if (isTaken) {
+          return {
+            available: false,
+            normalized: clean,
+            reason: `Handle ${clean} sudah digunakan oleh pengguna lain. Silakan pilih handle yang berbeda.`
+          };
+        }
 
-      if (isTaken) {
-        return {
-          available: false,
-          normalized: clean,
-          reason: `Handle ${clean} sudah digunakan oleh pengguna lain. Silakan pilih handle yang berbeda.`
-        };
-      }
-
-      // Check un-prefixed handle representation for legacy documents
-      const unPrefixed = clean.replace(/^@/, '');
-      const qUnPrefixed = query(collection(db, 'users'), where('handle', '==', unPrefixed), limit(5));
-      const snapUnPrefixed = await getDocs(qUnPrefixed);
-      const isTakenUnPrefixed = snapUnPrefixed.docs.some(docSnap => {
-        if (excludeUserId && docSnap.id === excludeUserId) return false;
-        return true;
-      });
-
-      if (isTakenUnPrefixed) {
-        return {
-          available: false,
-          normalized: clean,
-          reason: `Handle ${clean} sudah digunakan oleh pengguna lain. Silakan pilih handle yang berbeda.`
-        };
+        const unPrefixed = clean.replace(/^@/, '');
+        const qUnPrefixed = query(collection(db, 'users'), where('handle', '==', unPrefixed), limit(5));
+        const snapUnPrefixed = await getDocs(qUnPrefixed);
+        const isTakenUnPrefixed = snapUnPrefixed.docs.some(docSnap => {
+          if (excludeUserId && docSnap.id === excludeUserId) return false;
+          return true;
+        });
+        if (isTakenUnPrefixed) {
+          return {
+            available: false,
+            normalized: clean,
+            reason: `Handle ${clean} sudah digunakan oleh pengguna lain. Silakan pilih handle yang berbeda.`
+          };
+        }
       }
     } catch (err) {
-      console.warn('[AppContext] isHandleAvailable DB query notice:', err);
+      console.warn('[AppContext] isHandleAvailable error:', err);
+      return { available: false, normalized: clean, reason: 'Gagal memeriksa handle, coba lagi.' };
     }
 
     return { available: true, normalized: clean };
-  }, [allUsers]);
+  }, []);
 
-  // Generates a guaranteed unique handle from a base string
+  // Generates a guaranteed unique handle from a base string with max 5 attempts
   const generateUniqueHandle = useCallback(async (
     baseNameOrEmail: string,
     excludeUserId?: string
@@ -1882,26 +1869,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       base = `warga_${Math.floor(1000 + Math.random() * 9000)}`;
     }
 
-    let candidate = `@${base}`;
-    let res = await isHandleAvailable(candidate, excludeUserId);
-    if (res.available) return candidate;
-
-    let counter = 1;
-    while (!res.available && counter <= 50) {
-      candidate = `@${base}${counter}`;
-      res = await isHandleAvailable(candidate, excludeUserId);
-      counter++;
-    }
-
-    if (!res.available) {
-      candidate = `@${base}_${Date.now().toString().slice(-4)}`;
-      const finalCheck = await isHandleAvailable(candidate, excludeUserId);
-      if (!finalCheck.available) {
-        candidate = `@${base}_${Math.floor(1000 + Math.random() * 9000)}`;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const candidate = attempt === 0 ? `@${base}` : `@${base}${Math.floor(1000 + Math.random() * 9000)}`;
+      const clean = normalizeHandle(candidate);
+      const res = await isHandleAvailable(clean, excludeUserId);
+      if (res.available) {
+        return clean;
       }
     }
 
-    return candidate;
+    return `@${base}_${Math.floor(1000 + Math.random() * 9000)}`;
   }, [isHandleAvailable]);
 
   // Initialize Firebase Auth & Real User profile sync
@@ -3121,6 +3098,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const uid = auth.currentUser.uid;
 
     let targetHandle = normalizeHandle(currentUser.handle);
+    let handleChanged = false;
     if (updates.handle !== undefined) {
       const cleanHandle = normalizeHandle(updates.handle);
       const validation = validateHandle(cleanHandle);
@@ -3134,8 +3112,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           showToast(check.reason || `Handle ${cleanHandle} sudah digunakan. Silakan pilih handle yang berbeda.`);
           return false;
         }
+        handleChanged = true;
+        targetHandle = cleanHandle;
       }
-      targetHandle = cleanHandle;
     }
 
     const updated = {
@@ -3147,14 +3126,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     const { email: _unused, ...userDocPayload } = updated;
     try {
-      await setDoc(doc(db, 'users', uid), userDocPayload, { merge: true });
+      if (handleChanged) {
+        const oldHId = normalizeHandle(currentUser.handle).replace(/^@/, '');
+        const newHId = targetHandle.replace(/^@/, '');
+        await runTransaction(db, async (transaction) => {
+          const newHandleRef = doc(db, 'handles', newHId);
+          const newHandleSnap = await transaction.get(newHandleRef);
+          if (newHandleSnap.exists() && newHandleSnap.data().uid !== uid) {
+            throw new Error('HANDLE_TAKEN');
+          }
+          if (oldHId && oldHId !== newHId) {
+            const oldHandleRef = doc(db, 'handles', oldHId);
+            const oldHandleSnap = await transaction.get(oldHandleRef);
+            if (oldHandleSnap.exists() && oldHandleSnap.data().uid === uid) {
+              transaction.delete(oldHandleRef);
+            }
+          }
+          transaction.set(newHandleRef, { uid, createdAt: new Date().toISOString() });
+          transaction.set(doc(db, 'users', uid), userDocPayload, { merge: true });
+        });
+      } else {
+        await setDoc(doc(db, 'users', uid), userDocPayload, { merge: true });
+      }
+
       setCurrentUser(updated);
       setAllUsers(prev => prev.map(u => u.id === uid ? updated : u));
       refreshAllUsers({ force: true });
       showToast('Profil pengguna berhasil disimpan!');
       return true;
-    } catch (err) {
-      handleFirestoreError(err, OperationType.UPDATE, `users/${uid}`);
+    } catch (err: any) {
+      if (err?.message === 'HANDLE_TAKEN') {
+        showToast(`Handle ${targetHandle} sudah digunakan. Silakan pilih handle yang berbeda.`);
+      } else {
+        handleFirestoreError(err, OperationType.UPDATE, `users/${uid}`);
+      }
       return false;
     }
   };
@@ -3175,7 +3180,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return false;
     }
 
-    if (cleanHandle !== normalizeHandle(currentUser.handle)) {
+    const handleChanged = cleanHandle !== normalizeHandle(currentUser.handle);
+    if (handleChanged) {
       const check = await isHandleAvailable(cleanHandle, uid);
       if (!check.available) {
         showToast(check.reason || `Handle ${cleanHandle} sudah digunakan. Silakan pilih handle yang berbeda.`);
@@ -3204,8 +3210,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const userDocRef = doc(db, 'users', uid);
       const { email: _unused, ...userDocPayload } = updatedUser;
       try {
-        await setDoc(userDocRef, userDocPayload, { merge: true });
-      } catch (err) {
+        if (handleChanged) {
+          const oldHId = normalizeHandle(currentUser.handle).replace(/^@/, '');
+          const newHId = cleanHandle.replace(/^@/, '');
+          await runTransaction(db, async (transaction) => {
+            const newHandleRef = doc(db, 'handles', newHId);
+            const newHandleSnap = await transaction.get(newHandleRef);
+            if (newHandleSnap.exists() && newHandleSnap.data().uid !== uid) {
+              throw new Error('HANDLE_TAKEN');
+            }
+            if (oldHId && oldHId !== newHId) {
+              const oldHandleRef = doc(db, 'handles', oldHId);
+              const oldHandleSnap = await transaction.get(oldHandleRef);
+              if (oldHandleSnap.exists() && oldHandleSnap.data().uid === uid) {
+                transaction.delete(oldHandleRef);
+              }
+            }
+            transaction.set(newHandleRef, { uid, createdAt: new Date().toISOString() });
+            transaction.set(userDocRef, userDocPayload, { merge: true });
+          });
+        } else {
+          await setDoc(userDocRef, userDocPayload, { merge: true });
+        }
+      } catch (err: any) {
+        if (err?.message === 'HANDLE_TAKEN') {
+          showToast(`Handle ${cleanHandle} sudah digunakan. Silakan pilih handle yang berbeda.`);
+          return false;
+        }
         console.warn('[Onboarding] Error saving to Firestore, continuing with local state:', err);
       }
     }
@@ -3392,17 +3423,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       if (userCredential.user) {
         const uid = userCredential.user.uid;
-        
-        // Send email verification inside try/catch without blocking account creation
-        try {
-          await sendEmailVerification(userCredential.user, {
-            url: 'https://www.sotoyfilm.my.id/',
-          });
-          showToast('Email verifikasi telah dikirim! Cek inbox atau folder spam.');
-        } catch (emailErr: any) {
-          console.error('[Auth] Failed to send verification email at sign-up:', emailErr);
-          showToast('Akun dibuat, namun gagal mengirim email verifikasi. Kamu dapat mengirim ulang nanti.');
-        }
+        const hId = cleanHandle.replace(/^@/, '');
 
         const isAdminUID = isUserAdmin(null, uid, email);
         const isWriterUID = !isAdminUID && isUserWriter(null, uid);
@@ -3438,9 +3459,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           hasFinishedOnboarding: false,
         };
 
-        const userDocRef = doc(db, 'users', uid);
-        const { email: _unused, ...publicUserDoc } = newUser;
-        await setDoc(userDocRef, publicUserDoc);
+        try {
+          await runTransaction(db, async (transaction) => {
+            const handleRef = doc(db, 'handles', hId);
+            const handleSnap = await transaction.get(handleRef);
+            if (handleSnap.exists() && handleSnap.data().uid !== uid) {
+              throw new Error('HANDLE_TAKEN');
+            }
+            const userDocRef = doc(db, 'users', uid);
+            const { email: _unused, ...publicUserDoc } = newUser;
+            transaction.set(handleRef, { uid, createdAt: new Date().toISOString() });
+            transaction.set(userDocRef, publicUserDoc);
+          });
+        } catch (txnErr) {
+          if (auth.currentUser) {
+            try { await deleteUser(auth.currentUser); } catch {}
+          }
+          showToast('Handle sudah digunakan orang lain. Silakan pilih handle yang berbeda.');
+          isSigningUpRef.current = false;
+          return false;
+        }
+
+        // Send email verification inside try/catch without blocking account creation
+        try {
+          await sendEmailVerification(userCredential.user, {
+            url: 'https://www.sotoyfilm.my.id/',
+          });
+          showToast('Email verifikasi telah dikirim! Cek inbox atau folder spam.');
+        } catch (emailErr: any) {
+          console.error('[Auth] Failed to send verification email at sign-up:', emailErr);
+          showToast('Akun dibuat, namun gagal mengirim email verifikasi. Kamu dapat mengirim ulang nanti.');
+        }
+
         try {
           await setDoc(doc(db, 'userPrivate', uid), {
             email: email.trim(),
@@ -3509,39 +3559,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const isWriterRole = !isAdminRole && isUserWriter(null, uid);
         const isCriticRole = !isAdminRole && !isWriterRole && isUserCritic(null, uid);
         
-        const baseSeed = fbUser.displayName || (fbUser.email ? fbUser.email.split('@')[0] : 'user_' + uid.slice(0, 4));
-        const cleanHandle = await generateUniqueHandle(baseSeed, uid);
-        const newUser: User = {
-          id: uid,
-          name: fbUser.displayName || (isAdminRole ? 'Admin Utama' : isWriterRole ? 'Penulis Sotoy' : isCriticRole ? 'Si Paling Sotoy' : 'Warga Baru'),
-          handle: cleanHandle,
-          avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-          role: isAdminRole ? 'admin' : (isWriterRole ? 'penulis_sotoy' : (isCriticRole ? 'si_paling_sotoy' : 'warga_sotoy')),
-          roleTitle: isAdminRole 
-            ? 'Head Admin & Lead Editor' 
-            : (isWriterRole 
-              ? 'Penulis Sotoy (Jurnalis Film & Pop-Culture)' 
-              : (isCriticRole ? 'Si Paling Sotoy (Kritikus Film)' : 'Warga Sotoy (Penonton Santai)')),
-          bio: isAdminRole 
-            ? 'Menjaga ketertiban obrolan sotoy seantero jagat perfilman.' 
-            : (isWriterRole 
-              ? 'Menulis kabar terbaru, ulasan mendalam, dan kurasi film di Sotoy Film.' 
-              : (isCriticRole ? 'Kritikus film kawakan yang hobinya menilai setiap pixel di layar.' : 'Cinephile baru mendarat di Sotoy Film!')),
-          createdAt: new Date().toISOString(),
-          totalReviews: 0,
-          totalBuzz: 0,
-          followers: [],
-          following: [],
-          followersCount: 0,
-          followingCount: 0,
-          hasFinishedOnboarding: false,
-        };
-        const { email: _unused, ...publicUserPayload } = newUser;
-        try {
-          await setDoc(userDocRef, publicUserPayload);
-        } catch (e) {
-          console.warn('[Auth] Firestore setDoc fallback:', e);
+        let success = false;
+        let newUser: User | null = null;
+        let attempts = 0;
+        while (!success && attempts < 5) {
+          attempts++;
+          const baseSeed = fbUser.displayName || (fbUser.email ? fbUser.email.split('@')[0] : 'user_' + uid.slice(0, 4));
+          const cleanHandle = await generateUniqueHandle(baseSeed, uid);
+          const hId = cleanHandle.replace(/^@/, '');
+
+          newUser = {
+            id: uid,
+            name: fbUser.displayName || (isAdminRole ? 'Admin Utama' : isWriterRole ? 'Penulis Sotoy' : isCriticRole ? 'Si Paling Sotoy' : 'Warga Baru'),
+            handle: cleanHandle,
+            avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+            role: isAdminRole ? 'admin' : (isWriterRole ? 'penulis_sotoy' : (isCriticRole ? 'si_paling_sotoy' : 'warga_sotoy')),
+            roleTitle: isAdminRole 
+              ? 'Head Admin & Lead Editor' 
+              : (isWriterRole 
+                ? 'Penulis Sotoy (Jurnalis Film & Pop-Culture)' 
+                : (isCriticRole ? 'Si Paling Sotoy (Kritikus Film)' : 'Warga Sotoy (Penonton Santai)')),
+            bio: isAdminRole 
+              ? 'Menjaga ketertiban obrolan sotoy seantero jagat perfilman.' 
+              : (isWriterRole 
+                ? 'Menulis kabar terbaru, ulasan mendalam, dan kurasi film di Sotoy Film.' 
+                : (isCriticRole ? 'Kritikus film kawakan yang hobinya menilai setiap pixel di layar.' : 'Cinephile baru mendarat di Sotoy Film!')),
+            createdAt: new Date().toISOString(),
+            totalReviews: 0,
+            totalBuzz: 0,
+            followers: [],
+            following: [],
+            followersCount: 0,
+            followingCount: 0,
+            hasFinishedOnboarding: false,
+          };
+
+          try {
+            await runTransaction(db, async (transaction) => {
+              const handleRef = doc(db, 'handles', hId);
+              const handleSnap = await transaction.get(handleRef);
+              if (handleSnap.exists() && handleSnap.data().uid !== uid) {
+                throw new Error('HANDLE_TAKEN');
+              }
+              const { email: _unused, ...publicUserPayload } = newUser!;
+              transaction.set(handleRef, { uid, createdAt: new Date().toISOString() });
+              transaction.set(userDocRef, publicUserPayload);
+            });
+            success = true;
+          } catch (e) {
+            // retry loop
+          }
         }
+
+        if (!success) {
+          showToast('Gagal menghasilkan handle unik untuk Google login, coba lagi.');
+          return false;
+        }
+
         if (fbUser.email) {
           try {
             await setDoc(doc(db, 'userPrivate', uid), {
@@ -3550,7 +3624,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             }, { merge: true });
           } catch (e) {}
         }
-        setCurrentUser({ ...newUser, email: fbUser.email || '' });
+        setCurrentUser({ ...newUser!, email: fbUser.email || '' });
         setFollowingIds([]);
         setFollowersIds([]);
         setWatchlist([]);
