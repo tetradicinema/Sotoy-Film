@@ -459,7 +459,7 @@ export const UserPage: React.FC = () => {
     );
   }, [isOwnProfile, ratings, targetUserRatings, targetUser.id, targetUser.name]);
   const myArticles = articles.filter(a => {
-    const isAuthorMatch = a.author.id === targetUser.id || a.author.name === targetUser.name;
+    const isAuthorMatch = (a.authorId && a.authorId === targetUser.id) || a.author?.id === targetUser.id || a.author?.name === targetUser.name;
     if (!isAuthorMatch) return false;
     if (isOwnProfile || isAdmin) return true;
     return !isArticleUnpublished(a);

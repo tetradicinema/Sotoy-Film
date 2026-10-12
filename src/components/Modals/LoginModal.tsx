@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { X, LogIn, User as UserIcon, Mail, Lock, UserPlus, AlertTriangle, Chrome } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, LogIn, User as UserIcon, Mail, Lock, UserPlus, AlertTriangle, Chrome, Check, Loader2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { normalizeHandle, validateHandle } from '../../utils/handleHelpers';
 
 export const LoginModal: React.FC = () => {
   const { 
@@ -13,6 +14,8 @@ export const LoginModal: React.FC = () => {
     showToast,
     getLastAuthErrorCode,
     clearAuthError,
+    isHandleAvailable,
+    generateUniqueHandle,
   } = useApp();
 
   // Email Auth States
@@ -24,6 +27,52 @@ export const LoginModal: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showRestrictedWarning, setShowRestrictedWarning] = useState(false);
   const [authErrorMessage, setAuthErrorMessage] = useState<string | null>(null);
+
+  // Real-time handle uniqueness feedback state
+  const [handleStatus, setHandleStatus] = useState<{
+    checking: boolean;
+    available?: boolean;
+    message?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!isSignUp) {
+      setHandleStatus(null);
+      return;
+    }
+    const trimmed = handle.trim();
+    if (!trimmed) {
+      setHandleStatus(null);
+      return;
+    }
+
+    const clean = normalizeHandle(trimmed);
+    const validation = validateHandle(clean);
+    if (!validation.isValid) {
+      setHandleStatus({
+        checking: false,
+        available: false,
+        message: validation.error,
+      });
+      return;
+    }
+
+    setHandleStatus({ checking: true });
+    const timer = setTimeout(async () => {
+      try {
+        const res = await isHandleAvailable(clean);
+        setHandleStatus({
+          checking: false,
+          available: res.available,
+          message: res.available ? `Handle ${clean} tersedia!` : (res.reason || `Handle ${clean} sudah digunakan oleh pengguna lain.`),
+        });
+      } catch {
+        setHandleStatus(null);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [handle, isSignUp, isHandleAvailable]);
 
   if (!loginModalOpen) return null;
 
@@ -53,13 +102,37 @@ export const LoginModal: React.FC = () => {
           setLoading(false);
           return;
         }
-        const customHandle = handle.trim() ? (handle.startsWith('@') ? handle : `@${handle}`) : `@user_${Math.floor(Math.random() * 10000)}`;
+
+        let customHandle = '';
+        if (handle.trim()) {
+          const clean = normalizeHandle(handle);
+          const validation = validateHandle(clean);
+          if (!validation.isValid) {
+            setAuthErrorMessage(validation.error || 'Format handle tidak valid.');
+            showToast(validation.error || 'Format handle tidak valid.');
+            setLoading(false);
+            return;
+          }
+          const check = await isHandleAvailable(clean);
+          if (!check.available) {
+            const errorMsg = check.reason || `Handle ${clean} sudah digunakan oleh pengguna lain. Silakan pilih handle yang berbeda.`;
+            setAuthErrorMessage(errorMsg);
+            showToast(errorMsg);
+            setLoading(false);
+            return;
+          }
+          customHandle = clean;
+        } else {
+          customHandle = await generateUniqueHandle(name.trim() || email.split('@')[0]);
+        }
+
         const success = await signUpWithEmail(email, password, name, customHandle);
         if (success) {
           setEmail('');
           setPassword('');
           setName('');
           setHandle('');
+          setHandleStatus(null);
           setShowRestrictedWarning(false);
           setAuthErrorMessage(null);
         } else {
@@ -219,17 +292,46 @@ export const LoginModal: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Username / Handle
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-slate-300">
+                      Username / Handle (@)
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-mono">Unik & berbeda</span>
+                  </div>
                   <input
                     id="signup-handle-input"
                     type="text"
                     value={handle}
                     onChange={e => setHandle(e.target.value)}
                     placeholder="Contoh: @budisuka_film"
-                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
+                    className={`w-full bg-black/40 border rounded-lg px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors ${
+                      handleStatus?.available === true
+                        ? 'border-emerald-500/60 focus:border-emerald-400'
+                        : handleStatus?.available === false
+                        ? 'border-rose-500/60 focus:border-rose-400'
+                        : 'border-white/10 focus:border-[#FF2E7E]'
+                    }`}
                   />
+                  {handleStatus?.checking ? (
+                    <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-400 font-mono">
+                      <Loader2 className="w-3 h-3 animate-spin text-[#FF2E7E]" />
+                      <span>Memeriksa keunikan handle...</span>
+                    </div>
+                  ) : handleStatus?.available === true ? (
+                    <div className="flex items-center gap-1.5 mt-1 text-[11px] text-emerald-400 font-mono">
+                      <Check className="w-3 h-3 text-emerald-400 shrink-0" />
+                      <span>{handleStatus.message}</span>
+                    </div>
+                  ) : handleStatus?.available === false ? (
+                    <div className="flex items-center gap-1.5 mt-1 text-[11px] text-rose-400 font-mono">
+                      <AlertTriangle className="w-3 h-3 text-rose-400 shrink-0" />
+                      <span>{handleStatus.message}</span>
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-slate-500 mt-1 font-mono">
+                      Boleh dikosongkan (akan dibuatkan unik otomatis).
+                    </p>
+                  )}
                 </div>
               </div>
             )}

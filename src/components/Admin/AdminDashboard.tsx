@@ -36,8 +36,19 @@ export const AdminDashboard: React.FC = () => {
     isWriter,
     criticSubmissions,
     moderationReports,
-    appeals
+    appeals,
+    fetchAdminAppeals,
+    fetchAdminReports
   } = useApp();
+
+  useEffect(() => {
+    if (appeals.length === 0) {
+      fetchAdminAppeals();
+    }
+    if (moderationReports.length === 0) {
+      fetchAdminReports();
+    }
+  }, [appeals.length, moderationReports.length, fetchAdminAppeals, fetchAdminReports]);
 
   const location = useLocation();
 

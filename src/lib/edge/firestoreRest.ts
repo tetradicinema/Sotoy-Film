@@ -109,6 +109,25 @@ const collectionCache: Record<'films' | 'articles', CachedCollection | null> = {
 };
 
 /**
+ * Checks if an article entity is published according to status and scheduledAt rules.
+ */
+export function isArticlePublished(data: Record<string, any>): boolean {
+  if (!data) return false;
+  const status = data.status;
+  if (status === 'draft' || status === 'trash') {
+    return false;
+  }
+  if (status === 'scheduled') {
+    if (!data.scheduledAt) return false;
+    const scheduledTime = new Date(data.scheduledAt).getTime();
+    if (isNaN(scheduledTime) || scheduledTime > Date.now()) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
  * Fetches all documents in a collection via Firestore REST API, requesting only fields needed for meta tags.
  * Supports both paginated GET /documents/{collection} and POST /documents:runQuery fallback.
  */
@@ -148,9 +167,17 @@ export async function fetchCollectionDocuments(
       pageToken = data.nextPageToken;
     } while (pageToken && pageCount < 5);
 
-    if (allDocs.length > 0) {
-      collectionCache[collection] = { docs: allDocs, timestamp: Date.now() };
-      return allDocs;
+    let finalDocs = allDocs;
+    if (collection === 'articles') {
+      finalDocs = allDocs.filter(doc => {
+        const parsed = parseFirestoreFields(doc);
+        return isArticlePublished(parsed);
+      });
+    }
+
+    if (finalDocs.length > 0) {
+      collectionCache[collection] = { docs: finalDocs, timestamp: Date.now() };
+      return finalDocs;
     }
   } catch {
     // Proceed to runQuery fallback
@@ -184,9 +211,17 @@ export async function fetchCollectionDocuments(
     }
 
     if (queryRes.ok && Array.isArray(results)) {
-      const docs = results
+      let docs = results
         .filter((r: any) => r && r.document)
         .map((r: any) => r.document);
+
+      if (collection === 'articles') {
+        docs = docs.filter(doc => {
+          const parsed = parseFirestoreFields(doc);
+          return isArticlePublished(parsed);
+        });
+      }
+
       if (docs.length > 0) {
         collectionCache[collection] = { docs, timestamp: Date.now() };
         return docs;
@@ -242,6 +277,10 @@ export async function fetchEntityData(
       const doc = await directRes.json();
       const parsed = parseFirestoreFields(doc);
       if (parsed && Object.keys(parsed).length > 0) {
+        if (collection === 'articles' && !isArticlePublished(parsed)) {
+          negativeCache.set(cacheKey, now);
+          return null;
+        }
         negativeCache.delete(cacheKey);
         return parsed;
       }
@@ -284,6 +323,10 @@ export async function fetchEntityData(
         if (matchedDoc) {
           const parsed = parseFirestoreFields(matchedDoc);
           if (parsed && Object.keys(parsed).length > 0) {
+            if (collection === 'articles' && !isArticlePublished(parsed)) {
+              negativeCache.set(cacheKey, now);
+              return null;
+            }
             negativeCache.delete(cacheKey);
             return parsed;
           }

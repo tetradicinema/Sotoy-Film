@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ShieldAlert, 
   Trash2, 
@@ -30,8 +30,14 @@ export const AdminModeration: React.FC = () => {
     deleteFilmRating,
     ratings,
     showToast,
-    navigateTo
+    navigateTo,
+    fetchAdminReports,
+    hasMoreReports
   } = useApp();
+
+  useEffect(() => {
+    fetchAdminReports();
+  }, [fetchAdminReports]);
 
   const [activeSubTab, setActiveSubTab] = useState<'reports' | 'buzz' | 'reviews'>('reports');
   const [reportStatusFilter, setReportStatusFilter] = useState<'all' | 'pending' | 'resolved' | 'dismissed'>('pending');
@@ -283,6 +289,16 @@ export const AdminModeration: React.FC = () => {
               ))
             )}
           </div>
+          {hasMoreReports && (
+            <div className="p-4 text-center border-t border-slate-800 bg-[#171717]/40 rounded-2xl">
+              <button
+                onClick={() => fetchAdminReports({ loadMore: true })}
+                className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-all border border-slate-700 shadow-lg cursor-pointer"
+              >
+                Muat Lebih Banyak Laporan
+              </button>
+            </div>
+          )}
         </div>
       )}
 

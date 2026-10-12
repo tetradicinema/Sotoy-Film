@@ -45,6 +45,7 @@ export const AdminUserManagement: React.FC = () => {
     currentUser, 
     navigateTo,
     refreshAllUsers,
+    fetchAdminUserEmails,
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -55,15 +56,19 @@ export const AdminUserManagement: React.FC = () => {
   // Trigger immediate refresh on mount so the admin sees up-to-the-second live accuracy
   useEffect(() => {
     refreshAllUsers();
-  }, [refreshAllUsers]);
+    fetchAdminUserEmails();
+  }, [refreshAllUsers, fetchAdminUserEmails]);
 
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await refreshAllUsers({ force: true });
+      await Promise.all([
+        refreshAllUsers({ force: true }),
+        fetchAdminUserEmails({ force: true })
+      ]);
       showToast('Data pengguna berhasil diperbarui! 🔄');
     } catch {
-      showToast('Gagal memperbarui data pengguna.');
+      showToast('Gagal memperbarui data pengguna.', 'error');
     } finally {
       setIsRefreshing(false);
     }

@@ -1,12 +1,13 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Camera, User as UserIcon, AtSign, FileText, Sparkles, ArrowRight, Loader2, Film, Check, Compass } from 'lucide-react';
+import { Camera, User as UserIcon, AtSign, FileText, Sparkles, ArrowRight, Loader2, Film, Check, Compass, AlertTriangle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { ProfilePhotoCropModal } from '../Common/ProfilePhotoCropModal';
 import { DEFAULT_AVATAR } from '../../data/mockData';
+import { normalizeHandle, validateHandle } from '../../utils/handleHelpers';
 
 export const OnboardingPage: React.FC = () => {
-  const { currentUser, finishOnboarding, uploadProfilePhoto, showToast } = useApp();
+  const { currentUser, finishOnboarding, uploadProfilePhoto, showToast, isHandleAvailable } = useApp();
   const [name, setName] = useState(currentUser.name || '');
   const [handle, setHandle] = useState((currentUser.handle || '').replace('@', ''));
   const [bio, setBio] = useState(currentUser.bio || '');
@@ -14,6 +15,48 @@ export const OnboardingPage: React.FC = () => {
   const [selectedGenres, setSelectedGenres] = useState<string[]>(['Sci-Fi', 'Neo-Noir', 'Drama & Auteur']);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle uniqueness feedback
+  const [handleStatus, setHandleStatus] = useState<{
+    checking: boolean;
+    available?: boolean;
+    message?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const trimmed = handle.trim();
+    if (!trimmed) {
+      setHandleStatus(null);
+      return;
+    }
+
+    const clean = normalizeHandle(trimmed);
+    const validation = validateHandle(clean);
+    if (!validation.isValid) {
+      setHandleStatus({
+        checking: false,
+        available: false,
+        message: validation.error,
+      });
+      return;
+    }
+
+    setHandleStatus({ checking: true });
+    const timer = setTimeout(async () => {
+      try {
+        const res = await isHandleAvailable(clean, currentUser.id);
+        setHandleStatus({
+          checking: false,
+          available: res.available,
+          message: res.available ? `Handle ${clean} tersedia!` : (res.reason || `Handle ${clean} sudah digunakan oleh pengguna lain.`),
+        });
+      } catch {
+        setHandleStatus(null);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [handle, currentUser.id, isHandleAvailable]);
 
   // Profile Photo Cropping state
   const [cropModalOpen, setCropModalOpen] = useState(false);
@@ -93,12 +136,24 @@ export const OnboardingPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !handle.trim()) return;
+
+    const clean = normalizeHandle(handle);
+    const val = validateHandle(clean);
+    if (!val.isValid) {
+      showToast(val.error || 'Format handle tidak valid.');
+      return;
+    }
+
+    if (handleStatus?.available === false) {
+      showToast(handleStatus.message || `Handle ${clean} sudah digunakan oleh pengguna lain. Silakan pilih handle yang berbeda.`);
+      return;
+    }
     
     setIsSubmitting(true);
     try {
       await finishOnboarding({
         name,
-        handle: handle.startsWith('@') ? handle : `@${handle}`,
+        handle: clean,
         bio,
         avatar: selectedAvatar,
         favoriteGenres: selectedGenres,
@@ -194,10 +249,13 @@ export const OnboardingPage: React.FC = () => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[11px] font-black text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <AtSign className="w-3.5 h-3.5 text-[#FF2E7E]" />
-                  Username / Handle <span className="text-[#FF2E7E]">*</span>
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-black text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <AtSign className="w-3.5 h-3.5 text-[#FF2E7E]" />
+                    Username / Handle <span className="text-[#FF2E7E]">*</span>
+                  </label>
+                  <span className="text-[10px] text-slate-400 font-mono">Unik & berbeda</span>
+                </div>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">@</span>
                   <input
@@ -205,10 +263,32 @@ export const OnboardingPage: React.FC = () => {
                     value={handle}
                     onChange={(e) => setHandle(e.target.value.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase())}
                     placeholder="budinolan"
-                    className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl pl-9 pr-4 py-3.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#FF2E7E] focus:ring-1 focus:ring-[#FF2E7E]/30 transition-all min-h-[44px]"
+                    className={`w-full bg-slate-900/90 border rounded-xl pl-9 pr-4 py-3.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 transition-all min-h-[44px] ${
+                      handleStatus?.available === true
+                        ? 'border-emerald-500/60 focus:border-emerald-400 focus:ring-emerald-400/30'
+                        : handleStatus?.available === false
+                        ? 'border-rose-500/60 focus:border-rose-400 focus:ring-rose-400/30'
+                        : 'border-slate-700/80 focus:border-[#FF2E7E] focus:ring-[#FF2E7E]/30'
+                    }`}
                     required
                   />
                 </div>
+                {handleStatus?.checking ? (
+                  <div className="flex items-center gap-1.5 pt-0.5 text-[11px] text-slate-400 font-mono">
+                    <Loader2 className="w-3 h-3 animate-spin text-[#FF2E7E]" />
+                    <span>Memeriksa keunikan handle...</span>
+                  </div>
+                ) : handleStatus?.available === true ? (
+                  <div className="flex items-center gap-1.5 pt-0.5 text-[11px] text-emerald-400 font-mono">
+                    <Check className="w-3 h-3 text-emerald-400 shrink-0" />
+                    <span>{handleStatus.message}</span>
+                  </div>
+                ) : handleStatus?.available === false ? (
+                  <div className="flex items-center gap-1.5 pt-0.5 text-[11px] text-rose-400 font-mono">
+                    <AlertTriangle className="w-3 h-3 text-rose-400 shrink-0" />
+                    <span>{handleStatus.message}</span>
+                  </div>
+                ) : null}
               </div>
 
               <div className="sm:col-span-2 space-y-1.5">

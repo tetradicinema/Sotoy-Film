@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp, isUserAdmin } from '../../context/AppContext';
 import { ShieldCheck, CheckCircle2, XCircle, Search, ExternalLink, Filter, ArrowLeft } from 'lucide-react';

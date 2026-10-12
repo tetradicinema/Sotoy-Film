@@ -62,6 +62,35 @@ globalThis.fetch = async (url: string | URL | Request, init?: RequestInit): Prom
     });
   }
 
+  if (urlStr.includes('/documents/articles/draft-article')) {
+    return new Response(JSON.stringify({
+      name: 'projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents/articles/draft-article',
+      fields: {
+        title: { stringValue: 'Draft Article Title' },
+        status: { stringValue: 'draft' },
+        slug: { stringValue: 'draft-article' }
+      }
+    }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' }
+    });
+  }
+
+  if (urlStr.includes('/documents/articles/published-article')) {
+    return new Response(JSON.stringify({
+      name: 'projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents/articles/published-article',
+      fields: {
+        title: { stringValue: 'Published Article Title' },
+        status: { stringValue: 'published' },
+        slug: { stringValue: 'published-article' },
+        excerpt: { stringValue: 'This is a published article excerpt.' }
+      }
+    }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' }
+    });
+  }
+
   // 3. Mock general fallback collection requests (Strategic fallback list)
   if (urlStr.includes('/documents/films')) {
     return new Response(JSON.stringify({
@@ -309,6 +338,19 @@ const TEST_CASES: TestCase[] = [
     userAgent: 'Twitterbot/1.0',
     path: '/film/completely-non-existent-film-slug-xyz-999',
     expectedBranch: 'HUMAN', // Falls through gracefully with next() instead of throwing 500
+  },
+  {
+    name: 'Bot on draft article slug (draft -> generic fallback / pass-through)',
+    userAgent: 'Googlebot/2.1',
+    path: '/artikel/draft-article',
+    expectedBranch: 'HUMAN',
+  },
+  {
+    name: 'Bot on published article slug (published -> meta injected)',
+    userAgent: 'Googlebot/2.1',
+    path: '/artikel/published-article',
+    expectedBranch: 'BOT',
+    expectedMetaPatterns: ['Published Article Title', 'og:title'],
   },
 ];
 

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   ScrollText, 
   Search, 
@@ -34,7 +34,11 @@ import { AuditLog, AuditLogActionType, UserRole } from '../../types';
 import { RoleBadge } from '../Common/RoleBadge';
 
 export const AdminAuditLog: React.FC = () => {
-  const { auditLogs, clearAuditLogs, deleteAuditLog, showToast, currentUser, navigateTo } = useApp();
+  const { auditLogs, clearAuditLogs, deleteAuditLog, showToast, currentUser, navigateTo, fetchAuditLogs, hasMoreAuditLogs } = useApp();
+
+  useEffect(() => {
+    fetchAuditLogs();
+  }, [fetchAuditLogs]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [actionCategory, setActionCategory] = useState<'all' | 'roles' | 'suspensions' | 'deletions' | 'appeals' | 'moderation' | 'critics'>('all');
@@ -637,6 +641,17 @@ export const AdminAuditLog: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {hasMoreAuditLogs && (
+        <div className="p-4 text-center border-t border-slate-800 bg-[#171717]/40">
+          <button
+            onClick={() => fetchAuditLogs({ loadMore: true })}
+            className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-all border border-slate-700 shadow-lg cursor-pointer"
+          >
+            Muat Lebih Banyak Audit Log
+          </button>
+        </div>
+      )}
 
       {/* DETAIL MODAL / DRAWER */}
       {selectedLog && (

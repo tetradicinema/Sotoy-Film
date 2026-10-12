@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   History, 
   CheckCircle2, 
@@ -30,8 +30,14 @@ export const AdminAppeals: React.FC = () => {
     deleteAccountAppeal,
     allUsers,
     showToast,
-    navigateTo 
+    navigateTo,
+    fetchAdminAppeals,
+    hasMoreAppeals
   } = useApp();
+
+  useEffect(() => {
+    fetchAdminAppeals();
+  }, [fetchAdminAppeals]);
 
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [searchQuery, setSearchQuery] = useState('');
@@ -295,6 +301,16 @@ export const AdminAppeals: React.FC = () => {
               })
             )}
           </div>
+          {hasMoreAppeals && (
+            <div className="p-4 text-center border-t border-slate-800 bg-[#171717]/40">
+              <button
+                onClick={() => fetchAdminAppeals({ loadMore: true })}
+                className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-all border border-slate-700 shadow-lg cursor-pointer"
+              >
+                Muat Lebih Banyak Banding
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Right Column: Appeal Detail & Action Sidebar */}

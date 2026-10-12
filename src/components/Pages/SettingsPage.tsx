@@ -40,8 +40,11 @@ import {
   ExternalLink,
   Undo2,
   ShieldCheck,
+  Check,
+  Loader2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { normalizeHandle, validateHandle } from '../../utils/handleHelpers';
 import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 import { SettingsSubPage, UserSettings } from '../../types';
 import { ProfilePhotoCropModal } from '../Common/ProfilePhotoCropModal';
@@ -72,6 +75,7 @@ export const SettingsPage: React.FC = () => {
     navigateTo,
     isAdmin,
     isWriter,
+    isHandleAvailable,
   } = useApp();
 
   // Profile Form state
@@ -80,6 +84,57 @@ export const SettingsPage: React.FC = () => {
   const [bio, setBio] = useState(currentUser.bio || '');
   const [avatarPreview, setAvatarPreview] = useState(currentUser.avatar || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Real-time handle uniqueness feedback state
+  const [handleStatus, setHandleStatus] = useState<{
+    checking: boolean;
+    available?: boolean;
+    message?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const trimmed = handle.trim();
+    if (!trimmed) {
+      setHandleStatus(null);
+      return;
+    }
+
+    const clean = normalizeHandle(trimmed);
+    if (clean === normalizeHandle(currentUser.handle)) {
+      setHandleStatus({
+        checking: false,
+        available: true,
+        message: 'Handle aktif kamu saat ini.',
+      });
+      return;
+    }
+
+    const validation = validateHandle(clean);
+    if (!validation.isValid) {
+      setHandleStatus({
+        checking: false,
+        available: false,
+        message: validation.error,
+      });
+      return;
+    }
+
+    setHandleStatus({ checking: true });
+    const timer = setTimeout(async () => {
+      try {
+        const res = await isHandleAvailable(clean, currentUser.id);
+        setHandleStatus({
+          checking: false,
+          available: res.available,
+          message: res.available ? `Handle ${clean} tersedia!` : (res.reason || `Handle ${clean} sudah digunakan oleh pengguna lain.`),
+        });
+      } catch {
+        setHandleStatus(null);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [handle, currentUser.handle, currentUser.id, isHandleAvailable]);
 
   // Profile Photo Cropping state
   const [cropModalOpen, setCropModalOpen] = useState(false);
@@ -228,11 +283,25 @@ export const SettingsPage: React.FC = () => {
     setImageToCrop(null);
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateUserProfile({
-      name,
-      handle,
+    if (!name.trim()) {
+      showToast('Nama Lengkap wajib diisi.');
+      return;
+    }
+    const clean = normalizeHandle(handle);
+    const val = validateHandle(clean);
+    if (!val.isValid) {
+      showToast(val.error || 'Format handle tidak valid.');
+      return;
+    }
+    if (handleStatus?.available === false) {
+      showToast(handleStatus.message || `Handle ${clean} sudah digunakan oleh pengguna lain. Silakan pilih handle yang berbeda.`);
+      return;
+    }
+    await updateUserProfile({
+      name: name.trim(),
+      handle: clean,
       bio,
       avatar: avatarPreview,
     });
@@ -543,14 +612,39 @@ export const SettingsPage: React.FC = () => {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-300">Handle / Username (@)</label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-slate-300">Handle / Username (@)</label>
+                        <span className="text-[10px] text-slate-400 font-mono">Unik & berbeda</span>
+                      </div>
                       <input
                         type="text"
                         value={handle}
                         onChange={e => setHandle(e.target.value)}
                         required
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
+                        className={`w-full bg-slate-900 border rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors ${
+                          handleStatus?.available === true
+                            ? 'border-emerald-500/60 focus:border-emerald-400'
+                            : handleStatus?.available === false
+                            ? 'border-rose-500/60 focus:border-rose-400'
+                            : 'border-slate-800 focus:border-[#FF2E7E]'
+                        }`}
                       />
+                      {handleStatus?.checking ? (
+                        <div className="flex items-center gap-1.5 pt-0.5 text-[11px] text-slate-400 font-mono">
+                          <Loader2 className="w-3 h-3 animate-spin text-[#FF2E7E]" />
+                          <span>Memeriksa keunikan handle...</span>
+                        </div>
+                      ) : handleStatus?.available === true ? (
+                        <div className="flex items-center gap-1.5 pt-0.5 text-[11px] text-emerald-400 font-mono">
+                          <Check className="w-3 h-3 text-emerald-400 shrink-0" />
+                          <span>{handleStatus.message}</span>
+                        </div>
+                      ) : handleStatus?.available === false ? (
+                        <div className="flex items-center gap-1.5 pt-0.5 text-[11px] text-rose-400 font-mono">
+                          <AlertTriangle className="w-3 h-3 text-rose-400 shrink-0" />
+                          <span>{handleStatus.message}</span>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
 
