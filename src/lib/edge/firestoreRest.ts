@@ -243,6 +243,7 @@ export async function fetchCollectionDocuments(
  * Prevents repeated crawls of unknown or nonexistent URLs from triggering expensive collection scans.
  */
 const NEGATIVE_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const UNPUBLISHED_NEGATIVE_TTL_MS = 60 * 1000; // 60 seconds
 const negativeCache = new Map<string, number>();
 
 /**
@@ -261,9 +262,12 @@ export async function fetchEntityData(
   const now = Date.now();
 
   // 1. Negative cache check: skip immediately if recently proven not to exist
-  const negativeCachedAt = negativeCache.get(cacheKey);
-  if (negativeCachedAt && now - negativeCachedAt < NEGATIVE_CACHE_TTL_MS) {
-    return null;
+  const expiresAt = negativeCache.get(cacheKey);
+  if (expiresAt) {
+    if (now < expiresAt) {
+      return null;
+    }
+    negativeCache.delete(cacheKey);
   }
 
   // 2. Direct document GET if slug happens to be the document ID
@@ -278,7 +282,7 @@ export async function fetchEntityData(
       const parsed = parseFirestoreFields(doc);
       if (parsed && Object.keys(parsed).length > 0) {
         if (collection === 'articles' && !isArticlePublished(parsed)) {
-          negativeCache.set(cacheKey, now);
+          negativeCache.set(cacheKey, now + UNPUBLISHED_NEGATIVE_TTL_MS);
           return null;
         }
         negativeCache.delete(cacheKey);
@@ -324,7 +328,7 @@ export async function fetchEntityData(
           const parsed = parseFirestoreFields(matchedDoc);
           if (parsed && Object.keys(parsed).length > 0) {
             if (collection === 'articles' && !isArticlePublished(parsed)) {
-              negativeCache.set(cacheKey, now);
+              negativeCache.set(cacheKey, now + UNPUBLISHED_NEGATIVE_TTL_MS);
               return null;
             }
             negativeCache.delete(cacheKey);
@@ -361,6 +365,6 @@ export async function fetchEntityData(
   }
 
   // 5. Store in negative cache so repeated crawls of unknown URLs do not trigger scans
-  negativeCache.set(cacheKey, Date.now());
+  negativeCache.set(cacheKey, now + NEGATIVE_CACHE_TTL_MS);
   return null;
 }

@@ -1,9 +1,35 @@
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, doc, writeBatch } from 'firebase/firestore';
+/**
+ * Backfill Handles Migration Script
+ *
+ * Deterministically normalizes and migrates user handles to ensure uniqueness
+ * and registers them in the `handles` collection using the Firebase Admin SDK.
+ *
+ * Requirements:
+ * - GOOGLE_APPLICATION_CREDENTIALS must point to a valid service account JSON key file.
+ *
+ * Run commands:
+ * Dry-Run Mode (default):
+ *   GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json npx tsx scripts/backfill-handles.ts
+ *
+ * Apply Mode:
+ *   GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json npx tsx scripts/backfill-handles.ts --apply
+ */
+
+import admin from 'firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+interface UserRecord {
+  id: string;
+  handle: string;
+  createdAt?: string;
+  name?: string;
+}
+
+interface RenamedUserEntry {
+  uid: string;
+  'old -> new': string;
+}
 
 async function backfillHandles() {
   const isApply = process.argv.includes('--apply');
@@ -11,119 +37,202 @@ async function backfillHandles() {
   console.log(`Starting Handles Backfill Migration ${isApply ? '(APPLY MODE)' : '(DRY-RUN MODE)'}`);
   console.log('=====================================================\n');
 
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      projectId: firebaseConfig.projectId,
+    });
+  }
+
+  const databaseId = firebaseConfig.firestoreDatabaseId || '(default)';
+  console.log(`Target Firestore database: ${databaseId}`);
+  const db = getFirestore(admin.app(), databaseId);
+
   let scanned = 0;
   let normalizedCount = 0;
   let dedupedCount = 0;
-  let registryCreated = 0;
-  const renamedUsers: Array<{ uid: string; oldHandle: string; newHandle: string }> = [];
+  let usersUpdated = 0;
+  let handleDocsCreated = 0;
 
   try {
-    const usersSnap = await getDocs(collection(db, 'users'));
+    const usersSnap = await db.collection('users').get();
     scanned = usersSnap.size;
     console.log(`Found ${scanned} user documents in "users" collection.`);
 
-    const usersData: Array<{ id: string; createdAt: string; handle: string; name: string }> = [];
+    const usersData: UserRecord[] = [];
     usersSnap.docs.forEach(docSnap => {
       const data = docSnap.data();
       usersData.push({
         id: docSnap.id,
-        createdAt: data.createdAt || new Date().toISOString(),
         handle: typeof data.handle === 'string' ? data.handle : '',
-        name: data.name || 'User',
+        createdAt: typeof data.createdAt === 'string' ? data.createdAt : undefined,
+        name: typeof data.name === 'string' ? data.name : undefined,
       });
     });
 
-    // Sort users by createdAt ascending (oldest first) so deterministic tie-breaking works
+    // 1. Sort by createdAt ascending (missing createdAt = newest), tie-break by uid
     usersData.sort((a, b) => {
-      const tA = new Date(a.createdAt).getTime() || 0;
-      const tB = new Date(b.createdAt).getTime() || 0;
-      return tA - tB;
+      const tA = a.createdAt ? new Date(a.createdAt).getTime() : Infinity;
+      const tB = b.createdAt ? new Date(b.createdAt).getTime() : Infinity;
+      const validA = isNaN(tA) ? Infinity : tA;
+      const validB = isNaN(tB) ? Infinity : tB;
+      if (validA !== validB) {
+        return validA - validB;
+      }
+      return a.id.localeCompare(b.id);
     });
 
-    const handleAssignments = new Map<string, string>(); // body -> uid
-    const userNewHandles = new Map<string, string>(); // uid -> newHandle
+    // 2. Reserve @admin_sotoyfilm for CsG2CY2TaIZmG7yuPfzAxmRYrlY2 before the loop
+    const assignedHandles = new Map<string, string>(); // body -> uid
+    assignedHandles.set('admin_sotoyfilm', 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2');
 
+    const userNewHandles = new Map<string, string>(); // uid -> finalHandle (@body)
+    const renamedUsersTable: RenamedUserEntry[] = [];
+
+    // 3. Process each user deterministically
     for (const user of usersData) {
-      let raw = user.handle.trim().toLowerCase();
       if (user.id === 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2') {
-        raw = '@admin_sotoyfilm';
+        userNewHandles.set(user.id, '@admin_sotoyfilm');
+        if (user.handle !== '@admin_sotoyfilm') {
+          renamedUsersTable.push({
+            uid: user.id,
+            'old -> new': `${user.handle || '(empty)'} -> @admin_sotoyfilm`,
+          });
+        }
+        continue;
       }
 
-      let cleaned = raw.replace(/^@+/, '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-      let candidate = cleaned ? `@${cleaned}` : '';
-      let body = candidate.slice(1);
+      const raw = (user.handle || '').trim().toLowerCase();
+      let body = raw.replace(/^@+/, '').replace(/[^a-z0-9_]/g, '').slice(0, 30);
+      let wasNormalized = false;
 
-      if (!body || body.length < 3 || body.length > 30) {
-        const rand4 = Math.floor(1000 + Math.random() * 9000);
-        candidate = `@warga_${rand4}`;
+      // If body is shorter than 3 or empty: use "@warga_" + first 6 chars of uid (lowercased, stripped to [a-z0-9])
+      if (body.length < 3) {
+        const uidClean = user.id.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6);
+        body = `warga_${uidClean}`;
+        wasNormalized = true;
+      } else if (raw !== `@${body}`) {
+        wasNormalized = true;
+      }
+
+      if (wasNormalized) {
         normalizedCount++;
       }
 
-      let finalHandle = candidate;
-      let bodyOnly = finalHandle.slice(1);
-      while (handleAssignments.has(bodyOnly) && handleAssignments.get(bodyOnly) !== user.id) {
+      // 4. If body already taken by another uid, append smallest integer suffix (2, 3, ...)
+      let finalBody = body;
+      if (assignedHandles.has(finalBody) && assignedHandles.get(finalBody) !== user.id) {
         dedupedCount++;
-        const baseBody = finalHandle.replace(/^@/, '').replace(/\d+$/, '');
-        const nextRand = Math.floor(1000 + Math.random() * 9000);
-        finalHandle = `@${baseBody}${nextRand}`;
-        bodyOnly = finalHandle.slice(1);
+        let counter = 2;
+        while (true) {
+          const suffix = String(counter);
+          const maxBaseLen = 30 - suffix.length;
+          const candidateBase = body.slice(0, maxBaseLen);
+          const candidateBody = `${candidateBase}${suffix}`;
+          if (!assignedHandles.has(candidateBody) || assignedHandles.get(candidateBody) === user.id) {
+            finalBody = candidateBody;
+            break;
+          }
+          counter++;
+        }
       }
 
-      handleAssignments.set(bodyOnly, user.id);
+      assignedHandles.set(finalBody, user.id);
+      const finalHandle = `@${finalBody}`;
       userNewHandles.set(user.id, finalHandle);
 
       if (user.handle !== finalHandle) {
-        renamedUsers.push({
+        renamedUsersTable.push({
           uid: user.id,
-          oldHandle: user.handle || '(empty)',
-          newHandle: finalHandle,
+          'old -> new': `${user.handle || '(empty)'} -> ${finalHandle}`,
         });
       }
     }
 
-    console.log(`\n--- Summary Stats ---`);
+    if (isApply) {
+      // Pre-check existing handles collection for foreign ownership conflict
+      const existingHandlesSnap = await db.collection('handles').get();
+      const existingHandlesMap = new Map<string, { uid: string; createdAt?: string }>();
+
+      for (const hDoc of existingHandlesSnap.docs) {
+        const data = hDoc.data();
+        existingHandlesMap.set(hDoc.id, {
+          uid: data.uid,
+          createdAt: data.createdAt,
+        });
+        const plannedUid = assignedHandles.get(hDoc.id);
+        if (plannedUid && data.uid && data.uid !== plannedUid) {
+          throw new Error(
+            `Conflict detected: Document "handles/${hDoc.id}" already exists with uid "${data.uid}", ` +
+            `but backfill assigned this handle to uid "${plannedUid}". Stopping to prevent overwrite.`
+          );
+        }
+      }
+
+      // Perform batch writes (max 400 operations per batch)
+      let batch = db.batch();
+      let opsInBatch = 0;
+
+      for (const user of usersData) {
+        const finalHandle = userNewHandles.get(user.id)!;
+        const hId = finalHandle.replace(/^@/, '');
+
+        // Update users/{uid}.handle ONLY where it changed
+        if (user.handle !== finalHandle) {
+          const userRef = db.collection('users').doc(user.id);
+          batch.update(userRef, { handle: finalHandle });
+          usersUpdated++;
+          opsInBatch++;
+        }
+
+        // Set handles/{h} for every user (idempotent)
+        const handleRef = db.collection('handles').doc(hId);
+        const existingDoc = existingHandlesMap.get(hId);
+        batch.set(
+          handleRef,
+          {
+            uid: user.id,
+            createdAt: existingDoc?.createdAt || new Date().toISOString(),
+          },
+          { merge: true }
+        );
+        handleDocsCreated++;
+        opsInBatch++;
+
+        if (opsInBatch >= 400) {
+          await batch.commit();
+          batch = db.batch();
+          opsInBatch = 0;
+        }
+      }
+
+      if (opsInBatch > 0) {
+        await batch.commit();
+      }
+    }
+
+    // Output stats
+    console.log(`\n--- Migration Summary Stats ---`);
     console.log(`Scanned: ${scanned}`);
     console.log(`Normalized: ${normalizedCount}`);
     console.log(`Deduped: ${dedupedCount}`);
-    console.log(`Renamed Users: ${renamedUsers.length}`);
+    console.log(`Handle docs created: ${isApply ? handleDocsCreated : usersData.length}`);
+    console.log(`Users updated: ${isApply ? usersUpdated : renamedUsersTable.length}`);
 
-    if (renamedUsers.length > 0) {
+    if (renamedUsersTable.length > 0) {
       console.log('\nRenamed Users Table:');
-      console.table(renamedUsers);
-    }
-
-    if (isApply) {
-      console.log('\nApplying changes to Firestore (batch writes)...');
-      let batch = writeBatch(db);
-      let batchCount = 0;
-
-      for (const user of usersData) {
-        const newHandle = userNewHandles.get(user.id)!;
-        const hId = newHandle.replace(/^@/, '');
-        const userRef = doc(db, 'users', user.id);
-        const handleRef = doc(db, 'handles', hId);
-
-        batch.update(userRef, { handle: newHandle });
-        batch.set(handleRef, { uid: user.id, createdAt: new Date().toISOString() }, { merge: true });
-        batchCount += 2;
-        registryCreated++;
-
-        if (batchCount >= 400) {
-          await batch.commit();
-          batch = writeBatch(db);
-          batchCount = 0;
-        }
-      }
-      if (batchCount > 0) {
-        await batch.commit();
-      }
-      console.log(`Successfully created ${registryCreated} handle registry docs and updated users in Firestore!`);
+      console.table(renamedUsersTable);
     } else {
-      console.log('\n[DRY-RUN] No writes performed. Run with --apply to execute migration.');
+      console.log('\nAll user handles are already correctly normalized and unique. No renames needed.');
     }
 
-  } catch (err) {
-    console.error('Error during backfill-handles:', err);
+    if (!isApply) {
+      console.log('\n[DRY-RUN] No writes performed. Run with --apply to execute migration.');
+    } else {
+      console.log('\n[APPLY] Migration applied successfully to Firestore.');
+    }
+  } catch (err: any) {
+    console.error('Error during backfill-handles:', err?.message || err);
+    process.exit(1);
   }
 }
 

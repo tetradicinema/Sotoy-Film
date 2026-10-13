@@ -91,6 +91,37 @@ globalThis.fetch = async (url: string | URL | Request, init?: RequestInit): Prom
     });
   }
 
+  if (urlStr.includes('/documents/articles/scheduled-future-article')) {
+    return new Response(JSON.stringify({
+      name: 'projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents/articles/scheduled-future-article',
+      fields: {
+        title: { stringValue: 'Scheduled Future Article Title' },
+        status: { stringValue: 'scheduled' },
+        scheduledAt: { stringValue: '2099-01-01T00:00:00Z' },
+        slug: { stringValue: 'scheduled-future-article' }
+      }
+    }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' }
+    });
+  }
+
+  if (urlStr.includes('/documents/articles/scheduled-past-article')) {
+    return new Response(JSON.stringify({
+      name: 'projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents/articles/scheduled-past-article',
+      fields: {
+        title: { stringValue: 'Scheduled Past Article Title' },
+        status: { stringValue: 'scheduled' },
+        scheduledAt: { stringValue: '2020-01-01T00:00:00Z' },
+        slug: { stringValue: 'scheduled-past-article' },
+        excerpt: { stringValue: 'This is a scheduled past article excerpt.' }
+      }
+    }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' }
+    });
+  }
+
   // 3. Mock general fallback collection requests (Strategic fallback list)
   if (urlStr.includes('/documents/films')) {
     return new Response(JSON.stringify({
@@ -351,6 +382,19 @@ const TEST_CASES: TestCase[] = [
     path: '/artikel/published-article',
     expectedBranch: 'BOT',
     expectedMetaPatterns: ['Published Article Title', 'og:title'],
+  },
+  {
+    name: 'Bot on scheduled article in the future (future -> generic fallback / pass-through)',
+    userAgent: 'Googlebot/2.1',
+    path: '/artikel/scheduled-future-article',
+    expectedBranch: 'HUMAN',
+  },
+  {
+    name: 'Bot on scheduled article in the past (past -> meta injected)',
+    userAgent: 'Googlebot/2.1',
+    path: '/artikel/scheduled-past-article',
+    expectedBranch: 'BOT',
+    expectedMetaPatterns: ['Scheduled Past Article Title', 'og:title'],
   },
 ];
 

@@ -327,7 +327,7 @@ service cloud.firestore {
     // Rules for each collection
     match /users/{userId} {
       allow read: if true;
-      allow create: if isSignedIn() && isOwner(userId) && !incoming().keys().hasAny(['email']) && isValidUser(incoming()) && (incoming().role == 'warga_sotoy' || isAdmin());
+      allow create: if isSignedIn() && isOwner(userId) && !incoming().keys().hasAny(['email']) && isValidUser(incoming()) && (incoming().role == 'warga_sotoy' || isAdmin()) && (isAdmin() || getAfter(/databases/$(database)/documents/handles/$(incoming().handle.replace('@',''))).data.uid == request.auth.uid);
       allow update: if isSignedIn() && !incoming().keys().hasAny(['email']) && (
         // Document Owner updating profile / interests / following
         (isOwner(userId) && isValidUser(incoming()) && (incoming().role == existing().role) && (

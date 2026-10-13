@@ -132,6 +132,7 @@ import {
   increment,
   writeBatch,
   runTransaction,
+  documentId,
 } from 'firebase/firestore';
 import { 
   onAuthStateChanged, 
@@ -1189,31 +1190,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [isAdmin, currentView, refreshAllUsers]);
 
   // Admin on-demand loader for userPrivate collection (joined into memory when user management opens)
+  // Admin on-demand loader for userPrivate collection (joined into memory when user management opens)
   const [adminUserEmails, setAdminUserEmails] = useState<Record<string, string>>({});
+  const hasLoadedAdminEmailsRef = useRef<boolean>(false);
   const lastAdminEmailsFetchTsRef = useRef<number>(0);
   const inFlightAdminEmailsRef = useRef<Promise<void> | null>(null);
 
   const fetchAdminUserEmails = useCallback(async (opts?: { force?: boolean }) => {
     if (!isAdmin) return;
     const now = Date.now();
-    if (!opts?.force && (now - lastAdminEmailsFetchTsRef.current < 10 * 60 * 1000) && Object.keys(adminUserEmails).length > 0) {
+    if (!opts?.force && hasLoadedAdminEmailsRef.current && (now - lastAdminEmailsFetchTsRef.current < 10 * 60 * 1000)) {
       return;
     }
     if (inFlightAdminEmailsRef.current) return inFlightAdminEmailsRef.current;
 
     const promise = (async () => {
       try {
-        const snap = await getDocs(
-          query(collection(db, 'userPrivate'), orderBy('updatedAt', 'desc'), limit(100))
-        );
+        const PAGE_SIZE = 200;
+        const MAX_DOCS = 2000;
         const map: Record<string, string> = {};
-        snap.forEach((docSnap) => {
-          const data = docSnap.data() as UserPrivate;
-          if (data?.email) {
-            map[docSnap.id] = data.email;
+        let lastDoc: QueryDocumentSnapshot | null = null;
+        let totalFetched = 0;
+
+        while (totalFetched < MAX_DOCS) {
+          const constraints: any[] = [orderBy(documentId()), limit(PAGE_SIZE)];
+          if (lastDoc) {
+            constraints.push(startAfter(lastDoc));
           }
-        });
+          const snap = await getDocs(
+            query(collection(db, 'userPrivate'), ...constraints)
+          );
+          if (snap.empty) break;
+
+          snap.forEach((docSnap) => {
+            const data = docSnap.data() as UserPrivate;
+            if (data?.email) {
+              map[docSnap.id] = data.email;
+            }
+          });
+
+          totalFetched += snap.docs.length;
+          lastDoc = snap.docs[snap.docs.length - 1];
+          if (snap.docs.length < PAGE_SIZE) break;
+        }
+
         setAdminUserEmails(prev => ({ ...prev, ...map }));
+        hasLoadedAdminEmailsRef.current = true;
         lastAdminEmailsFetchTsRef.current = Date.now();
       } catch (err: any) {
         console.warn('[Firestore] userPrivate fetch notice:', err?.message || err);
@@ -1223,7 +1245,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     })();
     inFlightAdminEmailsRef.current = promise;
     return promise;
-  }, [isAdmin, adminUserEmails]);
+  }, [isAdmin]);
+
+  // Session-loaded flags for admin fetchers
+  const auditLogsLoadedSessionRef = useRef<boolean>(false);
+  const appealsLoadedSessionRef = useRef<boolean>(false);
+  const reportsLoadedSessionRef = useRef<boolean>(false);
+
+  // Reset session flags when user stops being admin/writer (logout or role change)
+  useEffect(() => {
+    if (!isAdmin && !isWriter) {
+      auditLogsLoadedSessionRef.current = false;
+      appealsLoadedSessionRef.current = false;
+      reportsLoadedSessionRef.current = false;
+      hasLoadedAdminEmailsRef.current = false;
+    }
+  }, [isAdmin, isWriter]);
 
   // Bounded on-demand fetchers for auditLogs with manual refresh and startAfter pagination
   const [hasMoreAuditLogs, setHasMoreAuditLogs] = useState<boolean>(false);
@@ -1233,6 +1270,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const fetchAuditLogs = useCallback(async (opts?: { loadMore?: boolean; force?: boolean }) => {
     if (!isAdmin && !isWriter) return;
     if (isFetchingAuditLogsRef.current) return;
+    if (!opts?.force && !opts?.loadMore && auditLogsLoadedSessionRef.current) {
+      return;
+    }
     isFetchingAuditLogsRef.current = true;
     try {
       const constraints: any[] = [orderBy('timestamp', 'desc')];
@@ -1263,6 +1303,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } else {
         setAuditLogs(items);
       }
+      auditLogsLoadedSessionRef.current = true;
     } catch (err: any) {
       console.warn('[Firestore] fetchAuditLogs error:', err?.message || err);
     } finally {
@@ -1278,6 +1319,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const fetchAdminAppeals = useCallback(async (opts?: { loadMore?: boolean; force?: boolean }) => {
     if (!isAdmin && !isWriter) return;
     if (isFetchingAppealsRef.current) return;
+    if (!opts?.force && !opts?.loadMore && appealsLoadedSessionRef.current) {
+      return;
+    }
     isFetchingAppealsRef.current = true;
     try {
       const constraints: any[] = [orderBy('createdAt', 'desc')];
@@ -1308,6 +1352,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } else {
         setAppeals(items);
       }
+      appealsLoadedSessionRef.current = true;
     } catch (err: any) {
       console.warn('[Firestore] fetchAdminAppeals error:', err?.message || err);
     } finally {
@@ -1372,6 +1417,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const fetchAdminReports = useCallback(async (opts?: { loadMore?: boolean; force?: boolean }) => {
     if (!isAdmin && !isWriter) return;
     if (isFetchingReportsRef.current) return;
+    if (!opts?.force && !opts?.loadMore && reportsLoadedSessionRef.current) {
+      return;
+    }
     isFetchingReportsRef.current = true;
     try {
       const constraints: any[] = [orderBy('createdAt', 'desc')];
@@ -1402,6 +1450,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } else {
         setModerationReports(items);
       }
+      reportsLoadedSessionRef.current = true;
     } catch (err: any) {
       console.warn('[Firestore] fetchAdminReports error:', err?.message || err);
     } finally {
@@ -1881,6 +1930,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return `@${base}_${Math.floor(1000 + Math.random() * 9000)}`;
   }, [isHandleAvailable]);
 
+  // Single shared helper to atomically claim a handle and create a user document
+  const claimHandleAndCreateUser = useCallback(async (
+    uid: string,
+    publicUserPayload: Omit<User, 'email'>,
+    desiredHandle: string
+  ): Promise<void> => {
+    const cleanHandle = normalizeHandle(desiredHandle);
+    const hId = cleanHandle.replace(/^@/, '');
+    await runTransaction(db, async (transaction) => {
+      const handleRef = doc(db, 'handles', hId);
+      const handleSnap = await transaction.get(handleRef);
+      if (handleSnap.exists() && handleSnap.data().uid !== uid) {
+        throw new Error('HANDLE_TAKEN');
+      }
+      const userDocRef = doc(db, 'users', uid);
+      transaction.set(handleRef, { uid, createdAt: new Date().toISOString() });
+      transaction.set(userDocRef, { ...publicUserPayload, handle: cleanHandle });
+    });
+  }, []);
+
   // Initialize Firebase Auth & Real User profile sync
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, async (fbUser) => {
@@ -1924,12 +1993,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             // Disambiguate legacy collision: CsG2CY2TaIZmG7yuPfzAxmRYrlY2 (Admin Tony Tofani)
             if (uid === 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' && normalizeHandle(data.handle) === '@tonytfani') {
               data.handle = '@admin_sotoyfilm';
-              try { await updateDoc(userDocRef, { handle: '@admin_sotoyfilm' }); } catch (e) {}
             }
             const normalizedUserHandle = normalizeHandle(data.handle);
             if (normalizedUserHandle && normalizedUserHandle !== data.handle) {
               data.handle = normalizedUserHandle;
-              try { await updateDoc(userDocRef, { handle: normalizedUserHandle }); } catch (e) {}
             }
 
             // Sync private email if present in Firebase Auth
@@ -1992,25 +2059,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const baseSeed = fbUser.displayName || (fbUser.email ? fbUser.email.split('@')[0] : 'user_' + uid.slice(0, 4));
             const uniqueDefaultHandle = await generateUniqueHandle(baseSeed, uid);
 
-            const defaultUser: User = {
-              id: uid,
-              name: fbUser.displayName || (isAdminRole ? 'Admin Utama' : isWriterRole ? 'Penulis Sotoy' : isCriticRole ? 'Si Paling Sotoy' : 'Warga Baru'),
-              handle: uniqueDefaultHandle,
-              avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-              role,
-              roleTitle,
-              bio,
-              createdAt: new Date().toISOString(),
-              totalReviews: 0,
-              totalBuzz: 0,
-              followers: [],
-              following: [],
-              followersCount: 0,
-              followingCount: 0,
-              hasFinishedOnboarding: true,
-            };
-            const { email: _unused, ...publicUserPayload } = defaultUser;
-            try { await setDoc(userDocRef, publicUserPayload); } catch (e) { /* ignore write permission */ }
+            let registeredUser: User | null = null;
+            let registered = false;
+            let attempts = 0;
+            while (!registered && attempts < 5) {
+              attempts++;
+              const candidateHandle = attempts === 1
+                ? uniqueDefaultHandle
+                : `@${uniqueDefaultHandle.replace(/^@/, '').slice(0, 25)}_${Math.floor(1000 + Math.random() * 9000)}`;
+
+              const defaultUser: User = {
+                id: uid,
+                name: fbUser.displayName || (isAdminRole ? 'Admin Utama' : isWriterRole ? 'Penulis Sotoy' : isCriticRole ? 'Si Paling Sotoy' : 'Warga Baru'),
+                handle: candidateHandle,
+                avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+                role,
+                roleTitle,
+                bio,
+                createdAt: new Date().toISOString(),
+                totalReviews: 0,
+                totalBuzz: 0,
+                followers: [],
+                following: [],
+                followersCount: 0,
+                followingCount: 0,
+                hasFinishedOnboarding: true,
+              };
+              const { email: _unused, ...publicUserPayload } = defaultUser;
+              try {
+                await claimHandleAndCreateUser(uid, publicUserPayload, candidateHandle);
+                registeredUser = defaultUser;
+                registered = true;
+              } catch (e: any) {
+                if (e?.message === 'HANDLE_TAKEN') {
+                  continue;
+                }
+                console.warn('[Auth] claimHandleAndCreateUser error during registration:', e);
+                break;
+              }
+            }
+
+            if (!registered || !registeredUser) {
+              showToast('Gagal mendaftarkan akun: handle tidak tersedia. Silakan coba lagi.', 'error');
+              await signOut(auth);
+              setAuthStatus('guest');
+              setCurrentUser(GUEST_USER);
+              return;
+            }
+
             if (fbUser.email) {
               try {
                 await setDoc(doc(db, 'userPrivate', uid), {
@@ -2019,8 +2115,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 }, { merge: true });
               } catch (e) {}
             }
-            setCurrentUser({ ...defaultUser, email: fbUser.email || '' });
-            setIsEmailVerified(computeIsEmailVerified(defaultUser, fbUser));
+            setCurrentUser({ ...registeredUser, email: fbUser.email || '' });
+            setIsEmailVerified(computeIsEmailVerified(registeredUser, fbUser));
             setFollowingIds([]);
             setFollowersIds([]);
             setWatchlist([]);
@@ -3460,22 +3556,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
 
         try {
-          await runTransaction(db, async (transaction) => {
-            const handleRef = doc(db, 'handles', hId);
-            const handleSnap = await transaction.get(handleRef);
-            if (handleSnap.exists() && handleSnap.data().uid !== uid) {
-              throw new Error('HANDLE_TAKEN');
-            }
-            const userDocRef = doc(db, 'users', uid);
-            const { email: _unused, ...publicUserDoc } = newUser;
-            transaction.set(handleRef, { uid, createdAt: new Date().toISOString() });
-            transaction.set(userDocRef, publicUserDoc);
-          });
-        } catch (txnErr) {
+          const { email: _unused, ...publicUserDoc } = newUser;
+          await claimHandleAndCreateUser(uid, publicUserDoc, cleanHandle);
+        } catch (txnErr: any) {
           if (auth.currentUser) {
             try { await deleteUser(auth.currentUser); } catch {}
           }
-          showToast('Handle sudah digunakan orang lain. Silakan pilih handle yang berbeda.');
+          if (txnErr?.message === 'HANDLE_TAKEN') {
+            showToast(`Handle ${cleanHandle} sudah digunakan orang lain. Silakan pilih handle yang berbeda.`);
+          } else {
+            showToast('Gagal membuat akun, coba lagi.');
+          }
           isSigningUpRef.current = false;
           return false;
         }
@@ -3595,16 +3686,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           };
 
           try {
-            await runTransaction(db, async (transaction) => {
-              const handleRef = doc(db, 'handles', hId);
-              const handleSnap = await transaction.get(handleRef);
-              if (handleSnap.exists() && handleSnap.data().uid !== uid) {
-                throw new Error('HANDLE_TAKEN');
-              }
-              const { email: _unused, ...publicUserPayload } = newUser!;
-              transaction.set(handleRef, { uid, createdAt: new Date().toISOString() });
-              transaction.set(userDocRef, publicUserPayload);
-            });
+            const { email: _unused, ...publicUserPayload } = newUser!;
+            await claimHandleAndCreateUser(uid, publicUserPayload, cleanHandle);
             success = true;
           } catch (e) {
             // retry loop

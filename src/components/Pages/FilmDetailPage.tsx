@@ -474,8 +474,8 @@ export const FilmDetailPage: React.FC = () => {
                 alt={film.title}
                 className="w-32 sm:w-52 md:w-60 rounded-2xl shadow-2xl border-2 border-white/20 group-hover:scale-105 transition-transform duration-300"
               />
-              <div className="absolute top-2.5 left-2.5 bg-black/85 backdrop-blur-md px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-xl border border-[#FF2E7E]/60 text-[#FF2E7E] font-medium text-xs sm:text-sm flex items-center gap-1 shadow-lg">
-                <Star className="w-3.5 h-3.5 fill-current" />
+              <div className="absolute top-2.5 left-2.5 bg-black/85 backdrop-blur-md px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-xl border border-amber-500/60 text-amber-400 font-medium text-xs sm:text-sm flex items-center gap-1 shadow-lg">
+                <Star className="w-3.5 h-3.5 fill-current text-amber-400" />
                 <span>{film.skorSotoy.toFixed(1)}</span>
               </div>
             </div>
@@ -541,72 +541,42 @@ export const FilmDetailPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Skor Sotoy Bar - Prioritize Critics Score */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 bg-slate-900/95 p-3.5 sm:p-4 rounded-2xl border border-slate-800 max-w-2xl shadow-xl">
-                <div className="flex items-center justify-between sm:justify-start gap-4 sm:gap-6">
-                  {/* 1. Skor Critics - Emas */}
-                  <div className="flex items-center gap-2.5">
-                    <div className="font-display font-medium text-2xl sm:text-3xl text-[#FF2E7E] drop-shadow-[0_0_12px_rgba(255,208,0,0.3)]">
-                      ★ {film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}
+              {/* Skor Sotoy Bar - Larger & Amber */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 sm:gap-6 bg-slate-900/95 p-5 sm:p-6 rounded-2xl border border-slate-800 max-w-2xl shadow-xl">
+                <div className="flex items-center justify-between sm:justify-start gap-5 sm:gap-8 w-full">
+                  {/* 1. Si Paling Sotoy */}
+                  <div className="flex items-center gap-3">
+                    <div className="font-display font-black text-3xl sm:text-4xl text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.3)] flex items-center gap-1.5">
+                      <span className="text-amber-400">★</span>
+                      <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
                     </div>
                     <div className="text-left">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[11px] sm:text-xs font-black text-white uppercase tracking-wider">
-                          Skor Critics
-                        </span>
-                        <span className="bg-[#FF2E7E]/20 text-[#FF2E7E] border border-[#FF2E7E]/40 text-[9px] font-black uppercase px-1.5 py-0.2 rounded-full">
-                          Utama
-                        </span>
+                      <div className="text-xs sm:text-sm font-black text-white uppercase tracking-wider">
+                        Si Paling Sotoy
                       </div>
-                      <div className="text-[10px] text-slate-400">
-                        Dewan Kritikus Sotoy
+                      <div className="text-[11px] text-amber-400 font-medium">
+                        {criticsReviews.length} reviews
                       </div>
                     </div>
                   </div>
 
-                  <div className="h-8 w-px bg-slate-800 block" />
+                  <div className="h-10 w-px bg-slate-800 block" />
 
-                  {/* 2. Skor Komunitas - Biru / Cyan, Besarnya Sama */}
-                  <div className="flex items-center gap-2.5">
-                    <div className="font-display font-medium text-2xl sm:text-3xl text-[#FF2E7E] drop-shadow-[0_0_12px_rgba(0,240,255,0.3)]">
-                      ★ {film.skorSotoy.toFixed(1)}
+                  {/* 2. Warga Sotoy */}
+                  <div className="flex items-center gap-3">
+                    <div className="font-display font-black text-3xl sm:text-4xl text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.3)] flex items-center gap-1.5">
+                      <span className="text-amber-400">★</span>
+                      <span>{film.skorSotoy.toFixed(1)}</span>
                     </div>
                     <div className="text-left">
-                      <div className="text-[10px] sm:text-[11px] font-bold text-slate-300 uppercase tracking-wider">
-                        Komunitas
+                      <div className="text-xs sm:text-sm font-black text-white uppercase tracking-wider">
+                        Warga Sotoy
                       </div>
-                      <div className="text-[9px] text-slate-400">
-                        {film.totalVotes.toLocaleString()} votes
+                      <div className="text-[11px] text-amber-400 font-medium">
+                        {communityReviews.length} reviews
                       </div>
                     </div>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/80">
-                  <button
-                    id="hero-share-film-rating-btn"
-                    onClick={handleShare}
-                    className="flex-1 sm:flex-initial justify-center px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-[#FF2E7E] transition-all flex items-center gap-1.5 text-xs font-bold"
-                    title="Bagikan Skor Film ke Instagram Story & Feed"
-                  >
-                    <Share2 className="w-3.5 h-3.5 text-[#FF2E7E]" />
-                    <span>Bagikan Skor</span>
-                  </button>
-
-                  <button
-                    id="detail-rate-film-modal-btn"
-                    onClick={() => {
-                      if (!isLoggedIn) {
-                        setLoginModalOpen(true);
-                      } else {
-                        setRatingModalOpen(true);
-                      }
-                    }}
-                    className="flex-1 sm:flex-initial bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl shadow-lg shadow-[#FF2E7E]/20 active:scale-95 transition-all flex items-center justify-center gap-1.5"
-                  >
-                    <Star className="w-4 h-4 fill-current" />
-                    <span>Beri Skor</span>
-                  </button>
                 </div>
               </div>
 
@@ -624,10 +594,35 @@ export const FilmDetailPage: React.FC = () => {
                     setIsPlayingTrailer(true);
                     scrollToSection('section-trailer');
                   }}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-2 border border-slate-700 transition-colors"
+                  className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center gap-2 border border-slate-700 transition-colors"
                 >
                   <Play className="w-3.5 h-3.5 text-[#FF2E7E] fill-current" />
                   <span>Tonton Trailer</span>
+                </button>
+
+                <button
+                  id="hero-share-film-rating-btn"
+                  onClick={handleShare}
+                  className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-[#FF2E7E] transition-all flex items-center gap-1.5 text-xs font-bold"
+                  title="Bagikan Skor Film ke Instagram Story & Feed"
+                >
+                  <Share2 className="w-3.5 h-3.5 text-[#FF2E7E]" />
+                  <span>Bagikan Skor</span>
+                </button>
+
+                <button
+                  id="detail-rate-film-modal-btn"
+                  onClick={() => {
+                    if (!isLoggedIn) {
+                      setLoginModalOpen(true);
+                    } else {
+                      setRatingModalOpen(true);
+                    }
+                  }}
+                  className="bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-lg shadow-[#FF2E7E]/20 active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                >
+                  <Star className="w-4 h-4 fill-current text-white" />
+                  <span>Beri Skor</span>
                 </button>
               </div>
             </div>
@@ -1029,7 +1024,7 @@ export const FilmDetailPage: React.FC = () => {
                   }`}
                 >
                   <Star className={`w-3.5 h-3.5 ${reviewFilter === 'critics' ? 'fill-current text-white' : 'text-amber-400'}`} />
-                  <span>Ulasan Kritikus (Si Paling Sotoy)</span>
+                  <span>Si Paling Sotoy</span>
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
                     reviewFilter === 'critics' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'
                   }`}>
@@ -1047,7 +1042,7 @@ export const FilmDetailPage: React.FC = () => {
                   }`}
                 >
                   <Users className="w-3.5 h-3.5" />
-                  <span>Komunitas Sotoy</span>
+                  <span>Warga Sotoy</span>
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
                     reviewFilter === 'community' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'
                   }`}>
@@ -1258,20 +1253,22 @@ export const FilmDetailPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3 text-center">
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3">
-                  <div className="font-display font-medium text-xl text-[#FF2E7E]">
-                    ★ {film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}
+                  <div className="font-display font-bold text-xl text-amber-400 flex items-center justify-center gap-1">
+                    <span className="text-amber-400">★</span>
+                    <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
                   </div>
-                  <div className="text-[10px] font-bold text-[#FF2E7E] mt-1 uppercase">
+                  <div className="text-[10px] font-bold text-amber-400 mt-1 uppercase">
                     Si Paling Sotoy
                   </div>
                 </div>
 
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3">
-                  <div className="font-display font-medium text-xl text-[#FF2E7E]">
-                    ★ {film.skorSotoy.toFixed(1)}
+                  <div className="font-display font-bold text-xl text-amber-400 flex items-center justify-center gap-1">
+                    <span className="text-amber-400">★</span>
+                    <span>{film.skorSotoy.toFixed(1)}</span>
                   </div>
-                  <div className="text-[10px] font-bold text-[#FF2E7E] mt-1 uppercase">
-                    Komunitas
+                  <div className="text-[10px] font-bold text-amber-400 mt-1 uppercase">
+                    Warga Sotoy
                   </div>
                 </div>
               </div>
