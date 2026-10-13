@@ -15,7 +15,7 @@
  *   GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json npx tsx scripts/backfill-handles.ts --apply
  */
 
-import admin from 'firebase-admin';
+import { initializeApp, getApps, getApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
@@ -37,15 +37,15 @@ async function backfillHandles() {
   console.log(`Starting Handles Backfill Migration ${isApply ? '(APPLY MODE)' : '(DRY-RUN MODE)'}`);
   console.log('=====================================================\n');
 
-  if (!admin.apps.length) {
-    admin.initializeApp({
+  if (!getApps().length) {
+    initializeApp({
       projectId: firebaseConfig.projectId,
     });
   }
 
   const databaseId = firebaseConfig.firestoreDatabaseId || '(default)';
   console.log(`Target Firestore database: ${databaseId}`);
-  const db = getFirestore(admin.app(), databaseId);
+  const db = getFirestore(getApp(), databaseId);
 
   let scanned = 0;
   let normalizedCount = 0;
