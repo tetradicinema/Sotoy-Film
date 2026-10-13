@@ -148,6 +148,33 @@ export const ArticleDetailPage: React.FC = () => {
     return () => unsub();
   }, [article?.id]);
 
+  const discussedFilms = useMemo(() => {
+    if (!article) return [] as FilmItem[];
+    const list: FilmItem[] = [];
+    if (article.relatedFilmIds && Array.isArray(article.relatedFilmIds)) {
+      article.relatedFilmIds.forEach(id => {
+        const found = films.find(f => f.id === id);
+        if (found && !list.some(item => item.id === found.id)) list.push(found);
+      });
+    }
+    if (article.relatedFilmId) {
+      const found = films.find(f => f.id === article.relatedFilmId);
+      if (found && !list.some(item => item.id === found.id)) list.push(found);
+    }
+    if (list.length === 0) {
+      const fallback = films.find(f =>
+        article.title.toLowerCase().includes(f.title.toLowerCase()) ||
+        article.tags.some(t => t.toLowerCase() === f.title.toLowerCase()) ||
+        (f.id === 'film-1' && (article.category === 'movies' || article.title.includes('Dune')))
+      );
+      if (fallback) list.push(fallback);
+    }
+    return list;
+  }, [article, films]);
+
+  const [activeDiscussedFilmIndex, setActiveDiscussedFilmIndex] = useState(0);
+  const discussedFilm = discussedFilms[activeDiscussedFilmIndex] || discussedFilms[0] || null;
+
   if (articles.length === 0) {
     return <ArticleDetailSkeleton />;
   }
@@ -173,33 +200,6 @@ export const ArticleDetailPage: React.FC = () => {
       </div>
     );
   }
-
-  // Cari daftar film yang dibahas dalam artikel ini
-  const discussedFilms = useMemo(() => {
-    const list: FilmItem[] = [];
-    if (article.relatedFilmIds && Array.isArray(article.relatedFilmIds)) {
-      article.relatedFilmIds.forEach(id => {
-        const found = films.find(f => f.id === id);
-        if (found && !list.some(item => item.id === found.id)) list.push(found);
-      });
-    }
-    if (article.relatedFilmId) {
-      const found = films.find(f => f.id === article.relatedFilmId);
-      if (found && !list.some(item => item.id === found.id)) list.push(found);
-    }
-    if (list.length === 0) {
-      const fallback = films.find(f =>
-        article.title.toLowerCase().includes(f.title.toLowerCase()) ||
-        article.tags.some(t => t.toLowerCase() === f.title.toLowerCase()) ||
-        (f.id === 'film-1' && (article.category === 'movies' || article.title.includes('Dune')))
-      );
-      if (fallback) list.push(fallback);
-    }
-    return list;
-  }, [article, films]);
-
-  const [activeDiscussedFilmIndex, setActiveDiscussedFilmIndex] = useState(0);
-  const discussedFilm = discussedFilms[activeDiscussedFilmIndex] || discussedFilms[0] || null;
 
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();

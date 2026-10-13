@@ -496,7 +496,7 @@ export type HomeSidebarWidgetKey =
 
 export interface SectionConfig {
   title?: string;
-  sourceType: 'auto' | 'manual';
+  sourceType: 'auto' | 'manual' | 'slider';
   category?: MainCategory | 'movie' | 'series' | 'anime';
   subCategory?: SubCategory | string;
   tag?: string;

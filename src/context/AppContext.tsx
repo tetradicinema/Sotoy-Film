@@ -370,6 +370,7 @@ interface AppContextType {
   followingIds: string[];
   followersIds: string[];
   allUsers: User[];
+  usersById: Map<string, User>;
   refreshAllUsers: (opts?: { force?: boolean }) => Promise<void>;
   toggleFollowUser: (userId: string) => void;
   isFollowing: (userId: string) => boolean;
@@ -1679,6 +1680,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [allUsers, adminUserEmails, currentUser?.id, currentUser?.email]);
 
   const viewedUser = (viewedUserId ? resolvedAllUsers.find(u => u.id === viewedUserId) : null) || currentUser;
+
+  const usersById = useMemo(() => {
+    const map = new Map<string, User>();
+    resolvedAllUsers.forEach(u => map.set(u.id, u));
+    return map;
+  }, [resolvedAllUsers]);
 
   // Dynamically resolve article author profiles directly from Firestore users collection
   const resolvedArticles = useMemo(() => {
@@ -6376,6 +6383,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         followingIds,
         followersIds,
         allUsers: resolvedAllUsers,
+        usersById,
         refreshAllUsers,
         toggleFollowUser,
         isFollowing,

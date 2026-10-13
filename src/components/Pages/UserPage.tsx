@@ -448,8 +448,7 @@ export const UserPage: React.FC = () => {
 
   // Filter content authored by the viewed/target user
   const myBuzz = buzzList.filter(
-    b => b.author.id === targetUser.id || 
-         (targetUser.handle && b.author.handle && b.author.handle.toLowerCase() === targetUser.handle.toLowerCase())
+    b => b.author.id === targetUser.id
   );
   const myReviews = useMemo(() => {
     const list = isOwnProfile ? ratings : targetUserRatings;
@@ -471,8 +470,7 @@ export const UserPage: React.FC = () => {
     buzzList.forEach(post => {
       if (Array.isArray(post.replies)) {
         post.replies.forEach(rep => {
-          const isMatch = rep.author?.id === targetUser.id || 
-            (targetUser.handle && rep.author?.handle && rep.author.handle.toLowerCase() === targetUser.handle.toLowerCase());
+          const isMatch = rep.author?.id === targetUser.id;
           if (isMatch) {
             list.push({ reply: rep, parentPost: post });
           }
@@ -480,7 +478,7 @@ export const UserPage: React.FC = () => {
       }
     });
     return list.sort((a, b) => new Date(b.reply.createdAt).getTime() - new Date(a.reply.createdAt).getTime());
-  }, [buzzList, targetUser.id, targetUser.handle]);
+  }, [buzzList, targetUser.id]);
 
   const myReposts = React.useMemo(() => {
     return buzzList

@@ -1344,9 +1344,11 @@ export const AdminHomepageSections: React.FC = () => {
               <span className={`px-3 py-1 rounded-xl text-xs font-bold uppercase tracking-wider ${
                 currentConfig.sourceType === 'manual'
                   ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                  : currentConfig.sourceType === 'slider'
+                  ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30'
                   : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
               }`}>
-                Mode: {currentConfig.sourceType === 'manual' ? 'Manual (Pick Items)' : 'Auto (Filter & Sort)'}
+                Mode: {currentConfig.sourceType === 'manual' ? 'Manual (Pick Items)' : currentConfig.sourceType === 'slider' ? 'Slider / Carousel' : 'Auto (Filter & Sort)'}
               </span>
             </div>
           </div>
@@ -1376,39 +1378,53 @@ export const AdminHomepageSections: React.FC = () => {
             <label className="block text-xs font-bold text-slate-300">
               Metode Pengambilan Konten (Source Type)
             </label>
-            <div className="grid grid-cols-2 gap-3 p-1 bg-black/40 rounded-2xl border border-white/[0.08]">
+            <div className="grid grid-cols-3 gap-2 p-1 bg-black/40 rounded-2xl border border-white/[0.08]">
               <button
                 type="button"
                 id="toggle-source-auto"
                 onClick={() => updateCurrentDraft({ sourceType: 'auto' })}
-                className={`py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   currentConfig.sourceType === 'auto'
                     ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <Sliders className="w-3.5 h-3.5" />
-                <span>Otomatis (Auto)</span>
+                <span>Otomatis</span>
               </button>
 
               <button
                 type="button"
                 id="toggle-source-manual"
                 onClick={() => updateCurrentDraft({ sourceType: 'manual' })}
-                className={`py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   currentConfig.sourceType === 'manual'
                     ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />
-                <span>Manual (Pilih Item)</span>
+                <span>Manual</span>
+              </button>
+
+              <button
+                type="button"
+                id="toggle-source-slider"
+                onClick={() => updateCurrentDraft({ sourceType: 'slider' })}
+                className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  currentConfig.sourceType === 'slider'
+                    ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Sliders className="w-3.5 h-3.5" />
+                <span>Slider</span>
               </button>
             </div>
           </div>
 
           {/* SUB-FORM A: AUTO MODE CONFIG */}
-          {currentConfig.sourceType === 'auto' && (
+          {(currentConfig.sourceType === 'auto' || currentConfig.sourceType === 'slider') && (
             <div className="p-4 sm:p-5 rounded-2xl bg-black/40 border border-white/[0.08] space-y-4">
               <div className="text-xs font-bold text-slate-300 flex items-center gap-1.5 pb-2 border-b border-white/[0.06]">
                 <Sliders className="w-3.5 h-3.5 text-[#FF2E7E]" />
