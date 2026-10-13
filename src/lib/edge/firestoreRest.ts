@@ -5,7 +5,7 @@
  */
 
 import { slugify } from '../../utils/slugify.js';
-import firebaseConfig from '../../../firebase-applet-config.json';
+import firebaseConfig from '../../../firebase-applet-config.json' with { type: 'json' };
 
 const envApiKey = typeof process !== 'undefined' && process.env ? process.env.VITE_FIREBASE_API_KEY : undefined;
 const configApiKey = (firebaseConfig as any)?.apiKey;
