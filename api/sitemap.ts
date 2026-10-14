@@ -107,11 +107,9 @@ export async function handleSitemapRequest(req: any, res: any) {
   res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400');
 
   const candidatePaths = [
-    path.join(process.cwd(), 'dist', 'sitemap.xml'),
     path.join(process.cwd(), 'public', 'sitemap.xml'),
+    path.join(process.cwd(), 'dist', 'sitemap.xml'),
     path.join(process.cwd(), 'sitemap.xml'),
-    path.join(__dirname, '..', 'public', 'sitemap.xml'),
-    path.join(__dirname, '..', 'dist', 'sitemap.xml'),
   ];
 
   for (const p of candidatePaths) {

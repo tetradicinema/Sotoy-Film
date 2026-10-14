@@ -523,6 +523,33 @@ const USERS_CACHE_KEY = 'sotoy_cached_all_users';
 const USERS_CACHE_TS_KEY = 'sotoy_cached_all_users_ts';
 const USERS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
+const FILMS_CACHE_KEY = 'sotoy_cached_films';
+const FILMS_CACHE_TS_KEY = 'sotoy_cached_films_ts';
+const FILMS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+const hydrateCachedFilms = (): { films: FilmItem[]; removedMarkers: string[]; ts: number } | null => {
+  try {
+    const raw = localStorage.getItem(FILMS_CACHE_KEY);
+    const rawTs = localStorage.getItem(FILMS_CACHE_TS_KEY);
+    if (!raw || !rawTs) return null;
+    const ts = parseInt(rawTs, 10);
+    if (isNaN(ts) || Date.now() - ts > FILMS_CACHE_TTL_MS) return null; // Expired
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return { films: parsed, removedMarkers: [], ts };
+    } else if (parsed && typeof parsed === 'object' && Array.isArray(parsed.films)) {
+      return {
+        films: parsed.films,
+        removedMarkers: Array.isArray(parsed.removedMarkers) ? parsed.removedMarkers : [],
+        ts,
+      };
+    }
+  } catch {
+    // If parsing fails, ignore the cache silently
+  }
+  return null;
+};
+
 const normalizeUserRecords = (inputUsers: User[]): User[] => {
   const userMap = new Map<string, User>();
   inputUsers.forEach(u => {
@@ -614,11 +641,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [savedArticles, setSavedArticles] = useState<string[]>([]);
   const [collections, setCollections] = useState<UserCollection[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
-  const [films, setFilms] = useState<FilmItem[]>([]);
-  const removedMockFilmIdsRef = React.useRef<Set<string>>(new Set());
+  // Hydrate films from localStorage cache on load so repeat visits within 10 minutes cost 0 reads
+  const initialCachedFilms = useMemo(() => hydrateCachedFilms(), []);
+  const [films, setFilms] = useState<FilmItem[]>(() => initialCachedFilms?.films || []);
+  const removedMockFilmIdsRef = React.useRef<Set<string>>(
+    new Set(initialCachedFilms?.removedMarkers || [])
+  );
+  const lastFilmsFetchTsRef = useRef<number>(initialCachedFilms?.ts || 0);
+  const inFlightFilmsFetchRef = useRef<Promise<void> | null>(null);
+
   const [rawBuzzList, setRawBuzzList] = useState<BuzzPost[]>([]);
   const [isLoadingArticles, setIsLoadingArticles] = useState<boolean>(true);
-  const [isLoadingFilms, setIsLoadingFilms] = useState<boolean>(true);
+  const [isLoadingFilms, setIsLoadingFilms] = useState<boolean>(() => !initialCachedFilms);
   const [isLoadingBuzz, setIsLoadingBuzz] = useState<boolean>(true);
   const [ratings, setRatings] = useState<UserRating[]>(INITIAL_RATINGS);
   const [criticSubmissions, setCriticSubmissions] = useState<CriticSubmission[]>([]);
@@ -935,7 +969,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return 0;
   }, []);
 
-  const syncFilmsWithRemovedMarkers = useCallback((currentFilmMap: Map<string, FilmItem>, removedSet: Set<string>) => {
+  const syncFilmsWithRemovedMarkers = useCallback((currentFilmMap: Map<string, FilmItem>, removedSet: Set<string>): FilmItem[] => {
     const mergedMap = new Map<string, FilmItem>(currentFilmMap);
     for (const init of INITIAL_FILMS) {
       if (!mergedMap.has(init.id) && !removedSet.has(init.id)) {
@@ -943,57 +977,119 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
     const merged = Array.from(mergedMap.values()).filter(f => !removedSet.has(f.id));
-    setFilms(merged.sort((a, b) => (a.trendingRank || 99) - (b.trendingRank || 99)));
+    const sorted = merged.sort((a, b) => (a.trendingRank || 99) - (b.trendingRank || 99));
+    setFilms(sorted);
     setIsLoadingFilms(false);
+    return sorted;
   }, []);
 
-  // Optimized fetch for films with limit(100), ordered by year, merged with INITIAL_FILMS
-  const refreshFilms = useCallback(async () => {
-    try {
-      setIsLoadingFilms(true);
-      const [removedSnap, filmsSnap] = await Promise.all([
-        getDocs(query(collection(db, 'removedMockFilms'), limit(100))),
-        getDocs(query(collection(db, 'films'), orderBy('year', 'desc'), limit(100))),
-      ]);
+  // Fetch ALL films without limit or orderBy('year'), paged by documentId() + startAfter
+  const refreshFilms = useCallback(async (opts?: { isInitialMount?: boolean }): Promise<void> => {
+    const isMount = Boolean(opts?.isInitialMount);
+    const now = Date.now();
 
-      const removedSet = new Set<string>();
-      removedSnap.forEach(docSnap => {
-        removedSet.add(docSnap.id);
-        const data = docSnap.data();
-        if (data?.id) removedSet.add(data.id);
-      });
-      removedMockFilmIdsRef.current = removedSet;
-
-      const filmMap = new Map<string, FilmItem>();
-      filmsSnap.forEach(docSnap => {
-        const data = docSnap.data() as FilmItem;
-        const id = data.id || docSnap.id;
-        if (id) {
-          const isLegacy = data.scoreScale === undefined;
-          const normalizedSkor = isLegacy && data.skorSotoy && data.skorSotoy <= 5.0 && data.skorSotoy > 0
-            ? Number((data.skorSotoy * 2).toFixed(1))
-            : data.skorSotoy;
-          const normalizedCriticsSkor = isLegacy && data.criticsSkorSotoy && data.criticsSkorSotoy <= 5.0 && data.criticsSkorSotoy > 0
-            ? Number((data.criticsSkorSotoy * 2).toFixed(1))
-            : data.criticsSkorSotoy;
-          filmMap.set(id, {
-            ...data,
-            id,
-            skorSotoy: normalizedSkor,
-            criticsSkorSotoy: normalizedCriticsSkor || normalizedSkor,
-          });
-        }
-      });
-
-      syncFilmsWithRemovedMarkers(filmMap, removedSet);
+    // The initial mount load is the only one that may use the cache
+    if (isMount && initialCachedFilms && (now - lastFilmsFetchTsRef.current < FILMS_CACHE_TTL_MS)) {
       setIsLoadingFilms(false);
-    } catch (err: any) {
-      console.warn('[Firestore] films subscription fallback to initial mock:', err.message);
-      const fallbackMap = new Map<string, FilmItem>();
-      syncFilmsWithRemovedMarkers(fallbackMap, removedMockFilmIdsRef.current);
-      setIsLoadingFilms(false);
+      return;
     }
-  }, [syncFilmsWithRemovedMarkers]);
+
+    // Dedupe concurrent in-flight calls
+    if (inFlightFilmsFetchRef.current) {
+      return inFlightFilmsFetchRef.current;
+    }
+
+    const fetchPromise = (async () => {
+      try {
+        setIsLoadingFilms(true);
+
+        // 1. Page through entire removedMockFilms collection with orderBy(documentId()) + limit(500)
+        const removedSet = new Set<string>();
+        let lastRemovedDoc: QueryDocumentSnapshot | null = null;
+        while (true) {
+          const constraints: any[] = [orderBy(documentId()), limit(500)];
+          if (lastRemovedDoc) {
+            constraints.push(startAfter(lastRemovedDoc));
+          }
+          const snap = await getDocs(query(collection(db, 'removedMockFilms'), ...constraints));
+          if (snap.empty) break;
+
+          snap.forEach(docSnap => {
+            removedSet.add(docSnap.id);
+            const data = docSnap.data();
+            if (data?.id) removedSet.add(data.id);
+          });
+
+          lastRemovedDoc = snap.docs[snap.docs.length - 1];
+          if (snap.docs.length < 500) break;
+        }
+        removedMockFilmIdsRef.current = removedSet;
+
+        // 2. Page through entire films collection with orderBy(documentId()) + limit(500)
+        const filmMap = new Map<string, FilmItem>();
+        let lastFilmDoc: QueryDocumentSnapshot | null = null;
+        while (true) {
+          const constraints: any[] = [orderBy(documentId()), limit(500)];
+          if (lastFilmDoc) {
+            constraints.push(startAfter(lastFilmDoc));
+          }
+          const snap = await getDocs(query(collection(db, 'films'), ...constraints));
+          if (snap.empty) break;
+
+          snap.forEach(docSnap => {
+            const data = docSnap.data() as FilmItem;
+            const id = data.id || docSnap.id;
+            if (id) {
+              const isLegacy = data.scoreScale === undefined;
+              const normalizedSkor = isLegacy && data.skorSotoy && data.skorSotoy <= 5.0 && data.skorSotoy > 0
+                ? Number((data.skorSotoy * 2).toFixed(1))
+                : data.skorSotoy;
+              const normalizedCriticsSkor = isLegacy && data.criticsSkorSotoy && data.criticsSkorSotoy <= 5.0 && data.criticsSkorSotoy > 0
+                ? Number((data.criticsSkorSotoy * 2).toFixed(1))
+                : data.criticsSkorSotoy;
+              filmMap.set(id, {
+                ...data,
+                id,
+                skorSotoy: normalizedSkor,
+                criticsSkorSotoy: normalizedCriticsSkor || normalizedSkor,
+              });
+            }
+          });
+
+          lastFilmDoc = snap.docs[snap.docs.length - 1];
+          if (snap.docs.length < 500) break;
+        }
+
+        const sortedFilms = syncFilmsWithRemovedMarkers(filmMap, removedSet);
+        lastFilmsFetchTsRef.current = Date.now();
+
+        // Update localStorage cache with TTL tracking
+        try {
+          const cachePayload = {
+            films: sortedFilms,
+            removedMarkers: Array.from(removedSet),
+          };
+          localStorage.setItem(FILMS_CACHE_KEY, JSON.stringify(cachePayload));
+          localStorage.setItem(FILMS_CACHE_TS_KEY, String(Date.now()));
+        } catch (storageErr) {
+          // If storage quota exceeded, silently skip caching
+          console.warn('[AppContext] Failed to cache films to localStorage:', storageErr);
+        }
+
+        setIsLoadingFilms(false);
+      } catch (err: any) {
+        console.warn('[Firestore] films fetch fallback to initial mock:', err?.message || err);
+        const fallbackMap = new Map<string, FilmItem>();
+        syncFilmsWithRemovedMarkers(fallbackMap, removedMockFilmIdsRef.current);
+        setIsLoadingFilms(false);
+      } finally {
+        inFlightFilmsFetchRef.current = null;
+      }
+    })();
+
+    inFlightFilmsFetchRef.current = fetchPromise;
+    return fetchPromise;
+  }, [initialCachedFilms, syncFilmsWithRemovedMarkers]);
 
   // Optimized fetch for articles with limit(50), ordered by publishedAtTimestamp desc, merged with INITIAL_ARTICLES
   const refreshArticles = useCallback(async () => {
@@ -1136,7 +1232,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Initial load for films and articles
   useEffect(() => {
-    refreshFilms();
+    refreshFilms({ isInitialMount: true });
     refreshArticles();
   }, [refreshFilms, refreshArticles]);
 

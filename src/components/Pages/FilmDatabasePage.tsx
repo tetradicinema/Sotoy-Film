@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Star,
   Search,
@@ -135,6 +135,14 @@ export const FilmDatabasePage: React.FC = () => {
   const [sortBy, setSortBy] = useState<'rating' | 'votes' | 'year' | 'title'>('rating');
   const [ratingModalFilm, setRatingModalFilm] = useState<FilmItem | null>(null);
   const [collectionModalFilm, setCollectionModalFilm] = useState<FilmItem | null>(null);
+
+  // Pagination state for "Jelajahi Database Lengkap"
+  const [visibleCount, setVisibleCount] = useState<number>(20);
+
+  // Reset visibleCount to 20 whenever searchQuery, selectedFormat, selectedGenre, ratingFilter or sortBy changes
+  useEffect(() => {
+    setVisibleCount(20);
+  }, [searchQuery, selectedFormat, selectedGenre, ratingFilter, sortBy]);
 
   // Review Filter Role State
   const [reviewsFilterRole, setReviewsFilterRole] = useState<'all' | 'critic' | 'warga'>('all');
@@ -1153,117 +1161,134 @@ export const FilmDatabasePage: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                {sortedSearchResults.map(film => {
-                  const inWatchlist = isItemInAnyCollection(film.id, 'film');
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  {sortedSearchResults.slice(0, visibleCount).map(film => {
+                    const inWatchlist = isItemInAnyCollection(film.id, 'film');
 
-                  return (
-                    <div
-                      key={film.id}
-                      id={`search-film-card-${film.id}`}
-                      className="bg-[#171717] border border-white/10 rounded-2xl overflow-hidden hover:border-[#FF2E7E] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group shadow-lg"
-                    >
-                      {/* Movie Poster */}
+                    return (
                       <div
-                        onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                        className="relative aspect-[2/3] w-full overflow-hidden cursor-pointer bg-[#0A0A0A]"
+                        key={film.id}
+                        id={`search-film-card-${film.id}`}
+                        className="bg-[#171717] border border-white/10 rounded-2xl overflow-hidden hover:border-[#FF2E7E] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group shadow-lg"
                       >
-                        <img
-                          src={film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80'}
-                          alt={film.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#171717] via-transparent to-transparent opacity-80" />
-
-                        {/* Rating Badge */}
-                        <div className="absolute top-2 left-2 bg-black/90 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/30 text-[#FFD000] text-[11px] font-black flex items-center gap-1 shadow-md">
-                          <Star className="w-3 h-3 fill-current text-[#FFD000]" />
-                          <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
-                        </div>
-
-                        {/* Watchlist / Collection Picker Popover */}
+                        {/* Movie Poster */}
                         <div
-                          onClick={(e) => e.stopPropagation()}
-                          className="absolute top-2 right-2 z-10"
+                          onClick={() => navigateTo('film-detail', { filmId: film.id })}
+                          className="relative aspect-[2/3] w-full overflow-hidden cursor-pointer bg-[#0A0A0A]"
                         >
-                          <CollectionPickerPopover
-                            itemId={film.id}
-                            itemType="film"
-                            itemName={film.title}
-                            variant="compact"
-                            align="right"
+                          <img
+                            src={film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80'}
+                            alt={film.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                           />
-                        </div>
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#171717] via-transparent to-transparent opacity-80" />
 
-                        <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[10px] font-bold text-slate-300">
-                          <span className="bg-slate-900/90 px-1.5 py-0.5 rounded uppercase">
-                            {film.type}
-                          </span>
-                          <span>{film.year}</span>
-                        </div>
-                      </div>
-
-                      {/* Content info */}
-                      <div className="p-3 flex-1 flex flex-col justify-between">
-                        <div>
-                          <h3
-                            onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                            className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-1 cursor-pointer mb-1"
-                            title={film.title}
-                          >
-                            {film.title}
-                          </h3>
-                          <div className="text-[10px] text-slate-400 line-clamp-1 mb-1.5">
-                            {film.director}
+                          {/* Rating Badge */}
+                          <div className="absolute top-2 left-2 bg-black/90 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/30 text-[#FFD000] text-[11px] font-black flex items-center gap-1 shadow-md">
+                            <Star className="w-3 h-3 fill-current text-[#FFD000]" />
+                            <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
                           </div>
 
-                          {/* Clickable Genre Tags */}
-                          <div className="flex flex-wrap gap-1 mb-2">
-                            {film.genres.slice(0, 2).map(g => {
-                              const isTagActive = selectedGenre.toLowerCase() === g.toLowerCase();
-                              return (
-                                <button
-                                  key={g}
-                                  onClick={e => {
-                                    e.stopPropagation();
-                                    setSelectedGenre(isTagActive ? 'all' : g);
-                                  }}
-                                  className={`text-[9px] font-bold px-1.5 py-0.5 rounded transition-colors ${
-                                    isTagActive
-                                      ? 'bg-[#FF2E7E] text-slate-950 font-black'
-                                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
-                                  }`}
-                                  title={`Filter genre ${g}`}
-                                >
-                                  {g}
-                                </button>
-                              );
-                            })}
+                          {/* Watchlist / Collection Picker Popover */}
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute top-2 right-2 z-10"
+                          >
+                            <CollectionPickerPopover
+                              itemId={film.id}
+                              itemType="film"
+                              itemName={film.title}
+                              variant="compact"
+                              align="right"
+                            />
+                          </div>
+
+                          <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[10px] font-bold text-slate-300">
+                            <span className="bg-slate-900/90 px-1.5 py-0.5 rounded uppercase">
+                              {film.type}
+                            </span>
+                            <span>{film.year}</span>
                           </div>
                         </div>
 
-                        <div className="pt-2 border-t border-slate-800/80 flex items-center gap-1.5">
-                          <button
-                            onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                            className="flex-1 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-bold text-center transition-colors"
-                          >
-                            Detail
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (!isLoggedIn) setLoginModalOpen(true);
-                              else setRatingModalFilm(film);
-                            }}
-                            className="py-1 px-2 rounded-lg bg-[#FF2E7E]/15 hover:bg-[#FF2E7E] text-[#FF2E7E] hover:text-slate-950 text-[11px] font-black transition-colors"
-                          >
-                            Ulas
-                          </button>
+                        {/* Content info */}
+                        <div className="p-3 flex-1 flex flex-col justify-between">
+                          <div>
+                            <h3
+                              onClick={() => navigateTo('film-detail', { filmId: film.id })}
+                              className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-1 cursor-pointer mb-1"
+                              title={film.title}
+                            >
+                              {film.title}
+                            </h3>
+                            <div className="text-[10px] text-slate-400 line-clamp-1 mb-1.5">
+                              {film.director}
+                            </div>
+
+                            {/* Clickable Genre Tags */}
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              {film.genres.slice(0, 2).map(g => {
+                                const isTagActive = selectedGenre.toLowerCase() === g.toLowerCase();
+                                return (
+                                  <button
+                                    key={g}
+                                    onClick={e => {
+                                      e.stopPropagation();
+                                      setSelectedGenre(isTagActive ? 'all' : g);
+                                    }}
+                                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded transition-colors ${
+                                      isTagActive
+                                        ? 'bg-[#FF2E7E] text-slate-950 font-black'
+                                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                                    }`}
+                                    title={`Filter genre ${g}`}
+                                  >
+                                    {g}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          <div className="pt-2 border-t border-slate-800/80 flex items-center gap-1.5">
+                            <button
+                              onClick={() => navigateTo('film-detail', { filmId: film.id })}
+                              className="flex-1 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-bold text-center transition-colors"
+                            >
+                              Detail
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (!isLoggedIn) setLoginModalOpen(true);
+                                else setRatingModalFilm(film);
+                              }}
+                              className="py-1 px-2 rounded-lg bg-[#FF2E7E]/15 hover:bg-[#FF2E7E] text-[#FF2E7E] hover:text-slate-950 text-[11px] font-black transition-colors"
+                            >
+                              Ulas
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+
+                {/* Pagination Controls / Tampilkan Lebih Banyak */}
+                {visibleCount < sortedSearchResults.length && (
+                  <div className="pt-6 flex flex-col items-center justify-center gap-2">
+                    <button
+                      onClick={() => setVisibleCount(prev => prev + 20)}
+                      className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] hover:brightness-110 active:scale-95 text-white font-bold text-xs shadow-lg shadow-[#FF2E7E]/25 transition-all flex items-center gap-2 cursor-pointer"
+                    >
+                      <span>Tampilkan Lebih Banyak</span>
+                    </button>
+                    <span className="text-[11px] text-slate-400">
+                      Menampilkan <strong className="text-white">{Math.min(visibleCount, sortedSearchResults.length)}</strong> dari <strong className="text-white">{sortedSearchResults.length}</strong> film
+                    </span>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </section>
