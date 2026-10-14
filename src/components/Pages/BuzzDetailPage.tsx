@@ -817,11 +817,20 @@ export const BuzzDetailPage: React.FC = () => {
                     const isReplyingToThis = replyingTo?.replyId === reply.id;
                     const isHighlighted = highlightedReplyId === reply.id;
 
+                    // Resolve live author data for this reply at render time
+                    const resolvedReplyAuthor = resolveAuthor(reply.author, usersById) ?? reply.author;
+                    const resolvedReplyToUser = reply.replyToUser
+                      ? (resolveAuthor(reply.replyToUser, usersById) ?? reply.replyToUser)
+                      : undefined;
+                    const resolvedParentAuthor = parentReply
+                      ? (resolveAuthor(parentReply.author, usersById) ?? parentReply.author)
+                      : undefined;
+
                     // Resolve replied-to target author
-                    const targetUser = reply.replyToUser || (parentReply ? {
-                      id: parentReply.author.id,
-                      name: parentReply.author.name,
-                      handle: parentReply.author.handle,
+                    const targetUser = resolvedReplyToUser || (resolvedParentAuthor ? {
+                      id: resolvedParentAuthor.id,
+                      name: resolvedParentAuthor.name,
+                      handle: resolvedParentAuthor.handle,
                     } : null);
 
                     // Hierarchy styling depending on thread depth
@@ -896,11 +905,11 @@ export const BuzzDetailPage: React.FC = () => {
                                 <button
                                   onClick={() => navigateTo('user-profile', { userId: reply.author.id })}
                                   className="shrink-0 group/avatar"
-                                  title={`Lihat profil ${reply.author.name}`}
+                                  title={`Lihat profil ${resolvedReplyAuthor.name}`}
                                 >
                                   <img
-                                    src={reply.author.avatar?.trim() || DEFAULT_AVATAR}
-                                    alt={reply.author.name}
+                                    src={resolvedReplyAuthor.avatar?.trim() || DEFAULT_AVATAR}
+                                    alt={resolvedReplyAuthor.name}
                                     className={`${avatarSize} rounded-xl object-cover ring-2 ring-white/10 group-hover/avatar:ring-[#FF2E7E] transition-all shadow-md`}
                                   />
                                 </button>
@@ -911,12 +920,12 @@ export const BuzzDetailPage: React.FC = () => {
                                       onClick={() => navigateTo('user-profile', { userId: reply.author.id })}
                                       className="font-bold text-sm text-white hover:text-[#FF2E7E] transition-colors truncate"
                                     >
-                                      {reply.author.name}
+                                      {resolvedReplyAuthor.name}
                                     </button>
-                                    <RoleBadge role={reply.author.role || 'warga_sotoy'} size="xs" />
+                                    <RoleBadge role={resolvedReplyAuthor.role || 'warga_sotoy'} size="xs" />
                                   </div>
                                   <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                                    <span className="font-mono">{reply.author.handle}</span>
+                                    <span className="font-mono">{resolvedReplyAuthor.handle}</span>
                                     <span>•</span>
                                     <span title={formatFullDateTime(reply.createdAt)}>{formatRelativeTime(reply.createdAt)}</span>
                                   </div>
@@ -967,13 +976,13 @@ export const BuzzDetailPage: React.FC = () => {
                                 </button>
 
                                 <button
-                                  onClick={() => handleStartReply(reply.id, reply.author)}
+                                  onClick={() => handleStartReply(reply.id, resolvedReplyAuthor)}
                                   className={`flex items-center gap-1.5 transition-opacity hover:opacity-80 active:scale-95 text-xs py-1 cursor-pointer ${
                                     isReplyingToThis
                                       ? 'text-[#FF2E7E] font-semibold'
                                       : 'text-slate-400 hover:text-slate-200'
                                   }`}
-                                  title={`Balas komentar @${reply.author.handle.replace('@', '')}`}
+                                  title={`Balas komentar @${resolvedReplyAuthor.handle.replace('@', '')}`}
                                 >
                                   <CornerDownRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                   <span className="font-medium">Balas</span>
@@ -997,7 +1006,7 @@ export const BuzzDetailPage: React.FC = () => {
 
                               <button
                                 onClick={() => {
-                                  navigator.clipboard.writeText(`"${reply.content}" - ${reply.author.name} di Sotoy Film`);
+                                  navigator.clipboard.writeText(`"${reply.content}" - ${resolvedReplyAuthor.name} di Sotoy Film`);
                                   showToast('Teks balasan disalin ke clipboard!');
                                 }}
                                 className="text-[10px] text-slate-400 hover:text-white transition-colors flex items-center gap-1 cursor-pointer"

@@ -457,6 +457,11 @@ export const CommunityFeedPage: React.FC = () => {
     // Default 'for-you' tab: Multi-signal personalized feed scoring across original posts and repost entries
     const scoredList = list
       .map(post => {
+        // Resolve live reposter data for the recommendation label
+        const resolvedRepostedBy = post.repostedBy
+          ? (resolveAuthor(post.repostedBy, usersById) ?? post.repostedBy)
+          : undefined;
+
         // A. Recency Score (use repost timestamp if repost, otherwise original post timestamp)
         const effectiveTimestamp =
           post.isRepost && post.repostedAt ? post.repostedAt : post.createdAt;
@@ -546,8 +551,8 @@ export const CommunityFeedPage: React.FC = () => {
           recommendationSignal = {
             type: 'following',
             label:
-              post.isRepost && post.repostedBy
-                ? `Direpost oleh ${post.repostedBy.name}`
+              post.isRepost && resolvedRepostedBy
+                ? `Direpost oleh ${resolvedRepostedBy.name}`
                 : 'Dari kreator yang kamu ikuti',
             score: feedScore,
           };
@@ -1102,6 +1107,12 @@ export const CommunityFeedPage: React.FC = () => {
           ) : (
             <AnimatePresence mode="popLayout" initial={false}>
               {filteredBuzz.map((post: BuzzPost) => {
+              // Resolve live author/reposter data for display
+              const resolvedAuthor = resolveAuthor(post.author, usersById) ?? post.author;
+              const resolvedRepostedBy = post.repostedBy
+                ? (resolveAuthor(post.repostedBy, usersById) ?? post.repostedBy)
+                : undefined;
+
               // Find full film details if tagged
               const postFilm = post.taggedFilm
                 ? films.find(f => f.id === post.taggedFilm?.id) || post.taggedFilm
@@ -1129,20 +1140,20 @@ export const CommunityFeedPage: React.FC = () => {
                   className="border-b border-white/10 py-4 sm:py-5 space-y-3.5 transition-colors"
                 >
                 {/* Repost Indicator Header */}
-                {post.isRepost && post.repostedBy && (
+                {post.isRepost && resolvedRepostedBy && (
                   <div
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigateTo('user-profile', { userId: post.repostedBy!.id });
+                      navigateTo('user-profile', { userId: resolvedRepostedBy.id });
                     }}
                     className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-emerald-400 cursor-pointer transition-colors pb-2 border-b border-white/10 group/repost"
-                    title={`Lihat profil ${post.repostedBy.name}`}
+                    title={`Lihat profil ${resolvedRepostedBy.name}`}
                   >
                     <Repeat2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 stroke-[2.2]" />
                     <span>
                       Direpost oleh{' '}
                       <span className="text-slate-200 group-hover/repost:text-emerald-300 font-bold hover:underline">
-                        {post.repostedBy.name}
+                        {resolvedRepostedBy.name}
                       </span>
                     </span>
                     {post.repostedAt && (
@@ -1156,22 +1167,22 @@ export const CommunityFeedPage: React.FC = () => {
                 {/* Post Author Info */}
                 <div className="flex items-center justify-between gap-2.5">
                   <div
-                    onClick={() => navigateTo('user-profile', { userId: post.author.id })}
+                    onClick={() => navigateTo('user-profile', { userId: resolvedAuthor.id })}
                     className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group min-w-0 flex-1"
-                    title={`Kunjungi profil ${post.author.name}`}
+                    title={`Kunjungi profil ${resolvedAuthor.name}`}
                   >
                     <img
-                      src={post.author.avatar?.trim() || DEFAULT_AVATAR}
-                      alt={post.author.name}
+                      src={resolvedAuthor.avatar?.trim() || DEFAULT_AVATAR}
+                      alt={resolvedAuthor.name}
                       className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover ring-1 ring-white/10 group-hover:ring-[#FF2E7E] transition-all shrink-0"
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`font-bold text-xs sm:text-sm text-white group-hover:${getRoleBadgeStyle(post.author.role || 'warga_sotoy').text} transition-colors truncate max-w-[120px] xs:max-w-[180px] sm:max-w-none`}>
-                          {post.author.name}
+                        <span className={`font-bold text-xs sm:text-sm text-white group-hover:${getRoleBadgeStyle(resolvedAuthor.role || 'warga_sotoy').text} transition-colors truncate max-w-[120px] xs:max-w-[180px] sm:max-w-none`}>
+                          {resolvedAuthor.name}
                         </span>
-                        {post.author.role && (
-                          <RoleBadge role={post.author.role} size="xs" />
+                        {resolvedAuthor.role && (
+                          <RoleBadge role={resolvedAuthor.role} size="xs" />
                         )}
                       </div>
                       <span
@@ -1200,7 +1211,7 @@ export const CommunityFeedPage: React.FC = () => {
                           e.stopPropagation();
                           if (!isLoggedIn) {
                             setLoginModalOpen(true);
-                            showToast(`Silakan masuk untuk mengikuti ${post.author.name}!`);
+                            showToast(`Silakan masuk untuk mengikuti ${resolvedAuthor.name}!`);
                             return;
                           }
                           toggleFollowUser(post.author.id);
@@ -1213,7 +1224,7 @@ export const CommunityFeedPage: React.FC = () => {
                         title={
                           isLoggedIn && isFollowing(post.author.id)
                             ? 'Klik untuk batal ikuti'
-                            : `Ikuti ${post.author.name}`
+                            : `Ikuti ${resolvedAuthor.name}`
                         }
                       >
                         {isLoggedIn && isFollowing(post.author.id) ? (
@@ -1288,7 +1299,7 @@ export const CommunityFeedPage: React.FC = () => {
                 </p>
 
                 {/* Attached Photo */}
-                <BuzzImageAttachment src={post.image} alt={`Foto postingan oleh ${post.author.name}`} />
+                <BuzzImageAttachment src={post.image} alt={`Foto postingan oleh ${resolvedAuthor.name}`} />
 
                 {/* Hashtags */}
                 {post.tags.length > 0 && (

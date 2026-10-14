@@ -1209,7 +1209,7 @@ export const UserPage: React.FC = () => {
                         </p>
                       )}
 
-                      <BuzzImageAttachment src={buzz.image} alt={`Foto postingan ${resolvedBuzzAuthor?.name || buzz.author.name}`} />
+                      <BuzzImageAttachment src={buzz.image} alt={`Foto postingan ${authorName}`} />
 
                       {buzz.taggedFilm && (
                         <div
@@ -1345,6 +1345,9 @@ export const UserPage: React.FC = () => {
                   const replyAuthorAvatar = reply.author?.avatar || targetUser.avatar;
                   const replyAuthorName = reply.author?.name || targetUser.name;
                   const replyAuthorRole = reply.author?.role || targetUser.role;
+                  const resolvedReplyToUser = reply.replyToUser
+                    ? (resolveAuthor(reply.replyToUser, usersById) ?? reply.replyToUser)
+                    : undefined;
 
                   return (
                     <div
@@ -1357,9 +1360,9 @@ export const UserPage: React.FC = () => {
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <CornerDownRight className="w-3.5 h-3.5 text-[#FF2E7E] shrink-0" />
                           <span>
-                            {reply.replyToUser ? (
+                            {resolvedReplyToUser ? (
                               <>
-                                Membalas <span className="font-bold text-neutral-200">@{reply.replyToUser.handle?.replace('@', '') || reply.replyToUser.name}</span>
+                                Membalas <span className="font-bold text-neutral-200">@{resolvedReplyToUser.handle?.replace('@', '') || resolvedReplyToUser.name}</span>
                               </>
                             ) : (
                               <>
@@ -1563,7 +1566,7 @@ export const UserPage: React.FC = () => {
                         {buzz.content}
                       </p>
 
-                      <BuzzImageAttachment src={buzz.image} alt={`Foto postingan ${buzz.author?.name}`} />
+                      <BuzzImageAttachment src={buzz.image} alt={`Foto postingan ${authorName}`} />
 
                       {buzz.taggedFilm && (
                         <div
@@ -1620,7 +1623,7 @@ export const UserPage: React.FC = () => {
                           <button
                             onClick={() =>
                               openShareModal({
-                                title: `Buzz oleh ${buzz.author?.name || 'Warga Sotoy'}`,
+                                title: `Buzz oleh ${authorName}`,
                                 text: buzz.content,
                                 url: window.location.href,
                               })
