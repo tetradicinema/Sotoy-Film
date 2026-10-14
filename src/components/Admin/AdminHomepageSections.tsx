@@ -56,6 +56,7 @@ import {
   resolveSidebarWidgetOrder,
   resolveHiddenBlocks,
   getSplitColumnBlocks,
+  resolveSectionOrder,
 } from '../../utils/homepageConfigHelper';
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -778,7 +779,7 @@ export const AdminHomepageSections: React.FC = () => {
 
   // Ordered list of section keys
   const [orderedKeys, setOrderedKeys] = useState<HomepageSectionKey[]>(() => {
-    return homepageSectionsConfig?.sectionOrder || DEFAULT_SECTION_ORDER;
+    return resolveSectionOrder(homepageSectionsConfig?.sectionOrder);
   });
 
   const [isSavingOrder, setIsSavingOrder] = useState(false);
@@ -786,7 +787,7 @@ export const AdminHomepageSections: React.FC = () => {
   // Keep orderedKeys synced with remote config
   useEffect(() => {
     if (homepageSectionsConfig?.sectionOrder && homepageSectionsConfig.sectionOrder.length > 0) {
-      setOrderedKeys(homepageSectionsConfig.sectionOrder);
+      setOrderedKeys(resolveSectionOrder(homepageSectionsConfig.sectionOrder));
     }
   }, [homepageSectionsConfig?.sectionOrder]);
 
@@ -851,7 +852,7 @@ export const AdminHomepageSections: React.FC = () => {
   };
 
   // Selected section to edit in focus, default to the first one
-  const [activeSectionKey, setActiveSectionKey] = useState<HomepageSectionKey>('hero_to_watch');
+  const [activeSectionKey, setActiveSectionKey] = useState<HomepageSectionKey>('hero_slider');
 
   // Draft local configs per section key
   const [draftConfigs, setDraftConfigs] = useState<Partial<Record<HomepageSectionKey, SectionConfig>>>(() => {
@@ -878,7 +879,7 @@ export const AdminHomepageSections: React.FC = () => {
       subCategory: '',
       tag: '',
       sortBy: 'newest',
-      limit: 5,
+      limit: activeSectionKey === 'hero_slider' ? 6 : 5,
       itemIds: [],
     };
     const draft = draftConfigs[activeSectionKey];
@@ -927,7 +928,7 @@ export const AdminHomepageSections: React.FC = () => {
       subCategory: '',
       tag: '',
       sortBy: 'newest',
-      limit: 5,
+      limit: key === 'hero_slider' ? 6 : 5,
       itemIds: [],
     };
     setDraftConfigs(prev => ({

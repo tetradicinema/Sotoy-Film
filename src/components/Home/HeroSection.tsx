@@ -5,7 +5,6 @@ import {
   Flame,
   Bookmark,
   Camera,
-  Star,
   Clock,
   ArrowRight,
   PenSquare,
@@ -14,7 +13,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
 import { GEAR_ADDICT_ITEMS, INITIAL_ARTICLES } from '../../data/mockData';
-import { resolveConfigFilms, resolveConfigArticles } from '../../utils/homepageConfigHelper';
+import { resolveConfigArticles } from '../../utils/homepageConfigHelper';
 
 const HeroActiveAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }> = ({ authorId, defaultAuthor }) => {
   const author = useDynamicArticleAuthor(authorId, defaultAuthor);
@@ -58,13 +57,13 @@ const HeroActiveAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }
 };
 
 export const HeroSection: React.FC = () => {
-  const { publishedArticles, films, navigateTo, currentUser, isLoggedIn, homepageSectionsConfig } = useApp();
+  const { publishedArticles, navigateTo, currentUser, isLoggedIn, homepageSectionsConfig } = useApp();
 
   // Ensure article pool is never completely empty
   const articlesPool = publishedArticles.length > 0 ? publishedArticles : INITIAL_ARTICLES;
 
-  // Trending articles for the main hero slider (sorted by popularity / heroSlider flag)
-  const trendingArticles = useMemo(() => {
+  // Default trending articles for the main hero slider (sorted by popularity / heroSlider flag)
+  const defaultSliderArticles = useMemo(() => {
     return [...articlesPool]
       .sort((a, b) => {
         if (a.heroSlider && !b.heroSlider) return -1;
@@ -73,6 +72,24 @@ export const HeroSection: React.FC = () => {
       })
       .slice(0, 6);
   }, [articlesPool]);
+
+  // Main hero slider articles (configured via hero_slider or default fallback)
+  const trendingArticles = useMemo(() => {
+    const rawConfig = homepageSectionsConfig?.sections?.hero_slider;
+    const effectiveConfig = rawConfig
+      ? {
+          ...rawConfig,
+          sourceType: (rawConfig.sourceType === 'slider' ? 'auto' : rawConfig.sourceType) as 'auto' | 'manual',
+          limit: rawConfig.limit && rawConfig.limit > 0 ? rawConfig.limit : 6,
+        }
+      : undefined;
+    const resolved = resolveConfigArticles(
+      articlesPool,
+      effectiveConfig,
+      defaultSliderArticles
+    );
+    return resolved.length > 0 ? resolved : defaultSliderArticles;
+  }, [articlesPool, homepageSectionsConfig?.sections?.hero_slider, defaultSliderArticles]);
 
   // Default recent articles for the right sidebar tab
   const defaultRecentArticles = useMemo(() => {
@@ -122,19 +139,31 @@ export const HeroSection: React.FC = () => {
     setCurrentSlide(prev => (prev + 1) % trendingArticles.length);
   };
 
-  // Default to watch recommendations
-  const defaultToWatchFilms = useMemo(() => {
-    return films.filter(f => f.featuredRecommendation || f.skorSotoy >= 4.5).slice(0, 5);
-  }, [films]);
+  // Default to watch article recommendations (movies, series, anime)
+  const defaultToWatchArticles = useMemo(() => {
+    return articlesPool
+      .filter(a => ['movies', 'series', 'anime'].includes(a.category))
+      .sort((a, b) => {
+        const timeA = a.publishedAtTimestamp
+          ? new Date(a.publishedAtTimestamp).getTime()
+          : new Date(a.publishedAt || 0).getTime();
+        const timeB = b.publishedAtTimestamp
+          ? new Date(b.publishedAtTimestamp).getTime()
+          : new Date(b.publishedAt || 0).getTime();
+        return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
+      })
+      .slice(0, 5);
+  }, [articlesPool]);
 
-  // Resolved to watch films using shared homepage config or fallback
-  const toWatchFilms = useMemo(() => {
-    return resolveConfigFilms(
-      films,
+  // Resolved to watch articles using shared homepage config or fallback
+  const toWatchArticles = useMemo(() => {
+    const resolved = resolveConfigArticles(
+      articlesPool,
       homepageSectionsConfig?.sections?.hero_to_watch,
-      defaultToWatchFilms
+      defaultToWatchArticles
     );
-  }, [films, homepageSectionsConfig?.sections?.hero_to_watch, defaultToWatchFilms]);
+    return resolved.length > 0 ? resolved : defaultToWatchArticles;
+  }, [articlesPool, homepageSectionsConfig?.sections?.hero_to_watch, defaultToWatchArticles]);
 
   // Default gear articles for the right sidebar tab
   const defaultGearArticles = useMemo(() => {
@@ -408,45 +437,49 @@ export const HeroSection: React.FC = () => {
                 </div>
               )}
 
-              {/* Tab Content 2: TO WATCH */}
+              {/* Tab Content 2: TO WATCH (ARTICLES) */}
               {activeTab === 'to-watch' && (
                 <div className="flex-1 flex flex-col justify-between min-h-0">
                   <div className="divide-y divide-white/[0.06] flex-1 flex flex-col justify-start">
-                    {toWatchFilms.map(film => (
+                    {toWatchArticles.map((art, index) => (
                       <div
-                        key={film.id}
-                        id={`towatch-film-item-${film.id}`}
-                        onClick={() => navigateTo('film-detail', { filmId: film.id })}
+                        key={art.id}
+                        id={`towatch-article-item-${art.id}`}
+                        onClick={() => navigateTo('article-detail', { articleId: art.id })}
                         className="group flex items-center gap-3 py-2 px-1.5 rounded-xl hover:bg-white/[0.04] transition-colors cursor-pointer"
                       >
+                        {/* Tabular Index Number */}
+                        <span className={`w-4 font-mono tabular-nums text-xs font-bold text-center shrink-0 ${
+                          index === 0 ? 'text-[#FF2E7E]' : 'text-slate-500'
+                        }`}>
+                          {String(index + 1).padStart(2, '0')}
+                        </span>
+
+                        {/* Poster/Cover */}
                         <img
-                          src={film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=160&q=80'}
-                          alt={film.title}
-                          className="w-10 h-14 object-cover rounded-lg shrink-0 border border-white/10 group-hover:scale-105 transition-transform duration-300"
+                          src={art.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=200&q=80'}
+                          alt={art.title}
+                          className="w-12 h-12 object-cover rounded-xl shrink-0 border border-white/10 group-hover:scale-105 transition-transform duration-300"
                         />
+
+                        {/* Metadata */}
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-white font-semibold text-xs leading-snug truncate group-hover:text-[#FF2E7E] transition-colors">
-                            {film.title}
-                          </h4>
-                          <p className="text-slate-400 text-[11px] line-clamp-1 mt-0.5">
-                            {film.curatorNote || film.synopsis}
-                          </p>
-                          <div className="mt-1 flex items-center gap-2 text-[10px]">
-                            {film.whereToWatch.slice(0, 1).map((w, idx) => (
-                              <span
-                                key={idx}
-                                className="text-slate-300 font-medium"
-                              >
-                                {w.platform}
-                              </span>
-                            ))}
-                            <span className="text-slate-600">·</span>
-                            <span className="font-mono tabular-nums text-amber-400 font-semibold flex items-center gap-0.5">
-                              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                              <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
+                          <div className="flex items-center gap-1.5 mb-0.5 text-[10px]">
+                            <span className="text-[#FF2E7E] font-bold uppercase tracking-wider truncate">
+                              {art.category}
                             </span>
+                            <span className="text-slate-600">·</span>
+                            <span className="text-slate-400 truncate">{art.publishedAt}</span>
+                          </div>
+                          <h4 className="text-white font-semibold text-xs leading-snug line-clamp-2 group-hover:text-[#FF2E7E] transition-colors">
+                            {art.title}
+                          </h4>
+                          <div className="mt-0.5 flex items-center gap-1 text-[10px] text-slate-400">
+                            <Clock className="w-2.5 h-2.5 text-slate-500" />
+                            <span>{art.readTime}</span>
                           </div>
                         </div>
+
                         <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-white transition-transform group-hover:translate-x-0.5 shrink-0" />
                       </div>
                     ))}
@@ -454,10 +487,10 @@ export const HeroSection: React.FC = () => {
 
                   <button
                     id="see-all-towatch-btn"
-                    onClick={() => navigateTo('film-recommendations')}
+                    onClick={() => navigateTo('category', { category: 'movies' })}
                     className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 hover:bg-white/[0.04] text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer mt-3 shrink-0"
                   >
-                    <span>Buka Generator Rekomendasi Film</span>
+                    <span>Jelajahi Artikel Rekomendasi</span>
                     <ArrowRight className="w-3.5 h-3.5 text-[#FF2E7E]" />
                   </button>
                 </div>

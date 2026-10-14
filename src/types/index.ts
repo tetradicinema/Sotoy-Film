@@ -464,6 +464,7 @@ export interface AuditLog {
 // -------------------------------------------------------------
 
 export type HomepageSectionKey =
+  | 'hero_slider'
   | 'hero_to_watch'
   | 'recent'
   | 'gear'

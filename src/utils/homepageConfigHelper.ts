@@ -298,6 +298,7 @@ export const ALL_FILM_CATEGORIES: ('movie' | 'series' | 'anime')[] = [
 ];
 
 export const DEFAULT_SECTION_ORDER: HomepageSectionKey[] = [
+  'hero_slider',
   'hero_to_watch',
   'recent',
   'gear',
@@ -311,15 +312,49 @@ export const DEFAULT_SECTION_ORDER: HomepageSectionKey[] = [
   'film_studies',
 ];
 
+export function resolveSectionOrder(saved?: HomepageSectionKey[]): HomepageSectionKey[] {
+  if (!Array.isArray(saved) || saved.length === 0) {
+    return [...DEFAULT_SECTION_ORDER];
+  }
+  const validSet = new Set<HomepageSectionKey>(DEFAULT_SECTION_ORDER);
+  const result: HomepageSectionKey[] = [];
+  const seen = new Set<HomepageSectionKey>();
+
+  for (const key of saved) {
+    if (validSet.has(key) && !seen.has(key)) {
+      result.push(key);
+      seen.add(key);
+    }
+  }
+
+  for (const defKey of DEFAULT_SECTION_ORDER) {
+    if (!seen.has(defKey)) {
+      result.push(defKey);
+      seen.add(defKey);
+    }
+  }
+
+  return result;
+}
+
 export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
+  {
+    key: 'hero_slider',
+    label: 'Hero: Slider Utama',
+    defaultTitle: 'Slider Utama',
+    targetType: 'articles',
+    description: 'Slider besar di kiri hero banner (artikel unggulan)',
+    defaultRule: 'Artikel bertanda heroSlider dulu, lalu paling banyak disukai (6 artikel)',
+    allowedCategories: ALL_ARTICLE_CATEGORIES,
+  },
   {
     key: 'hero_to_watch',
     label: 'Hero: To Watch Tab',
     defaultTitle: 'To Watch',
-    targetType: 'films',
-    description: 'Panel hero, tab rekomendasi tontonan (kanan hero banner)',
-    defaultRule: 'Film/serial rekomendasi rating tertinggi (skor sotoy ≥ 4.5)',
-    allowedCategories: ALL_FILM_CATEGORIES,
+    targetType: 'articles',
+    description: 'Panel hero, tab artikel rekomendasi tontonan (kanan hero banner)',
+    defaultRule: 'Artikel kategori Movies, Series, dan Anime (urutan terbaru)',
+    allowedCategories: ALL_ARTICLE_CATEGORIES,
   },
   {
     key: 'recent',
