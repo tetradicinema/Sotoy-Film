@@ -29,6 +29,7 @@ import { FilmItem, Article, BuzzPost, User } from '../../types';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
 import { searchTmdbFilms, TmdbSearchResultItem } from '../../utils/tmdbHelper';
 import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
+import { resolveAuthor } from '../../utils/resolveAuthor';
 
 type SearchTab = 'all' | 'film' | 'article' | 'buzz' | 'user';
 
@@ -53,6 +54,7 @@ export const SearchPage: React.FC = () => {
     publishedArticles,
     buzzList,
     allUsers,
+    usersById,
     navigateTo,
     goBack,
     currentUser,
@@ -206,15 +208,18 @@ export const SearchPage: React.FC = () => {
 
     // 3. Buzz Posts
     const buzzResults = buzzList.filter(buzz => {
+      const resolvedAuthor = resolveAuthor(buzz.author, usersById) ?? buzz.author;
       const matchContent = buzz.content.toLowerCase().includes(q);
-      const matchAuthor = buzz.author.name.toLowerCase().includes(q) || buzz.author.handle.toLowerCase().includes(q);
+      const matchAuthor = (resolvedAuthor.name || buzz.author.name).toLowerCase().includes(q) ||
+        (resolvedAuthor.handle || buzz.author.handle).toLowerCase().includes(q);
       const matchTags = buzz.tags.some(t => t.toLowerCase().includes(q));
       const matchTaggedFilm = buzz.taggedFilm?.title.toLowerCase().includes(q);
       const matchTaggedArticle = buzz.taggedArticle?.title.toLowerCase().includes(q);
       const matchTerms = terms.every(
         t =>
           buzz.content.toLowerCase().includes(t) ||
-          buzz.author.name.toLowerCase().includes(t) ||
+          (resolvedAuthor.name || buzz.author.name).toLowerCase().includes(t) ||
+          (resolvedAuthor.handle || buzz.author.handle).toLowerCase().includes(t) ||
           buzz.tags.some(tg => tg.toLowerCase().includes(t)) ||
           buzz.taggedFilm?.title.toLowerCase().includes(t)
       );
@@ -236,7 +241,7 @@ export const SearchPage: React.FC = () => {
       matchingBuzz: buzzResults,
       matchingUsers: userResults,
     };
-  }, [localQuery, films, publishedArticles, buzzList, allUsers]);
+  }, [localQuery, films, publishedArticles, buzzList, allUsers, usersById]);
 
   // Real-time Search to TMDB API for global film dataset
   useEffect(() => {
@@ -757,7 +762,9 @@ export const SearchPage: React.FC = () => {
                     </div>
 
                     <div className="space-y-3">
-                      {(activeTab === 'all' ? matchingBuzz.slice(0, 4) : matchingBuzz).map(buzz => (
+                      {(activeTab === 'all' ? matchingBuzz.slice(0, 4) : matchingBuzz).map(buzz => {
+                        const resolvedAuthor = resolveAuthor(buzz.author, usersById) ?? buzz.author;
+                        return (
                         <div
                           key={buzz.id}
                           onClick={() => navigateTo('buzz-detail', { buzzId: buzz.id })}
@@ -765,16 +772,16 @@ export const SearchPage: React.FC = () => {
                         >
                           <div className="flex items-start gap-3">
                             <img
-                              src={buzz.author.avatar?.trim() || DEFAULT_AVATAR}
-                              alt={buzz.author.name}
+                              src={(resolvedAuthor.avatar || buzz.author.avatar)?.trim() || DEFAULT_AVATAR}
+                              alt={resolvedAuthor.name || buzz.author.name}
                               className="w-10 h-10 rounded-full object-cover ring-1 ring-white/10 shrink-0"
                             />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 <span className="font-bold text-sm text-white group-hover:text-[#FF2E7E] transition-colors">
-                                  {buzz.author.name}
+                                  {resolvedAuthor.name || buzz.author.name}
                                 </span>
-                                <span className="text-xs text-slate-400">@{buzz.author.handle}</span>
+                                <span className="text-xs text-slate-400">@{resolvedAuthor.handle || buzz.author.handle}</span>
                                 <span className="text-[10px] text-slate-500" title={formatFullDateTime(buzz.createdAt)}>• {formatRelativeTime(buzz.createdAt)}</span>
                               </div>
 
@@ -808,7 +815,8 @@ export const SearchPage: React.FC = () => {
                             </div>
                           </div>
                         </div>
-                      ))}
+                      );
+                      })}
                     </div>
                   </div>
                 )}

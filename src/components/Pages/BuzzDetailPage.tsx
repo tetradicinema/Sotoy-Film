@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   ArrowLeft,
   MessageSquare,
@@ -36,6 +36,7 @@ import { MentionInput } from '../Common/MentionInput';
 import { BuzzReply } from '../../types';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
 import { BuzzImageAttachment } from '../Buzz/BuzzImageAttachment';
+import { resolveAuthor } from '../../utils/resolveAuthor';
 
 export const BuzzDetailPage: React.FC = () => {
   const {
@@ -58,6 +59,7 @@ export const BuzzDetailPage: React.FC = () => {
     isFollowing,
     films,
     articles,
+    usersById,
   } = useApp();
 
   const [replyText, setReplyText] = useState('');
@@ -110,6 +112,20 @@ export const BuzzDetailPage: React.FC = () => {
   // Find the selected buzz post, or fallback to the first one
   const buzz = buzzList.find(b => b.id === selectedBuzzId) || buzzList[0];
 
+  const resolvedBuzzAuthor = useMemo(() => {
+    if (!buzz?.author) return buzz?.author;
+    return resolveAuthor(buzz.author, usersById) ?? buzz.author;
+  }, [buzz?.author, usersById]);
+
+  const resolvedReplies = useMemo(() => {
+    if (!buzz?.replies) return [];
+    return buzz.replies.map(r => ({
+      ...r,
+      author: resolveAuthor(r.author, usersById) ?? r.author,
+      replyToUser: r.replyToUser ? (resolveAuthor(r.replyToUser, usersById) ?? r.replyToUser) : undefined,
+    }));
+  }, [buzz?.replies, usersById]);
+
   if (!buzz) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-4">
@@ -134,11 +150,18 @@ export const BuzzDetailPage: React.FC = () => {
     ? articles.find(a => a.id === buzz.taggedArticle?.id) || buzz.taggedArticle
     : null;
 
-  const replies = buzz.replies || [];
+  const replies = resolvedReplies;
 
   const handleStartReply = (replyId: string, author: { id: string; name: string; handle: string }) => {
-    setReplyingTo({ replyId, user: author });
-    const handleMention = author.handle.startsWith('@') ? author.handle : `@${author.handle}`;
+    // Ensure author passed is resolved
+    const resolved = resolveAuthor(author, usersById) ?? author;
+    const authorObj = {
+      id: resolved.id || author.id,
+      name: resolved.name || author.name,
+      handle: resolved.handle || author.handle,
+    };
+    setReplyingTo({ replyId, user: authorObj });
+    const handleMention = authorObj.handle.startsWith('@') ? authorObj.handle : `@${authorObj.handle}`;
     setReplyText(prev => {
       if (prev.includes(handleMention)) return prev;
       return `${handleMention} ${prev}`.trimStart();
@@ -165,18 +188,20 @@ export const BuzzDetailPage: React.FC = () => {
   };
 
   const handleShare = () => {
-    const authorHandle = buzz.author.handle.startsWith('@') ? buzz.author.handle : `@${buzz.author.handle}`;
+    const authorHandle = (resolvedBuzzAuthor?.handle || buzz.author.handle).startsWith('@')
+      ? (resolvedBuzzAuthor?.handle || buzz.author.handle)
+      : `@${resolvedBuzzAuthor?.handle || buzz.author.handle}`;
     openShareModal({
-      title: `Buzz Diskusi: ${buzz.author.name}`,
+      title: `Buzz Diskusi: ${resolvedBuzzAuthor?.name || buzz.author.name}`,
       text: buzz.content,
       tags: buzz.tags,
       type: 'buzz',
-      image: buzz.author.avatar,
-      imageUrl: buzz.author.avatar,
-      authorAvatar: buzz.author.avatar,
-      authorName: buzz.author.name,
-      authorHandle: buzz.author.handle,
-      authorRole: buzz.author.role,
+      image: resolvedBuzzAuthor?.avatar || buzz.author.avatar,
+      imageUrl: resolvedBuzzAuthor?.avatar || buzz.author.avatar,
+      authorAvatar: resolvedBuzzAuthor?.avatar || buzz.author.avatar,
+      authorName: resolvedBuzzAuthor?.name || buzz.author.name,
+      authorHandle: resolvedBuzzAuthor?.handle || buzz.author.handle,
+      authorRole: resolvedBuzzAuthor?.role || buzz.author.role,
       likes: buzz.likes,
       replies: (replies && replies.length > 0 ? replies.length : buzz.repliesCount) || 0,
       meta: postFilm ? `Membahas film ${postFilm.title}` : postArticle ? `Membahas artikel ${postArticle.title}` : `${authorHandle} di Sotoy Film`,
@@ -239,7 +264,7 @@ export const BuzzDetailPage: React.FC = () => {
           </span>
           <span>/</span>
           <span className="text-[#FF2E7E] truncate max-w-[200px]">
-            Utas Utama: @{buzz.author.handle.replace('@', '')}
+            Utas Utama: @{(resolvedBuzzAuthor?.handle || buzz.author.handle).replace('@', '')}
           </span>
         </div>
       </div>
@@ -276,11 +301,11 @@ export const BuzzDetailPage: React.FC = () => {
                 <button
                   onClick={() => navigateTo('user-profile', { userId: buzz.author.id })}
                   className="relative group shrink-0"
-                  title={`Lihat profil ${buzz.author.name}`}
+                  title={`Lihat profil ${resolvedBuzzAuthor?.name || buzz.author.name}`}
                 >
                   <img
-                    src={buzz.author.avatar?.trim() || DEFAULT_AVATAR}
-                    alt={buzz.author.name}
+                    src={(resolvedBuzzAuthor?.avatar || buzz.author.avatar)?.trim() || DEFAULT_AVATAR}
+                    alt={resolvedBuzzAuthor?.name || buzz.author.name}
                     className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl object-cover ring-2 ring-[#FF2E7E]/40 group-hover:ring-[#FF2E7E] transition-all shadow-lg shrink-0"
                   />
                   <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 sm:w-4 sm:h-4 bg-emerald-500 border-2 border-[#171717] rounded-full" />
@@ -290,15 +315,15 @@ export const BuzzDetailPage: React.FC = () => {
                   <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                     <button
                       onClick={() => navigateTo('user-profile', { userId: buzz.author.id })}
-                      className={`font-bold text-sm sm:text-lg text-white hover:${getRoleBadgeStyle(buzz.author.role || 'warga_sotoy').text} transition-colors truncate max-w-[130px] xs:max-w-[200px] sm:max-w-none text-left`}
+                      className={`font-bold text-sm sm:text-lg text-white hover:${getRoleBadgeStyle(resolvedBuzzAuthor?.role || buzz.author.role || 'warga_sotoy').text} transition-colors truncate max-w-[130px] xs:max-w-[200px] sm:max-w-none text-left`}
                     >
-                      {buzz.author.name}
+                      {resolvedBuzzAuthor?.name || buzz.author.name}
                     </button>
-                    <RoleBadge role={buzz.author.role || 'warga_sotoy'} size="xs" />
+                    <RoleBadge role={resolvedBuzzAuthor?.role || buzz.author.role || 'warga_sotoy'} size="xs" />
                   </div>
 
                   <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-slate-400 mt-0.5 truncate">
-                    <span className="font-mono text-slate-400">{buzz.author.handle}</span>
+                    <span className="font-mono text-slate-400">{resolvedBuzzAuthor?.handle || buzz.author.handle}</span>
                     <span>•</span>
                     <span className="text-slate-400" title={formatFullDateTime(buzz.createdAt)}>{formatRelativeTime(buzz.createdAt)}</span>
                   </div>
@@ -319,7 +344,7 @@ export const BuzzDetailPage: React.FC = () => {
                     onClick={() => {
                       if (!isLoggedIn) {
                         setLoginModalOpen(true);
-                        showToast(`Silakan masuk untuk mengikuti ${buzz.author.name}!`);
+                        showToast(`Silakan masuk untuk mengikuti ${resolvedBuzzAuthor?.name || buzz.author.name}!`);
                         return;
                       }
                       toggleFollowUser(buzz.author.id);
@@ -390,7 +415,7 @@ export const BuzzDetailPage: React.FC = () => {
             </div>
 
             {/* Attached Photo */}
-            <BuzzImageAttachment src={buzz.image} alt={`Foto postingan ${buzz.author.name}`} />
+            <BuzzImageAttachment src={buzz.image} alt={`Foto postingan ${resolvedBuzzAuthor?.name || buzz.author.name}`} />
 
             {/* Hashtags */}
             {buzz.tags.length > 0 && (
@@ -723,7 +748,7 @@ export const BuzzDetailPage: React.FC = () => {
                   placeholder={
                     replyingTo
                       ? `Tulis balasan kepada @${replyingTo.user.handle.replace('@', '')}... (Gunakan '@' untuk mention)`
-                      : `Tulis tanggapan untuk utas @${buzz.author.handle.replace('@', '')}... (Gunakan '@' untuk mention)`
+                      : `Tulis tanggapan untuk utas @${(resolvedBuzzAuthor?.handle || buzz.author.handle).replace('@', '')}... (Gunakan '@' untuk mention)`
                   }
                   rows={3}
                   className="w-full bg-[#0A0A0A] border border-white/10 rounded-2xl p-3.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] transition-colors resize-none"
@@ -734,11 +759,12 @@ export const BuzzDetailPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() =>
-                        setReplyText(prev =>
-                          prev.includes(`@${buzz.author.handle.replace('@', '')}`)
+                        setReplyText(prev => {
+                          const h = (resolvedBuzzAuthor?.handle || buzz.author.handle).replace('@', '');
+                          return prev.includes(`@${h}`)
                             ? prev
-                            : `@${buzz.author.handle.replace('@', '')} ${prev}`
-                        )
+                            : `@${h} ${prev}`;
+                        })
                       }
                       className="hover:text-[#FF2E7E] transition-colors text-[11px] font-mono flex items-center gap-1 bg-white/[0.06] border border-white/10 px-2 py-1 rounded-lg text-slate-300"
                     >
@@ -773,7 +799,7 @@ export const BuzzDetailPage: React.FC = () => {
                 </div>
                 <h4 className="font-bold text-white text-base">Belum Ada Balasan</h4>
                 <p className="text-slate-400 text-xs max-w-sm mx-auto">
-                  Jadilah orang pertama yang menanggapi argumen atau opini di Utas Utama dari {buzz.author.name}!
+                  Jadilah orang pertama yang menanggapi argumen atau opini di Utas Utama dari {resolvedBuzzAuthor?.name || buzz.author.name}!
                 </p>
               </div>
             ) : (
@@ -1051,23 +1077,25 @@ export const BuzzDetailPage: React.FC = () => {
             </div>
 
             <div className="space-y-3">
-              {otherBuzzList.map(item => (
-                <div
-                  key={item.id}
-                  onClick={() => navigateTo('buzz-detail', { buzzId: item.id })}
-                  className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 hover:border-[#FF2E7E]/40 transition-all cursor-pointer group space-y-2"
-                >
-                  <div className="flex items-center gap-2">
-                    <img
-                      src={item.author.avatar?.trim() || DEFAULT_AVATAR}
-                      alt={item.author.name}
-                      className="w-6 h-6 rounded-full object-cover"
-                    />
-                    <span className="text-xs font-bold text-white truncate">
-                      {item.author.name}
-                    </span>
-                    <span className="text-[10px] text-slate-400" title={formatFullDateTime(item.createdAt)}>• {formatRelativeTime(item.createdAt)}</span>
-                  </div>
+              {otherBuzzList.map(item => {
+                const itemAuthor = resolveAuthor(item.author, usersById) ?? item.author;
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => navigateTo('buzz-detail', { buzzId: item.id })}
+                    className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 hover:border-[#FF2E7E]/40 transition-all cursor-pointer group space-y-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={(itemAuthor.avatar || item.author.avatar)?.trim() || DEFAULT_AVATAR}
+                        alt={itemAuthor.name || item.author.name}
+                        className="w-6 h-6 rounded-full object-cover"
+                      />
+                      <span className="text-xs font-bold text-white truncate">
+                        {itemAuthor.name || item.author.name}
+                      </span>
+                      <span className="text-[10px] text-slate-400" title={formatFullDateTime(item.createdAt)}>• {formatRelativeTime(item.createdAt)}</span>
+                    </div>
 
                   <p className="text-xs text-slate-300 line-clamp-2 group-hover:text-slate-100 transition-colors leading-relaxed">
                     {item.content}
@@ -1084,7 +1112,8 @@ export const BuzzDetailPage: React.FC = () => {
                     </span>
                   </div>
                 </div>
-              ))}
+             );
+              })}
             </div>
           </div>
 

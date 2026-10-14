@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { ModerationReport, BuzzPost, UserRating } from '../../types';
+import { resolveAuthor } from '../../utils/resolveAuthor';
 
 export const AdminModeration: React.FC = () => {
   const { 
@@ -32,7 +33,8 @@ export const AdminModeration: React.FC = () => {
     showToast,
     navigateTo,
     fetchAdminReports,
-    hasMoreReports
+    hasMoreReports,
+    usersById,
   } = useApp();
 
   useEffect(() => {
@@ -60,8 +62,9 @@ export const AdminModeration: React.FC = () => {
   // Filter buzz posts
   const filteredBuzz = buzzList.filter(buzz => {
     if (!searchQuery.trim()) return true;
+    const resolvedAuthor = resolveAuthor(buzz.author, usersById) ?? buzz.author;
     const q = searchQuery.toLowerCase();
-    return buzz.content.toLowerCase().includes(q) || buzz.author.name.toLowerCase().includes(q);
+    return buzz.content.toLowerCase().includes(q) || (resolvedAuthor.name || buzz.author.name).toLowerCase().includes(q);
   });
 
   // Filter reviews
@@ -327,18 +330,20 @@ export const AdminModeration: React.FC = () => {
                 Tidak ada obrolan buzz yang cocok dengan pencarian.
               </div>
             ) : (
-              filteredBuzz.map(buzz => (
+              filteredBuzz.map(buzz => {
+                const resolvedAuthor = resolveAuthor(buzz.author, usersById) ?? buzz.author;
+                return (
                 <div key={buzz.id} className="bg-[#171717] border border-white/10 hover:border-white/20 rounded-2xl p-4 flex items-start justify-between gap-4 transition-all">
                   <div className="flex items-start gap-3 min-w-0">
                     <img
-                      src={buzz.author.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80'}
-                      alt={buzz.author.name}
+                      src={(resolvedAuthor.avatar || buzz.author.avatar) || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80'}
+                      alt={resolvedAuthor.name || buzz.author.name}
                       className="w-9 h-9 rounded-xl object-cover shrink-0"
                     />
                     <div className="min-w-0 space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-white text-xs">{buzz.author.name}</span>
-                        <span className="text-[10px] text-slate-500">@{buzz.author.handle}</span>
+                        <span className="font-bold text-white text-xs">{resolvedAuthor.name || buzz.author.name}</span>
+                        <span className="text-[10px] text-slate-500">@{resolvedAuthor.handle || buzz.author.handle}</span>
                         <span className="text-[10px] text-slate-600">• {buzz.createdAt ? new Date(buzz.createdAt).toLocaleDateString('id-ID') : 'Baru'}</span>
                       </div>
                       <p className="text-xs text-slate-300 line-clamp-3">{buzz.content}</p>
@@ -351,7 +356,7 @@ export const AdminModeration: React.FC = () => {
 
                   <div className="flex items-center gap-2 shrink-0">
                     <button
-                      onClick={() => handleBanAuthor(buzz.author.id, buzz.author.name)}
+                      onClick={() => handleBanAuthor(buzz.author.id, resolvedAuthor.name || buzz.author.name)}
                       className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 border border-white/10 transition-colors"
                       title="Bekukan Akun Penulis"
                     >
@@ -366,7 +371,8 @@ export const AdminModeration: React.FC = () => {
                     </button>
                   </div>
                 </div>
-              ))
+              );
+              })
             )}
           </div>
         </div>

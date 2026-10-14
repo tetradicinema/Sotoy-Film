@@ -26,6 +26,7 @@ import { RoleBadge } from '../Common/RoleBadge';
 import { FilmItem, Article, BuzzPost, User } from '../../types';
 import { searchTmdbFilms, TmdbSearchResultItem } from '../../utils/tmdbHelper';
 import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
+import { resolveAuthor } from '../../utils/resolveAuthor';
 
 interface GlobalSearchBarProps {
   isMobile?: boolean;
@@ -113,7 +114,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
   className = '',
   placeholder = 'Cari film, artikel, buzz, atau kritikus...',
 }) => {
-  const { films, publishedArticles, buzzList, allUsers, navigateTo, searchQuery, setSearchQuery, importAndNavigateToTmdbFilm } = useApp();
+  const { films, publishedArticles, buzzList, allUsers, usersById, navigateTo, searchQuery, setSearchQuery, importAndNavigateToTmdbFilm } = useApp();
 
   const [isOpen, setIsOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<SearchCategory>('all');
@@ -383,8 +384,10 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
     // 3. Filter Buzz Posts
     const buzzResults = buzzList
       .filter(buzz => {
+        const resolvedAuthor = resolveAuthor(buzz.author, usersById) ?? buzz.author;
         const matchContent = buzz.content.toLowerCase().includes(q);
-        const matchAuthor = buzz.author.name.toLowerCase().includes(q) || buzz.author.handle.toLowerCase().includes(q);
+        const matchAuthor = (resolvedAuthor.name || buzz.author.name).toLowerCase().includes(q) ||
+          (resolvedAuthor.handle || buzz.author.handle).toLowerCase().includes(q);
         const matchTags = buzz.tags.some(t => t.toLowerCase().includes(q));
         const matchTaggedFilm = buzz.taggedFilm?.title.toLowerCase().includes(q);
         const matchTaggedArticle = buzz.taggedArticle?.title.toLowerCase().includes(q);
@@ -392,7 +395,8 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
         const allTerms = terms.every(
           t =>
             buzz.content.toLowerCase().includes(t) ||
-            buzz.author.name.toLowerCase().includes(t) ||
+            (resolvedAuthor.name || buzz.author.name).toLowerCase().includes(t) ||
+            (resolvedAuthor.handle || buzz.author.handle).toLowerCase().includes(t) ||
             buzz.tags.some(tg => tg.toLowerCase().includes(t)) ||
             buzz.taggedFilm?.title.toLowerCase().includes(t)
         );
@@ -418,7 +422,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
       matchingBuzz: buzzResults,
       matchingUsers: userResults,
     };
-  }, [searchQuery, films, publishedArticles, buzzList, allUsers]);
+  }, [searchQuery, films, publishedArticles, buzzList, allUsers, usersById]);
 
   const totalResultsCount =
     matchingFilms.length + filteredTmdbResults.length + matchingArticles.length + matchingBuzz.length + matchingUsers.length;
@@ -1172,6 +1176,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                         const isSelected =
                           visibleFlattenedList[selectedIndex]?.type === 'buzz' &&
                           visibleFlattenedList[selectedIndex]?.data.id === buzz.id;
+                        const resolvedAuthor = resolveAuthor(buzz.author, usersById) ?? buzz.author;
 
                         return (
                           <div
@@ -1186,8 +1191,8 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                           >
                             {/* Author Avatar */}
                             <img
-                              src={buzz.author.avatar?.trim() || DEFAULT_AVATAR}
-                              alt={buzz.author.name}
+                              src={(resolvedAuthor.avatar || buzz.author.avatar)?.trim() || DEFAULT_AVATAR}
+                              alt={resolvedAuthor.name || buzz.author.name}
                               className="w-8 h-8 rounded-full object-cover ring-1 ring-[#FF2E7E]/40 shrink-0 mt-0.5"
                             />
 
@@ -1195,10 +1200,10 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <span className="text-xs font-bold text-white truncate">
-                                  <HighlightText text={buzz.author.name} query={searchQuery} />
+                                  <HighlightText text={resolvedAuthor.name || buzz.author.name} query={searchQuery} />
                                 </span>
                                 <span className="text-[10px] text-slate-400">
-                                  {buzz.author.handle}
+                                  {resolvedAuthor.handle || buzz.author.handle}
                                 </span>
                                 {buzz.taggedFilm && (
                                   <span className="text-[9px] bg-amber-500/10 text-[#FF2E7E] border border-amber-500/20 px-1.5 py-0.2 rounded font-medium truncate max-w-[140px]">

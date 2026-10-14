@@ -25,6 +25,7 @@ import { LeaderboardCard, LeaderboardPeriodTabs } from './LeaderboardCard';
 import { DEFAULT_AVATAR, DEFAULT_COVER } from '../../data/mockData';
 import { HomeSidebarWidgetKey } from '../../types';
 import { resolveSidebarWidgetOrder } from '../../utils/homepageConfigHelper';
+import { resolveAuthor } from '../../utils/resolveAuthor';
 
 interface EditorialSidebarProps {
   currentArticleId?: string;
@@ -46,6 +47,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
     showToast,
     openShareModal,
     allUsers,
+    usersById,
   } = useApp();
 
   const [quickBuzzText, setQuickBuzzText] = useState('');
@@ -167,7 +169,9 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
 
             {/* Recent Buzz Stream */}
             <div className="space-y-3">
-              {buzzList.slice(0, 3).map(post => (
+              {buzzList.slice(0, 3).map(post => {
+                const resolvedAuthor = resolveAuthor(post.author, usersById) ?? post.author;
+                return (
                 <div
                   key={post.id}
                   id={`sidebar-buzz-item-${post.id}`}
@@ -179,13 +183,13 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                       className="flex items-center gap-2 cursor-pointer group"
                     >
                       <img
-                        src={post.author.avatar?.trim() || DEFAULT_AVATAR}
-                        alt={post.author.name}
+                        src={(resolvedAuthor.avatar || post.author.avatar)?.trim() || DEFAULT_AVATAR}
+                        alt={resolvedAuthor.name || post.author.name}
                         className="w-6 h-6 rounded-full object-cover ring-1 ring-white/10 group-hover:ring-[#FF2E7E] transition-all"
                       />
                       <div>
                         <div className="text-xs font-semibold text-white group-hover:text-[#FF2E7E] transition-colors leading-tight">
-                          {post.author.name}
+                          {resolvedAuthor.name || post.author.name}
                         </div>
                         <div
                           className="text-[10px] text-slate-400 font-mono tabular-nums"
@@ -195,8 +199,8 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                         </div>
                       </div>
                     </div>
-                    {post.author.role && (
-                      <RoleBadge role={post.author.role} size="xs" />
+                    {(resolvedAuthor.role || post.author.role) && (
+                      <RoleBadge role={(resolvedAuthor.role || post.author.role)!} size="xs" />
                     )}
                   </div>
 
@@ -237,18 +241,20 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                       <button
                         onClick={() => {
                           const postFilm = post.taggedFilm ? films.find(f => f.id === post.taggedFilm?.id) || post.taggedFilm : null;
-                          const authorHandle = post.author.handle.startsWith('@') ? post.author.handle : `@${post.author.handle}`;
+                          const authorHandle = (resolvedAuthor.handle || post.author.handle).startsWith('@')
+                            ? (resolvedAuthor.handle || post.author.handle)
+                            : `@${resolvedAuthor.handle || post.author.handle}`;
                           openShareModal({
-                            title: `Buzz Diskusi: ${post.author.name}`,
+                            title: `Buzz Diskusi: ${resolvedAuthor.name || post.author.name}`,
                             text: post.content,
                             tags: post.tags,
                             type: 'buzz',
-                            image: post.author.avatar,
-                            imageUrl: post.author.avatar,
-                            authorAvatar: post.author.avatar,
-                            authorName: post.author.name,
-                            authorHandle: post.author.handle,
-                            authorRole: post.author.role,
+                            image: resolvedAuthor.avatar || post.author.avatar,
+                            imageUrl: resolvedAuthor.avatar || post.author.avatar,
+                            authorAvatar: resolvedAuthor.avatar || post.author.avatar,
+                            authorName: resolvedAuthor.name || post.author.name,
+                            authorHandle: resolvedAuthor.handle || post.author.handle,
+                            authorRole: resolvedAuthor.role || post.author.role,
                             likes: post.likes,
                             replies: (post.replies && post.replies.length > 0 ? post.replies.length : post.repliesCount) || 0,
                             meta: postFilm ? `Membahas film ${postFilm.title}` : `${authorHandle} di Sotoy Film`,
@@ -268,7 +274,8 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                     </div>
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
           </div>
         );

@@ -71,6 +71,7 @@ import { BuzzImageAttachment } from '../Buzz/BuzzImageAttachment';
 import { getUserRankInRole } from '../../utils/leaderboard';
 import { SotoyScoreSparkline } from '../Common/SotoyScoreSparkline';
 import { MentionInput } from '../Common/MentionInput';
+import { resolveAuthor } from '../../utils/resolveAuthor';
 
 const AdminDashboard = React.lazy(() =>
   import('../Admin/AdminDashboard').then(m => ({ default: m.AdminDashboard }))
@@ -126,6 +127,7 @@ export const UserPage: React.FC = () => {
     shareCollectionToBuzz,
     toggleSaveBuzz,
     savedBuzzIds,
+    usersById,
   } = useApp();
 
   // Support URL param for user profile /user/:id
@@ -472,13 +474,22 @@ export const UserPage: React.FC = () => {
         post.replies.forEach(rep => {
           const isMatch = rep.author?.id === targetUser.id;
           if (isMatch) {
-            list.push({ reply: rep, parentPost: post });
+            const resolvedReplyAuthor = resolveAuthor(rep.author, usersById) ?? rep.author;
+            const resolvedReplyToUser = rep.replyToUser ? (resolveAuthor(rep.replyToUser, usersById) ?? rep.replyToUser) : undefined;
+            list.push({
+              reply: {
+                ...rep,
+                author: resolvedReplyAuthor,
+                replyToUser: resolvedReplyToUser,
+              },
+              parentPost: post,
+            });
           }
         });
       }
     });
     return list.sort((a, b) => new Date(b.reply.createdAt).getTime() - new Date(a.reply.createdAt).getTime());
-  }, [buzzList, targetUser.id]);
+  }, [buzzList, targetUser.id, usersById]);
 
   const myReposts = React.useMemo(() => {
     return buzzList
@@ -1089,8 +1100,9 @@ export const UserPage: React.FC = () => {
             ) : (
               <div className="space-y-4">
                 {myBuzz.map(buzz => {
-                  const authorAvatar = buzz.author?.avatar || targetUser.avatar;
-                  const authorName = buzz.author?.name || targetUser.name;
+                  const resolvedBuzzAuthor = resolveAuthor(buzz.author, usersById) ?? buzz.author;
+                  const authorAvatar = resolvedBuzzAuthor?.avatar || targetUser.avatar;
+                  const authorName = resolvedBuzzAuthor?.name || targetUser.name;
 
                   return (
                     <div
@@ -1197,7 +1209,7 @@ export const UserPage: React.FC = () => {
                         </p>
                       )}
 
-                      <BuzzImageAttachment src={buzz.image} alt={`Foto postingan ${buzz.author.name}`} />
+                      <BuzzImageAttachment src={buzz.image} alt={`Foto postingan ${resolvedBuzzAuthor?.name || buzz.author.name}`} />
 
                       {buzz.taggedFilm && (
                         <div
@@ -1351,7 +1363,7 @@ export const UserPage: React.FC = () => {
                               </>
                             ) : (
                               <>
-                                Membalas postingan <span className="font-bold text-neutral-200">{parentPost.author?.name || 'Pengguna'}</span>
+                                Membalas postingan <span className="font-bold text-neutral-200">{(resolveAuthor(parentPost.author, usersById) ?? parentPost.author)?.name || 'Pengguna'}</span>
                               </>
                             )}
                           </span>
@@ -1392,7 +1404,7 @@ export const UserPage: React.FC = () => {
                       {/* Parent post snippet */}
                       <div className="bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-xs text-neutral-400 line-clamp-2">
                         <span className="font-bold text-neutral-300 block mb-0.5">
-                          {parentPost.author?.name}:
+                          {(resolveAuthor(parentPost.author, usersById) ?? parentPost.author)?.name}:
                         </span>
                         <span className="text-neutral-400 italic">
                           "{parentPost.content.length > 140 ? parentPost.content.slice(0, 140) + '...' : parentPost.content}"
@@ -1509,8 +1521,9 @@ export const UserPage: React.FC = () => {
             ) : (
               <div className="space-y-4">
                 {myReposts.map(buzz => {
-                  const authorAvatar = buzz.author?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
-                  const authorName = buzz.author?.name || 'Pengguna Sotoy';
+                  const resolvedAuthor = resolveAuthor(buzz.author, usersById) ?? buzz.author;
+                  const authorAvatar = resolvedAuthor?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
+                  const authorName = resolvedAuthor?.name || 'Pengguna Sotoy';
 
                   return (
                     <div

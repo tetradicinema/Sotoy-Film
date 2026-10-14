@@ -48,6 +48,7 @@ import { normalizeHandle, validateHandle } from '../../utils/handleHelpers';
 import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 import { SettingsSubPage, UserSettings } from '../../types';
 import { ProfilePhotoCropModal } from '../Common/ProfilePhotoCropModal';
+import { resolveAuthor } from '../../utils/resolveAuthor';
 
 export const SettingsPage: React.FC = () => {
   const {
@@ -76,6 +77,7 @@ export const SettingsPage: React.FC = () => {
     isAdmin,
     isWriter,
     isHandleAvailable,
+    usersById,
   } = useApp();
 
   // Profile Form state
@@ -696,18 +698,19 @@ export const SettingsPage: React.FC = () => {
 
               // 1. Liked items
               likedBuzzPosts.forEach(b => {
+                const resolvedAuthor = resolveAuthor(b.author, usersById) ?? b.author;
                 const totalReactions = (b.reactions ? Object.values(b.reactions).reduce((acc: number, val) => acc + (typeof val === 'number' ? val : 0), 0) : 0) + (b.likes || 0);
                 allActivities.push({
                   id: `liked-buzz-${b.id}`,
                   type: 'liked',
                   categoryLabel: 'Buzz Disukai',
-                  title: `Menyukai Buzz dari @${b.author.handle.replace('@', '')}`,
+                  title: `Menyukai Buzz dari @${(resolvedAuthor.handle || b.author.handle).replace('@', '')}`,
                   subtitle: b.content,
                   meta: `Reaksi: ${b.myReaction || '👍'} • ${totalReactions} total reaksi`,
                   date: b.createdAt,
                   linkType: 'buzz',
                   linkId: b.id,
-                  imageUrl: b.author.avatar,
+                  imageUrl: resolvedAuthor.avatar || b.author.avatar,
                   badgeColor: 'text-pink-400 bg-pink-500/10 border-pink-500/30',
                 });
               });

@@ -54,6 +54,7 @@ import { MentionInput } from '../Common/MentionInput';
 import { isAllowedImageType, compressBuzzImage } from '../../utils/imageCompression';
 import { BuzzImageAttachment } from '../Buzz/BuzzImageAttachment';
 import { BuzzFeedSkeleton } from '../Skeletons';
+import { resolveAuthor } from '../../utils/resolveAuthor';
 
 // ==========================================
 // FEED RANKING WEIGHT CONSTANTS
@@ -182,6 +183,7 @@ export const CommunityFeedPage: React.FC = () => {
     savedBuzzIds,
     toggleSaveBuzz,
     interestProfile,
+    usersById,
   } = useApp();
 
   const [postContent, setPostContent] = useState('');
@@ -342,9 +344,12 @@ export const CommunityFeedPage: React.FC = () => {
     const synthesizedPool: BuzzPost[] = [];
 
     buzzList.forEach(post => {
+      const resolvedPostAuthor = resolveAuthor(post.author, usersById) ?? post.author;
+
       // Original post entry
       synthesizedPool.push({
         ...post,
+        author: resolvedPostAuthor,
         isRepost: false,
         feedKey: post.id,
       });
@@ -353,21 +358,27 @@ export const CommunityFeedPage: React.FC = () => {
       if (post.repostedByUsers) {
         Object.entries(post.repostedByUsers).forEach(([reposterId, repostTimestamp]) => {
           const reposterUser =
+            usersById?.get(reposterId) ||
             allUsers.find(u => u.id === reposterId) ||
             (currentUser?.id === reposterId ? currentUser : null);
 
+          const rawRepostedBy = {
+            id: reposterId,
+            name: reposterUser?.name || 'Pengguna Sotoy',
+            handle: reposterUser?.handle || '@user',
+            avatar:
+              reposterUser?.avatar ||
+              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+            role: reposterUser?.role,
+          };
+
+          const resolvedRepostedBy = resolveAuthor(rawRepostedBy, usersById) ?? rawRepostedBy;
+
           synthesizedPool.push({
             ...post,
+            author: resolvedPostAuthor,
             isRepost: true,
-            repostedBy: {
-              id: reposterId,
-              name: reposterUser?.name || 'Pengguna Sotoy',
-              handle: reposterUser?.handle || '@user',
-              avatar:
-                reposterUser?.avatar ||
-                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-              role: reposterUser?.role,
-            },
+            repostedBy: resolvedRepostedBy,
             repostedAt: repostTimestamp,
             feedKey: `${post.id}-repost-${reposterId}`,
           });
@@ -411,21 +422,36 @@ export const CommunityFeedPage: React.FC = () => {
     }
 
     if (buzzFeedTab === 'saved') {
-      return buzzList.filter(b => savedBuzzIds.includes(b.id));
+      return buzzList
+        .filter(b => savedBuzzIds.includes(b.id))
+        .map(b => ({
+          ...b,
+          author: resolveAuthor(b.author, usersById) ?? b.author,
+        }));
     }
 
     if (buzzFeedTab === 'liked') {
-      return buzzList.filter(b => b.likedByMe || (b.myReaction !== undefined && b.myReaction !== null));
+      return buzzList
+        .filter(b => b.likedByMe || (b.myReaction !== undefined && b.myReaction !== null))
+        .map(b => ({
+          ...b,
+          author: resolveAuthor(b.author, usersById) ?? b.author,
+        }));
     }
 
     if (buzzFeedTab === 'trending') {
-      return [...buzzList].sort((a, b) => {
-        const aReactions = a.reactions ? Object.values(a.reactions).reduce((s, v) => s + (v || 0), 0) : (a.likes || 0);
-        const bReactions = b.reactions ? Object.values(b.reactions).reduce((s, v) => s + (v || 0), 0) : (b.likes || 0);
-        const aScore = aReactions + (a.repliesCount || 0) * 2;
-        const bScore = bReactions + (b.repliesCount || 0) * 2;
-        return bScore - aScore;
-      });
+      return [...buzzList]
+        .map(b => ({
+          ...b,
+          author: resolveAuthor(b.author, usersById) ?? b.author,
+        }))
+        .sort((a, b) => {
+          const aReactions = a.reactions ? Object.values(a.reactions).reduce((s, v) => s + (v || 0), 0) : (a.likes || 0);
+          const bReactions = b.reactions ? Object.values(b.reactions).reduce((s, v) => s + (v || 0), 0) : (b.likes || 0);
+          const aScore = aReactions + (a.repliesCount || 0) * 2;
+          const bScore = bReactions + (b.repliesCount || 0) * 2;
+          return bScore - aScore;
+        });
     }
 
     // Default 'for-you' tab: Multi-signal personalized feed scoring across original posts and repost entries
@@ -543,25 +569,28 @@ export const CommunityFeedPage: React.FC = () => {
 
     // Apply author/reposter diversity anti-clustering pass
     return applyAuthorDiversity(scoredList, 3);
-  }, [buzzList, allUsers, buzzFeedTab, followingIds, savedBuzzIds, activeTagFilter, interestProfile, currentUser?.id]);
+  }, [buzzList, allUsers, usersById, buzzFeedTab, followingIds, savedBuzzIds, activeTagFilter, interestProfile, currentUser?.id]);
 
   const handleShareBuzz = (post: typeof buzzList[0]) => {
     const postFilm = post.taggedFilm ? films.find(f => f.id === post.taggedFilm?.id) || post.taggedFilm : null;
     const postArticle = post.taggedArticle ? articles.find(a => a.id === post.taggedArticle?.id) || post.taggedArticle : null;
-    const authorHandle = post.author.handle.startsWith('@') ? post.author.handle : `@${post.author.handle}`;
+    const resolvedAuthor = resolveAuthor(post.author, usersById) ?? post.author;
+    const authorHandle = (resolvedAuthor.handle || post.author.handle).startsWith('@')
+      ? (resolvedAuthor.handle || post.author.handle)
+      : `@${resolvedAuthor.handle || post.author.handle}`;
     
     openShareModal({
-      title: `Buzz Diskusi: ${post.author.name}`,
+      title: `Buzz Diskusi: ${resolvedAuthor.name || post.author.name}`,
       url: window.location.href,
       text: post.content,
       tags: post.tags,
       type: 'buzz',
-      image: post.author.avatar,
-      imageUrl: post.author.avatar,
-      authorAvatar: post.author.avatar,
-      authorName: post.author.name,
-      authorHandle: post.author.handle,
-      authorRole: post.author.role,
+      image: resolvedAuthor.avatar || post.author.avatar,
+      imageUrl: resolvedAuthor.avatar || post.author.avatar,
+      authorAvatar: resolvedAuthor.avatar || post.author.avatar,
+      authorName: resolvedAuthor.name || post.author.name,
+      authorHandle: resolvedAuthor.handle || post.author.handle,
+      authorRole: resolvedAuthor.role || post.author.role,
       likes: post.likes,
       replies: (post.replies && post.replies.length > 0 ? post.replies.length : post.repliesCount) || 0,
       meta: postFilm ? `Membahas film ${postFilm.title}` : postArticle ? `Membahas artikel ${postArticle.title}` : `${authorHandle} di Sotoy Film`,

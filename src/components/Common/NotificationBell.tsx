@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { NotificationItem, NotificationType, User } from '../../types';
+import { resolveAuthor } from '../../utils/resolveAuthor';
 
 interface NotificationBellProps {
   mode?: 'global' | 'writer' | 'critic';
@@ -25,14 +26,18 @@ interface NotificationBellProps {
 const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
 
 // Helper function to resolve live notification sender info with fallbacks
-const resolveSenderInfo = (item: NotificationItem, allUsers: User[]) => {
-  // 1. Try to find the live user profile from real-time allUsers
-  const liveUser = item.sender?.id ? allUsers.find(u => u.id === item.sender.id) : undefined;
+const resolveSenderInfo = (item: NotificationItem, usersById: Map<string, User> | Record<string, User>, allUsers: User[]) => {
+  const resolved = resolveAuthor(item.sender, usersById);
+
+  // 1. Try to find the live user profile from real-time allUsers if not in usersById
+  const liveUser = (!resolved || resolved === item.sender) && item.sender?.id
+    ? allUsers.find(u => u.id === item.sender.id)
+    : undefined;
 
   // 2. Resolve live data first, then fall back to stored item.sender, and finally to safe defaults
-  const name = liveUser?.name || item.sender?.name || 'Pengguna';
-  const avatar = liveUser?.avatar || item.sender?.avatar || DEFAULT_AVATAR;
-  const handle = liveUser?.handle || item.sender?.handle || '';
+  const name = resolved?.name || liveUser?.name || item.sender?.name || 'Pengguna';
+  const avatar = resolved?.avatar || liveUser?.avatar || item.sender?.avatar || DEFAULT_AVATAR;
+  const handle = resolved?.handle || liveUser?.handle || item.sender?.handle || '';
 
   return { name, avatar, handle };
 };
@@ -77,7 +82,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ mode = 'glob
     markAllNotificationsAsRead, 
     deleteNotification,
     navigateTo,
-    allUsers
+    allUsers,
+    usersById,
   } = useApp();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -278,7 +284,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ mode = 'glob
               </div>
             ) : (
               filteredNotifications.map((item) => {
-              const { name: senderName, avatar: senderAvatar, handle: senderHandle } = resolveSenderInfo(item, allUsers);
+              const { name: senderName, avatar: senderAvatar, handle: senderHandle } = resolveSenderInfo(item, usersById, allUsers);
               const formattedMessage = formatNotificationMessage(item, senderName);
 
               return (
