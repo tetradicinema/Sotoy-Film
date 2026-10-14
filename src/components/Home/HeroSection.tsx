@@ -227,7 +227,7 @@ export const HeroSection: React.FC = () => {
           
           {/* LEFT: CINEMATIC COVER SLIDER (8 Columns - Trending Articles) */}
           <div className="lg:col-span-8 flex flex-col">
-            <div className="relative w-full flex-1 min-h-[460px] sm:min-h-[540px] rounded-3xl overflow-hidden border border-white/[0.08] shadow-2xl bg-[#0A0A0A] group">
+            <div className="relative w-full flex-1 min-h-[420px] sm:min-h-[480px] lg:min-h-[510px] rounded-3xl overflow-hidden border border-white/[0.08] shadow-2xl bg-[#0A0A0A] group">
               {/* Background Cover Image with cinematic pan/zoom */}
               <img
                 src={activeArticle?.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80'}
@@ -235,12 +235,12 @@ export const HeroSection: React.FC = () => {
                 className="absolute inset-0 w-full h-full object-cover object-center transform transition-transform duration-1000 scale-100 group-hover:scale-105"
               />
 
-              {/* Measured contrast scrim: at least 4.5:1 text contrast across entire image */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/75 to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0A]/90 via-[#0A0A0A]/40 to-transparent" />
+              {/* Refined contrast scrims: clearer image visibility while keeping text perfectly legible */}
+              <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/40 via-45% to-transparent pointer-events-none" />
 
               {/* Top Row: Trending Badge, Category & Reading Endorsement */}
-              <div className="absolute top-5 sm:top-7 left-5 sm:left-7 right-5 sm:right-7 flex items-center justify-between z-10">
+              <div className="absolute top-4 sm:top-6 left-4 sm:left-6 right-4 sm:right-6 flex items-center justify-between z-10">
                 <div className="flex items-center gap-2 text-xs text-slate-300 font-medium tracking-wide">
                   <span className="bg-[#FF2E7E] text-white px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md shadow-[#FF2E7E]/30">
                     <Flame className="w-3 h-3 fill-current text-white" />
@@ -259,57 +259,57 @@ export const HeroSection: React.FC = () => {
                 </div>
               </div>
 
-              {/* Bottom Editorial Presentation */}
-              <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-8 z-10 flex flex-col justify-end">
+              {/* Bottom Editorial Presentation (Compact & clean layout) */}
+              <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 lg:p-7 z-10 flex flex-col justify-end">
                 {/* Author attribution & Read time */}
-                <div className="flex items-center flex-wrap gap-2.5 mb-3 text-xs text-slate-300">
+                <div className="flex items-center flex-wrap gap-2 mb-2 text-xs text-slate-300">
                   <HeroActiveAuthorBadge authorId={activeArticle?.authorId} defaultAuthor={activeArticle?.author} />
                   <span className="text-slate-500" aria-hidden="true">·</span>
-                  <span className="flex items-center gap-1 text-slate-400 text-xs">
-                    <Clock className="w-3.5 h-3.5 text-slate-500" />
+                  <span className="flex items-center gap-1 text-slate-300 text-[11px]">
+                    <Clock className="w-3 h-3 text-[#FF2E7E]" />
                     <span>{activeArticle?.readTime || '5 mnt'}</span>
                   </span>
                   <span className="text-slate-500" aria-hidden="true">·</span>
-                  <span className="text-slate-400 text-xs">{activeArticle?.publishedAt || 'Terkini'}</span>
+                  <span className="text-slate-400 text-[11px]">{activeArticle?.publishedAt || 'Terkini'}</span>
                 </div>
 
                 {/* Primary Headline */}
                 <h1
                   onClick={() => activeArticle?.id && navigateTo('article-detail', { articleId: activeArticle.id })}
-                  className="font-display font-black text-2xl sm:text-3xl md:text-4xl text-white leading-tight mb-3 cursor-pointer hover:text-white transition-colors line-clamp-3 text-balance"
+                  className="font-display font-black text-xl sm:text-2xl lg:text-3xl text-white leading-snug mb-2 cursor-pointer hover:text-[#FF2E7E] transition-colors line-clamp-2 text-balance drop-shadow-md"
                 >
                   {activeArticle?.title}
                 </h1>
 
                 {/* Excerpt */}
-                <p className="text-slate-300 text-xs sm:text-sm line-clamp-2 max-w-2xl mb-6 leading-relaxed">
+                <p className="text-slate-200/90 text-xs sm:text-sm line-clamp-2 max-w-xl mb-3 sm:mb-4 leading-relaxed drop-shadow-sm">
                   {activeArticle?.excerpt}
                 </p>
 
                 {/* Footer Controls & Slider Navigation */}
-                <div className="flex items-center justify-between gap-4 pt-4 border-t border-white/[0.08]">
+                <div className="flex items-center justify-between gap-4 pt-3 border-t border-white/10">
                   <button
                     id="hero-read-article-btn"
                     onClick={() => activeArticle?.id && navigateTo('article-detail', { articleId: activeArticle.id })}
-                    className="bg-[#FF2E7E] hover:bg-[#e0266e] text-white font-semibold text-xs sm:text-sm px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-[#FF2E7E]/25"
+                    className="bg-[#FF2E7E] hover:bg-[#e0266e] text-white font-semibold text-xs sm:text-sm px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-[#FF2E7E]/25 cursor-pointer"
                   >
                     <span>Baca Ulasan Lengkap</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </button>
 
                   {/* Minimalist Slide Progress & Controls */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 text-xs font-mono text-slate-400 tabular-nums">
+                  <div className="flex items-center gap-2.5 sm:gap-3">
+                    <div className="flex items-center gap-1.5 text-xs font-mono text-slate-300 tabular-nums">
                       <span className="text-white font-bold">{String(currentSlide + 1).padStart(2, '0')}</span>
-                      <span>/</span>
-                      <span>{String(trendingArticles.length).padStart(2, '0')}</span>
+                      <span className="text-slate-500">/</span>
+                      <span className="text-slate-400">{String(trendingArticles.length).padStart(2, '0')}</span>
                     </div>
 
                     <div className="flex items-center gap-1">
                       <button
                         id="hero-slider-prev"
                         onClick={handlePrevSlide}
-                        className="w-8 h-8 rounded-lg bg-black/40 hover:bg-white/10 text-white border border-white/10 flex items-center justify-center transition-colors cursor-pointer"
+                        className="w-8 h-8 rounded-lg bg-black/50 hover:bg-white/15 text-white border border-white/10 flex items-center justify-center transition-colors cursor-pointer active:scale-95"
                         aria-label="Previous Slide"
                       >
                         <ChevronLeft className="w-4 h-4" />
@@ -317,7 +317,7 @@ export const HeroSection: React.FC = () => {
                       <button
                         id="hero-slider-next"
                         onClick={handleNextSlide}
-                        className="w-8 h-8 rounded-lg bg-black/40 hover:bg-white/10 text-white border border-white/10 flex items-center justify-center transition-colors cursor-pointer"
+                        className="w-8 h-8 rounded-lg bg-black/50 hover:bg-white/15 text-white border border-white/10 flex items-center justify-center transition-colors cursor-pointer active:scale-95"
                         aria-label="Next Slide"
                       >
                         <ChevronRight className="w-4 h-4" />
