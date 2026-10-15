@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, terminate } from 'firebase/firestore';
-import { INITIAL_ARTICLES, INITIAL_FILMS } from '../src/data/mockData.ts';
+import { INITIAL_FILMS } from '../src/data/mockData.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -120,12 +120,14 @@ async function run() {
 
   let app: any = null;
   let db: any = null;
+  let isOfflineFallback = false;
 
   try {
     // 2. Connect to Firestore using client configuration (Read-only)
     const configPath = path.join(rootDir, 'firebase-applet-config.json');
     if (!fs.existsSync(configPath)) {
       console.warn(`[Sitemap Builder] Config not found at: ${configPath}. Falling back to static catalog entries.`);
+      isOfflineFallback = true;
     } else {
       const firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
       app = initializeApp(firebaseConfig, `sitemap-builder-${Date.now()}`);
@@ -160,28 +162,6 @@ async function run() {
         });
         articlesCount++;
       });
-    }
-
-    // Also include published articles from INITIAL_ARTICLES if not yet written to Firestore
-    for (const item of INITIAL_ARTICLES) {
-      if (item.status === 'trash' || item.status === 'draft') continue;
-      if (item.status === 'scheduled') {
-        if (!item.scheduledAt) continue;
-        const schedTime = new Date(item.scheduledAt).getTime();
-        if (isNaN(schedTime) || schedTime > nowMs) continue;
-      }
-      const slug = item.slug || slugify(item.title) || item.id;
-      if (!slug || seenArticleSlugs.has(slug)) continue;
-
-      seenArticleSlugs.add(slug);
-      const lastmod = formatDateToYMD(item.publishedAt, today);
-      entries.push({
-        loc: `${baseUrl}/artikel/${encodeURIComponent(slug)}`,
-        lastmod,
-        changefreq: 'weekly',
-        priority: '0.8',
-      });
-      articlesCount++;
     }
 
     console.log(`[Sitemap Builder] Indexed ${articlesCount} published articles.`);
@@ -271,25 +251,7 @@ async function run() {
       console.log(`[Sitemap Builder] Info: Firestore offline or unreachable (${errorMsg}). Gracefully falling back to build-time offline static catalog.`);
     }
 
-    // Graceful offline fallback
-    for (const item of INITIAL_ARTICLES) {
-      if (item.status === 'trash' || item.status === 'draft') continue;
-      if (item.status === 'scheduled') {
-        if (!item.scheduledAt) continue;
-        const schedTime = new Date(item.scheduledAt).getTime();
-        if (isNaN(schedTime) || schedTime > nowMs) continue;
-      }
-      const slug = item.slug || slugify(item.title) || item.id;
-      if (!slug || seenArticleSlugs.has(slug)) continue;
-      seenArticleSlugs.add(slug);
-      entries.push({
-        loc: `${baseUrl}/artikel/${encodeURIComponent(slug)}`,
-        lastmod: today,
-        changefreq: 'weekly',
-        priority: '0.8',
-      });
-      articlesCount++;
-    }
+    isOfflineFallback = true;
     for (const film of INITIAL_FILMS) {
       const slug = film.slug || slugify(film.title) || film.id;
       if (
@@ -340,9 +302,21 @@ async function run() {
   }
 
   const sitemapDest = path.join(publicDir, 'sitemap.xml');
+  const totalUrls = entries.length;
+
+  if (isOfflineFallback && fs.existsSync(sitemapDest)) {
+    const existingContent = fs.readFileSync(sitemapDest, 'utf-8');
+    const existingUrlCount = (existingContent.match(/<url>/g) || []).length;
+    if (existingUrlCount > totalUrls) {
+      console.warn(`[Sitemap Builder] WARNING: Firestore cannot be read (offline fallback). Existing ${sitemapDest} has ${existingUrlCount} URLs which is more than fallback generated ${totalUrls} URLs. Keeping existing sitemap file.`);
+      console.log(`[Sitemap Builder] Generated fallback counts: ${articlesCount} articles, ${filmsCount} films, ${totalUrls} total URLs.`);
+      return;
+    }
+  }
+
   fs.writeFileSync(sitemapDest, xml, 'utf-8');
 
-  console.log(`[Sitemap Builder] Successfully wrote ${entries.length} URLs (${articlesCount} articles, ${filmsCount} films) to ${sitemapDest}`);
+  console.log(`[Sitemap Builder] Successfully wrote ${totalUrls} URLs (${articlesCount} articles, ${filmsCount} films) to ${sitemapDest}`);
 
 }
 

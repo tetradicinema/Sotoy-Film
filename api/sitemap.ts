@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import fs from 'fs';
 import path from 'path';
-import { INITIAL_ARTICLES, INITIAL_FILMS } from '../src/data/mockData.ts';
+import { INITIAL_FILMS } from '../src/data/mockData.ts';
 
 function escapeXml(unsafe: string): string {
   if (!unsafe) return '';
@@ -52,22 +52,8 @@ function buildFallbackSitemapXml(): string {
     { loc: `${baseUrl}/kategori/film-studies`, lastmod: today, changefreq: 'weekly', priority: '0.7' },
   ];
 
-  const seenArticleSlugs = new Set<string>();
   const seenFilmSlugs = new Set<string>();
-
   const articleUrls: Array<{ loc: string; lastmod: string; changefreq: string; priority: string }> = [];
-  for (const item of INITIAL_ARTICLES) {
-    if (item.status === 'trash' || item.status === 'draft') continue;
-    const slug = item.slug || slugify(item.title) || item.id;
-    if (!slug || seenArticleSlugs.has(slug)) continue;
-    seenArticleSlugs.add(slug);
-    articleUrls.push({
-      loc: `${baseUrl}/artikel/${encodeURIComponent(slug)}`,
-      lastmod: today,
-      changefreq: 'weekly',
-      priority: '0.8',
-    });
-  }
 
   const filmUrls: Array<{ loc: string; lastmod: string; changefreq: string; priority: string }> = [];
   for (const film of INITIAL_FILMS) {

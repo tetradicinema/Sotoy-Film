@@ -37,7 +37,6 @@ import {
 import { setCachedHomepageLayout, clearCachedHomepageLayout } from '../utils/homepageConfigHelper';
 import {
   DEFAULT_FALLBACK_AUTHOR,
-  INITIAL_ARTICLES,
   INITIAL_FILMS,
   INITIAL_BUZZ,
   INITIAL_RATINGS,
@@ -873,8 +872,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } else if (path.startsWith('/artikel/') || path.startsWith('/article/')) {
       const slug = decodeURIComponent(path.replace(/^\/(artikel|article)\//, ''));
       setCurrentView('article-detail');
-      const foundArticle = articles.find(a => a.slug === slug || a.id === slug)
-        || INITIAL_ARTICLES.find(a => a.slug === slug || a.id === slug);
+      const foundArticle = articles.find(a => a.slug === slug || a.id === slug);
       if (foundArticle) setSelectedArticleId(foundArticle.id);
     } else if (path.startsWith('/kategori/') || path.startsWith('/category/')) {
       setCurrentView('category');
@@ -1091,7 +1089,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return fetchPromise;
   }, [initialCachedFilms, syncFilmsWithRemovedMarkers]);
 
-  // Optimized fetch for articles with limit(50), ordered by publishedAtTimestamp desc, merged with INITIAL_ARTICLES
+  // Optimized fetch for articles with limit(50), ordered by publishedAtTimestamp desc
   const refreshArticles = useCallback(async () => {
     try {
       setIsLoadingArticles(true);
@@ -1110,11 +1108,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           articleMap.set(id, { ...data, id });
         }
       });
-      for (const init of INITIAL_ARTICLES) {
-        if (!articleMap.has(init.id)) {
-          articleMap.set(init.id, init);
-        }
-      }
       const getArticleTime = (art: Article): number => {
         if (art.publishedAtTimestamp) {
           const t = new Date(art.publishedAtTimestamp).getTime();
@@ -1130,12 +1123,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         return 0;
       };
-      const merged = Array.from(articleMap.values());
-      setArticles(merged.sort((a, b) => getArticleTime(b) - getArticleTime(a)));
+      const fetchedArticles = Array.from(articleMap.values());
+      setArticles(fetchedArticles.sort((a, b) => getArticleTime(b) - getArticleTime(a)));
       setIsLoadingArticles(false);
     } catch (err: any) {
-      console.warn('[Firestore] articles subscription fallback to initial mock:', err.message);
-      setArticles(INITIAL_ARTICLES);
+      console.warn('[Firestore] Error fetching articles from Firestore:', err.message);
+      setArticles(prev => prev);
       setIsLoadingArticles(false);
     }
   }, []);
@@ -3258,7 +3251,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const f = films.find((film) => film.id === item.itemId) || INITIAL_FILMS.find((film) => film.id === item.itemId);
         if (f?.poster) previewImages.push(f.poster);
       } else if (item.itemType === 'article') {
-        const a = articles.find((art) => art.id === item.itemId) || INITIAL_ARTICLES.find((art) => art.id === item.itemId);
+        const a = articles.find((art) => art.id === item.itemId);
         if (a?.coverImage) previewImages.push(a.coverImage);
       }
     });
@@ -4333,7 +4326,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       case 'article-detail': {
         const targetArticleId = options?.articleId || selectedArticleId;
-        const targetArticle = resolvedArticles.find(a => a.id === targetArticleId) || INITIAL_ARTICLES.find(a => a.id === targetArticleId);
+        const targetArticle = resolvedArticles.find(a => a.id === targetArticleId);
         const slug = targetArticle?.slug || targetArticleId;
         targetPath = slug ? `/artikel/${encodeURIComponent(slug)}` : '/';
         break;

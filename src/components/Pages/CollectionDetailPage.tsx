@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useApp } from '../../context/AppContext';
-import { INITIAL_FILMS, INITIAL_ARTICLES } from '../../data/mockData';
+import { INITIAL_FILMS } from '../../data/mockData';
 import {
   Bookmark,
   Share2,
@@ -331,7 +331,7 @@ export const CollectionDetailPage: React.FC = () => {
                   </div>
                 );
               } else if (item.itemType === 'article') {
-                const article = articles.find((a) => a.id === item.itemId) || INITIAL_ARTICLES.find((a) => a.id === item.itemId);
+                const article = articles.find(a => a.id === item.itemId);
                 if (!article) return null;
 
                 return (

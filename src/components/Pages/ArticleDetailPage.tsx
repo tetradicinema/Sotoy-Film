@@ -41,13 +41,14 @@ import { BreadcrumbNavigation } from '../Navigation/BreadcrumbNavigation';
 import { EditorialSidebar } from '../Common/EditorialSidebar';
 import { RateFilmModal } from '../Modals/RateFilmModal';
 import { ArticleDetailSkeleton } from '../Skeletons';
-import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER, INITIAL_ARTICLES } from '../../data/mockData';
+import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 import { slugify } from '../../utils/slugify';
 
 export const ArticleDetailPage: React.FC = () => {
   const {
     selectedArticleId,
     articles,
+    isLoadingArticles,
     films,
     currentUser,
     isLoggedIn,
@@ -70,13 +71,11 @@ export const ArticleDetailPage: React.FC = () => {
 
   const { slug } = useParams<{ slug?: string }>();
 
-  const rawArticle = (slug ? (articles.find(a => (a.slug && a.slug === slug) || a.id === slug || slugify(a.title) === slug) || INITIAL_ARTICLES.find(a => (a.slug && a.slug === slug) || a.id === slug || slugify(a.title) === slug)) : null)
-    || articles.find(a => a.id === selectedArticleId)
-    || INITIAL_ARTICLES.find(a => a.id === selectedArticleId)
-    || articles[0]
-    || INITIAL_ARTICLES[0];
+  const rawArticle = (slug ? articles.find(a => (a.slug && a.slug === slug) || a.id === slug || slugify(a.title) === slug) : null)
+    || (selectedArticleId ? articles.find(a => a.id === selectedArticleId) : null)
+    || (!slug && !selectedArticleId ? articles[0] : undefined);
 
-  const unpublished = isArticleUnpublished(rawArticle);
+  const unpublished = rawArticle ? isArticleUnpublished(rawArticle) : false;
   const isOwner = currentUser?.id && (rawArticle?.author?.id === currentUser.id || rawArticle?.authorId === currentUser.id);
   const isAuthorized = isOwner || isAdmin || isWriter;
   const article = (rawArticle && (!unpublished || isAuthorized)) ? rawArticle : null;
@@ -175,7 +174,7 @@ export const ArticleDetailPage: React.FC = () => {
   const [activeDiscussedFilmIndex, setActiveDiscussedFilmIndex] = useState(0);
   const discussedFilm = discussedFilms[activeDiscussedFilmIndex] || discussedFilms[0] || null;
 
-  if (articles.length === 0) {
+  if (isLoadingArticles && !article) {
     return <ArticleDetailSkeleton />;
   }
 

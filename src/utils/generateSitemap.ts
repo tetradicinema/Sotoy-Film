@@ -1,6 +1,6 @@
 import { collection, getDocs, Firestore } from 'firebase/firestore';
 import { slugify } from './slugify';
-import { INITIAL_ARTICLES, INITIAL_FILMS } from '../data/mockData';
+import { INITIAL_FILMS } from '../data/mockData';
 
 interface SitemapUrl {
   loc: string;
@@ -78,20 +78,6 @@ export async function generateSitemapXml(db: Firestore): Promise<string> {
     });
   } catch (error) {
     console.error('Sitemap: Failed to fetch articles', error);
-  }
-
-  // Include mock fallback articles if not present
-  for (const item of INITIAL_ARTICLES) {
-    if (item.status === 'trash' || item.status === 'draft') continue;
-    const slug = item.slug || slugify(item.title) || item.id;
-    if (!slug || seenArticleSlugs.has(slug)) continue;
-    seenArticleSlugs.add(slug);
-    urls.push({
-      loc: `${baseUrl}/artikel/${encodeURIComponent(slug)}`,
-      lastmod: today,
-      changefreq: 'weekly',
-      priority: '0.8',
-    });
   }
 
   // Fetch Films

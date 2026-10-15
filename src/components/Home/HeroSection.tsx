@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
-import { GEAR_ADDICT_ITEMS, INITIAL_ARTICLES } from '../../data/mockData';
+import { GEAR_ADDICT_ITEMS } from '../../data/mockData';
 import { resolveConfigArticles } from '../../utils/homepageConfigHelper';
 
 const HeroActiveAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }> = ({ authorId, defaultAuthor }) => {
@@ -57,10 +57,9 @@ const HeroActiveAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }
 };
 
 export const HeroSection: React.FC = () => {
-  const { publishedArticles, navigateTo, currentUser, isLoggedIn, homepageSectionsConfig } = useApp();
+  const { publishedArticles, navigateTo, currentUser, isLoggedIn, homepageSectionsConfig, isLoadingArticles } = useApp();
 
-  // Ensure article pool is never completely empty
-  const articlesPool = publishedArticles.length > 0 ? publishedArticles : INITIAL_ARTICLES;
+  const articlesPool = publishedArticles;
 
   // Default trending articles for the main hero slider (sorted by popularity / heroSlider flag)
   const defaultSliderArticles = useMemo(() => {
@@ -129,7 +128,7 @@ export const HeroSection: React.FC = () => {
   }, [trendingArticles.length]);
 
   const safeSlide = trendingArticles.length > 0 ? currentSlide % trendingArticles.length : 0;
-  const activeArticle = trendingArticles[safeSlide] || articlesPool[0] || INITIAL_ARTICLES[0];
+  const activeArticle = (trendingArticles.length > 0 ? trendingArticles[safeSlide] : null) || articlesPool[0] || null;
 
   const handlePrevSlide = () => {
     setCurrentSlide(prev => (prev === 0 ? trendingArticles.length - 1 : prev - 1));
@@ -227,106 +226,128 @@ export const HeroSection: React.FC = () => {
           
           {/* LEFT: CINEMATIC COVER SLIDER (8 Columns - Trending Articles) */}
           <div className="lg:col-span-8 flex flex-col">
-            <div className="relative w-full flex-1 min-h-[420px] sm:min-h-[480px] lg:min-h-[510px] rounded-3xl overflow-hidden border border-white/[0.08] shadow-2xl bg-[#0A0A0A] group">
-              {/* Background Cover Image with cinematic pan/zoom */}
-              <img
-                src={activeArticle?.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80'}
-                alt={activeArticle?.title || 'Hero Article'}
-                className="absolute inset-0 w-full h-full object-cover object-center transform transition-transform duration-1000 scale-100 group-hover:scale-105"
-              />
-
-              {/* Refined contrast scrims: clearer image visibility while keeping text perfectly legible */}
-              <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/40 via-45% to-transparent pointer-events-none" />
-
-              {/* Top Row: Trending Badge, Category & Reading Endorsement */}
-              <div className="absolute top-4 sm:top-6 left-4 sm:left-6 right-4 sm:right-6 flex items-center justify-between z-10">
-                <div className="flex items-center gap-2 text-xs text-slate-300 font-medium tracking-wide">
-                  <span className="bg-[#FF2E7E] text-white px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md shadow-[#FF2E7E]/30">
-                    <Flame className="w-3 h-3 fill-current text-white" />
-                    <span>Trending</span>
-                  </span>
-                  <span className="text-[#FF2E7E] font-bold uppercase tracking-wider text-[11px]">
-                    {activeArticle?.category || 'Cinematic'}
-                  </span>
-                  <span className="text-slate-500" aria-hidden="true">·</span>
-                  <span className="capitalize">{activeArticle?.subCategory || 'Review'}</span>
-                </div>
-
-                <div className="flex items-center gap-1.5 text-xs text-slate-300/90 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 font-mono tabular-nums">
-                  <span className="text-rose-400">♥</span>
-                  <span>{(activeArticle?.likes || 0).toLocaleString()}</span>
-                </div>
-              </div>
-
-              {/* Bottom Editorial Presentation (Compact & clean layout) */}
-              <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 lg:p-7 z-10 flex flex-col justify-end">
-                {/* Author attribution & Read time */}
-                <div className="flex items-center flex-wrap gap-2 mb-2 text-xs text-slate-300">
-                  <HeroActiveAuthorBadge authorId={activeArticle?.authorId} defaultAuthor={activeArticle?.author} />
-                  <span className="text-slate-500" aria-hidden="true">·</span>
-                  <span className="flex items-center gap-1 text-slate-300 text-[11px]">
-                    <Clock className="w-3 h-3 text-[#FF2E7E]" />
-                    <span>{activeArticle?.readTime || '5 mnt'}</span>
-                  </span>
-                  <span className="text-slate-500" aria-hidden="true">·</span>
-                  <span className="text-slate-400 text-[11px]">{activeArticle?.publishedAt || 'Terkini'}</span>
-                </div>
-
-                {/* Primary Headline */}
-                <h1
-                  onClick={() => activeArticle?.id && navigateTo('article-detail', { articleId: activeArticle.id })}
-                  className="font-display font-black text-xl sm:text-2xl lg:text-3xl text-white leading-snug mb-2 cursor-pointer hover:text-[#FF2E7E] transition-colors line-clamp-2 text-balance drop-shadow-md"
-                >
-                  {activeArticle?.title}
-                </h1>
-
-                {/* Excerpt */}
-                <p className="text-slate-200/90 text-xs sm:text-sm line-clamp-2 max-w-xl mb-3 sm:mb-4 leading-relaxed drop-shadow-sm">
-                  {activeArticle?.excerpt}
-                </p>
-
-                {/* Footer Controls & Slider Navigation */}
-                <div className="flex items-center justify-between gap-4 pt-3 border-t border-white/10">
-                  <button
-                    id="hero-read-article-btn"
-                    onClick={() => activeArticle?.id && navigateTo('article-detail', { articleId: activeArticle.id })}
-                    className="bg-[#FF2E7E] hover:bg-[#e0266e] text-white font-semibold text-xs sm:text-sm px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-[#FF2E7E]/25 cursor-pointer"
-                  >
-                    <span>Baca Ulasan Lengkap</span>
-                    <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  </button>
-
-                  {/* Minimalist Slide Progress & Controls */}
-                  <div className="flex items-center gap-2.5 sm:gap-3">
-                    <div className="flex items-center gap-1.5 text-xs font-mono text-slate-300 tabular-nums">
-                      <span className="text-white font-bold">{String(currentSlide + 1).padStart(2, '0')}</span>
-                      <span className="text-slate-500">/</span>
-                      <span className="text-slate-400">{String(trendingArticles.length).padStart(2, '0')}</span>
+            {!activeArticle ? (
+              <div className="relative w-full flex-1 min-h-[420px] sm:min-h-[480px] lg:min-h-[510px] rounded-3xl overflow-hidden border border-white/[0.08] bg-[#0A0A0A] flex items-center justify-center p-8 shadow-2xl">
+                {isLoadingArticles ? (
+                  <div className="w-full h-full flex flex-col justify-end p-6 space-y-4 animate-pulse">
+                    <div className="h-4 w-32 bg-white/10 rounded" />
+                    <div className="h-8 w-3/4 bg-white/10 rounded" />
+                    <div className="h-4 w-1/2 bg-white/10 rounded" />
+                  </div>
+                ) : (
+                  <div className="text-center space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-white/[0.05] border border-white/10 text-slate-400 mx-auto flex items-center justify-center">
+                      <Sparkles className="w-6 h-6 text-[#FF2E7E]" />
                     </div>
+                    <p className="text-sm font-semibold text-white">Belum ada artikel</p>
+                    <p className="text-xs text-slate-400 max-w-xs mx-auto">
+                      Artikel kurasi redaksi akan tampil di slider ini setelah dipublikasikan.
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="relative w-full flex-1 min-h-[420px] sm:min-h-[480px] lg:min-h-[510px] rounded-3xl overflow-hidden border border-white/[0.08] shadow-2xl bg-[#0A0A0A] group">
+                {/* Background Cover Image with cinematic pan/zoom */}
+                <img
+                  src={activeArticle.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80'}
+                  alt={activeArticle.title || 'Hero Article'}
+                  className="absolute inset-0 w-full h-full object-cover object-center transform transition-transform duration-1000 scale-100 group-hover:scale-105"
+                />
 
-                    <div className="flex items-center gap-1">
-                      <button
-                        id="hero-slider-prev"
-                        onClick={handlePrevSlide}
-                        className="w-8 h-8 rounded-lg bg-black/50 hover:bg-white/15 text-white border border-white/10 flex items-center justify-center transition-colors cursor-pointer active:scale-95"
-                        aria-label="Previous Slide"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </button>
-                      <button
-                        id="hero-slider-next"
-                        onClick={handleNextSlide}
-                        className="w-8 h-8 rounded-lg bg-black/50 hover:bg-white/15 text-white border border-white/10 flex items-center justify-center transition-colors cursor-pointer active:scale-95"
-                        aria-label="Next Slide"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
+                {/* Refined contrast scrims: clearer image visibility while keeping text perfectly legible */}
+                <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/40 via-45% to-transparent pointer-events-none" />
+
+                {/* Top Row: Trending Badge, Category & Reading Endorsement */}
+                <div className="absolute top-4 sm:top-6 left-4 sm:left-6 right-4 sm:right-6 flex items-center justify-between z-10">
+                  <div className="flex items-center gap-2 text-xs text-slate-300 font-medium tracking-wide">
+                    <span className="bg-[#FF2E7E] text-white px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md shadow-[#FF2E7E]/30">
+                      <Flame className="w-3 h-3 fill-current text-white" />
+                      <span>Trending</span>
+                    </span>
+                    <span className="text-[#FF2E7E] font-bold uppercase tracking-wider text-[11px]">
+                      {activeArticle.category || 'Cinematic'}
+                    </span>
+                    <span className="text-slate-500" aria-hidden="true">·</span>
+                    <span className="capitalize">{activeArticle.subCategory || 'Review'}</span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-xs text-slate-300/90 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 font-mono tabular-nums">
+                    <span className="text-rose-400">♥</span>
+                    <span>{(activeArticle.likes || 0).toLocaleString()}</span>
+                  </div>
+                </div>
+
+                {/* Bottom Editorial Presentation (Compact & clean layout) */}
+                <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 lg:p-7 z-10 flex flex-col justify-end">
+                  {/* Author attribution & Read time */}
+                  <div className="flex items-center flex-wrap gap-2 mb-2 text-xs text-slate-300">
+                    <HeroActiveAuthorBadge authorId={activeArticle.authorId} defaultAuthor={activeArticle.author} />
+                    <span className="text-slate-500" aria-hidden="true">·</span>
+                    <span className="flex items-center gap-1 text-slate-300 text-[11px]">
+                      <Clock className="w-3 h-3 text-[#FF2E7E]" />
+                      <span>{activeArticle.readTime || '5 mnt'}</span>
+                    </span>
+                    <span className="text-slate-500" aria-hidden="true">·</span>
+                    <span className="text-slate-400 text-[11px]">{activeArticle.publishedAt || 'Terkini'}</span>
+                  </div>
+
+                  {/* Primary Headline */}
+                  <h1
+                    onClick={() => activeArticle.id && navigateTo('article-detail', { articleId: activeArticle.id })}
+                    className="font-display font-black text-xl sm:text-2xl lg:text-3xl text-white leading-snug mb-2 cursor-pointer hover:text-[#FF2E7E] transition-colors line-clamp-2 text-balance drop-shadow-md"
+                  >
+                    {activeArticle.title}
+                  </h1>
+
+                  {/* Excerpt */}
+                  <p className="text-slate-200/90 text-xs sm:text-sm line-clamp-2 max-w-xl mb-3 sm:mb-4 leading-relaxed drop-shadow-sm">
+                    {activeArticle.excerpt}
+                  </p>
+
+                  {/* Footer Controls & Slider Navigation */}
+                  <div className="flex items-center justify-between gap-4 pt-3 border-t border-white/10">
+                    <button
+                      id="hero-read-article-btn"
+                      onClick={() => activeArticle.id && navigateTo('article-detail', { articleId: activeArticle.id })}
+                      className="bg-[#FF2E7E] hover:bg-[#e0266e] text-white font-semibold text-xs sm:text-sm px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-[#FF2E7E]/25 cursor-pointer"
+                    >
+                      <span>Baca Ulasan Lengkap</span>
+                      <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    </button>
+
+                    {/* Minimalist Slide Progress & Controls */}
+                    <div className="flex items-center gap-2.5 sm:gap-3">
+                      <div className="flex items-center gap-1.5 text-xs font-mono text-slate-300 tabular-nums">
+                        <span className="text-white font-bold">{String(currentSlide + 1).padStart(2, '0')}</span>
+                        <span className="text-slate-500">/</span>
+                        <span className="text-slate-400">{String(trendingArticles.length || 1).padStart(2, '0')}</span>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          id="hero-slider-prev"
+                          onClick={handlePrevSlide}
+                          className="w-8 h-8 rounded-lg bg-black/50 hover:bg-white/15 text-white border border-white/10 flex items-center justify-center transition-colors cursor-pointer active:scale-95"
+                          aria-label="Previous Slide"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+                        <button
+                          id="hero-slider-next"
+                          onClick={handleNextSlide}
+                          className="w-8 h-8 rounded-lg bg-black/50 hover:bg-white/15 text-white border border-white/10 flex items-center justify-center transition-colors cursor-pointer active:scale-95"
+                          aria-label="Next Slide"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* RIGHT: CURATED TANGGA & SELEKSI SINEMA (4 Columns) */}
@@ -382,48 +403,54 @@ export const HeroSection: React.FC = () => {
               {activeTab === 'trending' && (
                 <div className="flex-1 flex flex-col justify-between min-h-0">
                   <div className="divide-y divide-white/[0.06] flex-1 flex flex-col justify-start">
-                    {recentArticles.map((art, index) => (
-                      <div
-                        key={art.id}
-                        id={`recent-article-item-${art.id}`}
-                        onClick={() => navigateTo('article-detail', { articleId: art.id })}
-                        className="group flex items-center gap-3 py-2 px-1.5 rounded-xl hover:bg-white/[0.04] transition-colors cursor-pointer"
-                      >
-                        {/* Tabular Index Number */}
-                        <span className={`w-4 font-mono tabular-nums text-xs font-bold text-center shrink-0 ${
-                          index === 0 ? 'text-[#FF2E7E]' : 'text-slate-500'
-                        }`}>
-                          {String(index + 1).padStart(2, '0')}
-                        </span>
-
-                        {/* Poster/Cover */}
-                        <img
-                          src={art.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=200&q=80'}
-                          alt={art.title}
-                          className="w-12 h-12 object-cover rounded-xl shrink-0 border border-white/10 group-hover:scale-105 transition-transform duration-300"
-                        />
-
-                        {/* Metadata */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 mb-0.5 text-[10px]">
-                            <span className="text-[#FF2E7E] font-bold uppercase tracking-wider truncate">
-                              {art.category}
-                            </span>
-                            <span className="text-slate-600">·</span>
-                            <span className="text-slate-400 truncate">{art.publishedAt}</span>
-                          </div>
-                          <h4 className="text-white font-semibold text-xs leading-snug line-clamp-2 group-hover:text-[#FF2E7E] transition-colors">
-                            {art.title}
-                          </h4>
-                          <div className="mt-0.5 flex items-center gap-1 text-[10px] text-slate-400">
-                            <Clock className="w-2.5 h-2.5 text-slate-500" />
-                            <span>{art.readTime}</span>
-                          </div>
-                        </div>
-
-                        <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-white transition-transform group-hover:translate-x-0.5 shrink-0" />
+                    {recentArticles.length === 0 ? (
+                      <div className="py-12 text-center text-xs text-slate-500">
+                        Belum ada artikel terbaru.
                       </div>
-                    ))}
+                    ) : (
+                      recentArticles.map((art, index) => (
+                        <div
+                          key={art.id}
+                          id={`recent-article-item-${art.id}`}
+                          onClick={() => navigateTo('article-detail', { articleId: art.id })}
+                          className="group flex items-center gap-3 py-2 px-1.5 rounded-xl hover:bg-white/[0.04] transition-colors cursor-pointer"
+                        >
+                          {/* Tabular Index Number */}
+                          <span className={`w-4 font-mono tabular-nums text-xs font-bold text-center shrink-0 ${
+                            index === 0 ? 'text-[#FF2E7E]' : 'text-slate-500'
+                          }`}>
+                            {String(index + 1).padStart(2, '0')}
+                          </span>
+
+                          {/* Poster/Cover */}
+                          <img
+                            src={art.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=200&q=80'}
+                            alt={art.title}
+                            className="w-12 h-12 object-cover rounded-xl shrink-0 border border-white/10 group-hover:scale-105 transition-transform duration-300"
+                          />
+
+                          {/* Metadata */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 mb-0.5 text-[10px]">
+                              <span className="text-[#FF2E7E] font-bold uppercase tracking-wider truncate">
+                                {art.category}
+                              </span>
+                              <span className="text-slate-600">·</span>
+                              <span className="text-slate-400 truncate">{art.publishedAt}</span>
+                            </div>
+                            <h4 className="text-white font-semibold text-xs leading-snug line-clamp-2 group-hover:text-[#FF2E7E] transition-colors">
+                              {art.title}
+                            </h4>
+                            <div className="mt-0.5 flex items-center gap-1 text-[10px] text-slate-400">
+                              <Clock className="w-2.5 h-2.5 text-slate-500" />
+                              <span>{art.readTime}</span>
+                            </div>
+                          </div>
+
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-white transition-transform group-hover:translate-x-0.5 shrink-0" />
+                        </div>
+                      ))
+                    )}
                   </div>
 
                   <button
@@ -441,48 +468,54 @@ export const HeroSection: React.FC = () => {
               {activeTab === 'to-watch' && (
                 <div className="flex-1 flex flex-col justify-between min-h-0">
                   <div className="divide-y divide-white/[0.06] flex-1 flex flex-col justify-start">
-                    {toWatchArticles.map((art, index) => (
-                      <div
-                        key={art.id}
-                        id={`towatch-article-item-${art.id}`}
-                        onClick={() => navigateTo('article-detail', { articleId: art.id })}
-                        className="group flex items-center gap-3 py-2 px-1.5 rounded-xl hover:bg-white/[0.04] transition-colors cursor-pointer"
-                      >
-                        {/* Tabular Index Number */}
-                        <span className={`w-4 font-mono tabular-nums text-xs font-bold text-center shrink-0 ${
-                          index === 0 ? 'text-[#FF2E7E]' : 'text-slate-500'
-                        }`}>
-                          {String(index + 1).padStart(2, '0')}
-                        </span>
-
-                        {/* Poster/Cover */}
-                        <img
-                          src={art.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=200&q=80'}
-                          alt={art.title}
-                          className="w-12 h-12 object-cover rounded-xl shrink-0 border border-white/10 group-hover:scale-105 transition-transform duration-300"
-                        />
-
-                        {/* Metadata */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 mb-0.5 text-[10px]">
-                            <span className="text-[#FF2E7E] font-bold uppercase tracking-wider truncate">
-                              {art.category}
-                            </span>
-                            <span className="text-slate-600">·</span>
-                            <span className="text-slate-400 truncate">{art.publishedAt}</span>
-                          </div>
-                          <h4 className="text-white font-semibold text-xs leading-snug line-clamp-2 group-hover:text-[#FF2E7E] transition-colors">
-                            {art.title}
-                          </h4>
-                          <div className="mt-0.5 flex items-center gap-1 text-[10px] text-slate-400">
-                            <Clock className="w-2.5 h-2.5 text-slate-500" />
-                            <span>{art.readTime}</span>
-                          </div>
-                        </div>
-
-                        <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-white transition-transform group-hover:translate-x-0.5 shrink-0" />
+                    {toWatchArticles.length === 0 ? (
+                      <div className="py-12 text-center text-xs text-slate-500">
+                        Belum ada rekomendasi tontonan.
                       </div>
-                    ))}
+                    ) : (
+                      toWatchArticles.map((art, index) => (
+                        <div
+                          key={art.id}
+                          id={`towatch-article-item-${art.id}`}
+                          onClick={() => navigateTo('article-detail', { articleId: art.id })}
+                          className="group flex items-center gap-3 py-2 px-1.5 rounded-xl hover:bg-white/[0.04] transition-colors cursor-pointer"
+                        >
+                          {/* Tabular Index Number */}
+                          <span className={`w-4 font-mono tabular-nums text-xs font-bold text-center shrink-0 ${
+                            index === 0 ? 'text-[#FF2E7E]' : 'text-slate-500'
+                          }`}>
+                            {String(index + 1).padStart(2, '0')}
+                          </span>
+
+                          {/* Poster/Cover */}
+                          <img
+                            src={art.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=200&q=80'}
+                            alt={art.title}
+                            className="w-12 h-12 object-cover rounded-xl shrink-0 border border-white/10 group-hover:scale-105 transition-transform duration-300"
+                          />
+
+                          {/* Metadata */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 mb-0.5 text-[10px]">
+                              <span className="text-[#FF2E7E] font-bold uppercase tracking-wider truncate">
+                                {art.category}
+                              </span>
+                              <span className="text-slate-600">·</span>
+                              <span className="text-slate-400 truncate">{art.publishedAt}</span>
+                            </div>
+                            <h4 className="text-white font-semibold text-xs leading-snug line-clamp-2 group-hover:text-[#FF2E7E] transition-colors">
+                              {art.title}
+                            </h4>
+                            <div className="mt-0.5 flex items-center gap-1 text-[10px] text-slate-400">
+                              <Clock className="w-2.5 h-2.5 text-slate-500" />
+                              <span>{art.readTime}</span>
+                            </div>
+                          </div>
+
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-white transition-transform group-hover:translate-x-0.5 shrink-0" />
+                        </div>
+                      ))
+                    )}
                   </div>
 
                   <button

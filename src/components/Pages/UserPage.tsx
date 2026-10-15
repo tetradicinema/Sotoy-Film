@@ -59,7 +59,7 @@ import {
   CheckCheck,
 } from 'lucide-react';
 import { useApp, GUEST_USER } from '../../context/AppContext';
-import { INITIAL_FILMS, INITIAL_ARTICLES, DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
+import { INITIAL_FILMS, DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
 import { RoleBadge } from '../Common/RoleBadge';
 import { QuickReactionBar } from '../Common/QuickReactionBar';
@@ -542,7 +542,7 @@ export const UserPage: React.FC = () => {
 
   const mySavedArticles = useMemo(() => {
     return collectionArticleIds
-      .map(id => articles.find(a => a.id === id) || INITIAL_ARTICLES.find(a => a.id === id))
+      .map(id => articles.find(a => a.id === id))
       .filter((a): a is Article => Boolean(a));
   }, [collectionArticleIds, articles]);
 
@@ -2171,7 +2171,7 @@ export const UserPage: React.FC = () => {
                         const f = films.find(x => x.id === item.itemId) || INITIAL_FILMS.find(x => x.id === item.itemId);
                         if (f?.poster?.trim()) imageUrls.push(f.poster.trim());
                       } else {
-                        const a = articles.find(x => x.id === item.itemId) || INITIAL_ARTICLES.find(x => x.id === item.itemId);
+                        const a = articles.find(x => x.id === item.itemId);
                         if (a?.coverImage?.trim()) imageUrls.push(a.coverImage.trim());
                       }
                     });
