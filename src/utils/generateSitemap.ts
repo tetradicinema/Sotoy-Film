@@ -1,6 +1,6 @@
 import { collection, getDocs, Firestore } from 'firebase/firestore';
 import { slugify } from './slugify';
-import { INITIAL_FILMS } from '../data/mockData';
+
 
 interface SitemapUrl {
   loc: string;
@@ -102,18 +102,7 @@ export async function generateSitemapXml(db: Firestore): Promise<string> {
     console.error('Sitemap: Failed to fetch films', error);
   }
 
-  // Fallback initial films
-  for (const film of INITIAL_FILMS) {
-    const filmSlug = film.slug || slugify(film.title) || film.id;
-    if (!filmSlug || seenFilmSlugs.has(filmSlug)) continue;
-    seenFilmSlugs.add(filmSlug);
-    urls.push({
-      loc: `${baseUrl}/film/${encodeURIComponent(filmSlug)}`,
-      lastmod: today,
-      changefreq: 'monthly',
-      priority: '0.9',
-    });
-  }
+  
 
   // Generate XML
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';

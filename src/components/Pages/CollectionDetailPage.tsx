@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useApp } from '../../context/AppContext';
-import { INITIAL_FILMS } from '../../data/mockData';
 import {
   Bookmark,
   Share2,
@@ -267,7 +266,7 @@ export const CollectionDetailPage: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {itemsList.map((item: any) => {
               if (item.itemType === 'film') {
-                const film = films.find((f) => f.id === item.itemId) || INITIAL_FILMS.find((f) => f.id === item.itemId);
+                const film = films.find((f) => f.id === item.itemId);
                 if (!film) return null;
 
                 return (

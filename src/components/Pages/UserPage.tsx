@@ -59,7 +59,7 @@ import {
   CheckCheck,
 } from 'lucide-react';
 import { useApp, GUEST_USER } from '../../context/AppContext';
-import { INITIAL_FILMS, DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
+import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
 import { RoleBadge } from '../Common/RoleBadge';
 import { QuickReactionBar } from '../Common/QuickReactionBar';
@@ -536,7 +536,7 @@ export const UserPage: React.FC = () => {
 
   const myWatchlistFilms = useMemo(() => {
     return collectionFilmIds
-      .map(id => films.find(f => f.id === id) || INITIAL_FILMS.find(f => f.id === id))
+      .map(id => films.find(f => f.id === id))
       .filter((f): f is FilmItem => Boolean(f));
   }, [collectionFilmIds, films]);
 
@@ -2168,7 +2168,7 @@ export const UserPage: React.FC = () => {
                     const imageUrls: string[] = [];
                     col.items.slice(0, 4).forEach((item) => {
                       if (item.itemType === 'film') {
-                        const f = films.find(x => x.id === item.itemId) || INITIAL_FILMS.find(x => x.id === item.itemId);
+                        const f = films.find(x => x.id === item.itemId);
                         if (f?.poster?.trim()) imageUrls.push(f.poster.trim());
                       } else {
                         const a = articles.find(x => x.id === item.itemId);

@@ -37,7 +37,6 @@ import {
 import { setCachedHomepageLayout, clearCachedHomepageLayout } from '../utils/homepageConfigHelper';
 import {
   DEFAULT_FALLBACK_AUTHOR,
-  INITIAL_FILMS,
   INITIAL_BUZZ,
   INITIAL_RATINGS,
 } from '../data/mockData';
@@ -526,7 +525,7 @@ const FILMS_CACHE_KEY = 'sotoy_cached_films';
 const FILMS_CACHE_TS_KEY = 'sotoy_cached_films_ts';
 const FILMS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
-const hydrateCachedFilms = (): { films: FilmItem[]; removedMarkers: string[]; ts: number } | null => {
+const hydrateCachedFilms = (): { films: FilmItem[]; ts: number } | null => {
   try {
     const raw = localStorage.getItem(FILMS_CACHE_KEY);
     const rawTs = localStorage.getItem(FILMS_CACHE_TS_KEY);
@@ -534,14 +533,12 @@ const hydrateCachedFilms = (): { films: FilmItem[]; removedMarkers: string[]; ts
     const ts = parseInt(rawTs, 10);
     if (isNaN(ts) || Date.now() - ts > FILMS_CACHE_TTL_MS) return null; // Expired
     const parsed = JSON.parse(raw);
+    // Backward compatible with old payloads that wrapped films in an object.
+    // Any legacy `removedMarkers` field is ignored entirely.
     if (Array.isArray(parsed) && parsed.length > 0) {
-      return { films: parsed, removedMarkers: [], ts };
+      return { films: parsed, ts };
     } else if (parsed && typeof parsed === 'object' && Array.isArray(parsed.films)) {
-      return {
-        films: parsed.films,
-        removedMarkers: Array.isArray(parsed.removedMarkers) ? parsed.removedMarkers : [],
-        ts,
-      };
+      return { films: parsed.films, ts };
     }
   } catch {
     // If parsing fails, ignore the cache silently
@@ -643,9 +640,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Hydrate films from localStorage cache on load so repeat visits within 10 minutes cost 0 reads
   const initialCachedFilms = useMemo(() => hydrateCachedFilms(), []);
   const [films, setFilms] = useState<FilmItem[]>(() => initialCachedFilms?.films || []);
-  const removedMockFilmIdsRef = React.useRef<Set<string>>(
-    new Set(initialCachedFilms?.removedMarkers || [])
-  );
   const lastFilmsFetchTsRef = useRef<number>(initialCachedFilms?.ts || 0);
   const inFlightFilmsFetchRef = useRef<Promise<void> | null>(null);
 
@@ -866,8 +860,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } else if (path.startsWith('/film/')) {
       const slug = decodeURIComponent(path.replace('/film/', ''));
       setCurrentView('film-detail');
-      const foundFilm = films.find(f => (f.slug && f.slug === slug) || slugify(f.title) === slug || f.id === slug)
-        || INITIAL_FILMS.find(f => (f.slug && f.slug === slug) || slugify(f.title) === slug || f.id === slug);
+      const foundFilm = films.find(f => (f.slug && f.slug === slug) || slugify(f.title) === slug || f.id === slug);
       if (foundFilm) setSelectedFilmId(foundFilm.id);
     } else if (path.startsWith('/artikel/') || path.startsWith('/article/')) {
       const slug = decodeURIComponent(path.replace(/^\/(artikel|article)\//, ''));
@@ -967,20 +960,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return 0;
   }, []);
 
-  const syncFilmsWithRemovedMarkers = useCallback((currentFilmMap: Map<string, FilmItem>, removedSet: Set<string>): FilmItem[] => {
-    const mergedMap = new Map<string, FilmItem>(currentFilmMap);
-    for (const init of INITIAL_FILMS) {
-      if (!mergedMap.has(init.id) && !removedSet.has(init.id)) {
-        mergedMap.set(init.id, init);
-      }
-    }
-    const merged = Array.from(mergedMap.values()).filter(f => !removedSet.has(f.id));
-    const sorted = merged.sort((a, b) => (a.trendingRank || 99) - (b.trendingRank || 99));
-    setFilms(sorted);
-    setIsLoadingFilms(false);
-    return sorted;
-  }, []);
-
   // Fetch ALL films without limit or orderBy('year'), paged by documentId() + startAfter
   const refreshFilms = useCallback(async (opts?: { isInitialMount?: boolean }): Promise<void> => {
     const isMount = Boolean(opts?.isInitialMount);
@@ -1001,29 +980,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         setIsLoadingFilms(true);
 
-        // 1. Page through entire removedMockFilms collection with orderBy(documentId()) + limit(500)
-        const removedSet = new Set<string>();
-        let lastRemovedDoc: QueryDocumentSnapshot | null = null;
-        while (true) {
-          const constraints: any[] = [orderBy(documentId()), limit(500)];
-          if (lastRemovedDoc) {
-            constraints.push(startAfter(lastRemovedDoc));
-          }
-          const snap = await getDocs(query(collection(db, 'removedMockFilms'), ...constraints));
-          if (snap.empty) break;
-
-          snap.forEach(docSnap => {
-            removedSet.add(docSnap.id);
-            const data = docSnap.data();
-            if (data?.id) removedSet.add(data.id);
-          });
-
-          lastRemovedDoc = snap.docs[snap.docs.length - 1];
-          if (snap.docs.length < 500) break;
-        }
-        removedMockFilmIdsRef.current = removedSet;
-
-        // 2. Page through entire films collection with orderBy(documentId()) + limit(500)
+        // Page through entire films collection with orderBy(documentId()) + limit(500)
         const filmMap = new Map<string, FilmItem>();
         let lastFilmDoc: QueryDocumentSnapshot | null = null;
         while (true) {
@@ -1058,16 +1015,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (snap.docs.length < 500) break;
         }
 
-        const sortedFilms = syncFilmsWithRemovedMarkers(filmMap, removedSet);
+        const sortedFilms = Array.from(filmMap.values()).sort((a, b) => (a.trendingRank || 99) - (b.trendingRank || 99));
+        setFilms(sortedFilms);
         lastFilmsFetchTsRef.current = Date.now();
 
         // Update localStorage cache with TTL tracking
         try {
-          const cachePayload = {
-            films: sortedFilms,
-            removedMarkers: Array.from(removedSet),
-          };
-          localStorage.setItem(FILMS_CACHE_KEY, JSON.stringify(cachePayload));
+          localStorage.setItem(FILMS_CACHE_KEY, JSON.stringify({ films: sortedFilms }));
           localStorage.setItem(FILMS_CACHE_TS_KEY, String(Date.now()));
         } catch (storageErr) {
           // If storage quota exceeded, silently skip caching
@@ -1076,9 +1030,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         setIsLoadingFilms(false);
       } catch (err: any) {
-        console.warn('[Firestore] films fetch fallback to initial mock:', err?.message || err);
-        const fallbackMap = new Map<string, FilmItem>();
-        syncFilmsWithRemovedMarkers(fallbackMap, removedMockFilmIdsRef.current);
+        console.warn('[Firestore] films fetch failed, keeping previous films state:', err?.message || err);
+        // Keep the previous films state instead of resetting to mocks
         setIsLoadingFilms(false);
       } finally {
         inFlightFilmsFetchRef.current = null;
@@ -1087,7 +1040,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     inFlightFilmsFetchRef.current = fetchPromise;
     return fetchPromise;
-  }, [initialCachedFilms, syncFilmsWithRemovedMarkers]);
+  }, [initialCachedFilms]);
 
   // Optimized fetch for articles with limit(50), ordered by publishedAtTimestamp desc
   const refreshArticles = useCallback(async () => {
@@ -3248,7 +3201,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const previewImages: string[] = [];
     col.items.slice(0, 4).forEach((item) => {
       if (item.itemType === 'film') {
-        const f = films.find((film) => film.id === item.itemId) || INITIAL_FILMS.find((film) => film.id === item.itemId);
+        const f = films.find((film) => film.id === item.itemId);
         if (f?.poster) previewImages.push(f.poster);
       } else if (item.itemType === 'article') {
         const a = articles.find((art) => art.id === item.itemId);
@@ -4319,7 +4272,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         break;
       case 'film-detail': {
         const targetFilmId = options?.filmId || selectedFilmId;
-        const targetFilm = films.find(f => f.id === targetFilmId) || INITIAL_FILMS.find(f => f.id === targetFilmId);
+        const targetFilm = films.find(f => f.id === targetFilmId);
         const slug = targetFilm?.slug || (targetFilm?.title ? slugify(targetFilm.title) : targetFilmId);
         targetPath = slug ? `/film/${encodeURIComponent(slug)}` : '/film-database';
         break;
@@ -6081,20 +6034,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Immediately remove from in-memory state
     setFilms(prev => prev.filter(f => f.id !== id));
 
-    // If deleting a film whose ID matches an INITIAL_FILMS mock entry, write marker to removedMockFilms collection
-    const isMockFilm = INITIAL_FILMS.some(m => m.id === id);
-    if (isMockFilm) {
-      try {
-        await setDoc(doc(db, 'removedMockFilms', id), {
-          id,
-          removedAt: new Date().toISOString(),
-        });
-        removedMockFilmIdsRef.current.add(id);
-      } catch (err) {
-        console.error('[AppContext] Error writing to removedMockFilms:', err);
-      }
-    }
-
     try {
       await deleteDoc(doc(db, 'films', id));
       refreshFilms();
@@ -6110,24 +6049,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const bulkDeleteFilms = async (filmIds: string[]): Promise<boolean> => {
     setFilms(prev => prev.filter(f => !filmIds.includes(f.id)));
-
-    // Mark any INITIAL_FILMS mock entries in removedMockFilms in Firestore
-    const mockIds = filmIds.filter(id => INITIAL_FILMS.some(m => m.id === id));
-    if (mockIds.length > 0) {
-      try {
-        await Promise.all(
-          mockIds.map(id => {
-            removedMockFilmIdsRef.current.add(id);
-            return setDoc(doc(db, 'removedMockFilms', id), {
-              id,
-              removedAt: new Date().toISOString(),
-            });
-          })
-        );
-      } catch (err) {
-        console.error('[AppContext] Error writing bulk removedMockFilms:', err);
-      }
-    }
 
     try {
       await Promise.all(

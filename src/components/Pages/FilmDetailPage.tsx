@@ -34,7 +34,7 @@ import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
 import { SEOHead } from '../SEO/SEOHead';
 import { createMovieSchemaFromFilm, generateBreadcrumbSchema } from '../../utils/schemaHelpers';
 import { slugify } from '../../utils/slugify';
-import { INITIAL_FILMS, DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
+import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
 import { RoleBadge } from '../Common/RoleBadge';
@@ -116,6 +116,7 @@ export const FilmDetailPage: React.FC = () => {
     toggleLikeReview,
     syncLikedReviews,
     currentUser,
+    isLoadingFilms,
   } = useApp();
 
   const [ratingModalOpen, setRatingModalOpen] = useState(false);
@@ -126,11 +127,10 @@ export const FilmDetailPage: React.FC = () => {
   const [collectionModalOpen, setCollectionModalOpen] = useState(false);
 
   const { slug } = useParams<{ slug?: string }>();
-  const film: FilmItem = (slug ? (films.find(f => (f.slug && f.slug === slug) || slugify(f.title) === slug || f.id === slug) || INITIAL_FILMS.find(f => (f.slug && f.slug === slug) || slugify(f.title) === slug || f.id === slug)) : null)
+  const film: FilmItem | undefined = (slug ? films.find(f => (f.slug && f.slug === slug) || slugify(f.title) === slug || f.id === slug) : undefined)
     || films.find(f => f.id === selectedFilmId)
-    || INITIAL_FILMS.find(f => f.id === selectedFilmId)
     || films[0]
-    || INITIAL_FILMS[0];
+    || undefined;
 
   // TMDB live cast & crew sync
   const [liveCredits, setLiveCredits] = useState<{ cast: CastMember[]; crew: CrewMember[] }>({
@@ -176,34 +176,8 @@ export const FilmDetailPage: React.FC = () => {
     };
   }, [film?.id, film?.tmdbId, film?.title]);
 
-  if (films.length === 0) {
-    return <FilmDetailSkeleton />;
-  }
-
-  if (!film) {
-    return (
-      <div className="min-h-[60vh] py-16 flex items-center justify-center">
-        <div className="text-center space-y-4 max-w-md mx-auto px-4">
-          <div className="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-400 mx-auto flex items-center justify-center">
-            <Clapperboard className="w-7 h-7" />
-          </div>
-          <h2 className="text-xl font-display font-black text-white">Film Not Found</h2>
-          <p className="text-slate-400 text-xs leading-relaxed">
-            Data film atau tayangan yang Anda tuju tidak tersedia dalam katalog Sotoy Film.
-          </p>
-          <button
-            onClick={() => navigateTo('film-database')}
-            className="px-5 py-2.5 rounded-xl bg-white text-slate-950 text-xs font-bold hover:bg-slate-200 transition-colors"
-          >
-            Lihat Database Film
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   const [loadedFilmRatings, setLoadedFilmRatings] = useState<UserRating[]>(() =>
-    ratings.filter(r => film && r.filmId === film.id)
+    film ? ratings.filter(r => r.filmId === film.id) : []
   );
 
   useEffect(() => {
@@ -222,12 +196,13 @@ export const FilmDetailPage: React.FC = () => {
   }, [film?.id, getRatingsForFilm]);
 
   const filmReviews = useMemo(() => {
+    if (!film) return [];
     const contextFiltered = ratings.filter(r => r.filmId === film.id);
     if (contextFiltered.length > loadedFilmRatings.length) {
       return contextFiltered;
     }
     return loadedFilmRatings.length > 0 ? loadedFilmRatings : contextFiltered;
-  }, [ratings, loadedFilmRatings, film.id]);
+  }, [ratings, loadedFilmRatings, film?.id]);
 
   const criticsReviews = filmReviews.filter(r => r.userRole === 'si_paling_sotoy');
   const communityReviews = filmReviews.filter(r => r.userRole !== 'si_paling_sotoy');
@@ -246,6 +221,34 @@ export const FilmDetailPage: React.FC = () => {
       syncLikedReviews(ids);
     }
   }, [reviewIdsKey, currentUser?.id, syncLikedReviews]);
+
+  // Show the skeleton only while films are still loading and nothing has matched yet
+  if (isLoadingFilms && !film) {
+    return <FilmDetailSkeleton />;
+  }
+
+  // Loading finished and no film was found: render the not-found view
+  if (!film) {
+    return (
+      <div className="min-h-[60vh] py-16 flex items-center justify-center">
+        <div className="text-center space-y-4 max-w-md mx-auto px-4">
+          <div className="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-400 mx-auto flex items-center justify-center">
+            <Clapperboard className="w-7 h-7" />
+          </div>
+          <h2 className="text-xl font-display font-black text-white">Film Tidak Ditemukan</h2>
+          <p className="text-slate-400 text-xs leading-relaxed">
+            Data film atau tayangan yang Anda tuju tidak tersedia dalam katalog Sotoy Film.
+          </p>
+          <button
+            onClick={() => navigateTo('film-database')}
+            className="px-5 py-2.5 rounded-xl bg-white text-slate-950 text-xs font-bold hover:bg-slate-200 transition-colors"
+          >
+            Kembali ke Film Database
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const isInWatchlist = isItemInAnyCollection(film.id, 'film');
 
