@@ -558,11 +558,7 @@ const normalizeUserRecords = (inputUsers: User[]): User[] => {
   if (items.length === 0) return [];
 
   return items.map(u => {
-    let handle = normalizeHandle(u.handle);
-    // Disambiguate legacy collision: CsG2CY2TaIZmG7yuPfzAxmRYrlY2 (Tony Tofani Admin whose buzz handle is @admin_sotoyfilm)
-    if (u.id === 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' && handle === '@tonytfani') {
-      handle = '@admin_sotoyfilm';
-    }
+    const handle = normalizeHandle(u.handle);
 
     const updatedUser: User = {
       ...u,
@@ -2039,10 +2035,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               data.roleTitle = 'Si Paling Sotoy (Kritikus Film)';
             }
 
-            // Disambiguate legacy collision: CsG2CY2TaIZmG7yuPfzAxmRYrlY2 (Admin Tony Tofani)
-            if (uid === 'CsG2CY2TaIZmG7yuPfzAxmRYrlY2' && normalizeHandle(data.handle) === '@tonytfani') {
-              data.handle = '@admin_sotoyfilm';
-            }
             const normalizedUserHandle = normalizeHandle(data.handle);
             if (normalizedUserHandle && normalizedUserHandle !== data.handle) {
               data.handle = normalizedUserHandle;
@@ -5464,9 +5456,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const targetUser = allUsers.find(u => u.id === userId);
 
+      // Determine target's handle before deleting the user document
+      let rawHandle = targetUser?.handle;
+      if (!rawHandle) {
+        try {
+          const userSnap = await getDoc(doc(db, 'users', userId));
+          if (userSnap.exists()) {
+            rawHandle = userSnap.data()?.handle;
+          }
+        } catch (e) {
+          console.warn('[AppContext] Could not fetch target user doc for handle lookup:', e);
+        }
+      }
+      const normalizedHandle = rawHandle
+        ? rawHandle.toLowerCase().replace(/^@+/, '').trim()
+        : '';
+
       // 1. Delete user profile document from Firestore
       const userRef = doc(db, 'users', userId);
       await deleteDoc(userRef);
+
+      // Best-effort post-delete cleanup:
+      // a) Release the handle: getDoc(handles/{normalized}); if it exists AND its uid === userId, deleteDoc it. Never delete a handles doc that belongs to another uid.
+      if (normalizedHandle) {
+        try {
+          const handleRef = doc(db, 'handles', normalizedHandle);
+          const handleSnap = await getDoc(handleRef);
+          if (handleSnap.exists() && handleSnap.data()?.uid === userId) {
+            await deleteDoc(handleRef);
+          }
+        } catch (err) {
+          console.warn('[AppContext] Best-effort release handle notice:', err);
+        }
+      }
+
+      // b) deleteDoc(userPrivate/{userId}) (the rules already allow admin delete).
+      try {
+        await deleteDoc(doc(db, 'userPrivate', userId));
+      } catch (err) {
+        console.warn('[AppContext] Best-effort delete userPrivate notice:', err);
+      }
 
       // 2. Cascade delete user ratings
       try {
