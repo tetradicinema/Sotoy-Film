@@ -3,7 +3,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, terminate } from 'firebase/firestore';
-import { INITIAL_FILMS } from '../src/data/mockData.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -114,7 +113,6 @@ async function run() {
 
   const seenArticleSlugs = new Set<string>();
   const seenFilmSlugs = new Set<string>();
-  const removedMockFilmIds = new Set<string>();
   let articlesCount = 0;
   let filmsCount = 0;
 
@@ -167,20 +165,7 @@ async function run() {
     console.log(`[Sitemap Builder] Indexed ${articlesCount} published articles.`);
 
     if (db) {
-      // 4. Fetch Removed Mock Films markers from Firestore
-      console.log('[Sitemap Builder] Querying removedMockFilms markers from Firestore...');
-      const removedMockFilmsCol = collection(db, 'removedMockFilms');
-      const removedMockFilmsSnap = await getDocs(removedMockFilmsCol);
-
-      removedMockFilmsSnap.forEach(docSnap => {
-        removedMockFilmIds.add(docSnap.id);
-        const data = docSnap.data();
-        if (data?.id) removedMockFilmIds.add(String(data.id));
-        if (data?.slug) removedMockFilmIds.add(String(data.slug));
-      });
-      console.log(`[Sitemap Builder] Found ${removedMockFilmIds.size} removed mock film markers.`);
-
-      // 5. Fetch Films Catalog from Firestore
+      // 4. Fetch Films Catalog from Firestore
       console.log('[Sitemap Builder] Querying films catalog from Firestore...');
       const filmsCol = collection(db, 'films');
       const filmsSnap = await getDocs(filmsCol);
@@ -188,17 +173,7 @@ async function run() {
       filmsSnap.forEach(docSnap => {
         const film = docSnap.data();
         const docId = docSnap.id;
-        const filmId = film.id || docId;
         const slug = film.slug || slugify(film.title) || docId;
-
-        // Skip if marked as removed mock film
-        if (
-          removedMockFilmIds.has(docId) ||
-          (filmId && removedMockFilmIds.has(filmId)) ||
-          (slug && removedMockFilmIds.has(slug))
-        ) {
-          return;
-        }
 
         if (!slug || seenFilmSlugs.has(slug)) return;
 
@@ -214,32 +189,6 @@ async function run() {
       });
     }
 
-    // Fallback/merge with INITIAL_FILMS, excluding any mock films in removedMockFilms
-    for (const film of INITIAL_FILMS) {
-      const slug = film.slug || slugify(film.title) || film.id;
-
-      if (
-        removedMockFilmIds.has(film.id) ||
-        (film.slug && removedMockFilmIds.has(film.slug)) ||
-        (slug && removedMockFilmIds.has(slug)) ||
-        (film.title && removedMockFilmIds.has(slugify(film.title)))
-      ) {
-        continue;
-      }
-
-      if (!slug || seenFilmSlugs.has(slug)) continue;
-
-      seenFilmSlugs.add(slug);
-      const lastmod = formatDateToYMD(null, today);
-      entries.push({
-        loc: `${baseUrl}/film/${encodeURIComponent(slug)}`,
-        lastmod,
-        changefreq: 'monthly',
-        priority: '0.9',
-      });
-      filmsCount++;
-    }
-
     console.log(`[Sitemap Builder] Indexed ${filmsCount} films.`);
   } catch (dbError: any) {
     const errorMsg = dbError?.message || String(dbError);
@@ -252,26 +201,8 @@ async function run() {
     }
 
     isOfflineFallback = true;
-    for (const film of INITIAL_FILMS) {
-      const slug = film.slug || slugify(film.title) || film.id;
-      if (
-        removedMockFilmIds.has(film.id) ||
-        (film.slug && removedMockFilmIds.has(film.slug)) ||
-        (slug && removedMockFilmIds.has(slug)) ||
-        (film.title && removedMockFilmIds.has(slugify(film.title)))
-      ) {
-        continue;
-      }
-      if (!slug || seenFilmSlugs.has(slug)) continue;
-      seenFilmSlugs.add(slug);
-      entries.push({
-        loc: `${baseUrl}/film/${encodeURIComponent(slug)}`,
-        lastmod: today,
-        changefreq: 'monthly',
-        priority: '0.9',
-      });
-      filmsCount++;
-    }
+    // In offline fallback, no film URLs are added
+    filmsCount = 0;
   } finally {
     try {
       if (db) await terminate(db);

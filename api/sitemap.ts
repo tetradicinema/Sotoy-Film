@@ -1,7 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import fs from 'fs';
 import path from 'path';
-import { INITIAL_FILMS } from '../src/data/mockData.ts';
 
 function escapeXml(unsafe: string): string {
   if (!unsafe) return '';
@@ -11,19 +10,6 @@ function escapeXml(unsafe: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;');
-}
-
-function slugify(text: string): string {
-  if (!text) return '';
-  return text
-    .toString()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/[\s_-]+/g, '-')
-    .replace(/^-+|-+$/g, '');
 }
 
 /**
@@ -52,23 +38,9 @@ function buildFallbackSitemapXml(): string {
     { loc: `${baseUrl}/kategori/film-studies`, lastmod: today, changefreq: 'weekly', priority: '0.7' },
   ];
 
-  const seenFilmSlugs = new Set<string>();
   const articleUrls: Array<{ loc: string; lastmod: string; changefreq: string; priority: string }> = [];
 
-  const filmUrls: Array<{ loc: string; lastmod: string; changefreq: string; priority: string }> = [];
-  for (const film of INITIAL_FILMS) {
-    const slug = film.slug || slugify(film.title) || film.id;
-    if (!slug || seenFilmSlugs.has(slug)) continue;
-    seenFilmSlugs.add(slug);
-    filmUrls.push({
-      loc: `${baseUrl}/film/${encodeURIComponent(slug)}`,
-      lastmod: today,
-      changefreq: 'monthly',
-      priority: '0.9',
-    });
-  }
-
-  const allEntries = [...staticUrls, ...articleUrls, ...filmUrls];
+  const allEntries = [...staticUrls, ...articleUrls];
 
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
   xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
