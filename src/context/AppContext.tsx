@@ -537,7 +537,7 @@ const hydrateCachedFilms = (): { films: FilmItem[]; ts: number } | null => {
     // Any legacy `removedMarkers` field is ignored entirely.
     if (Array.isArray(parsed) && parsed.length > 0) {
       return { films: parsed, ts };
-    } else if (parsed && typeof parsed === 'object' && Array.isArray(parsed.films)) {
+      } else if (parsed && typeof parsed === 'object' && Array.isArray(parsed.films) && parsed.films.length > 0) {
       return { films: parsed.films, ts };
     }
   } catch {

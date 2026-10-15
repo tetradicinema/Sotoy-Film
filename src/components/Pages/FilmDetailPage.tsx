@@ -129,7 +129,6 @@ export const FilmDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug?: string }>();
   const film: FilmItem | undefined = (slug ? films.find(f => (f.slug && f.slug === slug) || slugify(f.title) === slug || f.id === slug) : undefined)
     || films.find(f => f.id === selectedFilmId)
-    || films[0]
     || undefined;
 
   // TMDB live cast & crew sync
