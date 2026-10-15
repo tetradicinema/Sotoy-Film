@@ -330,18 +330,23 @@ service cloud.firestore {
       allow create: if isSignedIn() && isOwner(userId) && !incoming().keys().hasAny(['email']) && isValidUser(incoming()) && (incoming().role == 'warga_sotoy' || isAdmin()) && (isAdmin() || getAfter(/databases/$(database)/documents/handles/$(incoming().handle.replace('@',''))).data.uid == request.auth.uid);
       allow update: if isSignedIn() && !incoming().keys().hasAny(['email']) && (
         // Document Owner updating profile / interests / following
-        (isOwner(userId) && isValidUser(incoming()) && (incoming().role == existing().role) && (
-          !incoming().diff(existing()).affectedKeys().hasAny(['followers', 'followersCount', 'following', 'followingCount']) || isVerifiedUser()
-        ) && (
-          !('followersCount' in incoming().diff(existing()).affectedKeys()) || isValidFollowersCountDelta()
-        ) && (
-          !('followingCount' in incoming().diff(existing()).affectedKeys()) || isValidFollowingCountDelta()
-        ) && (
-          !('following' in incoming().diff(existing()).affectedKeys()) || isValidFollowingArrayUpdate()
-        ) && (
-          !('followers' in incoming().diff(existing()).affectedKeys()) || isValidFollowersArrayUpdate()
-        ) && (
-          !('handle' in incoming().diff(existing()).affectedKeys()) || incoming().handle == existing().handle || getAfter(/databases/$(database)/documents/handles/$(incoming().handle.replace('@',''))).data.uid == request.auth.uid
+        (isOwner(userId) && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['interestProfile']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['lastInterestDecay']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['interestProfile', 'lastInterestDecay']) ||
+          (isValidUser(incoming()) && (incoming().role == existing().role) && (
+            !incoming().diff(existing()).affectedKeys().hasAny(['followers', 'followersCount', 'following', 'followingCount']) || isVerifiedUser()
+          ) && (
+            !('followersCount' in incoming().diff(existing()).affectedKeys()) || isValidFollowersCountDelta()
+          ) && (
+            !('followingCount' in incoming().diff(existing()).affectedKeys()) || isValidFollowingCountDelta()
+          ) && (
+            !('following' in incoming().diff(existing()).affectedKeys()) || isValidFollowingArrayUpdate()
+          ) && (
+            !('followers' in incoming().diff(existing()).affectedKeys()) || isValidFollowersArrayUpdate()
+          ) && (
+            !('handle' in incoming().diff(existing()).affectedKeys()) || incoming().handle == existing().handle || getAfter(/databases/$(database)/documents/handles/$(incoming().handle.replace('@',''))).data.uid == request.auth.uid
+          ))
         )) ||
         // Non-Owner (e.g. User A) updating User B's followersCount or followers array
         (!isOwner(userId) && isVerifiedUser() && incoming().diff(existing()).affectedKeys().hasOnly(['followersCount', 'followers']) && (
