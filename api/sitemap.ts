@@ -1,6 +1,26 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import fs from 'fs';
 import path from 'path';
+import {
+  FIRESTORE_DOCUMENTS_URL,
+  FIRESTORE_API_KEY,
+  fetchWithTimeout,
+  parseFirestoreFields,
+  isArticlePublished,
+} from '../src/lib/edge/firestoreRest';
+import { slugify } from '../src/utils/slugify';
+
+const BASE_URL = 'https://www.sotoyfilm.my.id';
+
+interface SitemapItem {
+  link: string;
+  title: string;
+  metaDescription: string;
+  type: 'Halaman' | 'Kategori' | 'Artikel' | 'Film/Series/Anime';
+  lastmod: string;
+  changefreq: string;
+  priority: string;
+}
 
 function escapeXml(unsafe: string): string {
   if (!unsafe) return '';
@@ -12,89 +32,272 @@ function escapeXml(unsafe: string): string {
     .replace(/'/g, '&apos;');
 }
 
-/**
- * Builds standard XML sitemap content fallback
- */
-function buildFallbackSitemapXml(): string {
-  const baseUrl = 'https://www.sotoyfilm.my.id';
-  const today = new Date().toISOString().split('T')[0];
+function formatDateToYMD(val: any, fallbackDate: string): string {
+  if (!val) return fallbackDate;
+  if (typeof val === 'string') {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+      const year = parseInt(val.slice(0, 4), 10);
+      if (year >= 2020) return val;
+      return fallbackDate;
+    }
+    const parsed = new Date(val);
+    if (!isNaN(parsed.getTime())) {
+      const formatted = parsed.toISOString().split('T')[0];
+      const year = parsed.getFullYear();
+      if (year >= 2020) return formatted;
+      return fallbackDate;
+    }
+  }
+  if (val && typeof val.toDate === 'function') {
+    try {
+      const parsed = val.toDate();
+      const formatted = parsed.toISOString().split('T')[0];
+      const year = parsed.getFullYear();
+      if (year >= 2020) return formatted;
+      return fallbackDate;
+    } catch {
+      // ignore
+    }
+  }
+  if (val && typeof val.seconds === 'number') {
+    const parsed = new Date(val.seconds * 1000);
+    const formatted = parsed.toISOString().split('T')[0];
+    const year = parsed.getFullYear();
+    if (year >= 2020) return formatted;
+    return fallbackDate;
+  }
+  return fallbackDate;
+}
 
-  const staticUrls = [
-    { loc: `${baseUrl}/`, lastmod: today, changefreq: 'daily', priority: '1.0' },
-    { loc: `${baseUrl}/film-database`, lastmod: today, changefreq: 'daily', priority: '0.9' },
-    { loc: `${baseUrl}/rekomendasi-film`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-    { loc: `${baseUrl}/komunitas`, lastmod: today, changefreq: 'daily', priority: '0.8' },
-    { loc: `${baseUrl}/panduan-leaderboard`, lastmod: today, changefreq: 'monthly', priority: '0.6' },
-    { loc: `${baseUrl}/tentang-kami`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
-    { loc: `${baseUrl}/kebijakan-privasi`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
-    { loc: `${baseUrl}/syarat-ketentuan`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
-    { loc: `${baseUrl}/kontak-bisnis`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
-    { loc: `${baseUrl}/gabung-kritikus`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
-    { loc: `${baseUrl}/kriteria-kritikus`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
-    { loc: `${baseUrl}/kategori/movies`, lastmod: today, changefreq: 'weekly', priority: '0.7' },
-    { loc: `${baseUrl}/kategori/series`, lastmod: today, changefreq: 'weekly', priority: '0.7' },
-    { loc: `${baseUrl}/kategori/anime`, lastmod: today, changefreq: 'weekly', priority: '0.7' },
-    { loc: `${baseUrl}/kategori/cinema-gear`, lastmod: today, changefreq: 'weekly', priority: '0.7' },
-    { loc: `${baseUrl}/kategori/film-studies`, lastmod: today, changefreq: 'weekly', priority: '0.7' },
+function getStaticItems(today: string): SitemapItem[] {
+  return [
+    { link: `${BASE_URL}/`, title: 'Sotoy Film - Beranda', metaDescription: '', type: 'Halaman', lastmod: today, changefreq: 'daily', priority: '1.0' },
+    { link: `${BASE_URL}/film-database`, title: 'Film Database', metaDescription: '', type: 'Halaman', lastmod: today, changefreq: 'daily', priority: '0.9' },
+    { link: `${BASE_URL}/rekomendasi-film`, title: 'Rekomendasi Film', metaDescription: '', type: 'Halaman', lastmod: today, changefreq: 'weekly', priority: '0.8' },
+    { link: `${BASE_URL}/komunitas`, title: 'Komunitas', metaDescription: '', type: 'Halaman', lastmod: today, changefreq: 'daily', priority: '0.8' },
+    { link: `${BASE_URL}/panduan-leaderboard`, title: 'Panduan Leaderboard', metaDescription: '', type: 'Halaman', lastmod: today, changefreq: 'monthly', priority: '0.6' },
+    { link: `${BASE_URL}/tentang-kami`, title: 'Tentang Kami', metaDescription: '', type: 'Halaman', lastmod: today, changefreq: 'monthly', priority: '0.5' },
+    { link: `${BASE_URL}/kebijakan-privasi`, title: 'Kebijakan Privasi', metaDescription: '', type: 'Halaman', lastmod: today, changefreq: 'monthly', priority: '0.5' },
+    { link: `${BASE_URL}/syarat-ketentuan`, title: 'Syarat & Ketentuan', metaDescription: '', type: 'Halaman', lastmod: today, changefreq: 'monthly', priority: '0.5' },
+    { link: `${BASE_URL}/kontak-bisnis`, title: 'Kontak Bisnis', metaDescription: '', type: 'Halaman', lastmod: today, changefreq: 'monthly', priority: '0.5' },
+    { link: `${BASE_URL}/gabung-kritikus`, title: 'Gabung Kritikus', metaDescription: '', type: 'Halaman', lastmod: today, changefreq: 'monthly', priority: '0.5' },
+    { link: `${BASE_URL}/kriteria-kritikus`, title: 'Kriteria Kritikus', metaDescription: '', type: 'Halaman', lastmod: today, changefreq: 'monthly', priority: '0.5' },
+    { link: `${BASE_URL}/kategori/movies`, title: 'Kategori Movies', metaDescription: '', type: 'Kategori', lastmod: today, changefreq: 'weekly', priority: '0.7' },
+    { link: `${BASE_URL}/kategori/series`, title: 'Kategori Series', metaDescription: '', type: 'Kategori', lastmod: today, changefreq: 'weekly', priority: '0.7' },
+    { link: `${BASE_URL}/kategori/anime`, title: 'Kategori Anime', metaDescription: '', type: 'Kategori', lastmod: today, changefreq: 'weekly', priority: '0.7' },
+    { link: `${BASE_URL}/kategori/cinema-gear`, title: 'Kategori Cinema Gear', metaDescription: '', type: 'Kategori', lastmod: today, changefreq: 'weekly', priority: '0.7' },
+    { link: `${BASE_URL}/kategori/film-studies`, title: 'Kategori Film Studies', metaDescription: '', type: 'Kategori', lastmod: today, changefreq: 'weekly', priority: '0.7' },
   ];
+}
 
-  const articleUrls: Array<{ loc: string; lastmod: string; changefreq: string; priority: string }> = [];
+/**
+ * Quotes a string value per RFC 4180
+ */
+function toCsvField(value: string | undefined | null): string {
+  if (value === undefined || value === null) return '';
+  const str = String(value);
+  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
 
-  const allEntries = [...staticUrls, ...articleUrls];
+function buildCsv(items: SitemapItem[]): string {
+  const header = 'Link,Title,MetaDescription,Type,Lastmod,Priority';
+  const rows = items.map(item =>
+    [
+      toCsvField(item.link),
+      toCsvField(item.title),
+      toCsvField(item.metaDescription),
+      toCsvField(item.type),
+      toCsvField(item.lastmod),
+      toCsvField(item.priority),
+    ].join(',')
+  );
+  return [header, ...rows].join('\r\n');
+}
 
+function buildXml(items: SitemapItem[]): string {
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
   xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
-  for (const entry of allEntries) {
+  for (const item of items) {
     xml += '  <url>\n';
-    xml += `    <loc>${escapeXml(entry.loc)}</loc>\n`;
-    xml += `    <lastmod>${escapeXml(entry.lastmod)}</lastmod>\n`;
-    xml += `    <changefreq>${escapeXml(entry.changefreq)}</changefreq>\n`;
-    xml += `    <priority>${escapeXml(entry.priority)}</priority>\n`;
+    xml += `    <loc>${escapeXml(item.link)}</loc>\n`;
+    xml += `    <lastmod>${escapeXml(item.lastmod)}</lastmod>\n`;
+    xml += `    <changefreq>${escapeXml(item.changefreq)}</changefreq>\n`;
+    xml += `    <priority>${escapeXml(item.priority)}</priority>\n`;
     xml += '  </url>\n';
   }
   xml += '</urlset>\n';
-
   return xml;
+}
+
+function getSnapshotXml(): string | null {
+  const candidatePaths = [
+    path.join(process.cwd(), 'data', 'sitemap-snapshot.xml'),
+    path.join(process.cwd(), 'sitemap-snapshot.xml'),
+  ];
+  for (const p of candidatePaths) {
+    try {
+      if (fs.existsSync(p)) {
+        const content = fs.readFileSync(p, 'utf-8');
+        if (content && content.includes('<urlset')) {
+          return content;
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return null;
+}
+
+async function fetchAllCollectionDocs(collectionId: 'articles' | 'films'): Promise<any[]> {
+  const allDocs: any[] = [];
+  const pageSize = 300;
+  let offset = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const url = `${FIRESTORE_DOCUMENTS_URL}:runQuery?key=${FIRESTORE_API_KEY}`;
+    const res = await fetchWithTimeout(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        structuredQuery: {
+          from: [{ collectionId }],
+          offset,
+          limit: pageSize,
+        },
+      }),
+    }, 6000);
+
+    if (!res.ok) {
+      throw new Error(`Firestore REST query failed with status ${res.status}`);
+    }
+
+    const results = await res.json();
+    if (!Array.isArray(results)) break;
+
+    const docs = results
+      .filter((r: any) => r && r.document)
+      .map((r: any) => {
+        const parsed = parseFirestoreFields(r.document);
+        if (r.document.name && !parsed.id) {
+          parsed.id = r.document.name.split('/').pop();
+        }
+        return parsed;
+      });
+
+    allDocs.push(...docs);
+
+    if (docs.length < pageSize) {
+      hasMore = false;
+    } else {
+      offset += pageSize;
+    }
+  }
+
+  return allDocs;
+}
+
+async function generateLiveSitemapItems(today: string): Promise<SitemapItem[]> {
+  const staticItems = getStaticItems(today);
+  const items: SitemapItem[] = [...staticItems];
+
+  // Fetch articles
+  const rawArticles = await fetchAllCollectionDocs('articles');
+  const seenArticleSlugs = new Set<string>();
+
+  for (const art of rawArticles) {
+    if (!isArticlePublished(art)) continue;
+
+    const slug = art.slug || (art.title ? slugify(art.title) : art.id);
+    if (!slug || seenArticleSlugs.has(slug)) continue;
+    seenArticleSlugs.add(slug);
+
+    const lastmod = formatDateToYMD(art.updatedAt || art.publishedAt || art.createdAt, today);
+    items.push({
+      link: `${BASE_URL}/artikel/${encodeURIComponent(slug)}`,
+      title: art.title || 'Artikel',
+      metaDescription: art.excerpt || '',
+      type: 'Artikel',
+      lastmod,
+      changefreq: 'weekly',
+      priority: '0.8',
+    });
+  }
+
+  // Fetch films
+  const rawFilms = await fetchAllCollectionDocs('films');
+  const seenFilmSlugs = new Set<string>();
+
+  for (const film of rawFilms) {
+    const slug = film.slug || (film.title ? slugify(film.title) : film.id);
+    if (!slug || seenFilmSlugs.has(slug)) continue;
+    seenFilmSlugs.add(slug);
+
+    const lastmod = formatDateToYMD(film.updatedAt || film.createdAt, today);
+    items.push({
+      link: `${BASE_URL}/film/${encodeURIComponent(slug)}`,
+      title: film.title || 'Film',
+      metaDescription: '',
+      type: 'Film/Series/Anime',
+      lastmod,
+      changefreq: 'monthly',
+      priority: '0.9',
+    });
+  }
+
+  return items;
+}
+
+function sendResponse(res: any, status: number, contentType: string, body: string) {
+  res.setHeader('Content-Type', contentType);
+  res.setHeader('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=3600');
+  if (typeof res.status === 'function') {
+    return res.status(status).send(body);
+  } else {
+    res.writeHead(status);
+    return res.end(body);
+  }
 }
 
 /**
  * Shared sitemap request handler for Express and Vercel Serverless
  */
 export async function handleSitemapRequest(req: any, res: any) {
-  res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400');
+  const today = new Date().toISOString().split('T')[0];
 
-  const candidatePaths = [
-    path.join(process.cwd(), 'public', 'sitemap.xml'),
-    path.join(process.cwd(), 'dist', 'sitemap.xml'),
-    path.join(process.cwd(), 'sitemap.xml'),
-  ];
+  const rawUrl = req.url || '/';
+  const isCsv =
+    req.query?.format === 'csv' ||
+    rawUrl.includes('format=csv') ||
+    rawUrl.endsWith('.csv') ||
+    rawUrl.includes('/sitemap.csv');
 
-  for (const p of candidatePaths) {
-    try {
-      if (fs.existsSync(p)) {
-        const content = fs.readFileSync(p, 'utf-8');
-        if (content && content.includes('<urlset')) {
-          if (res.status) {
-            return res.status(200).send(content);
-          } else {
-            res.writeHead(200);
-            return res.end(content);
-          }
-        }
-      }
-    } catch {
-      // ignore file read error, fallback to memory generation
+  try {
+    const items = await generateLiveSitemapItems(today);
+    if (isCsv) {
+      const csv = buildCsv(items);
+      return sendResponse(res, 200, 'text/csv; charset=utf-8', csv);
+    } else {
+      const xml = buildXml(items);
+      return sendResponse(res, 200, 'application/xml; charset=utf-8', xml);
     }
-  }
+  } catch (err) {
+    console.warn('[Live Sitemap] Error querying Firestore, serving fallback snapshot:', err);
 
-  // Generate valid XML dynamically if file not found on disk
-  const xml = buildFallbackSitemapXml();
-  if (res.status) {
-    return res.status(200).send(xml);
-  } else {
-    res.writeHead(200);
-    return res.end(xml);
+    if (isCsv) {
+      // Empty-safe fallback built from static pages only
+      const fallbackCsv = buildCsv(getStaticItems(today));
+      return sendResponse(res, 200, 'text/csv; charset=utf-8', fallbackCsv);
+    } else {
+      // Serve snapshot XML if available, otherwise static fallback XML
+      const snapshotXml = getSnapshotXml();
+      const fallbackXml = snapshotXml || buildXml(getStaticItems(today));
+      return sendResponse(res, 200, 'application/xml; charset=utf-8', fallbackXml);
+    }
   }
 }
 

@@ -226,13 +226,13 @@ async function run() {
   }
   xml += '</urlset>\n';
 
-  // 6. Write to public/sitemap.xml
-  const publicDir = path.join(rootDir, 'public');
-  if (!fs.existsSync(publicDir)) {
-    fs.mkdirSync(publicDir, { recursive: true });
+  // 6. Write to data/sitemap-snapshot.xml
+  const dataDir = path.join(rootDir, 'data');
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
   }
 
-  const sitemapDest = path.join(publicDir, 'sitemap.xml');
+  const sitemapDest = path.join(dataDir, 'sitemap-snapshot.xml');
   const totalUrls = entries.length;
 
   if (isOfflineFallback && fs.existsSync(sitemapDest)) {

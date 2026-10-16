@@ -29,8 +29,13 @@ async function startServer() {
     return handleImageProxy(req, res);
   });
 
-  // Explicit XML Sitemap & robots.txt routes with correct MIME types
+  // Explicit XML Sitemap & CSV routes with correct MIME types
   app.get("/sitemap.xml", (req, res) => {
+    return handleSitemapRequest(req, res);
+  });
+
+  app.get("/sitemap.csv", (req, res) => {
+    req.query = { ...(req.query || {}), format: 'csv' };
     return handleSitemapRequest(req, res);
   });
 
@@ -45,7 +50,7 @@ async function startServer() {
     }
 
     try {
-      const sitemapPath = path.join(process.cwd(), 'public', 'sitemap.xml');
+      const sitemapPath = path.join(process.cwd(), 'data', 'sitemap-snapshot.xml');
       if (!fs.existsSync(sitemapPath)) {
         return res.status(404).json({ error: 'Sitemap not found' });
       }
