@@ -58,11 +58,15 @@ export const HomeWatchlistsBlock: React.FC = () => {
   const defaultSeriesListsArticles = useMemo(() => {
     const lists = publishedArticles.filter(
       (a) =>
-        a.category === 'series' &&
+        (a.category === 'series' || a.title?.toLowerCase().includes('series') || a.title?.toLowerCase().includes('serial')) &&
         (a.subCategory === 'lists' || a.tags?.some((t) => t.toLowerCase().includes('list') || t.toLowerCase().includes('rekomendasi')))
     );
     if (lists.length > 0) return lists.slice(0, 5);
-    return publishedArticles.filter((a) => a.category === 'series').slice(0, 5);
+    const seriesCat = publishedArticles.filter(
+      (a) => a.category === 'series' || a.title?.toLowerCase().includes('series') || a.title?.toLowerCase().includes('serial')
+    );
+    if (seriesCat.length > 0) return seriesCat.slice(0, 5);
+    return publishedArticles.slice(0, 5);
   }, [publishedArticles]);
 
   const seriesListsArticles = useMemo(() => {
@@ -76,11 +80,15 @@ export const HomeWatchlistsBlock: React.FC = () => {
   const defaultAnimeListsArticles = useMemo(() => {
     const lists = publishedArticles.filter(
       (a) =>
-        a.category === 'anime' &&
+        (a.category === 'anime' || a.title?.toLowerCase().includes('anime')) &&
         (a.subCategory === 'lists' || a.tags?.some((t) => t.toLowerCase().includes('list') || t.toLowerCase().includes('rekomendasi')))
     );
     if (lists.length > 0) return lists.slice(0, 5);
-    return publishedArticles.filter((a) => a.category === 'anime').slice(0, 5);
+    const animeCat = publishedArticles.filter(
+      (a) => a.category === 'anime' || a.title?.toLowerCase().includes('anime')
+    );
+    if (animeCat.length > 0) return animeCat.slice(0, 5);
+    return publishedArticles.slice(0, 5);
   }, [publishedArticles]);
 
   const animeListsArticles = useMemo(() => {
@@ -129,6 +137,7 @@ export const HomeWatchlistsBlock: React.FC = () => {
               </h4>
               <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
                 <span className="truncate max-w-[90px]">{article.author?.name || 'Redaksi'}</span>
+                <span className="text-slate-600">·</span>
                 <span className="flex items-center gap-0.5 shrink-0">
                   <Clock className="w-2.5 h-2.5 text-slate-500" />
                   <span>{article.readTime}</span>

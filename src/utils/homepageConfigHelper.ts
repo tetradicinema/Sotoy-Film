@@ -534,7 +534,7 @@ export function resolveConfigArticles(
       const item = artMap.get(id);
       if (item) resolved.push(item);
     }
-    return resolved.length > 0 ? resolved : defaultArticles;
+    return resolved;
   }
 
   // Auto mode
@@ -578,5 +578,5 @@ export function resolveConfigArticles(
 
   const limit = config.limit && config.limit > 0 ? config.limit : 5;
   const sliced = filtered.slice(0, limit);
-  return sliced.length > 0 ? sliced : defaultArticles;
+  return sliced.length > 0 ? sliced : (config.category || config.subCategory ? [] : defaultArticles);
 }
