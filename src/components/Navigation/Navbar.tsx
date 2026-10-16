@@ -322,21 +322,6 @@ export const Navbar: React.FC = () => {
               <NotificationBell mode="global" />
             )}
 
-            {!(isAdmin || currentUser.role === 'admin') && (isWriter || currentUser.role === 'penulis_sotoy' || currentUser.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02') && (
-              <button
-                id="navbar-writer-mode-pill"
-                onClick={() => navigateTo('writer-dashboard')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all border shadow-sm ${
-                  currentView === 'writer-dashboard'
-                    ? 'bg-[#FF2E7E] text-white border-[#FF2E7E]'
-                    : 'bg-[#FF2E7E]/10 text-[#FF2E7E] border-[#FF2E7E]/30 hover:bg-[#FF2E7E] hover:text-white'
-                }`}
-                title="Dasbor CMS Penulis"
-              >
-                <PenSquare className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">DASBOR PENULIS</span>
-              </button>
-            )}
 
             {/* Unified Menu Trigger: Circular Profile Photo Avatar Button */}
             <div className="relative" ref={userMenuRef}>
