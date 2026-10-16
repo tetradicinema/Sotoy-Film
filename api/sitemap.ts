@@ -7,8 +7,8 @@ import {
   fetchWithTimeout,
   parseFirestoreFields,
   isArticlePublished,
-} from '../src/lib/edge/firestoreRest';
-import { slugify } from '../src/utils/slugify';
+} from '../src/lib/edge/firestoreRest.js';
+import { slugify } from '../src/utils/slugify.js';
 
 const BASE_URL = 'https://www.sotoyfilm.my.id';
 
