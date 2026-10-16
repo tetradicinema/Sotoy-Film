@@ -129,7 +129,6 @@ export const HomeWatchlistsBlock: React.FC = () => {
               </h4>
               <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
                 <span className="truncate max-w-[90px]">{article.author?.name || 'Redaksi'}</span>
-                <span className="text-slate-600">·</span>
                 <span className="flex items-center gap-0.5 shrink-0">
                   <Clock className="w-2.5 h-2.5 text-slate-500" />
                   <span>{article.readTime}</span>

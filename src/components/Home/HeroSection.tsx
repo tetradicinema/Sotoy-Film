@@ -45,13 +45,7 @@ const HeroActiveAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }
       <div className="flex items-center gap-2 text-xs text-slate-300">
         <span className="font-semibold text-white group-hover/author:text-[#FF2E7E] transition-colors truncate max-w-[140px] sm:max-w-none">
           {author.displayName || author.name}
-        </span>
-        {author.customBadge && (
-          <span className="text-[10px] text-white font-medium">
-            · {author.customBadge}
-          </span>
-        )}
-      </div>
+        </span>      </div>
     </div>
   );
 };

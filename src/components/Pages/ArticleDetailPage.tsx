@@ -94,22 +94,7 @@ export const ArticleDetailPage: React.FC = () => {
     userId?: string;
   }
 
-  const DEFAULT_COMMENTS: ArticleCommentItem[] = [
-    {
-      id: 'c-default-1',
-      name: 'Penggemar Sinema',
-      avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=200&q=80',
-      text: 'Analisis yang sangat tajam! Penulisan ulasannya mendalam.',
-      time: '1 jam lalu',
-    },
-    {
-      id: 'c-default-2',
-      name: 'Warga Sotoy',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-      text: 'Setuju banget sama poin artikel ini. Ulasannya sangat menarik.',
-      time: '3 jam lalu',
-    },
-  ];
+  const DEFAULT_COMMENTS: ArticleCommentItem[] = [];
 
   const [comments, setComments] = useState<ArticleCommentItem[]>(DEFAULT_COMMENTS);
 
@@ -121,7 +106,7 @@ export const ArticleDetailPage: React.FC = () => {
       commentsCol,
       (snapshot) => {
         if (snapshot.empty) {
-          setComments(DEFAULT_COMMENTS);
+          setComments([]);
           return;
         }
         const loaded: ArticleCommentItem[] = [];
@@ -137,11 +122,11 @@ export const ArticleDetailPage: React.FC = () => {
           });
         });
         loaded.sort((a, b) => b.id.localeCompare(a.id));
-        setComments(loaded.length > 0 ? loaded : DEFAULT_COMMENTS);
+        setComments(loaded.length > 0 ? loaded : []);
       },
       (err) => {
         console.warn('[ArticleComments] Error loading comments:', err.message);
-        setComments(DEFAULT_COMMENTS);
+        setComments([]);
       }
     );
     return () => unsub();
@@ -387,16 +372,6 @@ export const ArticleDetailPage: React.FC = () => {
                       title={`Kunjungi profil ${author.displayName || author.name}`}
                     >
                       {author.displayName || author.name}
-                    </span>
-
-                    {author.customBadge && (
-                      <span className="bg-[#FF2E7E]/20 text-[#FF2E7E] text-[10px] font-bold px-2 py-0.5 rounded uppercase border border-[#FF2E7E]/30">
-                        {author.customBadge}
-                      </span>
-                    )}
-
-                    <span className="text-[11px] text-slate-400 font-normal bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
-                      {author.articleCount} {author.articleCount === 1 ? 'artikel' : 'artikel'}
                     </span>
 
                     {(!isLoggedIn || author.id !== currentUser.id) && (
@@ -1029,22 +1004,28 @@ export const ArticleDetailPage: React.FC = () => {
 
           {/* Comments List */}
           <div className="space-y-3 pt-2">
-            {comments.map((c, i) => (
-              <div key={c.id || i} className="p-3.5 rounded-2xl bg-slate-900/50 border border-slate-800/80 space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <img
-                      src={c.avatar?.trim() || DEFAULT_AVATAR}
-                      alt={c.name}
-                      className="w-6 h-6 rounded-full object-cover border border-white/10"
-                    />
-                    <span className="font-bold text-white">{c.name}</span>
-                  </div>
-                  <span className="text-slate-500 text-[10px]">{c.time}</span>
-                </div>
-                <p className="text-slate-300 text-xs leading-relaxed pl-8">{c.text}</p>
+            {comments.length === 0 ? (
+              <div className="text-center py-6 text-slate-500 text-xs italic">
+                Belum ada komentar.
               </div>
-            ))}
+            ) : (
+              comments.map((c, i) => (
+                <div key={c.id || i} className="p-3.5 rounded-2xl bg-slate-900/50 border border-slate-800/80 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={c.avatar?.trim() || DEFAULT_AVATAR}
+                        alt={c.name}
+                        className="w-6 h-6 rounded-full object-cover border border-white/10"
+                      />
+                      <span className="font-bold text-white">{c.name}</span>
+                    </div>
+                    <span className="text-slate-500 text-[10px]">{c.time}</span>
+                  </div>
+                  <p className="text-slate-300 text-xs leading-relaxed pl-8">{c.text}</p>
+                </div>
+              ))
+            )}
           </div>
         </div>
 

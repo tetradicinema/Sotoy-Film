@@ -101,9 +101,7 @@ export const HomeFilmStudiesBlock: React.FC = () => {
                       <span className="text-[#FF2E7E] font-semibold">
                         {getFilmStudiesLabel(filmStudiesArticles[0].subCategory)}
                       </span>
-                      <span className="text-slate-600">·</span>
                       <span>{filmStudiesArticles[0].publishedAt}</span>
-                      <span className="text-slate-600">·</span>
                       <span>{filmStudiesArticles[0].readTime}</span>
                     </div>
 
@@ -161,7 +159,6 @@ export const HomeFilmStudiesBlock: React.FC = () => {
                       <span className="text-[#FF2E7E] font-medium">
                         {getFilmStudiesLabel(article.subCategory)}
                       </span>
-                      <span className="text-slate-600">·</span>
                       <span>{article.readTime}</span>
                     </div>
 

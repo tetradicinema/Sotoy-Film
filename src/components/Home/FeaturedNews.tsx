@@ -37,7 +37,6 @@ const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo
             <span className="text-[#FF2E7E] font-semibold uppercase tracking-wider text-[10px] truncate max-w-[80px]">
               {article.category}
             </span>
-            <span className="text-slate-600" aria-hidden="true">·</span>
             <span className="flex items-center gap-1 text-[10px]">
               <Clock className="w-2.5 h-2.5 text-slate-500" />
               <span>{article.readTime}</span>

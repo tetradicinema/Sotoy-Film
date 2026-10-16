@@ -79,18 +79,6 @@ const RelatedArticleAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: a
       <span className="text-[11px] font-bold text-slate-300 group-hover/author:text-[#FF2E7E] transition-colors">
         {author.displayName || author.name}
       </span>
-      {author.customBadge ? (
-        <span className="bg-pink-500/20 text-[#FF2E7E] text-[9px] font-black px-1.5 py-0.2 rounded border border-pink-500/30 uppercase">
-          {author.customBadge}
-        </span>
-      ) : (
-        <span className="bg-pink-500/20 text-[#FF2E7E] text-[9px] font-black px-1.5 py-0.2 rounded">
-          PENULIS
-        </span>
-      )}
-      <span className="text-[10px] text-slate-400 font-normal">
-        • {author.articleCount} artikel
-      </span>
     </div>
   );
 };

@@ -42,11 +42,8 @@ const HomeCategoryArticleItem: React.FC<HomeCategoryArticleItemProps> = ({ artic
             <span className="text-[#FF2E7E] font-semibold uppercase tracking-wider text-[11px]">
               {article.category}
             </span>
-            <span className="text-slate-600" aria-hidden="true">·</span>
             <span className="capitalize">{article.subCategory}</span>
-            <span className="text-slate-600" aria-hidden="true">·</span>
             <span className="text-[11px]">{article.publishedAt}</span>
-            <span className="text-slate-600" aria-hidden="true">·</span>
             <span className="flex items-center gap-1 text-[11px]">
               <Clock className="w-3 h-3 text-slate-500" />
               <span>{article.readTime}</span>

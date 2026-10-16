@@ -358,7 +358,6 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                     </h4>
                     <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
                       <span className="text-[#FF2E7E] font-medium">{rec.category}</span>
-                      <span className="text-slate-600">·</span>
                       <span>{rec.readTime}</span>
                     </div>
                   </div>

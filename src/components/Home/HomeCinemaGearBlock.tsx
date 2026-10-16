@@ -113,9 +113,7 @@ export const HomeCinemaGearBlock: React.FC = () => {
                   <div>
                     <div className="flex items-center gap-2 text-xs text-slate-400 mb-2">
                       <span className="text-[#FF2E7E] font-semibold">{gearArticles[0].subCategory}</span>
-                      <span className="text-slate-600">·</span>
                       <span>{gearArticles[0].publishedAt}</span>
-                      <span className="text-slate-600">·</span>
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3 text-slate-500" />
                         <span>{gearArticles[0].readTime}</span>
@@ -165,7 +163,6 @@ export const HomeCinemaGearBlock: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mb-1.5">
                       <span className="text-[#FF2E7E] font-medium">{article.subCategory}</span>
-                      <span className="text-slate-600">·</span>
                       <span>{article.readTime}</span>
                     </div>
                     <h4 className="font-display font-bold text-sm text-white group-hover:text-white line-clamp-2 leading-snug mb-1">

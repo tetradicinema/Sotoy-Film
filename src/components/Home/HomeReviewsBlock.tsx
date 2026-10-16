@@ -117,7 +117,6 @@ export const HomeReviewsBlock: React.FC = () => {
                     <div>
                       <div className="flex items-center gap-2 text-[11px] text-slate-400 mb-1">
                         <span className="text-[#FF2E7E] font-semibold">Verdict Film</span>
-                        <span className="text-slate-600">·</span>
                         <span>{article.readTime}</span>
                       </div>
 
@@ -179,7 +178,6 @@ export const HomeReviewsBlock: React.FC = () => {
                     <div>
                       <div className="flex items-center gap-2 text-[11px] text-slate-400 mb-1">
                         <span className="text-[#FF2E7E] font-semibold">Verdict Serial</span>
-                        <span className="text-slate-600">·</span>
                         <span>{article.readTime}</span>
                       </div>
 

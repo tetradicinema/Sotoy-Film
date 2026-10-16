@@ -40,7 +40,7 @@ export const ROLES_CONFIG: Record<UserRole, RoleConfigItem> = {
   si_paling_sotoy: {
     id: 'si_paling_sotoy',
     name: 'Si Paling Sotoy',
-    shortLabel: 'Top Critic',
+    shortLabel: 'Kritikus',
     fullTitle: 'Si Paling Sotoy (Kritikus Film)',
     description: 'Kritikus film terverifikasi & kurator tahunan',
     color: '#FFFFFF',

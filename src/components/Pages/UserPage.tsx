@@ -677,7 +677,7 @@ export const UserPage: React.FC = () => {
       badgeBg: style.badge,
       accent: style.color,
       roleName: style.name,
-      badgeText: targetUser.role === 'si_paling_sotoy' ? 'Top Critic' : style.name.split(' ').pop() || 'Warga',
+      badgeText: targetUser.role === 'si_paling_sotoy' ? 'Kritikus' : style.name.split(' ').pop() || 'Warga',
     };
   };
 
