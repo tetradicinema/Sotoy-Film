@@ -5552,8 +5552,60 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.warn('[AppContext] Cascade delete critic submissions notice:', err);
       }
 
-      // 7. Update in-memory state instantly
-      setAllUsers(prev => prev.filter(u => u.id !== userId));
+      // 7. Cascade delete follows where followerId == userId or followingId == userId
+      try {
+        const followsQuery1 = query(collection(db, 'follows'), where('followerId', '==', userId));
+        const followsSnap1 = await getDocs(followsQuery1);
+        const followPromises1 = followsSnap1.docs.map(d => deleteDoc(d.ref));
+        await Promise.all(followPromises1);
+      } catch (err) {
+        console.warn('[AppContext] Cascade delete follows (followerId) notice:', err);
+      }
+
+      try {
+        const followsQuery2 = query(collection(db, 'follows'), where('followingId', '==', userId));
+        const followsSnap2 = await getDocs(followsQuery2);
+        const followPromises2 = followsSnap2.docs.map(d => deleteDoc(d.ref));
+        await Promise.all(followPromises2);
+      } catch (err) {
+        console.warn('[AppContext] Cascade delete follows (followingId) notice:', err);
+      }
+
+      // 8. Update in-memory state instantly
+      setFollowingIds(prev => prev.filter(id => id !== userId));
+      setFollowersIds(prev => prev.filter(id => id !== userId));
+      setCurrentUser(prev => {
+        if (!prev) return prev;
+        const hasFollowing = prev.following?.includes(userId);
+        const hasFollowers = prev.followers?.includes(userId);
+        if (!hasFollowing && !hasFollowers) return prev;
+        const newFollowing = (prev.following || []).filter(id => id !== userId);
+        const newFollowers = (prev.followers || []).filter(id => id !== userId);
+        return {
+          ...prev,
+          following: newFollowing,
+          followers: newFollowers,
+          followingCount: Math.max(0, newFollowing.length),
+          followersCount: Math.max(0, newFollowers.length),
+        };
+      });
+      setAllUsers(prev => prev
+        .filter(u => u.id !== userId)
+        .map(u => {
+          const hadFollowing = u.following?.includes(userId);
+          const hadFollower = u.followers?.includes(userId);
+          if (!hadFollowing && !hadFollower) return u;
+          const newFollowing = (u.following || []).filter(id => id !== userId);
+          const newFollowers = (u.followers || []).filter(id => id !== userId);
+          return {
+            ...u,
+            following: newFollowing,
+            followers: newFollowers,
+            followingCount: typeof u.followingCount === 'number' ? Math.max(0, (u.followingCount || 0) - (hadFollowing ? 1 : 0)) : newFollowing.length,
+            followersCount: typeof u.followersCount === 'number' ? Math.max(0, (u.followersCount || 0) - (hadFollower ? 1 : 0)) : newFollowers.length,
+          };
+        })
+      );
       refreshAllUsers({ force: true });
       setRatings(prev => prev.filter(r => r.userId !== userId));
       setRawBuzzList(prev => prev.filter(b => b.author?.id !== userId && (b as any).authorId !== userId));
