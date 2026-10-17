@@ -23,6 +23,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
 import { RoleBadge } from '../Common/RoleBadge';
+import { LinkifiedText } from '../Common/LinkifiedText';
 import { FilmItem, Article, BuzzPost, User } from '../../types';
 import { searchTmdbFilms, TmdbSearchResultItem } from '../../utils/tmdbHelper';
 import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
@@ -1213,7 +1214,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                               </div>
 
                               <p className="text-xs text-slate-300 line-clamp-2 mt-1 leading-relaxed">
-                                <HighlightText text={buzz.content} query={searchQuery} />
+                                <LinkifiedText content={buzz.content} interactive={false} />
                               </p>
 
                               <div className="flex items-center gap-3 mt-1.5 text-[10px] text-slate-500 font-medium">

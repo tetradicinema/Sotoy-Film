@@ -10,7 +10,8 @@
     "build:server": "esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "NODE_ENV=production node dist/server.cjs",
     "lint": "tsc --noEmit",
-    "test:middleware": "tsx scripts/test-middleware.ts"
+    "test:middleware": "node --import tsx scripts/test-middleware.ts",
+    "test:linkify": "node --import tsx scripts/test-linkify.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

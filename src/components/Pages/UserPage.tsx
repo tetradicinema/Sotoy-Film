@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { LinkifiedText } from '../Common/LinkifiedText';
 import { useParams } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
@@ -901,7 +902,7 @@ export const UserPage: React.FC = () => {
           {Boolean(targetUser.bio) && (
             <div className="mt-1">
               <p className="text-slate-200 text-xs sm:text-sm leading-relaxed max-w-[680px]">
-                {targetUser.bio}
+                <LinkifiedText content={targetUser.bio} interactive={true} />
               </p>
             </div>
           )}
@@ -1205,7 +1206,7 @@ export const UserPage: React.FC = () => {
                         </div>
                       ) : (
                         <p className="text-neutral-200 text-xs sm:text-sm leading-relaxed whitespace-pre-line">
-                          {buzz.content}
+                          <LinkifiedText content={buzz.content} interactive={true} />
                         </p>
                       )}
 
@@ -1456,7 +1457,7 @@ export const UserPage: React.FC = () => {
                           </div>
                         ) : (
                           <p className="text-neutral-200 text-xs sm:text-sm leading-relaxed whitespace-pre-line pl-1">
-                            {reply.content}
+                            <LinkifiedText content={reply.content} interactive={true} />
                           </p>
                         )}
                       </div>
@@ -1563,7 +1564,7 @@ export const UserPage: React.FC = () => {
                       </div>
 
                       <p className="text-neutral-200 text-xs sm:text-sm leading-relaxed whitespace-pre-line">
-                        {buzz.content}
+                        <LinkifiedText content={buzz.content} interactive={true} />
                       </p>
 
                       <BuzzImageAttachment src={buzz.image} alt={`Foto postingan ${authorName}`} />

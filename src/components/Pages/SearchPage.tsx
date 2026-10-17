@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { LinkifiedText } from '../Common/LinkifiedText';
 import {
   Search,
   X,
@@ -786,7 +787,7 @@ export const SearchPage: React.FC = () => {
                               </div>
 
                               <p className="text-sm text-slate-200 mt-2 line-clamp-3 leading-relaxed">
-                                {buzz.content}
+                                <LinkifiedText content={buzz.content} interactive={false} />
                               </p>
 
                               {/* Tagged Film if any */}

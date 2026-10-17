@@ -5148,7 +5148,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Like Editorial Article in Firestore
   const likeArticle = async (articleId: string) => {
-    if (!requireVerified()) return;
+    if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') {
+      setLoginModalOpen(true);
+      showToast('Silakan masuk untuk menyukai artikel!');
+      return;
+    }
     const article = articles.find(a => a.id === articleId);
     if (!article) return;
 

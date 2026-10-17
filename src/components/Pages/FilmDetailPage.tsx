@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { LinkifiedText } from '../Common/LinkifiedText';
 import { useParams } from 'react-router-dom';
 import {
   Star,
@@ -1089,7 +1090,7 @@ export const FilmDetailPage: React.FC = () => {
 
                       {Boolean(rev.reviewText && rev.reviewText.trim()) && (
                         <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
-                          {rev.reviewText}
+                          <LinkifiedText content={rev.reviewText} interactive={true} />
                         </p>
                       )}
 

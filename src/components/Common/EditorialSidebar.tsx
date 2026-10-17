@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { LinkifiedText } from './LinkifiedText';
 import {
   Sparkles,
   MessageSquare,
@@ -218,7 +219,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                   )}
 
                   <p className="text-slate-300 text-xs leading-relaxed mb-2">
-                    {post.content}
+                    <LinkifiedText content={post.content} interactive={false} />
                   </p>
 
                   <div className="pt-2 border-t border-white/[0.06] space-y-2">

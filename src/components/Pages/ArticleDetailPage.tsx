@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { LinkifiedText } from '../Common/LinkifiedText';
 import { useParams } from 'react-router-dom';
 import { collection, doc, setDoc, onSnapshot, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
@@ -1022,7 +1023,9 @@ export const ArticleDetailPage: React.FC = () => {
                     </div>
                     <span className="text-slate-500 text-[10px]">{c.time}</span>
                   </div>
-                  <p className="text-slate-300 text-xs leading-relaxed pl-8">{c.text}</p>
+                  <p className="text-slate-300 text-xs leading-relaxed pl-8">
+                    <LinkifiedText content={c.text} interactive={true} />
+                  </p>
                 </div>
               ))
             )}

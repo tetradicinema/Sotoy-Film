@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { LinkifiedText } from '../Common/LinkifiedText';
 import { 
   ShieldAlert, 
   Trash2, 
@@ -346,7 +347,9 @@ export const AdminModeration: React.FC = () => {
                         <span className="text-[10px] text-slate-500">@{resolvedAuthor.handle || buzz.author.handle}</span>
                         <span className="text-[10px] text-slate-600">• {buzz.createdAt ? new Date(buzz.createdAt).toLocaleDateString('id-ID') : 'Baru'}</span>
                       </div>
-                      <p className="text-xs text-slate-300 line-clamp-3">{buzz.content}</p>
+                      <p className="text-xs text-slate-300 line-clamp-3">
+                        <LinkifiedText content={buzz.content} interactive={true} />
+                      </p>
                       <div className="flex items-center gap-3 text-[10px] text-slate-500 pt-1">
                         <span>{buzz.likes || 0} Suka</span>
                         <span>{buzz.repliesCount || buzz.replies?.length || 0} Balasan</span>
