@@ -2472,7 +2472,7 @@ export const UserPage: React.FC = () => {
                           </h5>
                           {Boolean(rev.reviewText && rev.reviewText.trim()) && (
                             <p className="text-neutral-200 text-xs sm:text-sm leading-relaxed">
-                              {rev.reviewText}
+                              <LinkifiedText content={rev.reviewText} interactive={true} />
                             </p>
                           )}
                         </div>
