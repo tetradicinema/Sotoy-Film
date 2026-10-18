@@ -86,12 +86,17 @@ service cloud.firestore {
     }
 
     // Entity validations
+    // NOTE: rules cannot validate list elements — the shape/size of data.links is checked
+    // here, but every link's URL/label/platform must be re-validated by the same sanitizer
+    // (sanitizeStoredLinks / validateProfileLinks in src/utils/profileLinks.ts) at render time.
     function isValidUser(data) {
       return data.keys().hasAll(['id', 'name', 'handle', 'role']) &&
         data.id is string && data.id.size() <= 128 &&
         data.name is string && data.name.size() <= 128 &&
         data.handle is string && data.handle.size() <= 128 &&
         data.handle.matches('^@[a-z0-9_]{3,30}$') &&
+        (!('links' in data) || (data.links is list && data.links.size() <= 5)) &&
+        (!('bio' in data) || (data.bio is string && data.bio.size() <= 300)) &&
         data.role in ['warga_sotoy', 'si_paling_sotoy', 'penulis_sotoy', 'admin'];
     }
 

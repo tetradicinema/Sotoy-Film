@@ -32,7 +32,8 @@ interface ProfileLinksEditorProps {
   disabled?: boolean;
 }
 
-const PLATFORM_META: Record<
+/** Platform metadata (label + lucide icon), reused by UserPage link chips. */
+export const PLATFORM_META: Record<
   ProfileLinkPlatform,
   { label: string; Icon: React.ComponentType<{ className?: string }> }
 > = {

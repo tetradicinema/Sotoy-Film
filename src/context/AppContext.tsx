@@ -33,8 +33,10 @@ import {
   HomepageSectionsConfig,
   HomeBlockKey,
   HomeSidebarWidgetKey,
+  ProfileLink,
 } from '../types';
 import { setCachedHomepageLayout, clearCachedHomepageLayout } from '../utils/homepageConfigHelper';
+import { validateProfileLinks, sanitizeStoredLinks } from '../utils/profileLinks';
 import {
   DEFAULT_FALLBACK_AUTHOR,
   INITIAL_BUZZ,
@@ -326,7 +328,7 @@ interface AppContextType {
   updateUserBio: (newBio: string) => Promise<void>;
   isHandleAvailable: (targetHandle: string, excludeUserId?: string) => Promise<{ available: boolean; normalized: string; reason?: string }>;
   generateUniqueHandle: (baseNameOrEmail: string, excludeUserId?: string) => Promise<string>;
-  updateUserProfile: (updates: { name?: string; handle?: string; avatar?: string; bio?: string }) => Promise<boolean>;
+  updateUserProfile: (updates: { name?: string; handle?: string; avatar?: string; bio?: string; links?: ProfileLink[] }) => Promise<boolean>;
   uploadProfilePhoto: (base64Data: string, fileName?: string, fileSize?: number, fileType?: string) => Promise<void>;
   files: UploadedFile[];
   userSettings: UserSettings;
@@ -446,7 +448,7 @@ interface AppContextType {
   toastMessage: string | null;
   toastType: 'success' | 'error' | 'info';
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
-  finishOnboarding: (updates: { name: string; handle: string; bio: string; avatar?: string; favoriteGenres?: string[] }) => Promise<boolean>;
+  finishOnboarding: (updates: { name: string; handle: string; bio: string; avatar?: string; favoriteGenres?: string[]; links?: ProfileLink[] }) => Promise<boolean>;
   // Notifications system
   notifications: NotificationItem[];
   unreadNotificationsCount: number;
@@ -458,6 +460,7 @@ interface AppContextType {
   // Admin Control Center Management
   updateUserRole: (userId: string, newRole: UserRole) => Promise<boolean>;
   toggleUserSuspension: (userId: string, isSuspended: boolean) => Promise<boolean>;
+  clearProfileLinks: (userId: string) => Promise<boolean>;
   bulkUpdateUserRoles: (userIds: string[], newRole: UserRole) => Promise<boolean>;
   bulkToggleUserSuspension: (userIds: string[], isSuspended: boolean) => Promise<boolean>;
   bulkUpdateArticles: (articleIds: string[], updates: Partial<Article>) => Promise<boolean>;
@@ -563,6 +566,8 @@ const normalizeUserRecords = (inputUsers: User[]): User[] => {
     const updatedUser: User = {
       ...u,
       handle: handle || '',
+      // Keep the profile links field; sanitize defensively against hand-crafted writes.
+      ...(u.links !== undefined ? { links: sanitizeStoredLinks(u.links) } : {}),
     };
 
     if (u.id === '0PCmaBvJrzeaQgpf3sSTC4mnsh02' || WRITER_UIDS.includes(u.id)) {
@@ -3230,9 +3235,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const updateUserProfile = async (updates: { name?: string; handle?: string; avatar?: string; bio?: string }): Promise<boolean> => {
+  const updateUserProfile = async (updates: { name?: string; handle?: string; avatar?: string; bio?: string; links?: ProfileLink[] }): Promise<boolean> => {
     if (!auth.currentUser) return false;
     const uid = auth.currentUser.uid;
+
+    // Validate profile links before touching anything else; refuse invalid data.
+    let validLinks: ProfileLink[] | undefined;
+    if (updates.links !== undefined) {
+      if (!Array.isArray(updates.links)) {
+        showToast('Format tautan profil tidak valid.', 'error');
+        return false;
+      }
+      const linkValidation = validateProfileLinks(updates.links);
+      const firstLinkError = Object.values(linkValidation.errors)[0];
+      if (firstLinkError) {
+        showToast(firstLinkError, 'error');
+        return false;
+      }
+      validLinks = linkValidation.valid;
+    }
 
     let targetHandle = normalizeHandle(currentUser.handle);
     let handleChanged = false;
@@ -3260,6 +3281,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       handle: targetHandle,
       avatar: updates.avatar?.trim() ? updates.avatar.trim() : currentUser.avatar,
       bio: updates.bio !== undefined ? updates.bio : currentUser.bio,
+      ...(validLinks !== undefined ? { links: validLinks } : {}),
     };
     const { email: _unused, ...userDocPayload } = updated;
     try {
@@ -3307,9 +3329,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     bio: string;
     avatar?: string;
     favoriteGenres?: string[];
+    links?: ProfileLink[];
   }): Promise<boolean> => {
     const cleanHandle = normalizeHandle(updates.handle);
     const uid = auth.currentUser ? auth.currentUser.uid : currentUser.id;
+
+    // Validate profile links before saving; refuse invalid data.
+    let validLinks: ProfileLink[] | undefined;
+    if (updates.links !== undefined) {
+      if (!Array.isArray(updates.links)) {
+        showToast('Format tautan profil tidak valid.', 'error');
+        return false;
+      }
+      const linkValidation = validateProfileLinks(updates.links);
+      const firstLinkError = Object.values(linkValidation.errors)[0];
+      if (firstLinkError) {
+        showToast(firstLinkError, 'error');
+        return false;
+      }
+      validLinks = linkValidation.valid;
+    }
 
     const validation = validateHandle(cleanHandle);
     if (!validation.isValid) {
@@ -3337,6 +3376,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       bio: cleanBio,
       avatar: cleanAvatar,
       hasFinishedOnboarding: true,
+      ...(validLinks !== undefined ? { links: validLinks } : {}),
     };
 
     if (updates.favoriteGenres && updates.favoriteGenres.length > 0) {
@@ -5447,6 +5487,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const clearProfileLinks = async (userId: string): Promise<boolean> => {
+    if (!isAdmin) {
+      showToast('Akses ditolak: Hanya admin yang dapat menghapus tautan profil.');
+      return false;
+    }
+    try {
+      const targetUser = allUsers.find(u => u.id === userId);
+      const targetLinks = targetUser?.links;
+      const clearedCount = Array.isArray(targetLinks) ? targetLinks.length : 0;
+      await setDoc(doc(db, 'users', userId), { links: [] }, { merge: true });
+      setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, links: [] } : u));
+      if (currentUser.id === userId) {
+        setCurrentUser(prev => ({ ...prev, links: [] }));
+      }
+      refreshAllUsers({ force: true });
+
+      await recordAuditLog({
+        action: 'profile_links_cleared',
+        targetId: userId,
+        targetName: targetUser?.name || 'Pengguna',
+        targetEmail: targetUser?.email || '',
+        targetRole: targetUser?.role,
+        targetType: 'user',
+        details: `Menghapus seluruh tautan profil (${clearedCount} tautan) milik "${targetUser?.name || userId}".`,
+        metadata: { targetUserId: userId, clearedCount }
+      });
+
+      showToast('Tautan profil pengguna berhasil dihapus.');
+      return true;
+    } catch (error) {
+      console.error('[AppContext] clearProfileLinks error:', error);
+      handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
+      return false;
+    }
+  };
+
   const deleteUserAccount = async (userId: string): Promise<boolean> => {
     console.log(`[AppContext] deleteUserAccount called for ${userId}`);
     if (!isAdmin) {
@@ -6518,6 +6594,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         checkAndSendMentions,
         updateUserRole,
         toggleUserSuspension,
+        clearProfileLinks,
         bulkUpdateUserRoles,
         bulkToggleUserSuspension,
         deleteUserAccount,

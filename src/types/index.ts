@@ -459,7 +459,8 @@ export type AuditLogActionType =
   | 'content_report_dismissed'
   | 'critic_approved'
   | 'critic_rejected'
-  | 'custom_badge_override';
+  | 'custom_badge_override'
+  | 'profile_links_cleared';
 
 export interface AuditLog {
   id: string;

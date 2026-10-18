@@ -45,9 +45,11 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { normalizeHandle, validateHandle } from '../../utils/handleHelpers';
+import { sanitizeStoredLinks } from '../../utils/profileLinks';
 import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
-import { SettingsSubPage, UserSettings } from '../../types';
+import { SettingsSubPage, UserSettings, ProfileLink } from '../../types';
 import { ProfilePhotoCropModal } from '../Common/ProfilePhotoCropModal';
+import ProfileLinksEditor from '../Common/ProfileLinksEditor';
 import { resolveAuthor } from '../../utils/resolveAuthor';
 
 export const SettingsPage: React.FC = () => {
@@ -84,6 +86,7 @@ export const SettingsPage: React.FC = () => {
   const [name, setName] = useState(currentUser.name || '');
   const [handle, setHandle] = useState(currentUser.handle || '');
   const [bio, setBio] = useState(currentUser.bio || '');
+  const [links, setLinks] = useState<ProfileLink[]>(() => sanitizeStoredLinks(currentUser.links));
   const [avatarPreview, setAvatarPreview] = useState(currentUser.avatar || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -155,6 +158,7 @@ export const SettingsPage: React.FC = () => {
       setName(currentUser.name || '');
       setHandle(currentUser.handle || '');
       setBio(currentUser.bio || '');
+      setLinks(sanitizeStoredLinks(currentUser.links));
       setAvatarPreview(currentUser.avatar || '');
       if (currentUser.email) {
         setCurrentEmail(currentUser.email);
@@ -306,6 +310,7 @@ export const SettingsPage: React.FC = () => {
       handle: clean,
       bio,
       avatar: avatarPreview,
+      links,
     });
   };
 
@@ -654,11 +659,21 @@ export const SettingsPage: React.FC = () => {
                     <label className="text-xs font-bold text-slate-300">Bio Sinematik & Filosofi Menonton</label>
                     <textarea
                       value={bio}
-                      onChange={e => setBio(e.target.value)}
+                      onChange={e => setBio(e.target.value)}maxLength={300}
                       rows={3}
                       className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] resize-none"
                       placeholder="Ceritakan seleramu tentang film, sutradara favorit, atau gaya visual yang kamu sukai..."
                     />
+                    <p className="text-[11px] text-slate-500 text-right">{bio.length}/300</p>
+                  </div>
+
+                  {/* Tautan Profil (profile links) */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-300">Tautan Profil</label>
+                    <p className="text-[11px] text-slate-500">
+                      Tautkan media sosial atau situs pribadimu (maks. 5 tautan, https). Tautan akan tampil di halaman profil kamu.
+                    </p>
+                    <ProfileLinksEditor value={links} onChange={setLinks} max={5} />
                   </div>
 
                   <div className="flex justify-end pt-2">

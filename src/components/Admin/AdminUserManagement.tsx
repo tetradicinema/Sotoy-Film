@@ -23,6 +23,7 @@ import {
   UserCheck,
   Layers,
   Trash2,
+  Unlink,
   AlertTriangle,
   RefreshCw,
   Info
@@ -41,6 +42,7 @@ export const AdminUserManagement: React.FC = () => {
     bulkToggleUserSuspension,
     deleteUserAccount,
     bulkDeleteUserAccounts,
+    clearProfileLinks,
     showToast, 
     currentUser, 
     navigateTo,
@@ -83,6 +85,7 @@ export const AdminUserManagement: React.FC = () => {
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
   const [isBulkSuspendModalOpen, setIsBulkSuspendModalOpen] = useState<{ isOpen: boolean; isSuspending: boolean } | null>(null);
   const [userToSuspend, setUserToSuspend] = useState<{ user: User; isSuspending: boolean } | null>(null);
+  const [userToClearLinks, setUserToClearLinks] = useState<User | null>(null);
   const [isProcessingAction, setIsProcessingAction] = useState(false);
 
   // Filtered Users List
@@ -223,6 +226,19 @@ export const AdminUserManagement: React.FC = () => {
     try {
       await toggleUserSuspension(userToSuspend.user.id, userToSuspend.isSuspending);
       setUserToSuspend(null);
+    } finally {
+      setIsProcessingAction(false);
+    }
+  };
+
+  const handleExecuteClearLinks = async () => {
+    if (!userToClearLinks) return;
+    setIsProcessingAction(true);
+    try {
+      const success = await clearProfileLinks(userToClearLinks.id);
+      if (success) {
+        setUserToClearLinks(null);
+      }
     } finally {
       setIsProcessingAction(false);
     }
@@ -672,6 +688,17 @@ export const AdminUserManagement: React.FC = () => {
                             )}
                           </button>
 
+                          {(user.links?.length ?? 0) > 0 && (
+                            <button
+                              onClick={() => setUserToClearLinks(user)}
+                              className="p-1.5 rounded-lg border bg-slate-800 hover:bg-amber-500/20 text-slate-400 hover:text-amber-400 border-slate-700 hover:border-amber-500/30 text-xs font-bold transition-colors flex items-center gap-1"
+                              title="Hapus Tautan Profil (Links)"
+                            >
+                              <Unlink className="w-3 h-3" />
+                              <span className="hidden lg:inline text-[10px]">Hapus Tautan</span>
+                            </button>
+                          )}
+
                           <button
                             onClick={() => setUserToDelete(user)}
                             className="p-1.5 rounded-lg border bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 border-slate-700 hover:border-red-500/30 text-xs font-bold transition-colors flex items-center gap-1"
@@ -1043,6 +1070,54 @@ export const AdminUserManagement: React.FC = () => {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* MODAL 5: CLEAR PROFILE LINKS CONFIRMATION */}
+      {userToClearLinks && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-[#171717] border border-white/10 rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-amber-500/20 bg-amber-500/10 flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border bg-amber-500/20 text-amber-400 border-amber-500/30">
+                <Unlink className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-display font-black text-lg text-white">Hapus Tautan Profil</h3>
+                <p className="text-slate-400 text-xs mt-1">
+                  Seluruh tautan profil milik "{userToClearLinks.name}" ({userToClearLinks.links?.length || 0} tautan) akan dihapus dari halaman profilnya.
+                </p>
+              </div>
+              <button
+                onClick={() => setUserToClearLinks(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/[0.05] transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setUserToClearLinks(null)}
+                disabled={isProcessingAction}
+                className="px-4 py-2.5 rounded-xl border border-white/10 text-slate-300 hover:bg-white/[0.05] text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteClearLinks}
+                disabled={isProcessingAction}
+                className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold shadow-sm flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+              >
+                {isProcessingAction ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Unlink className="w-3.5 h-3.5" />
+                )}
+                <span>Konfirmasi Hapus Tautan</span>
+              </button>
             </div>
           </div>
         </div>

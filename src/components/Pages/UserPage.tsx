@@ -73,6 +73,9 @@ import { getUserRankInRole } from '../../utils/leaderboard';
 import { SotoyScoreSparkline } from '../Common/SotoyScoreSparkline';
 import { MentionInput } from '../Common/MentionInput';
 import { resolveAuthor } from '../../utils/resolveAuthor';
+import { sanitizeStoredLinks } from '../../utils/profileLinks';
+import { getHost } from '../../utils/safeUrl';
+import { PLATFORM_META } from '../Common/ProfileLinksEditor';
 
 const AdminDashboard = React.lazy(() =>
   import('../Admin/AdminDashboard').then(m => ({ default: m.AdminDashboard }))
@@ -684,6 +687,9 @@ export const UserPage: React.FC = () => {
 
   const roleTheme = getRoleTheme();
 
+  // Profile links — sanitized at render time (defense in depth against hand-crafted writes)
+  const profileLinks = sanitizeStoredLinks(targetUser.links);
+
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-white py-4 sm:py-6">
       <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 pt-2 pb-12 space-y-6">
@@ -904,6 +910,44 @@ export const UserPage: React.FC = () => {
               <p className="text-slate-200 text-xs sm:text-sm leading-relaxed max-w-[680px]">
                 <LinkifiedText content={targetUser.bio} interactive={true} />
               </p>
+            </div>
+          )}
+
+          {/* Profile Links */}
+          {profileLinks.length > 0 && (
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              {profileLinks.map(link => {
+                const meta = PLATFORM_META[link.platform] ?? PLATFORM_META.website;
+                const Icon = meta.Icon;
+                const host = getHost(link.url).replace(/^www\./, '') || link.url;
+                return (
+                  <a
+                    key={link.id}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer nofollow ugc me"
+                    title={link.label ? `${link.label} — ${host}` : host}
+                    className="inline-flex items-center gap-1.5 max-w-full px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs text-slate-300 hover:border-[#FF2E7E]/60 hover:text-white transition-colors"
+                  >
+                    <Icon className="w-3.5 h-3.5 text-[#FF2E7E] shrink-0" />
+                    <span className="truncate">{link.label || host}</span>
+                  </a>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Own profile with no links yet → subtle shortcut to settings */}
+          {isOwnProfile && profileLinks.length === 0 && (
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={() => navigateTo('settings', { settingsTab: 'profile' })}
+                className="inline-flex items-center gap-1.5 text-[11px] text-slate-500 hover:text-[#FF2E7E] transition-colors cursor-pointer"
+              >
+                <Plus className="w-3 h-3" />
+                <span>Tambah tautan</span>
+              </button>
             </div>
           )}
         </header>
