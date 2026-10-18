@@ -37,6 +37,7 @@ import {
 } from '../types';
 import { setCachedHomepageLayout, clearCachedHomepageLayout } from '../utils/homepageConfigHelper';
 import { validateProfileLinks, sanitizeStoredLinks } from '../utils/profileLinks';
+import { TERMS_VERSION } from '../utils/onboardingHelpers';
 import {
   DEFAULT_FALLBACK_AUTHOR,
   INITIAL_BUZZ,
@@ -448,7 +449,10 @@ interface AppContextType {
   toastMessage: string | null;
   toastType: 'success' | 'error' | 'info';
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
-  finishOnboarding: (updates: { name: string; handle: string; bio: string; avatar?: string; favoriteGenres?: string[]; links?: ProfileLink[] }) => Promise<boolean>;
+  finishOnboarding: (updates: { name: string; handle: string; bio: string; avatar?: string; favoriteGenres?: string[]; links?: ProfileLink[]; acceptedTerms: boolean }) => Promise<boolean>;
+  // Last finishOnboarding failure: 'handle_taken' → wizard returns to step 1,
+  // 'save_failed' → stay on the wizard and allow a retry.
+  onboardingError: 'handle_taken' | 'save_failed' | null;
   // Notifications system
   notifications: NotificationItem[];
   unreadNotificationsCount: number;
@@ -606,6 +610,38 @@ const hydrateCachedUsers = (): { users: User[]; ts: number } | null => {
   return null;
 };
 
+// ---------------------------------------------------------------------------
+// Post-login redirect: remember the internal page a visitor wanted before the
+// login modal opened or they were gated, so finishOnboarding can bring them
+// back afterwards. Only same-origin paths are ever stored — never external URLs.
+// ---------------------------------------------------------------------------
+const POST_LOGIN_REDIRECT_KEY = 'sotoy_post_login_redirect';
+
+const isSafeInternalPath = (value: string): boolean =>
+  value.startsWith('/') && !value.startsWith('//') && !value.includes('://');
+
+const rememberPostLoginRedirect = () => {
+  try {
+    const path = window.location.pathname;
+    // Never store the wizard itself (would loop back into onboarding).
+    if (!isSafeInternalPath(path) || path === '/onboarding') return;
+    sessionStorage.setItem(POST_LOGIN_REDIRECT_KEY, path);
+  } catch {
+    // sessionStorage unavailable — best effort only.
+  }
+};
+
+const consumePostLoginRedirect = (): string | null => {
+  try {
+    const raw = sessionStorage.getItem(POST_LOGIN_REDIRECT_KEY);
+    sessionStorage.removeItem(POST_LOGIN_REDIRECT_KEY);
+    if (!raw || !isSafeInternalPath(raw) || raw === '/onboarding') return null;
+    return raw;
+  } catch {
+    return null;
+  }
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Authentication & Session States
   const [authStatus, setAuthStatus] = useState<AuthStatus>('loading');
@@ -619,6 +655,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAuthStatus(loggedIn ? 'authenticated' : 'guest');
   }, []);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [onboardingError, setOnboardingError] = useState<'handle_taken' | 'save_failed' | null>(null);
   const [isComposeBuzzOpen, setIsComposeBuzzOpen] = useState(false);
   const [buzzPrefill, setBuzzPrefill] = useState<{
     content?: string;
@@ -853,6 +890,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // User Profile Visiting state
   const [viewedUserId, setViewedUserId] = useState<string | null>(null);
 
+  // Remember the page a visitor wanted whenever the login modal opens for a
+  // logged-out visitor (or they are gated into login), so it can be restored
+  // once onboarding has finished.
+  useEffect(() => {
+    if (loginModalOpen && !isLoggedIn) rememberPostLoginRedirect();
+  }, [loginModalOpen, isLoggedIn]);
+
   // Synchronize browser URL location to currentView and relevant entity IDs on page load / route change
   useEffect(() => {
     const path = location.pathname;
@@ -930,7 +974,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } else if (path === '/onboarding') {
       setCurrentView('onboarding');
     }
-  }, [location.pathname, films, articles, currentUser.id]);
+
+    // Onboarding gate (route/view handling): while the signed-in user has not
+    // finished onboarding (strictly false — legacy users with undefined count
+    // as finished), only the wizard itself and the legal pages opened from it
+    // are reachable. Redirect any other route so the gate also holds on direct
+    // page loads and browser back/forward, not just after login.
+    if (
+      auth.currentUser &&
+      currentUser.hasFinishedOnboarding === false &&
+      path !== '/onboarding' &&
+      path !== '/syarat-ketentuan' && path !== '/terms-conditions' &&
+      path !== '/kebijakan-privasi' && path !== '/privacy-policy'
+    ) {
+      setCurrentView('onboarding');
+      // Replace so the blocked route does not linger in the history stack.
+      navigate('/onboarding', { replace: true });
+      return;
+    }
+  }, [location.pathname, films, articles, currentUser.id, currentUser.hasFinishedOnboarding]);
 
   // Sync basic preferences to local storage
   useEffect(() => {
@@ -3330,7 +3392,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     avatar?: string;
     favoriteGenres?: string[];
     links?: ProfileLink[];
+    acceptedTerms: boolean;
   }): Promise<boolean> => {
+    // A fresh attempt clears any previous failure shown to the wizard.
+    setOnboardingError(null);
+
+    // Terms acceptance is mandatory — refuse without it.
+    if (updates.acceptedTerms !== true) {
+      showToast('Kamu harus menyetujui Syarat & Ketentuan dan Kebijakan Privasi terlebih dahulu.', 'error');
+      return false;
+    }
+
     const cleanHandle = normalizeHandle(updates.handle);
     const uid = auth.currentUser ? auth.currentUser.uid : currentUser.id;
 
@@ -3360,11 +3432,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (handleChanged) {
       const check = await isHandleAvailable(cleanHandle, uid);
       if (!check.available) {
+        setOnboardingError('handle_taken');
         showToast(check.reason || `Handle ${cleanHandle} sudah digunakan. Silakan pilih handle yang berbeda.`);
         return false;
       }
     }
 
+    const nowIso = new Date().toISOString();
     const cleanName = updates.name.trim();
     const cleanBio = updates.bio.trim();
     const cleanAvatar = updates.avatar || currentUser.avatar;
@@ -3376,54 +3450,73 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       bio: cleanBio,
       avatar: cleanAvatar,
       hasFinishedOnboarding: true,
+      termsAcceptedAt: nowIso,
+      termsVersion: TERMS_VERSION,
+      onboardingCompletedAt: nowIso,
       ...(validLinks !== undefined ? { links: validLinks } : {}),
     };
 
+    // Persist to Firestore first. Only apply the local "finished" state after
+    // the write actually succeeded — a failed save must never look like a
+    // success (the user would be locked out of retrying with data intact).
+    if (!auth.currentUser) {
+      setOnboardingError('save_failed');
+      showToast('Sesi kamu sudah berakhir. Silakan masuk kembali untuk menyimpan progres onboarding.', 'error');
+      return false;
+    }
+
+    const userDocRef = doc(db, 'users', uid);
+    const { email: _unused, ...userDocPayload } = updatedUser;
+    try {
+      if (handleChanged) {
+        const oldHId = normalizeHandle(currentUser.handle).replace(/^@/, '');
+        const newHId = cleanHandle.replace(/^@/, '');
+        await runTransaction(db, async (transaction) => {
+          const newHandleRef = doc(db, 'handles', newHId);
+          const newHandleSnap = await transaction.get(newHandleRef);
+          if (newHandleSnap.exists() && newHandleSnap.data().uid !== uid) {
+            throw new Error('HANDLE_TAKEN');
+          }
+          if (oldHId && oldHId !== newHId) {
+            const oldHandleRef = doc(db, 'handles', oldHId);
+            const oldHandleSnap = await transaction.get(oldHandleRef);
+            if (oldHandleSnap.exists() && oldHandleSnap.data().uid === uid) {
+              transaction.delete(oldHandleRef);
+            }
+          }
+          transaction.set(newHandleRef, { uid, createdAt: new Date().toISOString() });
+          transaction.set(userDocRef, userDocPayload, { merge: true });
+        });
+      } else {
+        await setDoc(userDocRef, userDocPayload, { merge: true });
+      }
+    } catch (err: any) {
+      if (err?.message === 'HANDLE_TAKEN') {
+        setOnboardingError('handle_taken');
+        showToast(`Handle ${cleanHandle} sudah digunakan. Silakan pilih handle yang berbeda.`);
+        return false;
+      }
+      console.error('[Onboarding] Gagal menyimpan ke Firestore:', err);
+      setOnboardingError('save_failed');
+      showToast('Gagal menyimpan progres onboarding. Periksa koneksi internetmu lalu coba lagi.', 'error');
+      return false;
+    }
+
+    // Success — now (and only now) apply everything locally.
     if (updates.favoriteGenres && updates.favoriteGenres.length > 0) {
       updateUserSettings({ favoriteGenres: updates.favoriteGenres });
     }
-
-    if (auth.currentUser) {
-      const userDocRef = doc(db, 'users', uid);
-      const { email: _unused, ...userDocPayload } = updatedUser;
-      try {
-        if (handleChanged) {
-          const oldHId = normalizeHandle(currentUser.handle).replace(/^@/, '');
-          const newHId = cleanHandle.replace(/^@/, '');
-          await runTransaction(db, async (transaction) => {
-            const newHandleRef = doc(db, 'handles', newHId);
-            const newHandleSnap = await transaction.get(newHandleRef);
-            if (newHandleSnap.exists() && newHandleSnap.data().uid !== uid) {
-              throw new Error('HANDLE_TAKEN');
-            }
-            if (oldHId && oldHId !== newHId) {
-              const oldHandleRef = doc(db, 'handles', oldHId);
-              const oldHandleSnap = await transaction.get(oldHandleRef);
-              if (oldHandleSnap.exists() && oldHandleSnap.data().uid === uid) {
-                transaction.delete(oldHandleRef);
-              }
-            }
-            transaction.set(newHandleRef, { uid, createdAt: new Date().toISOString() });
-            transaction.set(userDocRef, userDocPayload, { merge: true });
-          });
-        } else {
-          await setDoc(userDocRef, userDocPayload, { merge: true });
-        }
-      } catch (err: any) {
-        if (err?.message === 'HANDLE_TAKEN') {
-          showToast(`Handle ${cleanHandle} sudah digunakan. Silakan pilih handle yang berbeda.`);
-          return false;
-        }
-        console.warn('[Onboarding] Error saving to Firestore, continuing with local state:', err);
-      }
-    }
-
     setCurrentUser(updatedUser);
     setAllUsers(prev => prev.map(u => u.id === uid ? updatedUser : u));
     refreshAllUsers({ force: true });
     localStorage.setItem('sotoy_current_user', JSON.stringify(updatedUser));
-    showToast('Profil kamu sudah siap! Selamat datang di Sotoy Film. 🎬');
-    setCurrentView('home');
+    showToast('Selamat datang di Sotoy Film!', 'success');
+
+    // Return the user to the page they wanted before login/onboarding (if any),
+    // otherwise go home. The URL change also syncs currentView via the route
+    // effect above; replace keeps the wizard out of the back stack.
+    const targetPath = consumePostLoginRedirect() || '/';
+    navigate(targetPath, { replace: true });
     return true;
   };
 
@@ -4273,6 +4366,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       collectionId?: string;
     }
   ) => {
+    // Onboarding gate: while the signed-in user has not finished onboarding,
+    // only the wizard and the legal pages are reachable. (Logged-out visitors
+    // and legacy users without the flag are unaffected.)
+    if (
+      auth.currentUser &&
+      currentUser.hasFinishedOnboarding === false &&
+      view !== 'onboarding' &&
+      view !== 'terms-conditions' &&
+      view !== 'privacy-policy'
+    ) {
+      setViewHistory(prev =>
+        prev[prev.length - 1] !== 'onboarding' ? [...prev, 'onboarding'] : prev
+      );
+      setCurrentView('onboarding');
+      if (location.pathname !== '/onboarding') {
+        navigate('/onboarding', { replace: true });
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     setViewHistory(prev => {
       if (prev[prev.length - 1] !== view) {
         return [...prev, view];
@@ -6585,6 +6699,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toastType,
         showToast,
         finishOnboarding,
+        onboardingError,
         notifications,
         unreadNotificationsCount,
         sendNotification,

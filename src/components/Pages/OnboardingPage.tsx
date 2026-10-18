@@ -91,6 +91,7 @@ export const OnboardingPage: React.FC = () => {
   const {
     currentUser,
     finishOnboarding,
+    onboardingError,
     uploadProfilePhoto,
     showToast,
     isHandleAvailable,
@@ -169,6 +170,9 @@ export const OnboardingPage: React.FC = () => {
     message?: string;
   } | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  // Bumped when a submit-time handle conflict is reported so the debounced
+  // availability check re-runs for the handle the user already typed.
+  const [handleCheckNonce, setHandleCheckNonce] = useState(0);
 
   // Profile photo cropping state
   const [cropModalOpen, setCropModalOpen] = useState(false);
@@ -288,7 +292,7 @@ export const OnboardingPage: React.FC = () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [handle, currentUser.id, isHandleAvailable]);
+  }, [handle, currentUser.id, isHandleAvailable, handleCheckNonce]);
 
   // ---------------------------------------------------------------------------
   // Persist the wizard state to sessionStorage (cleared only on success)
@@ -356,6 +360,21 @@ export const OnboardingPage: React.FC = () => {
       setAvatar(currentUser.avatar);
     }
   }, [currentUser.avatar]);
+
+  // Submit-time handle conflict (taken meanwhile): go back to step 1 with a
+  // clear message and re-run the availability check for the typed handle.
+  useEffect(() => {
+    if (onboardingError !== 'handle_taken') return;
+    setStep(1);
+    setHandleCheckNonce(n => n + 1);
+    showToast(
+      `Handle ${normalizeHandle(handle)} sudah digunakan. Silakan pilih handle yang berbeda.`,
+      'error'
+    );
+    // Deliberately depend only on onboardingError so the toast fires once per
+    // failed attempt (showToast gets a fresh identity every render).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onboardingError]);
 
   // 60 s resend cooldown (EmailVerificationBanner pattern)
   useEffect(() => {
@@ -470,11 +489,10 @@ export const OnboardingPage: React.FC = () => {
         avatar: avatar.trim() || undefined,
         favoriteGenres: selectedGenres,
         links: filledLinks,
-        // TODO(Stage C): once AppContext.finishOnboarding accepts them, also pass
-        //   termsAcceptedAt: new Date().toISOString(),
-        //   termsVersion: TERMS_VERSION (from src/utils/onboardingHelpers.ts),
-        //   onboardingCompletedAt: new Date().toISOString(),
-        // and persist them to the user doc together with hasFinishedOnboarding.
+        acceptedTerms,
+        // The terms timestamps (termsAcceptedAt/termsVersion/onboardingCompletedAt)
+        // are stamped server-side by AppContext.finishOnboarding together with
+        // hasFinishedOnboarding once the Firestore write succeeds.
       });
 
       if (ok) {
