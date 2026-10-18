@@ -12,7 +12,39 @@ export function normalizeHandle(handle: string): string {
   return cleaned ? `@${cleaned}` : '';
 }
 
-const RESERVED_HANDLES = new Set([
+/**
+ * Reserved handles for the platform (stored WITHOUT '@', lowercase).
+ * Used by onboarding handle suggestions and new-account checks.
+ * NOTE: intentionally NOT wired into validateHandle — existing users must
+ * keep validating exactly as before.
+ */
+export const RESERVED_HANDLES: readonly string[] = [
+  'admin',
+  'administrator',
+  'sotoy',
+  'sotoyfilm',
+  'official',
+  'support',
+  'help',
+  'moderator',
+  'mod',
+  'staff',
+  'team',
+  'system',
+  'root',
+  'api',
+  'www',
+  'login',
+  'signup',
+  'null',
+  'undefined',
+];
+
+/**
+ * Legacy reserved handles (stored WITH '@') that validateHandle has always
+ * rejected. Kept unchanged so existing users are not affected.
+ */
+const LEGACY_RESERVED_HANDLES = new Set([
   '@tamu',
   '@guest',
   '@system',
@@ -21,9 +53,16 @@ const RESERVED_HANDLES = new Set([
   '@null',
 ]);
 
+/**
+ * True when the handle is reserved by the platform.
+ * Accepts the handle with or without a leading '@' and is case-insensitive.
+ * Covers both the exported RESERVED_HANDLES list and the legacy system set.
+ */
 export function isReservedHandle(handle: string): boolean {
   const normalized = normalizeHandle(handle);
-  return RESERVED_HANDLES.has(normalized);
+  if (!normalized) return false;
+  if (LEGACY_RESERVED_HANDLES.has(normalized)) return true;
+  return RESERVED_HANDLES.includes(normalized.slice(1));
 }
 
 /**
@@ -54,7 +93,9 @@ export function validateHandle(handle: string): { isValid: boolean; error?: stri
     return { isValid: false, error: 'Handle hanya boleh berisi huruf, angka, dan underscore (_).' };
   }
 
-  if (isReservedHandle(normalized)) {
+  // Legacy check only — validateHandle must behave exactly as before, so
+  // handles like '@admin' that existing users may already own stay valid here.
+  if (LEGACY_RESERVED_HANDLES.has(normalized)) {
     return { isValid: false, error: 'Handle ini dicadangkan oleh sistem. Silakan pilih handle yang berbeda.' };
   }
 

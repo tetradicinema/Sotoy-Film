@@ -12,7 +12,8 @@
     "lint": "tsc --noEmit",
     "test:middleware": "node --import tsx scripts/test-middleware.ts",
     "test:linkify": "node --import tsx scripts/test-linkify.ts",
-    "test:profile-links": "node --import tsx scripts/test-profile-links.ts"
+    "test:profile-links": "node --import tsx scripts/test-profile-links.ts",
+    "test:onboarding": "node --import tsx scripts/test-onboarding.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -43,6 +43,9 @@ export interface User {
   watchlist?: string[]; // Saved film IDs
   savedArticles?: string[]; // Saved article IDs
   links?: ProfileLink[]; // Profile links (max 5, validated via src/utils/profileLinks)
+  termsAcceptedAt?: string; // ISO timestamp of when the user accepted the current Terms
+  termsVersion?: string; // TERMS_VERSION at the time of acceptance (e.g. '2026-10')
+  onboardingCompletedAt?: string; // ISO timestamp of when onboarding finished
   interestProfile?: InterestProfile;
   lastInterestDecay?: string;
   isSuspended?: boolean;
