@@ -11,7 +11,8 @@
     "start": "NODE_ENV=production node dist/server.cjs",
     "lint": "tsc --noEmit",
     "test:middleware": "node --import tsx scripts/test-middleware.ts",
-    "test:linkify": "node --import tsx scripts/test-linkify.ts"
+    "test:linkify": "node --import tsx scripts/test-linkify.ts",
+    "test:profile-links": "node --import tsx scripts/test-profile-links.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

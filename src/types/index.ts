@@ -2,6 +2,25 @@
 
 export type UserRole = 'warga_sotoy' | 'si_paling_sotoy' | 'penulis_sotoy' | 'admin';
 
+export type ProfileLinkPlatform =
+  | 'instagram'
+  | 'tiktok'
+  | 'youtube'
+  | 'x'
+  | 'facebook'
+  | 'threads'
+  | 'linkedin'
+  | 'github'
+  | 'spotify'
+  | 'website';
+
+export interface ProfileLink {
+  id: string;
+  url: string;
+  label?: string;
+  platform: ProfileLinkPlatform;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -23,6 +42,7 @@ export interface User {
   hasFinishedOnboarding?: boolean;
   watchlist?: string[]; // Saved film IDs
   savedArticles?: string[]; // Saved article IDs
+  links?: ProfileLink[]; // Profile links (max 5, validated via src/utils/profileLinks)
   interestProfile?: InterestProfile;
   lastInterestDecay?: string;
   isSuspended?: boolean;
