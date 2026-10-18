@@ -42,7 +42,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { MainCategory, SubCategory, FilmItem, ArticleVersion } from '../../types';
 import { db } from '../../lib/firebase';
-import { doc, setDoc, deleteDoc, onSnapshot, collection, query, where, orderBy } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, query, where, orderBy } from 'firebase/firestore';
 import { RichTextEditor } from '../CMS/RichTextEditor';
 import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 
@@ -231,13 +231,96 @@ export const WriteArticlePage: React.FC = () => {
     ).slice(0, 8);
   }, [films, filmSearchQuery]);
 
-  // Populate data if editing an existing article
+  const loadedArticleIdRef = useRef<string | null>(null);
+  const editingIdRef = useRef<string | null>(editingId);
+  useEffect(() => {
+    editingIdRef.current = editingId;
+  }, [editingId]);
+
+  const creatingDraftPromiseRef = useRef<Promise<string | null> | null>(null);
+  const lastSavedHashRef = useRef<string>('');
+  const isSavingRef = useRef<boolean>(false);
+  const autosaveTimeoutRef = useRef<any>(null);
+  const autosaveIntervalRef = useRef<any>(null);
+  const autosaveErrorRetryCountRef = useRef<number>(0);
+
+  const [autosaveStatus, setAutosaveStatus] = useState<'clean' | 'dirty' | 'saving' | 'saved' | 'error'>('clean');
+  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
+  const [autosaveBackupData, setAutosaveBackupData] = useState<any | null>(null);
+
+  const latestFormRef = useRef({
+    title,
+    customSlug,
+    isSlugManuallyEdited,
+    category,
+    subCategory,
+    excerpt,
+    content,
+    coverImage,
+    tagsInput,
+    readTime,
+    selectedFilmIds,
+    seoTitle,
+    metaDescription,
+    ogImage,
+    seoKeywords,
+    articleStatus,
+    publishOption,
+    scheduledAtDate,
+  });
+
+  useEffect(() => {
+    latestFormRef.current = {
+      title,
+      customSlug,
+      isSlugManuallyEdited,
+      category,
+      subCategory,
+      excerpt,
+      content,
+      coverImage,
+      tagsInput,
+      readTime,
+      selectedFilmIds,
+      seoTitle,
+      metaDescription,
+      ogImage,
+      seoKeywords,
+      articleStatus,
+      publishOption,
+      scheduledAtDate,
+    };
+  }, [
+    title,
+    customSlug,
+    isSlugManuallyEdited,
+    category,
+    subCategory,
+    excerpt,
+    content,
+    coverImage,
+    tagsInput,
+    readTime,
+    selectedFilmIds,
+    seoTitle,
+    metaDescription,
+    ogImage,
+    seoKeywords,
+    articleStatus,
+    publishOption,
+    scheduledAtDate,
+  ]);
+
+  // Populate data if editing an existing article (once per selectedArticleId)
   useEffect(() => {
     if (selectedArticleId) {
+      if (loadedArticleIdRef.current === selectedArticleId) return;
       const found = articles.find(a => a.id === selectedArticleId);
       if (found) {
+        loadedArticleIdRef.current = found.id;
         setIsEditMode(true);
         setEditingId(found.id);
+        editingIdRef.current = found.id;
         setTitle(found.title || '');
         if (found.slug) {
           setCustomSlug(found.slug);
@@ -278,22 +361,326 @@ export const WriteArticlePage: React.FC = () => {
         } else {
           setSelectedFilmIds([]);
         }
-        return;
+
+        if (validStatus === 'published' || validStatus === 'scheduled') {
+          const backupRef = doc(db, 'articles', found.id, 'autosaves', currentUser.id);
+          getDoc(backupRef).then(snap => {
+            if (snap.exists()) {
+              const bData = snap.data();
+              const backupTime = new Date(bData.savedAt || 0).getTime();
+              const articleTime = new Date(found.publishedAtTimestamp || (found as any).updatedAt || 0).getTime();
+              if (backupTime > articleTime) {
+                setAutosaveBackupData(bData);
+                setShowRestoreBanner(true);
+              }
+            }
+          }).catch(() => {});
+        }
+      }
+    } else {
+      if (editingIdRef.current) return;
+      if (loadedArticleIdRef.current === null) {
+        loadedArticleIdRef.current = 'new';
+        setIsEditMode(false);
+        setEditingId(null);
+        editingIdRef.current = null;
+        setTitle('');
+        setCustomSlug('');
+        setIsSlugManuallyEdited(false);
+        setSelectedFilmIds([]);
+        setArticleStatus('published');
+        setSeoTitle('');
+        setMetaDescription('');
+        setOgImage('');
+        setSeoKeywords('');
       }
     }
-    // Default reset for new article
-    setIsEditMode(false);
-    setEditingId(null);
-    setTitle('');
-    setCustomSlug('');
-    setIsSlugManuallyEdited(false);
-    setSelectedFilmIds([]);
-    setArticleStatus('published');
-    setSeoTitle('');
-    setMetaDescription('');
-    setOgImage('');
-    setSeoKeywords('');
-  }, [selectedArticleId, articles]);
+  }, [selectedArticleId]);
+
+  const handleRestoreBackup = () => {
+    if (!autosaveBackupData) return;
+    setTitle(autosaveBackupData.title || '');
+    if (autosaveBackupData.slug) {
+      setCustomSlug(autosaveBackupData.slug);
+      setIsSlugManuallyEdited(true);
+    }
+    setCategory(autosaveBackupData.category || 'movies');
+    setSubCategory(autosaveBackupData.subCategory || 'news');
+    setExcerpt(autosaveBackupData.excerpt || '');
+    setContent(autosaveBackupData.content || '');
+    setCoverImage(autosaveBackupData.coverImage || '');
+    setTagsInput((autosaveBackupData.tags || []).join(', '));
+    if (autosaveBackupData.relatedFilmIds) setSelectedFilmIds(autosaveBackupData.relatedFilmIds);
+    setShowRestoreBanner(false);
+    showToast('Perubahan terbaru berhasil dipulihkan dari cadangan.', 'success');
+  };
+
+  const handleDiscardBackup = async () => {
+    if (!editingIdRef.current) return;
+    try {
+      await deleteDoc(doc(db, 'articles', editingIdRef.current, 'autosaves', currentUser.id));
+    } catch {}
+    setShowRestoreBanner(false);
+    setAutosaveBackupData(null);
+    showToast('Cadangan perubahan dibuang.', 'info');
+  };
+
+  const getOrCreateDraftId = async (): Promise<string | null> => {
+    if (editingIdRef.current) return editingIdRef.current;
+    if (creatingDraftPromiseRef.current) return creatingDraftPromiseRef.current;
+
+    creatingDraftPromiseRef.current = (async () => {
+      try {
+        const form = latestFormRef.current;
+        const plainText = form.content.replace(/<[^>]*>/g, '').trim();
+        if (form.title.trim().length < 3 && plainText.length < 30) {
+          return null;
+        }
+        const newId = `art-draft-${currentUser.id}-${Date.now()}`;
+        const finalSlug = form.isSlugManuallyEdited && form.customSlug.trim()
+          ? form.customSlug.trim()
+          : slugify(form.title) || `draft-${newId}`;
+        const cleanTags = form.tagsInput.split(',').map(t => t.trim()).filter(Boolean);
+        const payload = {
+          title: form.title.trim(),
+          slug: finalSlug,
+          excerpt: form.excerpt.trim() || form.title.trim(),
+          content: form.content.trim(),
+          coverImage: form.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80',
+          category: form.category,
+          subCategory: form.subCategory,
+          readTime: form.readTime,
+          tags: cleanTags.length > 0 ? cleanTags : ['SotoyFilm'],
+          status: 'draft',
+          publishedAt: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
+          publishedAtTimestamp: new Date().toISOString(),
+          seoTitle: form.seoTitle.trim() || form.title.trim(),
+          metaDescription: form.metaDescription.trim() || form.excerpt,
+          ogImage: ogImage.trim() || form.coverImage,
+          seoKeywords: form.seoKeywords.trim() || cleanTags.join(', '),
+          author: {
+            id: currentUser.id,
+            name: currentUser.name,
+            avatar: currentUser.avatar,
+            role: currentUser.role,
+          },
+          authorId: currentUser.id,
+        };
+        const success = await addArticle(payload as any);
+        if (success) {
+          editingIdRef.current = newId;
+          setEditingId(newId);
+          setIsEditMode(true);
+          loadedArticleIdRef.current = newId;
+          navigateTo('write-article', { articleId: newId });
+          return newId;
+        }
+        return null;
+      } finally {
+        creatingDraftPromiseRef.current = null;
+      }
+    })();
+
+    return creatingDraftPromiseRef.current;
+  };
+
+  const executeAutoSave = async () => {
+    if (isSavingRef.current || isSubmitting) return;
+    const form = latestFormRef.current;
+    const plainText = form.content.replace(/<[^>]*>/g, '').trim();
+    if (form.title.trim().length < 3 && plainText.length < 30) return;
+
+    const currentHashFields = {
+      title: form.title,
+      slug: form.customSlug,
+      category: form.category,
+      subCategory: form.subCategory,
+      excerpt: form.excerpt,
+      content: form.content,
+      coverImage: form.coverImage,
+      tagsInput: form.tagsInput,
+      selectedFilmIds: form.selectedFilmIds,
+      seoTitle: form.seoTitle,
+      metaDescription: form.metaDescription,
+      ogImage: form.ogImage,
+      seoKeywords: form.seoKeywords,
+      articleStatus: form.articleStatus,
+    };
+    const snapshot = JSON.stringify(currentHashFields);
+    if (snapshot === lastSavedHashRef.current) return;
+
+    isSavingRef.current = true;
+    setIsAutoSaving(true);
+    setAutosaveStatus('saving');
+
+    try {
+      const isPublishedOrScheduled = form.articleStatus === 'published' || form.articleStatus === 'scheduled';
+      let targetId = editingIdRef.current || selectedArticleId;
+
+      if (!targetId) {
+        targetId = await getOrCreateDraftId();
+        if (!targetId) {
+          isSavingRef.current = false;
+          setIsAutoSaving(false);
+          setAutosaveStatus('clean');
+          return;
+        }
+      }
+
+      const finalSlug = form.isSlugManuallyEdited && form.customSlug.trim()
+        ? form.customSlug.trim()
+        : slugify(form.title) || (targetId ? `draft-${targetId}` : `draft-${Date.now()}`);
+
+      const cleanTags = form.tagsInput.split(',').map(t => t.trim()).filter(Boolean);
+      const payload: Record<string, any> = {
+        title: form.title,
+        slug: finalSlug,
+        excerpt: form.excerpt || form.title,
+        content: form.content,
+        coverImage: form.coverImage,
+        category: form.category,
+        subCategory: form.subCategory,
+        readTime: form.readTime,
+        tags: cleanTags.length > 0 ? cleanTags : ['SotoyFilm'],
+        seoTitle: form.seoTitle.trim() || form.title,
+        metaDescription: form.metaDescription.trim() || form.excerpt || form.title,
+        ogImage: form.ogImage.trim() || form.coverImage,
+        seoKeywords: form.seoKeywords.trim() || cleanTags.join(', '),
+      };
+
+      if (form.selectedFilmIds.length > 0) {
+        payload.relatedFilmIds = form.selectedFilmIds;
+        payload.relatedFilmId = form.selectedFilmIds[0];
+      }
+
+      if (isPublishedOrScheduled) {
+        const backupRef = doc(db, 'articles', targetId, 'autosaves', currentUser.id);
+        await setDoc(backupRef, {
+          ...payload,
+          status: form.articleStatus,
+          savedAt: new Date().toISOString(),
+        }, { merge: true });
+      } else {
+        await updateArticle(targetId, {
+          ...payload,
+          status: 'draft',
+        }, { silent: true });
+      }
+
+      lastSavedHashRef.current = snapshot;
+      setLastAutoSavedAt(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }));
+      setAutosaveStatus('saved');
+      autosaveErrorRetryCountRef.current = 0;
+    } catch (err) {
+      console.error('[AutoSave] Error:', err);
+      setAutosaveStatus('error');
+      const retryCount = autosaveErrorRetryCountRef.current++;
+      const delay = retryCount === 0 ? 5000 : retryCount === 1 ? 15000 : 45000;
+      setTimeout(() => {
+        if (autosaveStatus === 'error') executeAutoSave();
+      }, delay);
+    } finally {
+      isSavingRef.current = false;
+      setIsAutoSaving(false);
+    }
+  };
+
+  // Debounce effect + 30s max interval
+  useEffect(() => {
+    if (!isAuthorized || isSubmitting) return;
+
+    const form = latestFormRef.current;
+    const currentHashFields = {
+      title: form.title,
+      slug: form.customSlug,
+      category: form.category,
+      subCategory: form.subCategory,
+      excerpt: form.excerpt,
+      content: form.content,
+      coverImage: form.coverImage,
+      tagsInput: form.tagsInput,
+      selectedFilmIds: form.selectedFilmIds,
+      seoTitle: form.seoTitle,
+      metaDescription: form.metaDescription,
+      ogImage: form.ogImage,
+      seoKeywords: form.seoKeywords,
+      articleStatus: form.articleStatus,
+    };
+    const snapshot = JSON.stringify(currentHashFields);
+
+    if (snapshot !== lastSavedHashRef.current) {
+      setAutosaveStatus('dirty');
+      if (autosaveTimeoutRef.current) clearTimeout(autosaveTimeoutRef.current);
+      autosaveTimeoutRef.current = setTimeout(() => {
+        executeAutoSave();
+      }, 4000);
+    }
+
+    if (!autosaveIntervalRef.current) {
+      autosaveIntervalRef.current = setInterval(() => {
+        const currentForm = latestFormRef.current;
+        const currentHashFields = {
+          title: currentForm.title,
+          slug: currentForm.customSlug,
+          category: currentForm.category,
+          subCategory: currentForm.subCategory,
+          excerpt: currentForm.excerpt,
+          content: currentForm.content,
+          coverImage: currentForm.coverImage,
+          tagsInput: currentForm.tagsInput,
+          selectedFilmIds: currentForm.selectedFilmIds,
+          seoTitle: currentForm.seoTitle,
+          metaDescription: currentForm.metaDescription,
+          ogImage: currentForm.ogImage,
+          seoKeywords: currentForm.seoKeywords,
+          articleStatus: currentForm.articleStatus,
+        };
+        const currentSnap = JSON.stringify(currentHashFields);
+        if (currentSnap !== lastSavedHashRef.current) {
+          executeAutoSave();
+        }
+      }, 30000);
+    }
+
+    return () => {
+      if (autosaveTimeoutRef.current) clearTimeout(autosaveTimeoutRef.current);
+      if (autosaveIntervalRef.current) {
+        clearInterval(autosaveIntervalRef.current);
+        autosaveIntervalRef.current = null;
+      }
+    };
+  }, [
+    title,
+    customSlug,
+    category,
+    subCategory,
+    excerpt,
+    content,
+    coverImage,
+    tagsInput,
+    selectedFilmIds,
+    seoTitle,
+    metaDescription,
+    ogImage,
+    seoKeywords,
+    articleStatus,
+    isAuthorized,
+    isSubmitting,
+  ]);
+
+  // beforeunload warning handler
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const form = latestFormRef.current;
+      const snapshot = JSON.stringify(form);
+      if (snapshot !== lastSavedHashRef.current && (form.title.trim() || form.content.trim())) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
 
   // Collaborative Presence Heartbeat & Sync Listener
   const activeArticleDocId = editingId || (selectedArticleId ? selectedArticleId : 'draft_session_' + currentUser.id);
@@ -349,101 +736,6 @@ export const WriteArticlePage: React.FC = () => {
       deleteDoc(presenceRef).catch(() => {});
     };
   }, [activeArticleDocId, currentUser, isAuthorized]);
-
-  // 30-Second Auto-Save Effect
-  useEffect(() => {
-    if (!isAuthorized || isSubmitting) return;
-
-    const autoSaveTimer = setInterval(async () => {
-      // Don't auto-save empty document
-      if (!title.trim() && !content.trim()) return;
-
-      setIsAutoSaving(true);
-      try {
-        const cleanTags = tagsInput
-          .split(',')
-          .map(t => t.trim())
-          .filter(Boolean);
-
-        const finalSlug = customSlug.trim() || (title ? slugify(title) : `draft-${Date.now()}`);
-
-        const payload: Record<string, any> = {
-          title: title.trim() || 'Draf Tanpa Judul',
-          slug: finalSlug,
-          excerpt: excerpt || title || 'Draf Otomatis',
-          content: content || '',
-          coverImage,
-          category,
-          subCategory,
-          readTime,
-          tags: cleanTags.length > 0 ? cleanTags : ['SotoyFilm', 'Draft'],
-          status: 'draft' as const,
-          seoTitle: seoTitle.trim() || title,
-          metaDescription: metaDescription.trim() || excerpt,
-          ogImage: ogImage.trim() || coverImage,
-          seoKeywords: seoKeywords.trim() || cleanTags.join(', '),
-        };
-
-        if (selectedFilmIds.length > 0) {
-          payload.relatedFilmIds = selectedFilmIds;
-          payload.relatedFilmId = selectedFilmIds[0];
-        }
-
-        if (editingId) {
-          await updateArticle(editingId, payload);
-        } else {
-          const newDraftId = `art-draft-${Date.now()}`;
-          const newArticlePayload = {
-            ...payload,
-            id: newDraftId,
-            publishedAt: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
-            publishedAtTimestamp: new Date().toISOString(),
-            views: 1,
-            likes: 0,
-            commentsCount: 0,
-            author: {
-              id: currentUser.id,
-              name: currentUser.name,
-              avatar: currentUser.avatar,
-              role: currentUser.role,
-            },
-          };
-          const sanitizedDraft = JSON.parse(JSON.stringify(newArticlePayload));
-          await setDoc(doc(db, 'articles', newDraftId), sanitizedDraft);
-          setEditingId(newDraftId);
-          setIsEditMode(true);
-        }
-
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        setLastAutoSavedAt(timeStr);
-      } catch (err) {
-        console.warn('[AutoSave] Gagal menyimpan draf otomatis:', err);
-      } finally {
-        setIsAutoSaving(false);
-      }
-    }, 30000); // 30 seconds
-
-    return () => clearInterval(autoSaveTimer);
-  }, [
-    isAuthorized,
-    isSubmitting,
-    editingId,
-    title,
-    content,
-    excerpt,
-    category,
-    subCategory,
-    coverImage,
-    tagsInput,
-    readTime,
-    selectedFilmIds,
-    seoTitle,
-    metaDescription,
-    ogImage,
-    seoKeywords,
-    currentUser,
-  ]);
 
   // Realtime Article Versions Listener
   const activeArticleIdForVersions = editingId || (selectedArticleId ? selectedArticleId : null);
@@ -754,16 +1046,18 @@ export const WriteArticlePage: React.FC = () => {
         await new Promise(res => setTimeout(res, 500));
       }
 
-      if (isEditMode && editingId) {
+      const targetId = editingIdRef.current;
+      if (targetId) {
         await saveVersionSnapshot(
           targetStatus === 'published' ? 'Pembaruan Artikel Terbit' : targetStatus === 'scheduled' ? 'Penjadwalan Terbit' : 'Penyimpanan Draf',
-          editingId
+          targetId
         );
-        const success = await updateArticle(editingId, payload);
+        const success = await updateArticle(targetId, payload);
         if (success) {
+          deleteDoc(doc(db, 'articles', targetId, 'autosaves', currentUser.id)).catch(() => {});
           if (targetStatus === 'published') {
             setPublishedSuccessModal({
-              id: editingId,
+              id: targetId,
               title,
               slug: finalSlug,
               coverImage,
@@ -914,17 +1208,51 @@ export const WriteArticlePage: React.FC = () => {
 
             {/* Real-time Auto-Save Status Badge */}
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-medium text-slate-300">
-              <CheckCheck className={`w-3.5 h-3.5 ${isAutoSaving ? 'text-amber-400 animate-spin' : lastAutoSavedAt ? 'text-emerald-400' : 'text-slate-500'}`} />
+              <CheckCheck className={`w-3.5 h-3.5 ${
+                autosaveStatus === 'saving' || isAutoSaving ? 'text-amber-400 animate-spin' :
+                autosaveStatus === 'dirty' ? 'text-amber-500' :
+                autosaveStatus === 'error' ? 'text-rose-400' : 'text-emerald-400'
+              }`} />
               <span>
-                {isAutoSaving
-                  ? 'Menyimpan draf...'
+                {autosaveStatus === 'saving' || isAutoSaving
+                  ? 'Menyimpan...'
+                  : autosaveStatus === 'dirty'
+                  ? 'Perubahan belum tersimpan'
+                  : autosaveStatus === 'error'
+                  ? 'Gagal menyimpan, mencoba lagi'
                   : lastAutoSavedAt
-                  ? `Otomatis tersimpan ${lastAutoSavedAt}`
-                  : 'Auto-save aktif (30d)'}
+                  ? `Tersimpan otomatis ${lastAutoSavedAt}`
+                  : 'Auto-save aktif'}
               </span>
             </div>
           </div>
         </div>
+
+        {/* Restore Backup Banner if newer autosave exists */}
+        {showRestoreBanner && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-200">
+            <div className="flex items-center gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>Ada perubahan yang belum disimpan dari cadangan ({autosaveBackupData?.savedAt ? new Date(autosaveBackupData.savedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : 'terbaru'}).</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleRestoreBackup}
+                className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold transition-colors cursor-pointer"
+              >
+                Pulihkan
+              </button>
+              <button
+                type="button"
+                onClick={handleDiscardBackup}
+                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
+              >
+                Buang
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Main Editor Form Container */}
         <div className="space-y-6">

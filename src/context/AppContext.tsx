@@ -387,7 +387,7 @@ interface AppContextType {
   closeShareModal: () => void;
   // Content creation
   addArticle: (newArticle: Omit<Article, 'id' | 'publishedAt' | 'views' | 'likes' | 'commentsCount'>) => Promise<boolean>;
-  updateArticle: (id: string, updatedFields: Partial<Article>) => Promise<boolean>;
+  updateArticle: (id: string, updatedFields: Partial<Article>, options?: { silent?: boolean }) => Promise<boolean>;
   deleteArticle: (id: string) => Promise<void>;
   addBuzzPost: (
     content: string,
@@ -4587,14 +4587,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Update Article in Firestore
-  const updateArticle = async (id: string, updatedFields: Partial<Article>): Promise<boolean> => {
+  const updateArticle = async (id: string, updatedFields: Partial<Article>, options?: { silent?: boolean }): Promise<boolean> => {
     if (!requireVerified()) return false;
     const targetArticle = resolvedArticles.find(a => a.id === id);
     const isAuthor = targetArticle?.author?.id === currentUser.id || targetArticle?.authorId === currentUser.id;
     const isPermitted = isAuthor || currentUser.role === 'admin' || isUserAdmin(currentUser) || isUserWriter(currentUser);
     if (!isPermitted) {
       console.error('[Article] Permission denied for update:', { id, currentUser: currentUser.id, role: currentUser.role });
-      showToast('Hanya Penulis pemilik artikel atau Admin yang dapat menyunting artikel.', 'error');
+      if (!options?.silent) {
+        showToast('Hanya Penulis pemilik artikel atau Admin yang dapat menyunting artikel.', 'error');
+      }
       return false;
     }
     try {
@@ -4608,20 +4610,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const sanitizedUpdates = JSON.parse(JSON.stringify(updatesToSave));
       console.log('[Article] Updating document:', id, sanitizedUpdates);
       await updateDoc(doc(db, 'articles', id), sanitizedUpdates);
-      refreshArticles();
-      const toastMsg = updatedFields.status === 'draft'
-        ? 'Draf artikel berhasil disimpan!'
-        : updatedFields.status === 'scheduled'
-        ? 'Jadwal terbit artikel berhasil diperbarui!'
-        : 'Artikel berhasil diperbarui!';
-      showToast(toastMsg, 'success');
+      if (!options?.silent) {
+        refreshArticles();
+        const toastMsg = updatedFields.status === 'draft'
+          ? 'Draf artikel berhasil disimpan!'
+          : updatedFields.status === 'scheduled'
+          ? 'Jadwal terbit artikel berhasil diperbarui!'
+          : 'Artikel berhasil diperbarui!';
+        showToast(toastMsg, 'success');
+      } else {
+        setArticles(prev => prev.map(a => a.id === id ? { ...a, ...updatesToSave } : a));
+      }
       return true;
     } catch (error: any) {
       console.error('[Article] Error updating article:', id, error);
-      const reason = error?.code === 'permission-denied'
-        ? 'Akses ditolak: Anda tidak memiliki izin.'
-        : 'Gagal memperbarui artikel.';
-      showToast(reason, 'error');
+      if (!options?.silent) {
+        const reason = error?.code === 'permission-denied'
+          ? 'Akses ditolak: Anda tidak memiliki izin.'
+          : 'Gagal memperbarui artikel.';
+        showToast(reason, 'error');
+      }
       return false;
     }
   };

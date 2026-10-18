@@ -76,8 +76,52 @@ export const AdminCMSArticles: React.FC = () => {
     navigateTo, 
     showToast,
     allUsers,
-    currentUser
+    currentUser,
+    isAdmin
   } = useApp();
+
+  const handleCleanupDuplicateDrafts = async () => {
+    if (!isAdmin) return;
+    const drafts = articles.filter(a => a.status === 'draft');
+    const groups = new Map<string, Article[]>();
+    drafts.forEach(d => {
+      const authorId = d.author?.id || d.authorId || 'unknown';
+      const titleKey = (d.title || '').trim().toLowerCase();
+      const isPlaceholder = !titleKey || titleKey === 'draf tanpa judul' || titleKey === 'draf otomatis' || (d.content || '').replace(/<[^>]*>/g, '').trim().length < 30;
+      const key = isPlaceholder ? `empty_${authorId}_${d.id}` : `${authorId}_${titleKey}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(d);
+    });
+
+    const idsToDelete: string[] = [];
+    groups.forEach((group, key) => {
+      if (key.startsWith('empty_')) {
+        if (group.length > 1) {
+          group.sort((a, b) => new Date(b.publishedAtTimestamp || b.publishedAt || 0).getTime() - new Date(a.publishedAtTimestamp || a.publishedAt || 0).getTime());
+          for (let i = 1; i < group.length; i++) {
+            idsToDelete.push(group[i].id);
+          }
+        }
+      } else {
+        if (group.length > 1) {
+          group.sort((a, b) => new Date(b.publishedAtTimestamp || b.publishedAt || 0).getTime() - new Date(a.publishedAtTimestamp || a.publishedAt || 0).getTime());
+          for (let i = 1; i < group.length; i++) {
+            idsToDelete.push(group[i].id);
+          }
+        }
+      }
+    });
+
+    if (idsToDelete.length === 0) {
+      showToast('Tidak ada draft duplikat yang perlu dibersihkan.', 'info');
+      return;
+    }
+
+    if (window.confirm(`Ditemukan ${idsToDelete.length} draft duplikat/kosong. Bersihkan sekarang?`)) {
+      await bulkDeleteArticles(idsToDelete);
+      showToast(`Berhasil membersihkan ${idsToDelete.length} draft duplikat.`, 'success');
+    }
+  };
 
   // Status Filter Tabs (WordPress Style)
   const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft' | 'scheduled' | 'trash'>('all');
@@ -475,6 +519,18 @@ export const AdminCMSArticles: React.FC = () => {
                 </span>
               )}
             </button>
+
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={handleCleanupDuplicateDrafts}
+                className="px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-bold transition-all flex items-center gap-2 shadow-sm active:scale-[0.98]"
+                title="Bersihkan draf duplikat atau draf kosong berlebih"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Bersihkan Draf Duplikat</span>
+              </button>
+            )}
 
             <button
               onClick={() => navigateTo('write-article')}

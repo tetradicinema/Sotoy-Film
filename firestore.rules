@@ -459,6 +459,10 @@ service cloud.firestore {
         (request.auth.uid == 'Jm0raI2h47TJG9ZtZAR1HLVcjSj2' && existing().author.id == request.auth.uid)
       );
 
+      match /autosaves/{uid} {
+        allow read, write, delete: if isSignedIn() && (isWriter() || isAdmin()) && request.auth.uid == uid;
+      }
+
       match /comments/{commentId} {
         allow read: if true;
         allow create: if isSignedIn() && !isSuspended() && isValidId(commentId) && incoming().userId == request.auth.uid;
