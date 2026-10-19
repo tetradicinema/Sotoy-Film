@@ -1,4 +1,4 @@
-import { parseEmbedUrl, getEmbedValidationFeedback } from '../src/lib/embeds.js';
+import { parseEmbedUrl, getEmbedValidationFeedback, getEmbedIframe } from '../src/lib/embeds.js';
 
 interface TestCase {
   name: string;

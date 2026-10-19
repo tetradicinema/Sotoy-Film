@@ -1,4 +1,5 @@
 export type EmbedProvider = 'youtube' | 'instagram' | 'x' | 'tiktok' | 'threads';
+import { sanitizeExternalUrl } from '../utils/safeUrl';
 
 export interface EmbedData {
   provider: EmbedProvider;
@@ -13,7 +14,6 @@ export interface ProviderConfig {
   name: string;
   iconName: string;
   hosts: string[];
-  scriptUrl?: string;
   placeholderText: string;
   exampleUrl: string;
 }
@@ -30,7 +30,6 @@ export const PROVIDER_CONFIGS: Record<EmbedProvider, ProviderConfig> = {
     name: 'Instagram',
     iconName: 'Instagram',
     hosts: ['instagram.com', 'www.instagram.com'],
-    scriptUrl: 'https://www.instagram.com/embed.js',
     placeholderText: 'https://www.instagram.com/p/... atau /reel/...',
     exampleUrl: 'https://www.instagram.com/p/C6q0XYZ123/',
   },
@@ -38,7 +37,6 @@ export const PROVIDER_CONFIGS: Record<EmbedProvider, ProviderConfig> = {
     name: 'X (Twitter)',
     iconName: 'Twitter',
     hosts: ['x.com', 'twitter.com', 'www.x.com', 'www.twitter.com', 'mobile.x.com', 'mobile.twitter.com'],
-    scriptUrl: 'https://platform.twitter.com/widgets.js',
     placeholderText: 'https://x.com/username/status/...',
     exampleUrl: 'https://x.com/sotoyfilm/status/1234567890123456789',
   },
@@ -46,7 +44,6 @@ export const PROVIDER_CONFIGS: Record<EmbedProvider, ProviderConfig> = {
     name: 'TikTok',
     iconName: 'Video',
     hosts: ['tiktok.com', 'www.tiktok.com'],
-    scriptUrl: 'https://www.tiktok.com/embed.js',
     placeholderText: 'https://www.tiktok.com/@user/video/...',
     exampleUrl: 'https://www.tiktok.com/@sotoyfilm/video/7123456789012345678',
   },
@@ -54,7 +51,6 @@ export const PROVIDER_CONFIGS: Record<EmbedProvider, ProviderConfig> = {
     name: 'Threads',
     iconName: 'AtSign',
     hosts: ['threads.net', 'www.threads.net', 'threads.com', 'www.threads.com'],
-    scriptUrl: 'https://www.threads.net/embed.js',
     placeholderText: 'https://www.threads.net/@user/post/...',
     exampleUrl: 'https://www.threads.net/@sotoyfilm/post/C6q0XYZ123',
   },
@@ -248,13 +244,99 @@ export function getEmbedValidationFeedback(input: string): { valid: boolean; err
     };
   }
 
-  const data = parseEmbedUrl(trimmed);
-  if (data) {
-    return { valid: true, data };
+  const parsed = parseEmbedUrl(trimmed);
+  if (parsed) {
+    return { valid: true, data: parsed };
   }
 
   return {
     valid: false,
     error: 'Format link tidak dikenali atau belum didukung. Hanya mendukung YouTube, Instagram, X (Twitter), TikTok, dan Threads.',
   };
+}
+
+export function getEmbedIframe(data: EmbedData): { src: string; aspect?: string; height?: number; maxWidth: number } | null {
+  if (!data || !data.id) return null;
+
+  switch (data.provider) {
+    case 'youtube': {
+      const id = data.id;
+      if (!/^[a-zA-Z0-9_-]{11}$/.test(id)) {
+        return null;
+      }
+      const isShorts = data.kind === 'shorts';
+      return {
+        src: `https://www.youtube-nocookie.com/embed/${id}?rel=0`,
+        aspect: isShorts ? '9/16' : '16/9',
+        maxWidth: isShorts ? 360 : 560,
+      };
+    }
+    case 'instagram': {
+      const id = data.id;
+      if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
+        return null;
+      }
+      try {
+        const canonical = new URL(data.url);
+        const pathname = canonical.pathname.toLowerCase();
+        const segMatch = pathname.match(/^\/(p|reel|reels|tv)\/[a-zA-Z0-9_-]+/);
+        if (!segMatch) return null;
+        const rawSeg = segMatch[1];
+        if (rawSeg === 'reel' || rawSeg === 'reels') {
+          return {
+            src: `https://www.instagram.com/reel/${id}/embed/`,
+            height: 620,
+            maxWidth: 540,
+          };
+        }
+        if (rawSeg === 'tv') {
+          return {
+            src: `https://www.instagram.com/tv/${id}/embed/`,
+            height: 620,
+            maxWidth: 540,
+          };
+        }
+        return {
+          src: `https://www.instagram.com/p/${id}/embed/`,
+          height: 620,
+          maxWidth: 540,
+        };
+      } catch {
+        return null;
+      }
+    }
+    case 'x': {
+      const id = data.id;
+      if (!/^\d+$/.test(id)) {
+        return null;
+      }
+      return {
+        src: `https://platform.twitter.com/embed/Tweet.html?id=${id}&dnt=true&theme=dark`,
+        height: 500,
+        maxWidth: 550,
+      };
+    }
+    case 'tiktok': {
+      const id = data.id;
+      if (!/^\d+$/.test(id)) {
+        return null;
+      }
+      return {
+        src: `https://www.tiktok.com/embed/v2/${id}`,
+        height: 740,
+        maxWidth: 605,
+      };
+    }
+    case 'threads': {
+      return null;
+    }
+    default:
+      return null;
+  }
+}
+
+export function getSafeEmbedLink(data: EmbedData): string | null {
+  const parsed = parseEmbedUrl(data.url);
+  if (!parsed) return null;
+  return sanitizeExternalUrl(parsed.url);
 }

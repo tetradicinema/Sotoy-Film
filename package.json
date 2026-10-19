@@ -14,7 +14,7 @@
     "test:linkify": "node --import tsx scripts/test-linkify.ts",
     "test:profile-links": "node --import tsx scripts/test-profile-links.ts",
     "test:onboarding": "node --import tsx scripts/test-onboarding.ts",
-    "test:embeds": "node --import tsx scripts/test-embeds.ts"
+     "test:embeds": "node --import tsx scripts/test-embeds.ts && node --import tsx scripts/test-embeds.iframe.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
