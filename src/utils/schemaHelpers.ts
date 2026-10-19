@@ -80,7 +80,7 @@ export function generateBreadcrumbSchema(items: BreadcrumbItem[]) {
 export interface MovieSchemaInput {
   title: string;
   originalTitle?: string;
-  type?: 'movie' | 'series' | 'anime';
+  type?: 'movie' | 'series' | 'anime' | 'animation';
   image: string | string[];
   description: string;
   director: string;

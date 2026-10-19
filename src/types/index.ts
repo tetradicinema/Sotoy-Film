@@ -199,9 +199,10 @@ export interface FilmItem {
   tmdbId?: number;
   title: string;
   originalTitle?: string;
-  type: 'movie' | 'series' | 'anime';
+  type: 'movie' | 'series' | 'anime' | 'animation';
   year: number;
   releaseDate?: string; // ISO date string, e.g. "2024-07-12"
+  idReleaseDate?: string; // ISO date of the Indonesian theatrical release
   poster: string;
   backdrop: string;
   synopsis: string;
@@ -503,7 +504,12 @@ export type HomepageSectionKey =
   | 'reviews_movie'
   | 'reviews_series'
   | 'anime_news'
-  | 'film_studies';
+  | 'film_studies'
+  | 'fd_on_theatres'
+  | 'fd_streaming'
+  | 'fd_coming_soon'
+  | 'fd_animation'
+  | 'fd_fans_favourite';
 
 export type HomeBlockKey =
   | 'hero'
@@ -526,17 +532,21 @@ export type HomeSidebarWidgetKey =
 export interface SectionConfig {
   title?: string;
   sourceType: 'auto' | 'manual' | 'slider';
-  category?: MainCategory | 'movie' | 'series' | 'anime';
+  category?: MainCategory | 'movie' | 'series' | 'anime' | 'animation';
   subCategory?: SubCategory | string;
   tag?: string;
-  sortBy?: 'newest' | 'rating' | 'views';
+  sortBy?: 'newest' | 'rating' | 'views' | 'votes' | 'release_soonest';
   limit?: number;
   itemIds?: string[];
+  enabled?: boolean;
+  platform?: string;
+  minVotes?: number;
 }
 
 export interface HomepageSectionsConfig {
   sections?: Partial<Record<HomepageSectionKey, SectionConfig>>;
   sectionOrder?: HomepageSectionKey[];
+  filmDbSectionOrder?: HomepageSectionKey[];
   blockOrder?: HomeBlockKey[];
   sidebarPosition?: 'right' | 'left' | 'hidden';
   sidebarWidgetOrder?: HomeSidebarWidgetKey[];

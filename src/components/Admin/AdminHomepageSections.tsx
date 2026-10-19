@@ -48,6 +48,7 @@ import {
   HOMEPAGE_SECTIONS_META,
   SectionMeta,
   DEFAULT_SECTION_ORDER,
+  DEFAULT_FILM_DB_SECTION_ORDER,
   DEFAULT_BLOCK_ORDER,
   DEFAULT_SIDEBAR_WIDGET_ORDER,
   HOME_BLOCKS_META,
@@ -57,12 +58,15 @@ import {
   resolveHiddenBlocks,
   getSplitColumnBlocks,
   resolveSectionOrder,
+  resolveFilmDbSectionOrder,
 } from '../../utils/homepageConfigHelper';
+import { getStreamingPlatforms } from '../../utils/filmSections';
 
 const CATEGORY_LABELS: Record<string, string> = {
   movies: 'Movies',
   series: 'Series',
-  anime: 'Anime',
+  anime: 'Animasi',
+  animation: 'Animasi',
   'cinema-gear': 'Cinema Gear',
   'film-studies': 'Film Studies',
   movie: 'Movies',
@@ -386,6 +390,7 @@ const SortableSectionItem: React.FC<SortableSectionItemProps> = ({
   const sectionConfig = draftConfigs[keyId] || homepageSectionsConfig?.sections?.[keyId];
   const isManual = sectionConfig?.sourceType === 'manual';
   const hasCustomTitle = !!sectionConfig?.title && sectionConfig.title.trim().length > 0;
+  const isEnabled = sectionConfig?.enabled !== false;
 
   return (
     <div
@@ -394,6 +399,8 @@ const SortableSectionItem: React.FC<SortableSectionItemProps> = ({
       className={`p-2.5 rounded-2xl transition-all flex items-center justify-between gap-2 border ${
         active
           ? 'bg-white/[0.12] border-white/20 text-white shadow-sm'
+          : !isEnabled
+          ? 'bg-black/30 text-slate-400 border-white/[0.03] opacity-75 hover:opacity-100 hover:bg-white/[0.04]'
           : 'hover:bg-white/[0.04] text-slate-300 border-white/[0.04]'
       }`}
     >
@@ -441,6 +448,11 @@ const SortableSectionItem: React.FC<SortableSectionItemProps> = ({
 
       {/* Reorder Up/Down Controls & Mode Indicator */}
       <div className="flex items-center gap-1 shrink-0">
+        {!isEnabled && (
+          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider bg-red-500/15 text-red-400 border border-red-500/30">
+            Off
+          </span>
+        )}
         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${
           isManual 
             ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' 
@@ -487,9 +499,13 @@ export const AdminHomepageSections: React.FC = () => {
     homepageSectionsConfig,
     updateHomepageSectionConfig,
     updateHomepageSectionOrder,
+    updateFilmDbSectionOrder,
     updateHomepageLayout,
     showToast,
   } = useApp();
+
+  // Top-level Area Switch: 'home' (Beranda) | 'film_database' (Film Database)
+  const [adminAreaTab, setAdminAreaTab] = useState<'home' | 'film_database'>('home');
 
   // Layout Reordering States (9 Blocks & Sidebar)
   const [orderedBlockKeys, setOrderedBlockKeys] = useState<HomeBlockKey[]>(() => {
@@ -851,7 +867,75 @@ export const AdminHomepageSections: React.FC = () => {
     }
   };
 
-  // Selected section to edit in focus, default to the first one
+  // Ordered list of section keys for Film Database
+  const [orderedFilmDbKeys, setOrderedFilmDbKeys] = useState<HomepageSectionKey[]>(() => {
+    return resolveFilmDbSectionOrder(homepageSectionsConfig?.filmDbSectionOrder);
+  });
+
+  const [isSavingFilmDbOrder, setIsSavingFilmDbOrder] = useState(false);
+
+  // Keep orderedFilmDbKeys synced with remote config
+  useEffect(() => {
+    if (homepageSectionsConfig?.filmDbSectionOrder && homepageSectionsConfig.filmDbSectionOrder.length > 0) {
+      setOrderedFilmDbKeys(resolveFilmDbSectionOrder(homepageSectionsConfig.filmDbSectionOrder));
+    }
+  }, [homepageSectionsConfig?.filmDbSectionOrder]);
+
+  const handleFilmDbDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = orderedFilmDbKeys.indexOf(active.id as HomepageSectionKey);
+      const newIndex = orderedFilmDbKeys.indexOf(over.id as HomepageSectionKey);
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const nextOrder = arrayMove(orderedFilmDbKeys, oldIndex, newIndex);
+        setOrderedFilmDbKeys(nextOrder);
+        try {
+          setIsSavingFilmDbOrder(true);
+          await updateFilmDbSectionOrder(nextOrder);
+        } catch (err) {
+          console.error('Failed to save film database section order:', err);
+        } finally {
+          setIsSavingFilmDbOrder(false);
+        }
+      }
+    }
+  };
+
+  const handleMoveFilmDbSectionOrder = async (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= orderedFilmDbKeys.length) return;
+    const next = [...orderedFilmDbKeys];
+    const temp = next[index];
+    next[index] = next[targetIndex];
+    next[targetIndex] = temp;
+    setOrderedFilmDbKeys(next);
+    try {
+      setIsSavingFilmDbOrder(true);
+      await updateFilmDbSectionOrder(next);
+    } catch (err) {
+      console.error('Failed to save film database section order:', err);
+    } finally {
+      setIsSavingFilmDbOrder(false);
+    }
+  };
+
+  const handleSaveFilmDbSectionOrder = async () => {
+    try {
+      setIsSavingFilmDbOrder(true);
+      await updateFilmDbSectionOrder(orderedFilmDbKeys);
+    } catch (err) {
+      console.error('Failed to save film database section order:', err);
+    } finally {
+      setIsSavingFilmDbOrder(false);
+    }
+  };
+
+  // Streaming platforms derived from loaded films for fd_streaming dropdown
+  const streamingPlatforms = useMemo(() => {
+    return getStreamingPlatforms(films);
+  }, [films]);
+
+  // Selected section to edit in focus, default to the first one based on area
   const [activeSectionKey, setActiveSectionKey] = useState<HomepageSectionKey>('hero_slider');
 
   // Draft local configs per section key
@@ -872,6 +956,7 @@ export const AdminHomepageSections: React.FC = () => {
 
   // Current working section config (draft or from firestore or default)
   const currentConfig: SectionConfig = useMemo(() => {
+    const isFilmDb = currentMeta.area === 'film_database';
     const defaultVal: SectionConfig = {
       title: '',
       sourceType: 'auto',
@@ -879,18 +964,22 @@ export const AdminHomepageSections: React.FC = () => {
       subCategory: '',
       tag: '',
       sortBy: 'newest',
-      limit: activeSectionKey === 'hero_slider' ? 6 : 5,
+      limit: activeSectionKey === 'hero_slider' ? 6 : isFilmDb ? 12 : 5,
       itemIds: [],
+      enabled: true,
+      platform: '',
+      minVotes: activeSectionKey === 'fd_fans_favourite' ? 3 : undefined,
     };
     const draft = draftConfigs[activeSectionKey];
     const fromRemote = homepageSectionsConfig?.sections?.[activeSectionKey];
-    const base = draft || fromRemote || {};
+    const base: Partial<SectionConfig> = draft || fromRemote || {};
     return {
       ...defaultVal,
       ...base,
-      itemIds: (base as SectionConfig).itemIds || [],
+      itemIds: base.itemIds || [],
+      enabled: base.enabled !== undefined ? base.enabled : true,
     };
-  }, [draftConfigs, homepageSectionsConfig, activeSectionKey]);
+  }, [draftConfigs, homepageSectionsConfig, activeSectionKey, currentMeta.area]);
 
   const updateCurrentDraft = (changes: Partial<SectionConfig>) => {
     setDraftConfigs(prev => ({
@@ -921,6 +1010,7 @@ export const AdminHomepageSections: React.FC = () => {
   };
 
   const handleResetSection = async (key: HomepageSectionKey) => {
+    const isFilmDb = key.startsWith('fd_');
     const defaultReset: SectionConfig = {
       title: '',
       sourceType: 'auto',
@@ -928,8 +1018,11 @@ export const AdminHomepageSections: React.FC = () => {
       subCategory: '',
       tag: '',
       sortBy: 'newest',
-      limit: key === 'hero_slider' ? 6 : 5,
+      limit: key === 'hero_slider' ? 6 : isFilmDb ? 12 : 5,
       itemIds: [],
+      enabled: true,
+      platform: '',
+      minVotes: key === 'fd_fans_favourite' ? 3 : undefined,
     };
     setDraftConfigs(prev => ({
       ...prev,
@@ -1006,38 +1099,90 @@ export const AdminHomepageSections: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Top Banner */}
-      <div className="bg-[#171717] border border-white/[0.08] rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
+      {/* Top Banner & Area Navigation */}
+      <div className="bg-[#171717] border border-white/[0.08] rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden space-y-5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
             <div className="w-12 h-12 rounded-2xl bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 flex items-center justify-center shrink-0 text-[#FF2E7E]">
-              <Layout className="w-6 h-6" />
+              {adminAreaTab === 'home' ? (
+                <Layout className="w-6 h-6" />
+              ) : (
+                <Film className="w-6 h-6" />
+              )}
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="font-display font-black text-white text-xl tracking-tight">
-                  Kontrol Seksi Beranda
+                  {adminAreaTab === 'home' ? 'Kontrol Seksi Beranda' : 'Kontrol Seksi Film Database'}
                 </h2>
                 <span className="px-2.5 py-0.5 rounded-full bg-[#FF2E7E]/15 border border-[#FF2E7E]/30 text-[#FF2E7E] text-[10px] font-bold tracking-wider uppercase">
-                  Shared Config
+                  {adminAreaTab === 'home' ? 'Beranda' : 'Film Database'}
                 </span>
               </div>
               <p className="text-slate-400 text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
-                Kustomisasi judul, mode kurasi otomatis (kategori & sub-kategori), atau pilih item manual secara spesifik untuk tiap seksi di halaman beranda. Geser urutan seksi dengan drag-and-drop. Perubahan tersimpan secara realtime di Firestore.
+                {adminAreaTab === 'home'
+                  ? 'Kustomisasi judul, mode kurasi otomatis (kategori & sub-kategori), atau pilih item manual secara spesifik untuk tiap seksi di halaman beranda. Geser urutan seksi dengan drag-and-drop. Perubahan tersimpan secara realtime di Firestore.'
+                  : 'Konfigurasi 5 seksi kurasi Film Database (Sedang Tayang di Bioskop, What\'s Streaming, Coming Soon, Animasi Rekomendasi, dan Fan\'s Favourite). Atur urutan seksi, status aktif, filter platform streaming, dan batas minimum voting.'}
               </p>
             </div>
           </div>
 
           <div className="text-xs text-slate-400 bg-black/40 border border-white/[0.06] p-3 rounded-2xl shrink-0">
-            <span className="text-slate-300 font-semibold">Total 11 Seksi Terhubung</span>
+            <span className="text-slate-300 font-semibold">
+              {adminAreaTab === 'home'
+                ? `Total ${orderedKeys.length} Seksi Terhubung`
+                : `Total ${orderedFilmDbKeys.length} Seksi Film Database`}
+            </span>
             <div className="text-[11px] text-slate-500 mt-0.5">
               Tersinkronisasi langsung ke pengunjung publik
             </div>
           </div>
         </div>
+
+        {/* Top-Level Tab Switcher: Beranda | Film Database */}
+        <div className="pt-2 border-t border-white/[0.06] flex items-center gap-2">
+          <button
+            type="button"
+            id="tab-area-home"
+            onClick={() => {
+              setAdminAreaTab('home');
+              if (currentMeta.area !== 'home') {
+                setActiveSectionKey('hero_slider');
+              }
+            }}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              adminAreaTab === 'home'
+                ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25'
+                : 'bg-white/[0.04] text-slate-400 hover:text-white hover:bg-white/[0.08] border border-white/[0.06]'
+            }`}
+          >
+            <Layout className="w-4 h-4" />
+            <span>Beranda</span>
+          </button>
+
+          <button
+            type="button"
+            id="tab-area-film-database"
+            onClick={() => {
+              setAdminAreaTab('film_database');
+              if (currentMeta.area !== 'film_database') {
+                setActiveSectionKey('fd_on_theatres');
+              }
+            }}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              adminAreaTab === 'film_database'
+                ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25'
+                : 'bg-white/[0.04] text-slate-400 hover:text-white hover:bg-white/[0.08] border border-white/[0.06]'
+            }`}
+          >
+            <Film className="w-4 h-4" />
+            <span>Film Database</span>
+          </button>
+        </div>
       </div>
 
-      {/* CARD 1: SUSUNAN BERANDA (REORDER BLOCKS & SIDEBAR) */}
+      {/* CARD 1: SUSUNAN BERANDA (REORDER BLOCKS & SIDEBAR) - Only for Beranda */}
+      {adminAreaTab === 'home' && (
       <div className="bg-[#171717] border border-white/[0.08] rounded-3xl p-5 sm:p-6 shadow-xl space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.08]">
           <div className="flex items-center gap-3">
@@ -1255,25 +1400,28 @@ export const AdminHomepageSections: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
 
       {/* Main Grid: Left Navigation / Right Config Form */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* Left Column: 11 Section Content Source List (4 cols) */}
+        {/* Left Column: Section Content Source List (4 cols) */}
         <div className="lg:col-span-4 bg-[#171717] border border-white/[0.08] rounded-3xl p-3.5 sm:p-4 space-y-3 shadow-lg">
           <div className="px-2 py-1 flex items-center justify-between">
             <div>
-              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">Sumber Konten Seksi</span>
+              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                {adminAreaTab === 'home' ? 'Sumber Konten Seksi' : 'Urutan Seksi Film Database'}
+              </span>
               <span className="text-[10px] text-slate-500">Tarik ikon ⋮⋮ atau gunakan panah ↑ ↓</span>
             </div>
             <button
               type="button"
               id="save-section-order-btn"
-              onClick={handleSaveSectionOrder}
-              disabled={isSavingOrder}
+              onClick={adminAreaTab === 'home' ? handleSaveSectionOrder : handleSaveFilmDbSectionOrder}
+              disabled={adminAreaTab === 'home' ? isSavingOrder : isSavingFilmDbOrder}
               className="px-3 py-1.5 rounded-xl bg-[#FF2E7E] hover:bg-[#FF2E7E]/90 text-white text-[11px] font-bold transition-all shadow-md cursor-pointer disabled:opacity-50 flex items-center gap-1 shrink-0 active:scale-95"
             >
-              {isSavingOrder ? (
+              {(adminAreaTab === 'home' ? isSavingOrder : isSavingFilmDbOrder) ? (
                 <span>Menyimpan...</span>
               ) : (
                 <>
@@ -1287,14 +1435,14 @@ export const AdminHomepageSections: React.FC = () => {
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
+            onDragEnd={adminAreaTab === 'home' ? handleDragEnd : handleFilmDbDragEnd}
           >
             <SortableContext
-              items={orderedKeys}
+              items={adminAreaTab === 'home' ? orderedKeys : orderedFilmDbKeys}
               strategy={verticalListSortingStrategy}
             >
               <div className="space-y-1.5 max-h-[660px] overflow-y-auto pr-1">
-                {orderedKeys.map((key, idx) => (
+                {(adminAreaTab === 'home' ? orderedKeys : orderedFilmDbKeys).map((key, idx) => (
                   <SortableSectionItem
                     key={key}
                     keyId={key}
@@ -1304,8 +1452,8 @@ export const AdminHomepageSections: React.FC = () => {
                     setSearchQuery={setSearchQuery}
                     draftConfigs={draftConfigs}
                     homepageSectionsConfig={homepageSectionsConfig}
-                    handleMoveSectionOrder={handleMoveSectionOrder}
-                    orderedLength={orderedKeys.length}
+                    handleMoveSectionOrder={adminAreaTab === 'home' ? handleMoveSectionOrder : handleMoveFilmDbSectionOrder}
+                    orderedLength={(adminAreaTab === 'home' ? orderedKeys : orderedFilmDbKeys).length}
                   />
                 ))}
               </div>
@@ -1352,6 +1500,35 @@ export const AdminHomepageSections: React.FC = () => {
                 Mode: {currentConfig.sourceType === 'manual' ? 'Manual (Pick Items)' : currentConfig.sourceType === 'slider' ? 'Slider / Carousel' : 'Auto (Filter & Sort)'}
               </span>
             </div>
+          </div>
+
+          {/* Form Field 0: Aktif Toggle */}
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-black/40 border border-white/[0.08]">
+            <div>
+              <span className="text-xs font-bold text-white block">Status Penayangan Seksi</span>
+              <span className="text-[11px] text-slate-400">
+                {currentConfig.enabled !== false
+                  ? 'Seksi ini aktif dan akan ditampilkan di aplikasi.'
+                  : 'Seksi ini dinonaktifkan (disembunyikan dari penayangan publik).'}
+              </span>
+            </div>
+            <button
+              type="button"
+              id="toggle-section-enabled"
+              onClick={() => updateCurrentDraft({ enabled: currentConfig.enabled === false ? true : false })}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                currentConfig.enabled !== false
+                  ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
+                  : 'bg-red-500/15 border border-red-500/30 text-red-300'
+              }`}
+            >
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  currentConfig.enabled !== false ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'
+                }`}
+              />
+              <span>{currentConfig.enabled !== false ? 'Aktif' : 'Non-aktif'}</span>
+            </button>
           </div>
 
           {/* Form Field 1: Custom Title */}
@@ -1473,6 +1650,51 @@ export const AdminHomepageSections: React.FC = () => {
                   </select>
                 </div>
 
+                {/* Platform select (only for fd_streaming, fed by getStreamingPlatforms) */}
+                {activeSectionKey === 'fd_streaming' && (
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <label className="block text-[11px] font-semibold text-slate-400">
+                      Filter Platform Streaming (Khusus Explore What's Streaming)
+                    </label>
+                    <select
+                      id="select-platform-streaming"
+                      value={currentConfig.platform || ''}
+                      onChange={(e) => updateCurrentDraft({ platform: e.target.value || undefined })}
+                      className="w-full px-3 py-2 rounded-xl bg-[#171717] border border-white/[0.1] text-white text-xs outline-none focus:border-[#FF2E7E] transition-colors"
+                    >
+                      <option value="">Semua Platform Streaming (Bawaan)</option>
+                      {streamingPlatforms.map((p) => (
+                        <option key={p.name} value={p.name}>
+                          {p.name} ({p.count} judul)
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[10px] text-slate-500">
+                      Pilih satu platform streaming spesifik jika ingin mengunci seksi ini hanya untuk katalog platform tersebut.
+                    </p>
+                  </div>
+                )}
+
+                {/* MinVotes (only for fd_fans_favourite) */}
+                {activeSectionKey === 'fd_fans_favourite' && (
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <label className="block text-[11px] font-semibold text-slate-400">
+                      Batas Minimum Suara (Min Votes)
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={currentConfig.minVotes !== undefined ? currentConfig.minVotes : 3}
+                      onChange={(e) => updateCurrentDraft({ minVotes: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                      className="w-full px-3 py-2 rounded-xl bg-[#171717] border border-white/[0.1] text-white text-xs outline-none focus:border-[#FF2E7E] transition-colors"
+                    />
+                    <p className="text-[10px] text-slate-500">
+                      Film harus memiliki minimal total suara ini agar masuk ke Fan's Favourite (default: 3).
+                    </p>
+                  </div>
+                )}
+
                 {/* Optional Tag Filter */}
                 <div className="space-y-1.5">
                   <label className="block text-[11px] font-semibold text-slate-400">
@@ -1501,6 +1723,8 @@ export const AdminHomepageSections: React.FC = () => {
                     <option value="newest">Terbaru (Newest)</option>
                     <option value="rating">Rating / Skor Sotoy Tertinggi</option>
                     <option value="views">Paling Banyak Dilihat (Views)</option>
+                    <option value="votes">Jumlah Suara Terbanyak (Total Votes)</option>
+                    <option value="release_soonest">Rilis Paling Dekat (Release Soonest)</option>
                   </select>
                 </div>
 
@@ -1512,8 +1736,8 @@ export const AdminHomepageSections: React.FC = () => {
                   <input
                     type="number"
                     min={1}
-                    max={20}
-                    value={currentConfig.limit || 5}
+                    max={50}
+                    value={currentConfig.limit || (currentMeta.area === 'film_database' ? 12 : 5)}
                     onChange={(e) => updateCurrentDraft({ limit: parseInt(e.target.value, 10) || 5 })}
                     className="w-full px-3 py-2 rounded-xl bg-[#171717] border border-white/[0.1] text-white text-xs outline-none focus:border-[#FF2E7E] transition-colors"
                   />

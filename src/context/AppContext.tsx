@@ -286,6 +286,7 @@ interface AppContextType {
   homepageConfigLoaded: boolean;
   updateHomepageSectionConfig: (sectionKey: HomepageSectionKey, config: Partial<SectionConfig>) => Promise<void>;
   updateHomepageSectionOrder: (newOrder: HomepageSectionKey[]) => Promise<void>;
+  updateFilmDbSectionOrder: (newOrder: HomepageSectionKey[]) => Promise<void>;
   updateHomepageLayout: (partial: {
     blockOrder?: HomeBlockKey[];
     sidebarPosition?: 'right' | 'left' | 'hidden';
@@ -1729,6 +1730,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     showToast('Susunan seksi beranda berhasil disimpan!', 'success');
+  }, [isAdmin, currentUser, showToast]);
+
+  const updateFilmDbSectionOrder = useCallback(async (
+    newOrder: HomepageSectionKey[]
+  ) => {
+    if (!isAdmin && currentUser.role !== 'admin') {
+      showToast('Hanya administrator yang memiliki izin untuk mengubah susunan seksi Film Database.', 'error');
+      throw new Error('Unauthorized: Admin access required');
+    }
+    const configDocRef = doc(db, 'siteConfig', 'homepageSections');
+    const now = new Date().toISOString();
+    await setDoc(
+      configDocRef,
+      {
+        filmDbSectionOrder: newOrder,
+        updatedAt: now,
+        updatedBy: currentUser.id || currentUser.email || 'admin',
+      },
+      { merge: true }
+    );
+
+    showToast('Susunan seksi Film Database berhasil disimpan!', 'success');
   }, [isAdmin, currentUser, showToast]);
 
   const updateHomepageLayout = useCallback(async (
@@ -6617,6 +6640,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         homepageConfigLoaded,
         updateHomepageSectionConfig,
         updateHomepageSectionOrder,
+        updateFilmDbSectionOrder,
         updateHomepageLayout,
         criticSubmissions,
         addCriticSubmission,

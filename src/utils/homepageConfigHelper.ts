@@ -7,7 +7,8 @@ export interface SectionMeta {
   targetType: 'films' | 'articles';
   description: string;
   defaultRule: string;
-  allowedCategories: (MainCategory | 'movie' | 'series' | 'anime')[];
+  allowedCategories: (MainCategory | 'movie' | 'series' | 'anime' | 'animation')[];
+  area: 'home' | 'film_database';
 }
 
 export interface HomeBlockMeta {
@@ -291,10 +292,10 @@ export const ALL_ARTICLE_CATEGORIES: MainCategory[] = [
   'film-studies',
 ];
 
-export const ALL_FILM_CATEGORIES: ('movie' | 'series' | 'anime')[] = [
+export const ALL_FILM_CATEGORIES: ('movie' | 'series' | 'animation')[] = [
   'movie',
   'series',
-  'anime',
+  'animation',
 ];
 
 export const DEFAULT_SECTION_ORDER: HomepageSectionKey[] = [
@@ -310,6 +311,14 @@ export const DEFAULT_SECTION_ORDER: HomepageSectionKey[] = [
   'reviews_series',
   'anime_news',
   'film_studies',
+];
+
+export const DEFAULT_FILM_DB_SECTION_ORDER: HomepageSectionKey[] = [
+  'fd_on_theatres',
+  'fd_streaming',
+  'fd_coming_soon',
+  'fd_animation',
+  'fd_fans_favourite',
 ];
 
 export function resolveSectionOrder(saved?: HomepageSectionKey[]): HomepageSectionKey[] {
@@ -337,6 +346,31 @@ export function resolveSectionOrder(saved?: HomepageSectionKey[]): HomepageSecti
   return result;
 }
 
+export function resolveFilmDbSectionOrder(saved?: HomepageSectionKey[]): HomepageSectionKey[] {
+  if (!Array.isArray(saved) || saved.length === 0) {
+    return [...DEFAULT_FILM_DB_SECTION_ORDER];
+  }
+  const validSet = new Set<HomepageSectionKey>(DEFAULT_FILM_DB_SECTION_ORDER);
+  const result: HomepageSectionKey[] = [];
+  const seen = new Set<HomepageSectionKey>();
+
+  for (const key of saved) {
+    if (validSet.has(key) && !seen.has(key)) {
+      result.push(key);
+      seen.add(key);
+    }
+  }
+
+  for (const defKey of DEFAULT_FILM_DB_SECTION_ORDER) {
+    if (!seen.has(defKey)) {
+      result.push(defKey);
+      seen.add(defKey);
+    }
+  }
+
+  return result;
+}
+
 export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
   {
     key: 'hero_slider',
@@ -346,6 +380,7 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     description: 'Slider besar di kiri hero banner (artikel unggulan)',
     defaultRule: 'Artikel bertanda heroSlider dulu, lalu paling banyak disukai (6 artikel)',
     allowedCategories: ALL_ARTICLE_CATEGORIES,
+    area: 'home',
   },
   {
     key: 'hero_to_watch',
@@ -355,6 +390,7 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     description: 'Panel hero, tab artikel rekomendasi tontonan (kanan hero banner)',
     defaultRule: 'Artikel kategori Movies, Series, dan Anime (urutan terbaru)',
     allowedCategories: ALL_ARTICLE_CATEGORIES,
+    area: 'home',
   },
   {
     key: 'recent',
@@ -364,6 +400,7 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     description: 'Panel hero, tab artikel terbaru (kanan hero banner)',
     defaultRule: 'Artikel terbaru dari semua kategori',
     allowedCategories: ALL_ARTICLE_CATEGORIES,
+    area: 'home',
   },
   {
     key: 'gear',
@@ -373,6 +410,7 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     description: 'Panel hero, tab kurasi ketiga (kanan hero banner)',
     defaultRule: 'Artikel kategori Cinema Gear & Tech',
     allowedCategories: ALL_ARTICLE_CATEGORIES,
+    area: 'home',
   },
   {
     key: 'movie_list',
@@ -382,6 +420,7 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     description: 'Seksi 1, kolom 1 (daftar vertikal dengan poster)',
     defaultRule: 'Artikel kategori Movies (urutan terbaru)',
     allowedCategories: ALL_ARTICLE_CATEGORIES,
+    area: 'home',
   },
   {
     key: 'series_list',
@@ -391,6 +430,7 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     description: 'Seksi 1, kolom 2 (daftar vertikal dengan poster)',
     defaultRule: 'Artikel kategori Series (urutan terbaru)',
     allowedCategories: ALL_ARTICLE_CATEGORIES,
+    area: 'home',
   },
   {
     key: 'anime_list',
@@ -400,6 +440,7 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     description: 'Seksi 1, kolom 3 (daftar vertikal dengan poster)',
     defaultRule: 'Artikel kategori Anime (urutan terbaru)',
     allowedCategories: ALL_ARTICLE_CATEGORIES,
+    area: 'home',
   },
   {
     key: 'cinema_gear_articles',
@@ -409,6 +450,7 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     description: 'Seksi 2, carousel besar',
     defaultRule: 'Artikel kategori Cinema Gear & Tech',
     allowedCategories: ALL_ARTICLE_CATEGORIES,
+    area: 'home',
   },
   {
     key: 'reviews_movie',
@@ -418,6 +460,7 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     description: 'Seksi 3, grid 2-kolom sebelah kiri',
     defaultRule: 'Artikel kategori Movies (ulasan & review film)',
     allowedCategories: ALL_ARTICLE_CATEGORIES,
+    area: 'home',
   },
   {
     key: 'reviews_series',
@@ -427,6 +470,7 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     description: 'Seksi 3, grid 2-kolom sebelah kanan',
     defaultRule: 'Artikel kategori Series (ulasan & review serial)',
     allowedCategories: ALL_ARTICLE_CATEGORIES,
+    area: 'home',
   },
   {
     key: 'anime_news',
@@ -436,6 +480,7 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     description: 'Seksi 4, grid artikel gaya news ticker',
     defaultRule: 'Artikel kategori Anime (kabar & berita terkini)',
     allowedCategories: ALL_ARTICLE_CATEGORIES,
+    area: 'home',
   },
   {
     key: 'film_studies',
@@ -445,6 +490,60 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     description: 'Seksi 5, kartu esai sinematik vertikal & mendalam',
     defaultRule: 'Artikel kategori Film Studies (kajian sinema)',
     allowedCategories: ALL_ARTICLE_CATEGORIES,
+    area: 'home',
+  },
+  // -------------------------------------------------------------
+  // FILM DATABASE SECTIONS
+  // -------------------------------------------------------------
+  {
+    key: 'fd_on_theatres',
+    label: 'Sedang Tayang di Bioskop',
+    defaultTitle: 'Sedang Tayang di Bioskop',
+    targetType: 'films',
+    description: 'Film yang sedang tayang di bioskop saat ini (8 minggu terakhir)',
+    defaultRule: 'Where to watch "cinema" & rilis antara 56 hari lalu s/d hari ini (rilis terbaru dulu)',
+    allowedCategories: ALL_FILM_CATEGORIES,
+    area: 'film_database',
+  },
+  {
+    key: 'fd_streaming',
+    label: "Explore What's Streaming",
+    defaultTitle: "Explore What's Streaming",
+    targetType: 'films',
+    description: 'Koleksi film & serial yang tersedia di platform streaming',
+    defaultRule: 'Where to watch "stream" (filter opsional per platform, rilis terbaru dulu)',
+    allowedCategories: ALL_FILM_CATEGORIES,
+    area: 'film_database',
+  },
+  {
+    key: 'fd_coming_soon',
+    label: 'Coming Soon to Theatres',
+    defaultTitle: 'Coming Soon to Theatres',
+    targetType: 'films',
+    description: 'Film bioskop yang akan segera tayang di masa mendatang',
+    defaultRule: 'Tanggal rilis setelah hari ini (rilis paling dekat dulu)',
+    allowedCategories: ALL_FILM_CATEGORIES,
+    area: 'film_database',
+  },
+  {
+    key: 'fd_animation',
+    label: 'Animation Recommendation',
+    defaultTitle: 'Animation Recommendation',
+    targetType: 'films',
+    description: 'Rekomendasi film & serial animasi terbaik',
+    defaultRule: 'Tipe "animation" / genre animasi, diurutkan skor berbobot Bayesian',
+    allowedCategories: ALL_FILM_CATEGORIES,
+    area: 'film_database',
+  },
+  {
+    key: 'fd_fans_favourite',
+    label: "Fan's Favourite",
+    defaultTitle: "Fan's Favourite",
+    targetType: 'films',
+    description: 'Film paling disukai dan dinilai tinggi oleh warga Sotoy',
+    defaultRule: 'Skor berbobot Bayesian tertinggi dengan batas minimum votes',
+    allowedCategories: ALL_FILM_CATEGORIES,
+    area: 'film_database',
   },
 ];
 
@@ -480,6 +579,13 @@ export function resolveConfigFilms(
       if (cat === 'movie' || cat === 'movies') {
         return filmType === 'movie' || filmType === 'movies' || !filmType;
       }
+      if (cat === 'animation' || cat === 'anime') {
+        return (
+          filmType === 'animation' ||
+          filmType === 'anime' ||
+          (Array.isArray(f.genres) && f.genres.some((g: string) => /animas?i|animation/i.test(g)))
+        );
+      }
       return filmType === cat;
     });
   }
@@ -502,11 +608,27 @@ export function resolveConfigFilms(
   // Sort
   if (config.sortBy === 'rating') {
     filtered.sort((a, b) => (b.skorSotoy || 0) - (a.skorSotoy || 0));
-  } else if (config.sortBy === 'views') {
+  } else if (config.sortBy === 'views' || config.sortBy === 'votes') {
     filtered.sort((a, b) => (b.totalVotes || 0) - (a.totalVotes || 0));
+  } else if (config.sortBy === 'release_soonest') {
+    filtered.sort((a, b) => {
+      const dateA = a.idReleaseDate || a.releaseDate;
+      const dateB = b.idReleaseDate || b.releaseDate;
+      const timeA = dateA ? new Date(dateA).getTime() : Infinity;
+      const timeB = dateB ? new Date(dateB).getTime() : Infinity;
+      return (isNaN(timeA) ? Infinity : timeA) - (isNaN(timeB) ? Infinity : timeB);
+    });
   } else {
-    // Newest
-    filtered.sort((a, b) => (b.year || 0) - (a.year || 0));
+    // Newest: prefer idReleaseDate, then releaseDate, then year
+    filtered.sort((a, b) => {
+      const dateA = a.idReleaseDate || a.releaseDate;
+      const dateB = b.idReleaseDate || b.releaseDate;
+      if (dateA && dateB) {
+        const diff = new Date(dateB).getTime() - new Date(dateA).getTime();
+        if (!isNaN(diff) && diff !== 0) return diff;
+      }
+      return (b.year || 0) - (a.year || 0);
+    });
   }
 
   const limit = config.limit && config.limit > 0 ? config.limit : 5;

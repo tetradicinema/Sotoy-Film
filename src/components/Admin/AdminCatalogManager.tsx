@@ -45,7 +45,7 @@ import {
 interface FilmFormData {
   title: string;
   originalTitle: string;
-  type: 'movie' | 'series' | 'anime';
+  type: 'movie' | 'series' | 'anime' | 'animation';
   year: number;
   releaseDate: string; // ISO date string e.g. "2024-07-12"
   duration: string;
