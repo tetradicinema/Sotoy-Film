@@ -32,9 +32,19 @@ import {
 import { useApp } from '../../context/AppContext';
 import { Article, MainCategory } from '../../types';
 import { NotificationBell } from '../Common/NotificationBell';
-import { CMSArticleWorkspace } from '../Pages/CMSArticleWorkspace';
 import { CMSAnalyticsCard } from '../CMS/CMSAnalyticsCard';
 import { DEFAULT_AVATAR } from '../../data/mockData';
+
+// Code-split the article workspace (pulls in the rich-text editor runtime)
+const CMSArticleWorkspace = React.lazy(() =>
+  import('../Pages/CMSArticleWorkspace').then(m => ({ default: m.CMSArticleWorkspace }))
+);
+
+const EditorLoadingFallback: React.FC = () => (
+  <div className="flex items-center justify-center py-16">
+    <div className="w-10 h-10 border-3 border-[#FF2E7E] border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 export const WriterDashboard: React.FC = () => {
   const {
@@ -598,7 +608,9 @@ export const WriterDashboard: React.FC = () => {
         </div>
 
         {/* WordPress-Style CMS Article Workspace */}
-        <CMSArticleWorkspace mode="writer" />
+        <React.Suspense fallback={<EditorLoadingFallback />}>
+          <CMSArticleWorkspace mode="writer" />
+        </React.Suspense>
       </div>
     </div>
   );

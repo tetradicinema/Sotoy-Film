@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { LinkifiedText } from '../Common/LinkifiedText';
 import { LegacyMarkdownContent } from '../Common/LegacyMarkdownContent';
-import { TiptapContentRenderer } from '../Common/TiptapContentRenderer';
 import { useParams } from 'react-router-dom';
 import { collection, doc, setDoc, onSnapshot, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
@@ -46,6 +45,11 @@ import { RateFilmModal } from '../Modals/RateFilmModal';
 import { ArticleDetailSkeleton } from '../Skeletons';
 import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 import { slugify } from '../../utils/slugify';
+
+// Code-split the Tiptap content renderer so readers don't download the editor runtime
+const TiptapContentRenderer = React.lazy(() =>
+  import('../Common/TiptapContentRenderer').then(m => ({ default: m.TiptapContentRenderer }))
+);
 
 export const ArticleDetailPage: React.FC = () => {
   const {
@@ -472,7 +476,9 @@ export const ArticleDetailPage: React.FC = () => {
           {/* Article Main Body Content */}
           <div className="w-full">
             {article.contentFormat === 'tiptap' && article.contentJson ? (
-              <TiptapContentRenderer contentJson={article.contentJson} />
+              <React.Suspense fallback={<ArticleDetailSkeleton />}>
+                <TiptapContentRenderer contentJson={article.contentJson} />
+              </React.Suspense>
             ) : (
               <LegacyMarkdownContent content={article.content} />
             )}

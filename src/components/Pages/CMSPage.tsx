@@ -16,9 +16,19 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { auth } from '../../lib/firebase';
-import { CMSArticleWorkspace } from './CMSArticleWorkspace';
 import { SEOHead } from '../SEO/SEOHead';
 import { RoleBadge } from '../Common/RoleBadge';
+
+// Code-split the article workspace (pulls in the rich-text editor runtime)
+const CMSArticleWorkspace = React.lazy(() =>
+  import('./CMSArticleWorkspace').then(m => ({ default: m.CMSArticleWorkspace }))
+);
+
+const EditorLoadingFallback: React.FC = () => (
+  <div className="flex items-center justify-center py-16">
+    <div className="w-10 h-10 border-3 border-[#FF2E7E] border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 export const CMSPage: React.FC = () => {
   const { 
@@ -232,16 +242,18 @@ export const CMSPage: React.FC = () => {
 
         {/* The Full Featured CMS Article Workspace */}
         <div className="bg-[#171717] border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-6">
-          <CMSArticleWorkspace 
-            mode={effectiveMode}
-            title={isUserAdmin && adminScope === 'all' ? 'Katalog Seluruh Artikel Editorial' : 'Artikel & Draf Tulisan'}
-            subtitle={
-              isUserAdmin && adminScope === 'all'
-                ? 'Semua artikel terbit, draf dalam antrian, dan artikel terjadwal dari seluruh staf penulis redaksi.'
-                : 'Daftar tulisan dan draf artikel Anda sendiri.'
-            }
-            showCreateButton={false}
-          />
+          <React.Suspense fallback={<EditorLoadingFallback />}>
+            <CMSArticleWorkspace 
+              mode={effectiveMode}
+              title={isUserAdmin && adminScope === 'all' ? 'Katalog Seluruh Artikel Editorial' : 'Artikel & Draf Tulisan'}
+              subtitle={
+                isUserAdmin && adminScope === 'all'
+                  ? 'Semua artikel terbit, draf dalam antrian, dan artikel terjadwal dari seluruh staf penulis redaksi.'
+                  : 'Daftar tulisan dan draf artikel Anda sendiri.'
+              }
+              showCreateButton={false}
+            />
+          </React.Suspense>
         </div>
 
       </div>

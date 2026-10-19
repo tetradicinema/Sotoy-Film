@@ -161,6 +161,8 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({
           color: '#FF2E7E',
           width: 2,
         },
+        link: false,
+        underline: false,
       }),
       Underline,
       LinkExtension.configure({

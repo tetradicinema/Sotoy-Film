@@ -29,7 +29,6 @@ import { FilmRecommendationsPage } from './components/Pages/FilmRecommendationsP
 import { CommunityFeedPage } from './components/Pages/CommunityFeedPage';
 import { BuzzDetailPage } from './components/Pages/BuzzDetailPage';
 import { ArticleDetailPage } from './components/Pages/ArticleDetailPage';
-import { WriteArticlePage } from './components/Pages/WriteArticlePage';
 import { UserPage } from './components/Pages/UserPage';
 import { CollectionDetailPage } from './components/Pages/CollectionDetailPage';
 import { SettingsPage } from './components/Pages/SettingsPage';
@@ -67,6 +66,10 @@ const CMSPage = React.lazy(() =>
 );
 const AdminHomepageSectionsPage = React.lazy(() =>
   import('./components/Pages/AdminHomepageSectionsPage').then(m => ({ default: m.AdminHomepageSectionsPage }))
+);
+// Code-split the article editor page (pulls in @tiptap editor runtime)
+const WriteArticlePage = React.lazy(() =>
+  import('./components/Pages/WriteArticlePage').then(m => ({ default: m.WriteArticlePage }))
 );
 
 import { GenericPageSkeleton } from './components/Skeletons';
@@ -338,8 +341,22 @@ const AppContent: React.FC = () => {
           <Route path="/article" element={<Navigate to="/kategori/movies" replace />} />
           <Route path="/artikel/:slug" element={<ArticleDetailPage />} />
           <Route path="/article/:slug" element={<ArticleDetailPage />} />
-          <Route path="/tulis-artikel" element={<WriteArticlePage />} />
-          <Route path="/write-article" element={<WriteArticlePage />} />
+          <Route
+            path="/tulis-artikel"
+            element={
+              <React.Suspense fallback={<PageLoadingFallback />}>
+                <WriteArticlePage />
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/write-article"
+            element={
+              <React.Suspense fallback={<PageLoadingFallback />}>
+                <WriteArticlePage />
+              </React.Suspense>
+            }
+          />
 
           {/* Category & Exploration Routes */}
           <Route path="/kategori" element={<Navigate to="/kategori/movies" replace />} />

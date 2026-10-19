@@ -67,6 +67,8 @@ export const TiptapContentRenderer: React.FC<TiptapContentRendererProps> = ({ co
           heading: {
             levels: [2, 3, 4],
           },
+          link: false,
+          underline: false,
         }),
         Underline,
         LinkExtension.configure({
