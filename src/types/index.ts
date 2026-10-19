@@ -124,6 +124,8 @@ export interface Article {
   slug: string;
   excerpt: string;
   content: string;
+  contentFormat?: 'markdown' | 'tiptap';
+  contentJson?: string;
   coverImage: string;
   category: MainCategory;
   subCategory: SubCategory;
@@ -163,6 +165,8 @@ export interface ArticleVersion {
   title: string;
   excerpt: string;
   content: string;
+  contentFormat?: 'markdown' | 'tiptap';
+  contentJson?: string;
   tags?: string[];
   category?: MainCategory;
   subCategory?: SubCategory;

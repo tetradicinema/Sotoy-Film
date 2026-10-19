@@ -43,6 +43,8 @@
         "slug": { "type": "string" },
         "excerpt": { "type": "string" },
         "content": { "type": "string" },
+        "contentFormat": { "type": "string", "enum": ["markdown", "tiptap"] },
+        "contentJson": { "type": "string" },
         "coverImage": { "type": "string" },
         "category": { "type": "string" },
         "subCategory": { "type": "string" },

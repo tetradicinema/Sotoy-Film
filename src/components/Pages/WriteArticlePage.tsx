@@ -43,6 +43,7 @@ import { useApp } from '../../context/AppContext';
 import { MainCategory, SubCategory, FilmItem, ArticleVersion } from '../../types';
 import { db } from '../../lib/firebase';
 import { doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, query, where, orderBy } from 'firebase/firestore';
+import { ArticleEditor } from '../CMS/ArticleEditor';
 import { RichTextEditor } from '../CMS/RichTextEditor';
 import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 
@@ -82,6 +83,8 @@ export const WriteArticlePage: React.FC = () => {
   const [subCategory, setSubCategory] = useState<SubCategory>('news');
   const [excerpt, setExcerpt] = useState('');
   const [content, setContent] = useState('');
+  const [contentFormat, setContentFormat] = useState<'markdown' | 'tiptap'>('tiptap');
+  const [contentJson, setContentJson] = useState<string>('');
   const [coverImage, setCoverImage] = useState('https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80');
   const [tagsInput, setTagsInput] = useState('Film, Bioskop, Review');
   const [readTime, setReadTime] = useState('5 mnt baca');
@@ -256,6 +259,8 @@ export const WriteArticlePage: React.FC = () => {
     subCategory,
     excerpt,
     content,
+    contentFormat,
+    contentJson,
     coverImage,
     tagsInput,
     readTime,
@@ -278,6 +283,8 @@ export const WriteArticlePage: React.FC = () => {
       subCategory,
       excerpt,
       content,
+      contentFormat,
+      contentJson,
       coverImage,
       tagsInput,
       readTime,
@@ -298,6 +305,8 @@ export const WriteArticlePage: React.FC = () => {
     subCategory,
     excerpt,
     content,
+    contentFormat,
+    contentJson,
     coverImage,
     tagsInput,
     readTime,
@@ -333,6 +342,8 @@ export const WriteArticlePage: React.FC = () => {
         setSubCategory(found.subCategory || 'news');
         setExcerpt(found.excerpt || '');
         setContent(found.content || '');
+        setContentFormat(found.contentFormat || 'markdown');
+        setContentJson(found.contentJson || '');
         setCoverImage(found.coverImage || '');
         setTagsInput((found.tags || []).join(', '));
         setReadTime(found.readTime || '5 mnt baca');
@@ -387,6 +398,9 @@ export const WriteArticlePage: React.FC = () => {
         setTitle('');
         setCustomSlug('');
         setIsSlugManuallyEdited(false);
+        setContent('');
+        setContentFormat('tiptap');
+        setContentJson('');
         setSelectedFilmIds([]);
         setArticleStatus('published');
         setSeoTitle('');
@@ -408,6 +422,12 @@ export const WriteArticlePage: React.FC = () => {
     setSubCategory(autosaveBackupData.subCategory || 'news');
     setExcerpt(autosaveBackupData.excerpt || '');
     setContent(autosaveBackupData.content || '');
+    if (autosaveBackupData.contentFormat) {
+      setContentFormat(autosaveBackupData.contentFormat);
+    }
+    if (autosaveBackupData.contentJson) {
+      setContentJson(autosaveBackupData.contentJson);
+    }
     setCoverImage(autosaveBackupData.coverImage || '');
     setTagsInput((autosaveBackupData.tags || []).join(', '));
     if (autosaveBackupData.relatedFilmIds) setSelectedFilmIds(autosaveBackupData.relatedFilmIds);
@@ -446,6 +466,8 @@ export const WriteArticlePage: React.FC = () => {
           slug: finalSlug,
           excerpt: form.excerpt.trim() || form.title.trim(),
           content: form.content.trim(),
+          contentFormat: 'tiptap',
+          contentJson: form.contentJson || '',
           coverImage: form.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80',
           category: form.category,
           subCategory: form.subCategory,
@@ -497,6 +519,7 @@ export const WriteArticlePage: React.FC = () => {
       subCategory: form.subCategory,
       excerpt: form.excerpt,
       content: form.content,
+      contentJson: form.contentJson,
       coverImage: form.coverImage,
       tagsInput: form.tagsInput,
       selectedFilmIds: form.selectedFilmIds,
@@ -537,6 +560,8 @@ export const WriteArticlePage: React.FC = () => {
         slug: finalSlug,
         excerpt: form.excerpt || form.title,
         content: form.content,
+        contentFormat: 'tiptap',
+        contentJson: form.contentJson || '',
         coverImage: form.coverImage,
         category: form.category,
         subCategory: form.subCategory,
@@ -597,6 +622,7 @@ export const WriteArticlePage: React.FC = () => {
       subCategory: form.subCategory,
       excerpt: form.excerpt,
       content: form.content,
+      contentJson: form.contentJson,
       coverImage: form.coverImage,
       tagsInput: form.tagsInput,
       selectedFilmIds: form.selectedFilmIds,
@@ -800,6 +826,8 @@ export const WriteArticlePage: React.FC = () => {
         title: title.trim() || 'Draf Tanpa Judul',
         excerpt: excerpt.trim() || title.trim() || 'Ringkasan Draf',
         content: content || '',
+        contentFormat: 'tiptap',
+        contentJson: contentJson || '',
         tags: cleanTags,
         category,
         subCategory,
@@ -837,6 +865,12 @@ export const WriteArticlePage: React.FC = () => {
     setTitle(ver.title || '');
     setExcerpt(ver.excerpt || '');
     setContent(ver.content || '');
+    if (ver.contentFormat) {
+      setContentFormat(ver.contentFormat);
+    }
+    if (ver.contentJson) {
+      setContentJson(ver.contentJson);
+    }
     if (ver.tags && Array.isArray(ver.tags) && ver.tags.length > 0) {
       setTagsInput(ver.tags.join(', '));
     }
@@ -938,6 +972,8 @@ export const WriteArticlePage: React.FC = () => {
     setIsSlugManuallyEdited(false);
     setExcerpt('');
     setContent('');
+    setContentFormat('tiptap');
+    setContentJson('');
     setCoverImage('https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80');
     setTagsInput('Film, Bioskop, Review');
     setReadTime('5 mnt baca');
@@ -1015,6 +1051,8 @@ export const WriteArticlePage: React.FC = () => {
         slug: finalSlug,
         excerpt: excerpt || title,
         content,
+        contentFormat: 'tiptap',
+        contentJson: contentJson || '',
         coverImage,
         category,
         subCategory,
@@ -1768,16 +1806,21 @@ export const WriteArticlePage: React.FC = () => {
               {/* Content Editor */}
               <div>
                 <label className="block text-xs font-bold text-slate-300 mb-1.5 flex items-center justify-between">
-                  <span>Isi Konten Artikel (Mendukung Markdown, Tabel, Link, & Gambar) <span className="text-[#FF2E7E]">*</span></span>
+                  <span>Isi Konten Artikel (WYSIWYG Tiptap & Sematan Media Sosial) <span className="text-[#FF2E7E]">*</span></span>
                   <span className="text-[11px] font-mono text-slate-400">
                     {readingStats.words} kata • ~{readingStats.estimatedMinutes} mnt baca
                   </span>
                 </label>
-                <RichTextEditor
-                  id="write-content-textarea"
-                  value={content}
-                  onChange={setContent}
-                  placeholder="Tulis ulasan mendalam, breakdown teknis, atau poin-poin artikel..."
+                <ArticleEditor
+                  key={editingId || (selectedArticleId ? `art-${selectedArticleId}` : 'new-article')}
+                  initialJson={contentJson}
+                  initialMarkdown={content}
+                  onChange={({ json, markdown, plainText, wordCount }) => {
+                    setContent(markdown);
+                    setContentJson(json);
+                    setContentFormat('tiptap');
+                  }}
+                  placeholder="Tulis naskah ulasan mendalam, analisis sinematografi, atau artikel film Anda... Ketik '/' untuk menu kilat atau tempelkan link YouTube/IG/X/TikTok/Threads untuk menyematkan embed."
                 />
               </div>
 

@@ -115,7 +115,9 @@ service cloud.firestore {
       return data.keys().hasAll(['id', 'title', 'content', 'category', 'author']) &&
         data.id is string && data.id.size() <= 128 &&
         data.title is string && data.title.size() <= 200 &&
-        data.content is string && data.content.size() <= 50000 &&
+        data.content is string && data.content.size() <= 100000 &&
+        (!('contentJson' in data) || (data.contentJson is string && data.contentJson.size() <= 600000)) &&
+        (!('contentFormat' in data) || (data.contentFormat in ['markdown', 'tiptap'])) &&
         data.category is string &&
         data.author is map &&
         data.author.id is string &&
