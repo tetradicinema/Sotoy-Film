@@ -957,13 +957,14 @@ export const AdminHomepageSections: React.FC = () => {
   // Current working section config (draft or from firestore or default)
   const currentConfig: SectionConfig = useMemo(() => {
     const isFilmDb = currentMeta.area === 'film_database';
+    const isFdSection = activeSectionKey.startsWith('fd_');
     const defaultVal: SectionConfig = {
       title: '',
       sourceType: 'auto',
       category: undefined,
       subCategory: '',
       tag: '',
-      sortBy: 'newest',
+      sortBy: isFilmDb || isFdSection ? undefined : 'newest',
       limit: activeSectionKey === 'hero_slider' ? 6 : isFilmDb ? 12 : 5,
       itemIds: [],
       enabled: true,
@@ -1017,7 +1018,7 @@ export const AdminHomepageSections: React.FC = () => {
       category: undefined,
       subCategory: '',
       tag: '',
-      sortBy: 'newest',
+      sortBy: isFilmDb ? undefined : 'newest',
       limit: key === 'hero_slider' ? 6 : isFilmDb ? 12 : 5,
       itemIds: [],
       enabled: true,
@@ -1716,11 +1717,15 @@ export const AdminHomepageSections: React.FC = () => {
                   </label>
                   <select
                     id="select-sort-auto"
-                    value={currentConfig.sortBy || 'newest'}
-                    onChange={(e) => updateCurrentDraft({ sortBy: e.target.value as any })}
+                    value={currentConfig.sortBy || ''}
+                    onChange={(e) => updateCurrentDraft({ sortBy: (e.target.value as any) || undefined })}
                     className="w-full px-3 py-2 rounded-xl bg-[#171717] border border-white/[0.1] text-white text-xs outline-none focus:border-[#FF2E7E] transition-colors"
                   >
-                    <option value="newest">Terbaru (Newest)</option>
+                    {(currentMeta.area === 'film_database' || activeSectionKey.startsWith('fd_')) ? (
+                      <option value="">Bawaan seksi (otomatis)</option>
+                    ) : (
+                      <option value="newest">Terbaru (Newest)</option>
+                    )}
                     <option value="rating">Rating / Skor Sotoy Tertinggi</option>
                     <option value="views">Paling Banyak Dilihat (Views)</option>
                     <option value="votes">Jumlah Suara Terbanyak (Total Votes)</option>

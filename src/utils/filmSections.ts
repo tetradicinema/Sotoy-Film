@@ -204,7 +204,15 @@ export function resolveFilmDbSection(
 
     case 'fd_fans_favourite': {
       // Films with totalVotes >= (config.minVotes ?? 3)
-      const minVotes = config?.minVotes !== undefined ? config.minVotes : 3;
+      let minVotes = 3;
+      if (typeof config?.minVotes === 'number') {
+        minVotes = config.minVotes;
+      } else if (config?.minVotes === '' || (config?.minVotes as any) === null) {
+        minVotes = 3;
+      } else if (config?.minVotes !== undefined) {
+        const parsed = Number(config.minVotes);
+        minVotes = isNaN(parsed) ? 3 : parsed;
+      }
       filtered = films.filter(f => (f.totalVotes || 0) >= minVotes);
       break;
     }
@@ -259,8 +267,10 @@ export function resolveFilmDbSection(
   }
 
   // 3. Sorting
-  if (config?.sortBy) {
-    switch (config.sortBy) {
+  const sortBy = config?.sortBy;
+  const hasSortBy = typeof sortBy === 'string' && sortBy.trim() !== '';
+  if (hasSortBy) {
+    switch (sortBy) {
       case 'rating': {
         filtered.sort((a, b) => normalizeFilmScore(b) - normalizeFilmScore(a));
         break;
