@@ -96,19 +96,10 @@ const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo
 export const FeaturedNews: React.FC = () => {
   const { publishedArticles, isLoadingArticles, navigateTo } = useApp();
 
-  // Pick 5 featured/top articles
+  // Pick strictly articles flagged with featured
   const featuredArticles = useMemo(() => {
-    const featured = publishedArticles.filter(a => a.featured && !a.heroSlider);
-    if (featured.length >= 5) return featured.slice(0, 5);
-    const fallback = publishedArticles.filter(a => !a.heroSlider);
-    const combined = [...featured];
-    for (const art of fallback) {
-      if (combined.length >= 5) break;
-      if (!combined.some(a => a.id === art.id)) {
-        combined.push(art);
-      }
-    }
-    return combined.slice(0, 5);
+    const featured = publishedArticles.filter(a => a.featured === true);
+    return featured.slice(0, 5);
   }, [publishedArticles]);
 
   return (
