@@ -531,6 +531,7 @@ export type HomeSidebarWidgetKey =
 
 export interface SectionConfig {
   title?: string;
+  description?: string;
   sourceType: 'auto' | 'manual' | 'slider';
   // Legacy values 'anime' and 'animasi' are still accepted when reading saved
   // configurations, and are treated as 'animation'.

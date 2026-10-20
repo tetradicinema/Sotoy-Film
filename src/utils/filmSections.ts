@@ -1,4 +1,5 @@
-import { FilmItem, SectionConfig, HomepageSectionKey } from '../types';
+import { FilmItem, SectionConfig, HomepageSectionKey, HomepageSectionsConfig } from '../types';
+import { HOMEPAGE_SECTIONS_META, resolveFilmDbSectionOrder } from './homepageConfigHelper';
 
 /**
  * Normalizes streaming platform names to canonical forms.
@@ -24,7 +25,26 @@ export function normalizePlatform(name: string): string {
 }
 
 /**
- * Returns up to 8 normalized platform names with counts, sorted by frequency descending.
+ * Canonical major streaming platforms, in the fixed display order they should
+ * always appear before any other (unknown) platform.
+ */
+export const MAJOR_STREAMING_PLATFORMS: string[] = [
+  'Netflix',
+  'Prime Video',
+  'Disney+ Hotstar',
+  'Max',
+  'Apple TV+',
+  'Vidio',
+  'Viu',
+  'WeTV',
+  'iQIYI',
+  'Bioskop Online',
+];
+
+/**
+ * Returns up to 8 normalized platform names with counts. Major platforms come
+ * first in their fixed order, then remaining platforms by frequency descending
+ * (ties alphabetically).
  */
 export function getStreamingPlatforms(films: FilmItem[]): { name: string; count: number }[] {
   const map = new Map<string, number>();
@@ -48,7 +68,19 @@ export function getStreamingPlatforms(films: FilmItem[]): { name: string; count:
     list.push({ name, count });
   }
 
-  list.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  const majorIndex = new Map(MAJOR_STREAMING_PLATFORMS.map((name, index) => [name, index]));
+
+  list.sort((a, b) => {
+    const aMajor = majorIndex.get(a.name);
+    const bMajor = majorIndex.get(b.name);
+
+    if (aMajor !== undefined && bMajor !== undefined) return aMajor - bMajor;
+    if (aMajor !== undefined) return -1;
+    if (bMajor !== undefined) return 1;
+
+    return b.count - a.count || a.name.localeCompare(b.name);
+  });
+
   return list.slice(0, 8);
 }
 
@@ -352,4 +384,76 @@ export function resolveFilmDbSection(
 
   // 4. Limit
   return filtered.slice(0, limit);
+}
+
+/**
+ * Re-applies the film database section resolver for a streaming platform chip.
+ * The platform is applied before the resolver limit so a chip click never
+ * returns fewer items than the configured limit when enough films match.
+ */
+export function resolveStreamingForPlatform(
+  films: FilmItem[],
+  config: SectionConfig,
+  platform?: string,
+  opts?: { now?: Date }
+): FilmItem[] {
+  return resolveFilmDbSection(
+    'fd_streaming',
+    films,
+    { ...config, platform: platform || config.platform },
+    opts
+  );
+}
+
+export interface FilmDbSection {
+  key: HomepageSectionKey;
+  title: string;
+  description: string;
+  films: FilmItem[];
+  platforms?: { name: string; count: number }[];
+  activePlatform?: string;
+}
+
+/**
+ * Builds the ordered, render-ready list of Film Database sections from the
+ * saved homepage configuration. Sections that are disabled or resolve to an
+ * empty film list are omitted.
+ */
+export function buildFilmDbSections(
+  films: FilmItem[],
+  homepageConfig?: HomepageSectionsConfig | null,
+  opts?: { now?: Date }
+): FilmDbSection[] {
+  const config = homepageConfig ?? undefined;
+  const order = resolveFilmDbSectionOrder(config?.filmDbSectionOrder);
+  const metaByKey = new Map(HOMEPAGE_SECTIONS_META.map(meta => [meta.key, meta]));
+
+  const sections: FilmDbSection[] = [];
+
+  for (const key of order) {
+    const meta = metaByKey.get(key);
+    if (!meta || meta.area !== 'film_database') continue;
+
+    const sectionConfig: SectionConfig = config?.sections?.[key] ?? { sourceType: 'auto' };
+    if (sectionConfig.enabled === false) continue;
+
+    const resolvedFilms = resolveFilmDbSection(key, films, sectionConfig, opts);
+    if (resolvedFilms.length === 0) continue;
+
+    const section: FilmDbSection = {
+      key,
+      title: sectionConfig.title?.trim() || meta.defaultTitle,
+      description: sectionConfig.description?.trim() || meta.defaultDescription || '',
+      films: resolvedFilms,
+    };
+
+    if (key === 'fd_streaming') {
+      section.platforms = sectionConfig.platform ? [] : getStreamingPlatforms(films);
+      section.activePlatform = sectionConfig.platform;
+    }
+
+    sections.push(section);
+  }
+
+  return sections;
 }

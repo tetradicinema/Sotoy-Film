@@ -7,6 +7,7 @@ export interface SectionMeta {
   key: HomepageSectionKey;
   label: string;
   defaultTitle: string;
+  defaultDescription?: string;
   targetType: 'films' | 'articles';
   description: string;
   defaultRule: string;
@@ -500,8 +501,9 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
   // -------------------------------------------------------------
   {
     key: 'fd_on_theatres',
-    label: 'Sedang Tayang di Bioskop',
-    defaultTitle: 'Sedang Tayang di Bioskop',
+    label: 'On Theatres Now',
+    defaultTitle: 'On Theatres Now',
+    defaultDescription: 'Film yang sedang tayang di bioskop Indonesia saat ini.',
     targetType: 'films',
     description: 'Film yang sedang tayang di bioskop saat ini (8 minggu terakhir)',
     defaultRule: 'Where to watch "cinema" & rilis antara 56 hari lalu s/d hari ini (rilis terbaru dulu)',
@@ -512,6 +514,7 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     key: 'fd_streaming',
     label: "Explore What's Streaming",
     defaultTitle: "Explore What's Streaming",
+    defaultDescription: 'Film dan series yang bisa ditonton sekarang di Netflix, Prime Video, dan platform streaming lainnya.',
     targetType: 'films',
     description: 'Koleksi film & serial yang tersedia di platform streaming',
     defaultRule: 'Where to watch "stream" (filter opsional per platform, rilis terbaru dulu)',
@@ -522,6 +525,7 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     key: 'fd_coming_soon',
     label: 'Coming Soon to Theatres',
     defaultTitle: 'Coming Soon to Theatres',
+    defaultDescription: 'Film yang segera tayang di bioskop, diurutkan dari rilis terdekat.',
     targetType: 'films',
     description: 'Film bioskop yang akan segera tayang di masa mendatang',
     defaultRule: 'Tanggal rilis setelah hari ini (rilis paling dekat dulu)',
@@ -532,6 +536,7 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     key: 'fd_animation',
     label: 'Animation Recommendation',
     defaultTitle: 'Animation Recommendation',
+    defaultDescription: 'Rekomendasi film dan series animasi, dari anime Jepang sampai animasi layar lebar.',
     targetType: 'films',
     description: 'Rekomendasi film & serial animation terbaik',
     defaultRule: 'Tipe "animation" / genre animation, diurutkan skor berbobot Bayesian',
@@ -542,6 +547,7 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     key: 'fd_fans_favourite',
     label: "Fan's Favourite",
     defaultTitle: "Fan's Favourite",
+    defaultDescription: 'Judul dengan skor komunitas tertinggi, dipilih langsung oleh penonton Sotoy.',
     targetType: 'films',
     description: 'Film paling disukai dan dinilai tinggi oleh warga Sotoy',
     defaultRule: 'Skor berbobot Bayesian tertinggi dengan batas minimum votes',

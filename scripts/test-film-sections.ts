@@ -1,5 +1,11 @@
-import { resolveFilmDbSection } from '../src/utils/filmSections';
-import { FilmItem, SectionConfig, HomepageSectionKey } from '../src/types';
+import {
+  resolveFilmDbSection,
+  resolveStreamingForPlatform,
+  buildFilmDbSections,
+  getStreamingPlatforms,
+} from '../src/utils/filmSections';
+import { HOMEPAGE_SECTIONS_META } from '../src/utils/homepageConfigHelper';
+import { FilmItem, SectionConfig, HomepageSectionKey, HomepageSectionsConfig } from '../src/types';
 
 // Fixed now for deterministic tests
 const FIXED_NOW = new Date('2026-10-19T12:00:00Z');
@@ -38,6 +44,17 @@ const createFilm = (overrides: Partial<FilmItem>): FilmItem => ({
   totalVotes: 0,
   ...overrides,
 });
+
+// Helper to create a batch of streaming films per platform
+const createPlatformFilms = (entries: Array<[string, number]>): FilmItem[] =>
+  entries.flatMap(([platform, count], groupIndex) =>
+    Array.from({ length: count }, (_, i) =>
+      createFilm({
+        id: `platform-${groupIndex}-${i}`,
+        whereToWatch: [{ type: 'stream', platform }],
+      })
+    )
+  );
 
 let passed = 0;
 let failed = 0;
@@ -451,6 +468,354 @@ const runTests = () => {
     // a2: (50/53)*8.5 + (3/53)*7.125 = 8.0189 + 0.4033 = 8.4222
     // a1: (1/4)*9 + (3/4)*7.125 = 2.25 + 5.34375 = 7.59375
     assert(result[0].id === 'anim2' && result[1].id === 'anim1', 'fd_animation defaults to Bayesian ranking');
+  }
+
+  // ---------------------------------------------------------------------------
+  // buildFilmDbSections - configurable Film Database section system
+  // ---------------------------------------------------------------------------
+
+  // Shared fixture that satisfies all five default Film Database sections
+  const sectionFilms: FilmItem[] = [
+    createFilm({
+      id: 'cfg-cinema',
+      whereToWatch: [{ type: 'cinema', platform: 'Cinema XXI' }],
+      idReleaseDate: daysAgo(5),
+    }),
+    createFilm({
+      id: 'cfg-stream',
+      whereToWatch: [{ type: 'stream', platform: 'Netflix' }],
+    }),
+    createFilm({
+      id: 'cfg-soon',
+      idReleaseDate: daysFromNow(10),
+    }),
+    createFilm({
+      id: 'cfg-anim',
+      type: 'animation',
+      whereToWatch: [{ type: 'stream', platform: 'Netflix' }],
+    }),
+    createFilm({
+      id: 'cfg-fan',
+      totalVotes: 10,
+      skorSotoy: 8,
+      scoreScale: 10,
+    }),
+  ];
+
+  // 32. order follows saved filmDbSectionOrder
+  {
+    const order: HomepageSectionKey[] = [
+      'fd_animation',
+      'fd_on_theatres',
+      'fd_streaming',
+      'fd_coming_soon',
+      'fd_fans_favourite',
+    ];
+    const config: HomepageSectionsConfig = { filmDbSectionOrder: order };
+    const result = buildFilmDbSections(sectionFilms, config, { now: FIXED_NOW });
+    assertEquals(result.map(s => s.key), order, 'buildFilmDbSections follows saved filmDbSectionOrder');
+  }
+
+  // 33. missing key is appended
+  {
+    const config: HomepageSectionsConfig = {
+      filmDbSectionOrder: ['fd_coming_soon'],
+    };
+    const result = buildFilmDbSections(sectionFilms, config, { now: FIXED_NOW });
+    assertEquals(
+      result.map(s => s.key),
+      ['fd_coming_soon', 'fd_on_theatres', 'fd_streaming', 'fd_animation', 'fd_fans_favourite'],
+      'buildFilmDbSections appends missing keys in default order'
+    );
+  }
+
+  // 34. disabled section is skipped
+  {
+    const config: HomepageSectionsConfig = {
+      sections: {
+        fd_animation: { sourceType: 'auto', enabled: false },
+      },
+    };
+    const result = buildFilmDbSections(sectionFilms, config, { now: FIXED_NOW });
+    assert(
+      !result.some(s => s.key === 'fd_animation'),
+      'buildFilmDbSections skips a disabled section'
+    );
+    assertEquals(
+      result.map(s => s.key),
+      ['fd_on_theatres', 'fd_streaming', 'fd_coming_soon', 'fd_fans_favourite'],
+      'disabled section does not disturb the remaining order'
+    );
+  }
+
+  // 35. empty section is skipped
+  {
+    const onlyStreaming = [
+      createFilm({
+        id: 'only-stream',
+        whereToWatch: [{ type: 'stream', platform: 'Netflix' }],
+      }),
+    ];
+    const result = buildFilmDbSections(onlyStreaming, undefined, { now: FIXED_NOW });
+    assertEquals(
+      result.map(s => s.key),
+      ['fd_streaming'],
+      'buildFilmDbSections skips sections that resolve to zero films'
+    );
+  }
+
+  // 36. custom title overrides default
+  {
+    const config: HomepageSectionsConfig = {
+      sections: {
+        fd_streaming: { sourceType: 'auto', title: '  Custom Stream  ' },
+      },
+    };
+    const result = buildFilmDbSections(sectionFilms, config, { now: FIXED_NOW });
+    const streaming = result.find(s => s.key === 'fd_streaming');
+    assertEquals(streaming?.title, 'Custom Stream', 'custom title overrides the default title');
+  }
+
+  // 37. fd_streaming returns platforms
+  {
+    const films = [
+      createFilm({ id: 'plat-netflix', whereToWatch: [{ type: 'stream', platform: 'Netflix' }] }),
+      createFilm({ id: 'plat-prime', whereToWatch: [{ type: 'stream', platform: 'Amazon Prime' }] }),
+      createFilm({ id: 'plat-disney', whereToWatch: [{ type: 'stream', platform: 'Disney+' }] }),
+    ];
+    const result = buildFilmDbSections(films, undefined, { now: FIXED_NOW });
+    const streaming = result.find(s => s.key === 'fd_streaming');
+    assertEquals(streaming?.platforms?.length, 3, 'fd_streaming section exposes streaming platforms');
+    assertEquals(
+      streaming?.platforms?.map(p => p.name).sort(),
+      ['Disney+ Hotstar', 'Netflix', 'Prime Video'],
+      'fd_streaming platforms are normalized'
+    );
+  }
+
+  // 38. fd_streaming platforms is empty when config.platform is set
+  {
+    const films = [
+      createFilm({ id: 'fixed-netflix', whereToWatch: [{ type: 'stream', platform: 'Netflix' }] }),
+      createFilm({ id: 'fixed-prime', whereToWatch: [{ type: 'stream', platform: 'Prime Video' }] }),
+    ];
+    const config: HomepageSectionsConfig = {
+      sections: {
+        fd_streaming: { sourceType: 'auto', platform: 'Netflix' },
+      },
+    };
+    const result = buildFilmDbSections(films, config, { now: FIXED_NOW });
+    const streaming = result.find(s => s.key === 'fd_streaming');
+    assert(Array.isArray(streaming?.platforms), 'fd_streaming still returns a platforms array');
+    assertEquals(streaming?.platforms?.length, 0, 'fd_streaming platforms is empty when a platform is fixed');
+    assertEquals(streaming?.activePlatform, 'Netflix', 'fd_streaming reports the fixed active platform');
+  }
+
+  // 39. resolveStreamingForPlatform applies the platform before the limit
+  {
+    const netflixFilms = Array.from({ length: 5 }, (_, i) =>
+      createFilm({
+        id: `chip-netflix-${i}`,
+        whereToWatch: [{ type: 'stream', platform: 'Netflix' }],
+      })
+    );
+    const primeFilms = Array.from({ length: 3 }, (_, i) =>
+      createFilm({
+        id: `chip-prime-${i}`,
+        whereToWatch: [{ type: 'stream', platform: 'Prime Video' }],
+      })
+    );
+    const config: SectionConfig = { sourceType: 'auto', limit: 2 };
+    const result = resolveStreamingForPlatform(
+      [...primeFilms, ...netflixFilms],
+      config,
+      'Netflix',
+      { now: FIXED_NOW }
+    );
+    assertEquals(result.length, 2, 'resolveStreamingForPlatform applies the limit after the platform filter');
+    assert(
+      result.every(f => f.whereToWatch.some(w => w.platform === 'Netflix')),
+      'resolveStreamingForPlatform returns only the selected platform'
+    );
+  }
+
+  // 40. manual section keeps saved order
+  {
+    const films = [
+      createFilm({ id: 'manual-a' }),
+      createFilm({ id: 'manual-b' }),
+      createFilm({ id: 'manual-c' }),
+    ];
+    const config: HomepageSectionsConfig = {
+      filmDbSectionOrder: ['fd_streaming'],
+      sections: {
+        fd_streaming: {
+          sourceType: 'manual',
+          itemIds: ['manual-c', 'manual-a', 'manual-b'],
+          limit: 3,
+        },
+      },
+    };
+    const result = buildFilmDbSections(films, config, { now: FIXED_NOW });
+    assertEquals(
+      result[0]?.films.map(f => f.id),
+      ['manual-c', 'manual-a', 'manual-b'],
+      'manual section keeps the saved item order'
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // getStreamingPlatforms - major platform ordering
+  // ---------------------------------------------------------------------------
+
+  // 41. known platforms first, in the fixed major order
+  {
+    const films = createPlatformFilms([
+      ['iQIYI', 1],
+      ['Max', 1],
+      ['Netflix', 1],
+      ['Bioskop Online', 1],
+      ['Prime Video', 1],
+      ['Disney+ Hotstar', 1],
+      ['Apple TV+', 1],
+      ['Vidio', 1],
+    ]);
+    const result = getStreamingPlatforms(films);
+    assertEquals(
+      result.map(p => p.name),
+      [
+        'Netflix',
+        'Prime Video',
+        'Disney+ Hotstar',
+        'Max',
+        'Apple TV+',
+        'Vidio',
+        'iQIYI',
+        'Bioskop Online',
+      ],
+      'getStreamingPlatforms puts known platforms first in the fixed order'
+    );
+  }
+
+  // 42. unknown platforms come after known ones, sorted by count
+  {
+    const films = createPlatformFilms([
+      ['Netflix', 1],
+      ['Prime Video', 2],
+      ['Mubi', 5],
+      ['Criterion', 3],
+    ]);
+    const result = getStreamingPlatforms(films);
+    assertEquals(
+      result.map(p => p.name),
+      ['Netflix', 'Prime Video', 'Mubi', 'Criterion'],
+      'getStreamingPlatforms places unknown platforms after known ones by count'
+    );
+  }
+
+  // 43. max 8 platforms
+  {
+    const films = createPlatformFilms([
+      ['Netflix', 1],
+      ['Platform A', 1],
+      ['Platform B', 1],
+      ['Platform C', 1],
+      ['Platform D', 1],
+      ['Platform E', 1],
+      ['Platform F', 1],
+      ['Platform G', 1],
+      ['Platform H', 1],
+      ['Platform I', 1],
+    ]);
+    const result = getStreamingPlatforms(films);
+    assertEquals(result.length, 8, 'getStreamingPlatforms returns at most 8 platforms');
+    assertEquals(result[0]?.name, 'Netflix', 'getStreamingPlatforms keeps the known platform in the capped list');
+  }
+
+  // 44. counts are included
+  {
+    const films = createPlatformFilms([
+      ['Netflix', 3],
+      ['Prime Video', 2],
+    ]);
+    const result = getStreamingPlatforms(films);
+    assertEquals(
+      result,
+      [
+        { name: 'Netflix', count: 3 },
+        { name: 'Prime Video', count: 2 },
+      ],
+      'getStreamingPlatforms includes per-platform counts'
+    );
+  }
+
+  // 45. ties between unknown platforms sort alphabetically
+  {
+    const films = createPlatformFilms([
+      ['Zeta', 2],
+      ['Alpha', 2],
+      ['Mubi', 2],
+    ]);
+    const result = getStreamingPlatforms(films);
+    assertEquals(
+      result.map(p => p.name),
+      ['Alpha', 'Mubi', 'Zeta'],
+      'getStreamingPlatforms sorts unknown platform ties alphabetically'
+    );
+  }
+
+  // 46. fd_on_theatres default title
+  {
+    const meta = HOMEPAGE_SECTIONS_META.find(item => item.key === 'fd_on_theatres');
+    assertEquals(meta?.label, 'On Theatres Now', 'fd_on_theatres label uses the new default title');
+    assertEquals(
+      meta?.defaultTitle,
+      'On Theatres Now',
+      'fd_on_theatres defaultTitle uses the new default title'
+    );
+  }
+
+  // 47. Film Database sections expose the default description
+  {
+    const result = buildFilmDbSections(sectionFilms, undefined, { now: FIXED_NOW });
+    const streaming = result.find(s => s.key === 'fd_streaming');
+    assertEquals(
+      streaming?.description,
+      'Film dan series yang bisa ditonton sekarang di Netflix, Prime Video, dan platform streaming lainnya.',
+      'buildFilmDbSections returns the default description'
+    );
+  }
+
+  // 48. custom description overrides the default (trimmed)
+  {
+    const config: HomepageSectionsConfig = {
+      sections: {
+        fd_streaming: { sourceType: 'auto', description: '  Deskripsi pilihan editor  ' },
+      },
+    };
+    const result = buildFilmDbSections(sectionFilms, config, { now: FIXED_NOW });
+    const streaming = result.find(s => s.key === 'fd_streaming');
+    assertEquals(
+      streaming?.description,
+      'Deskripsi pilihan editor',
+      'buildFilmDbSections returns the trimmed config description override'
+    );
+  }
+
+  // 49. blank description falls back to the default
+  {
+    const config: HomepageSectionsConfig = {
+      sections: {
+        fd_streaming: { sourceType: 'auto', description: '   ' },
+      },
+    };
+    const result = buildFilmDbSections(sectionFilms, config, { now: FIXED_NOW });
+    const streaming = result.find(s => s.key === 'fd_streaming');
+    assertEquals(
+      streaming?.description,
+      'Film dan series yang bisa ditonton sekarang di Netflix, Prime Video, dan platform streaming lainnya.',
+      'buildFilmDbSections falls back to the default when the description override is blank'
+    );
   }
 
   console.log(`\n--- Results: ${passed} passed, ${failed} failed ---`);

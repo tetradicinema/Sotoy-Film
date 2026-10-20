@@ -960,6 +960,7 @@ export const AdminHomepageSections: React.FC = () => {
     const isFdSection = activeSectionKey.startsWith('fd_');
     const defaultVal: SectionConfig = {
       title: '',
+      description: '',
       sourceType: 'auto',
       category: undefined,
       subCategory: '',
@@ -1014,6 +1015,7 @@ export const AdminHomepageSections: React.FC = () => {
     const isFilmDb = key.startsWith('fd_');
     const defaultReset: SectionConfig = {
       title: '',
+      description: '',
       sourceType: 'auto',
       category: undefined,
       subCategory: '',
@@ -1123,7 +1125,7 @@ export const AdminHomepageSections: React.FC = () => {
               <p className="text-slate-400 text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
                 {adminAreaTab === 'home'
                   ? 'Kustomisasi judul, mode kurasi otomatis (kategori & sub-kategori), atau pilih item manual secara spesifik untuk tiap seksi di halaman beranda. Geser urutan seksi dengan drag-and-drop. Perubahan tersimpan secara realtime di Firestore.'
-                  : 'Konfigurasi 5 seksi kurasi Film Database (Sedang Tayang di Bioskop, What\'s Streaming, Coming Soon, Animation Rekomendasi, dan Fan\'s Favourite). Atur urutan seksi, status aktif, filter platform streaming, dan batas minimum voting.'}
+                  : 'Konfigurasi 5 seksi kurasi Film Database (On Theatres Now, What\'s Streaming, Coming Soon, Animation Rekomendasi, dan Fan\'s Favourite). Atur urutan seksi, status aktif, filter platform streaming, dan batas minimum voting.'}
               </p>
             </div>
           </div>
@@ -1551,6 +1553,27 @@ export const AdminHomepageSections: React.FC = () => {
               Kosongkan jika ingin menggunakan judul bawaan kode ({currentMeta.defaultTitle}).
             </p>
           </div>
+
+          {/* Form Field 1b: Custom Description (Film Database sections) */}
+          {currentMeta.area === 'film_database' && (
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-300">
+                Deskripsi
+              </label>
+              <input
+                id={`input-section-description-${currentMeta.key}`}
+                type="text"
+                value={currentConfig.description || ''}
+                onChange={(e) => updateCurrentDraft({ description: e.target.value })}
+                placeholder={`Default: ${currentMeta.defaultDescription || ''}`}
+                maxLength={140}
+                className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-white/[0.1] focus:border-[#FF2E7E] text-white text-xs sm:text-sm placeholder:text-slate-600 outline-none transition-colors"
+              />
+              <p className="text-[11px] text-slate-500">
+                Maksimal 140 karakter. Kosongkan untuk memakai deskripsi bawaan kode.
+              </p>
+            </div>
+          )}
 
           {/* Form Field 2: Source Type Toggle */}
           <div className="space-y-2">

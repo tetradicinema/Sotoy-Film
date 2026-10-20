@@ -2,20 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import {
   Camera,
-  User as UserIcon,
-  AtSign,
-  FileText,
-  Sparkles,
   ArrowRight,
   ArrowLeft,
   Loader2,
-  Film,
   Check,
   AlertTriangle,
   LogOut,
   Mail,
   CheckCircle2,
-  ShieldCheck,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { ProfilePhotoCropModal } from '../Common/ProfilePhotoCropModal';
@@ -611,27 +605,20 @@ export const OnboardingPage: React.FC = () => {
   const filledLinksCount = links.filter(l => (l.url || '').trim()).length;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0B0C14] px-4 py-8 sm:py-12 relative overflow-hidden">
-      {/* Decorative ambient gradients */}
-      <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-25">
-        <div className="absolute top-[-15%] left-[-10%] w-[50%] h-[50%] bg-[#FF2E7E] rounded-full blur-[140px]" />
-        <div className="absolute bottom-[-15%] right-[-10%] w-[50%] h-[50%] bg-[#FF2E7E] rounded-full blur-[140px]" />
-      </div>
-
+    <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A] px-4 py-8 sm:py-12">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
         className="w-full max-w-2xl relative z-10 my-auto"
       >
-        <div className="bg-[#171717]/90 backdrop-blur-2xl border border-slate-800/80 rounded-3xl sm:rounded-[36px] p-5 sm:p-8 shadow-2xl">
+        <div className="bg-[#171717] border border-slate-800 rounded-3xl sm:rounded-[36px] p-5 sm:p-8">
           {/* Header + Keluar */}
           <div className="flex items-start justify-between gap-3 mb-5">
             <div className="min-w-0">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF2E7E]/15 border border-[#FF2E7E]/30 text-[#FF2E7E] text-[11px] font-black uppercase tracking-widest mb-3">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Personalisasi Akun</span>
-              </div>
+              <p className="text-[11px] font-black uppercase tracking-widest text-[#FF2E7E] mb-3">
+                Personalisasi Akun
+              </p>
               <h1 className="text-xl sm:text-3xl font-display font-black text-white tracking-tight mb-1">
                 Lengkapi Profil <span className="text-[#FF2E7E]">Cinephile</span> Kamu
               </h1>
@@ -676,7 +663,7 @@ export const OnboardingPage: React.FC = () => {
               className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden"
             >
               <div
-                className="h-full bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] rounded-full transition-all duration-500"
+                className="h-full bg-[#FF2E7E] rounded-full transition-all duration-500"
                 style={{ width: `${(step / TOTAL_STEPS) * 100}%` }}
               />
             </div>
@@ -748,18 +735,13 @@ export const OnboardingPage: React.FC = () => {
               {/* ---------------- Step 1: Profile ---------------- */}
               {step === 1 && (
                 <div className="space-y-5">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-[#FF2E7E]/10 text-[#FF2E7E] flex items-center justify-center shrink-0">
-                      <UserIcon className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <h2 className="text-sm font-black text-white tracking-tight">
-                        Identitas Kamu
-                      </h2>
-                      <p className="text-[11px] text-slate-400">
-                        Nama tampilan & handle unik untuk profil publikmu.
-                      </p>
-                    </div>
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-black text-white tracking-tight">
+                      Identitas Kamu
+                    </h2>
+                    <p className="text-[11px] text-slate-400">
+                      Nama tampilan & handle unik untuk profil publikmu.
+                    </p>
                   </div>
 
                   <div className="space-y-1.5">
@@ -767,7 +749,6 @@ export const OnboardingPage: React.FC = () => {
                       htmlFor="onboarding-name"
                       className="text-[11px] font-black text-slate-300 uppercase tracking-wider flex items-center gap-1.5"
                     >
-                      <UserIcon className="w-3.5 h-3.5 text-[#FF2E7E]" />
                       Nama Lengkap / Panggilan <span className="text-[#FF2E7E]">*</span>
                     </label>
                     <input
@@ -805,7 +786,6 @@ export const OnboardingPage: React.FC = () => {
                         htmlFor="onboarding-handle"
                         className="text-[11px] font-black text-slate-300 uppercase tracking-wider flex items-center gap-1.5"
                       >
-                        <AtSign className="w-3.5 h-3.5 text-[#FF2E7E]" />
                         Username / Handle <span className="text-[#FF2E7E]">*</span>
                       </label>
                       <span className="text-[10px] text-slate-400 font-mono">
@@ -891,18 +871,13 @@ export const OnboardingPage: React.FC = () => {
               {/* ---------------- Step 2: Photo ---------------- */}
               {step === 2 && (
                 <div className="space-y-5">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-[#FF2E7E]/10 text-[#FF2E7E] flex items-center justify-center shrink-0">
-                      <Camera className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <h2 className="text-sm font-black text-white tracking-tight">
-                        Foto Profil
-                      </h2>
-                      <p className="text-[11px] text-slate-400">
-                        Opsional — pakai foto Google kamu atau unggah foto baru.
-                      </p>
-                    </div>
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-black text-white tracking-tight">
+                      Foto Profil
+                    </h2>
+                    <p className="text-[11px] text-slate-400">
+                      Opsional — pakai foto Google kamu atau unggah foto baru.
+                    </p>
                   </div>
 
                   <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 text-center">
@@ -923,7 +898,7 @@ export const OnboardingPage: React.FC = () => {
                           onClick={() => fileInputRef.current?.click()}
                           disabled={isCompressing || isSubmitting}
                           aria-label="Unggah foto profil (JPEG, PNG, atau WebP, maks. 5 MB)"
-                          className="absolute bottom-[-6px] right-[-6px] w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-slate-950 rounded-xl flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                          className="absolute bottom-[-6px] right-[-6px] w-9 h-9 sm:w-10 sm:h-10 bg-[#FF2E7E] hover:bg-[#e0266e] text-slate-950 rounded-xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                           {isCompressing ? (
                             <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
@@ -974,18 +949,13 @@ export const OnboardingPage: React.FC = () => {
               {/* ---------------- Step 3: About you ---------------- */}
               {step === 3 && (
                 <div className="space-y-5">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-[#FF2E7E]/10 text-[#FF2E7E] flex items-center justify-center shrink-0">
-                      <FileText className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <h2 className="text-sm font-black text-white tracking-tight">
-                        Tentang Kamu
-                      </h2>
-                      <p className="text-[11px] text-slate-400">
-                        Bio singkat & tautan profil (opsional).
-                      </p>
-                    </div>
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-black text-white tracking-tight">
+                      Tentang Kamu
+                    </h2>
+                    <p className="text-[11px] text-slate-400">
+                      Bio singkat & tautan profil (opsional).
+                    </p>
                   </div>
 
                   <div className="space-y-1.5">
@@ -993,7 +963,6 @@ export const OnboardingPage: React.FC = () => {
                       htmlFor="onboarding-bio"
                       className="text-[11px] font-black text-slate-300 uppercase tracking-wider flex items-center gap-1.5"
                     >
-                      <FileText className="w-3.5 h-3.5 text-[#FF2E7E]" />
                       Bio Singkat
                     </label>
                     <textarea
@@ -1035,18 +1004,13 @@ export const OnboardingPage: React.FC = () => {
               {/* ---------------- Step 4: Interests & consent ---------------- */}
               {step === 4 && (
                 <div className="space-y-5">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-[#FF2E7E]/10 text-[#FF2E7E] flex items-center justify-center shrink-0">
-                      <Film className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <h2 className="text-sm font-black text-white tracking-tight">
-                        Minat & Persetujuan
-                      </h2>
-                      <p className="text-[11px] text-slate-400">
-                        Pilih minimal 1 genre favoritmu.
-                      </p>
-                    </div>
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-black text-white tracking-tight">
+                      Minat & Persetujuan
+                    </h2>
+                    <p className="text-[11px] text-slate-400">
+                      Pilih minimal 1 genre favoritmu.
+                    </p>
                   </div>
 
                   <div
@@ -1060,7 +1024,6 @@ export const OnboardingPage: React.FC = () => {
                       id="onboarding-genres-label"
                       className="text-[11px] font-black text-slate-300 uppercase tracking-wider flex items-center gap-1.5"
                     >
-                      <Film className="w-3.5 h-3.5 text-[#FF2E7E]" />
                       Genre Sinema Favorit <span className="text-[#FF2E7E]">*</span>
                       <span className="text-slate-500 font-bold normal-case tracking-normal">
                         ({selectedGenres.length} dipilih)
@@ -1077,7 +1040,7 @@ export const OnboardingPage: React.FC = () => {
                             aria-pressed={isChecked}
                             className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 min-h-[40px] focus:outline-none focus:ring-1 focus:ring-[#FF2E7E] ${
                               isChecked
-                                ? 'bg-[#FF2E7E] text-slate-950 shadow-md shadow-[#FF2E7E]/20 font-black'
+                                ? 'bg-[#FF2E7E] text-slate-950 font-black'
                                 : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
                             }`}
                           >
@@ -1140,8 +1103,7 @@ export const OnboardingPage: React.FC = () => {
                         </a>
                       </span>
                     </label>
-                    <p className="flex items-center gap-2 text-[11px] text-slate-500">
-                      <ShieldCheck className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                    <p className="text-[11px] text-slate-500">
                       Keduanya terbuka di tab baru. Verifikasi email tetap diperlukan
                       untuk bisa memposting.
                     </p>
@@ -1185,7 +1147,7 @@ export const OnboardingPage: React.FC = () => {
                     ? 'Selesaikan onboarding'
                     : `Lanjut ke langkah ${step + 1} dari ${TOTAL_STEPS}`
                 }
-                className="flex-1 group relative bg-gradient-to-r from-[#FF2E7E] via-[#e0266e] to-[#FF2E7E] text-slate-950 disabled:opacity-50 disabled:cursor-not-allowed py-4 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-wider shadow-xl shadow-[#FF2E7E]/20 hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2 min-h-[48px]"
+                className="flex-1 group relative bg-[#FF2E7E] hover:bg-[#e0266e] text-slate-950 disabled:opacity-50 disabled:cursor-not-allowed py-4 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-wider active:scale-[0.99] transition-all flex items-center justify-center gap-2 min-h-[48px]"
               >
                 {isSubmitting ? (
                   <>
