@@ -129,7 +129,8 @@ service cloud.firestore {
       return data.keys().hasAll(['id', 'title', 'type', 'year', 'genres']) &&
         data.id is string && data.id.size() <= 128 &&
         data.title is string && data.title.size() <= 200 &&
-        data.type in ['movie', 'series', 'anime'] &&
+        // remove 'anime' after scripts/migrate-film-types.ts --apply has completed
+        data.type in ['movie', 'series', 'anime', 'animation'] &&
         (data.year is int || data.year is number) &&
         data.genres is list;
     }

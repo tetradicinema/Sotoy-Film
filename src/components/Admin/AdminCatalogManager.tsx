@@ -1220,7 +1220,7 @@ export const AdminCatalogManager: React.FC = () => {
                   >
                     <option value="movie">Movie (Film Layar Lebar)</option>
                     <option value="series">Series (Serial Televisi / Web)</option>
-                    <option value="anime">Anime (Animasi Jepang)</option>
+                    <option value="animation">Animasi</option>
                   </select>
                 </div>
 

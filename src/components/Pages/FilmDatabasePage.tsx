@@ -60,7 +60,7 @@ export const GENRE_CATEGORIES: GenreCategory[] = [
     icon: Layers,
     badgeClass: 'text-slate-300 border-slate-700 bg-slate-900/60',
     activeClass: 'bg-white text-slate-950 border-white shadow-lg shadow-white/10 ring-2 ring-white/20 font-black',
-    description: 'Jelajahi seluruh katalog film bioskop, tayangan serial, dan anime di database Sotoy Film.',
+    description: 'Jelajahi seluruh katalog film bioskop, tayangan serial, dan animasi di database Sotoy Film.',
     themeColor: '#ffffff',
   },
   {
@@ -129,7 +129,7 @@ export const FilmDatabasePage: React.FC = () => {
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFormat, setSelectedFormat] = useState<'all' | 'movie' | 'series' | 'anime'>('all');
+  const [selectedFormat, setSelectedFormat] = useState<'all' | 'movie' | 'series' | 'animation'>('all');
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
   const [ratingFilter, setRatingFilter] = useState<number>(0);
   const [sortBy, setSortBy] = useState<'rating' | 'votes' | 'year' | 'title'>('rating');
@@ -293,7 +293,7 @@ export const FilmDatabasePage: React.FC = () => {
             </h1>
 
             <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
-              Katalog lengkap film bioskop, series drama prestisius, dan anime terkini. Bandingkan Skor Komunitas penonton dengan ulasan kurator Si Paling Sotoy, serta telusuri ulasan populer komunitas.
+              Katalog lengkap film bioskop, series drama prestisius, dan animasi terkini. Bandingkan Skor Komunitas penonton dengan ulasan kurator Si Paling Sotoy, serta telusuri ulasan populer komunitas.
             </p>
           </div>
         </div>
@@ -316,7 +316,7 @@ export const FilmDatabasePage: React.FC = () => {
                     </span>
                   )}
                 </div>
-                <p className="text-slate-400 text-xs">Pilih kategori genre untuk memfilter katalog film, serial, dan anime secara instan</p>
+                <p className="text-slate-400 text-xs">Pilih kategori genre untuk memfilter katalog film, serial, dan animasi secara instan</p>
               </div>
             </div>
 
@@ -1043,14 +1043,14 @@ export const FilmDatabasePage: React.FC = () => {
                 Series
               </button>
               <button
-                onClick={() => setSelectedFormat('anime')}
+                onClick={() => setSelectedFormat('animation')}
                 className={`px-3.5 py-2 rounded-xl font-bold transition-all shrink-0 min-h-[38px] cursor-pointer active:scale-95 ${
-                  selectedFormat === 'anime'
+                  selectedFormat === 'animation'
                     ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 border border-[#FF2E7E]'
                     : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                 }`}
               >
-                Anime
+                Animasi
               </button>
             </div>
 
@@ -1206,7 +1206,7 @@ export const FilmDatabasePage: React.FC = () => {
 
                           <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[10px] font-bold text-slate-300">
                             <span className="bg-slate-900/90 px-1.5 py-0.5 rounded uppercase">
-                              {film.type}
+                              {film.type === 'animation' ? 'Animasi' : film.type}
                             </span>
                             <span>{film.year}</span>
                           </div>
