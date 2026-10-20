@@ -1,5 +1,6 @@
 import { FilmItem } from '../src/types';
 import {
+  decideTmdbFallback,
   pickIdReleaseDate,
   getBadgeColor,
   buildWhereToWatch,
@@ -742,6 +743,98 @@ const runTests = () => {
     outsideWindow?.updates.whereToWatch,
     [],
     'computeFilmSyncUpdate removes stale cinema after the 56-day window'
+  );
+
+  // -------------------------------------------------------------------------
+  // decideTmdbFallback
+  // -------------------------------------------------------------------------
+
+  // 38
+  const fallbackAfterError = decideTmdbFallback('animation', 'error', 'ok');
+  assertEquals(
+    fallbackAfterError.retryAlternate,
+    true,
+    'decideTmdbFallback retries the other media type when animation fetch errors'
+  );
+  assertEquals(
+    fallbackAfterError.useAlternate,
+    true,
+    'decideTmdbFallback uses the alternate result after a fetch error'
+  );
+  assertEquals(
+    fallbackAfterError.finalStatus,
+    'ok',
+    'decideTmdbFallback reports the successful alternate status'
+  );
+
+  // 39
+  const fallbackBothErrors = decideTmdbFallback('animation', 'error', 'error');
+  assertEquals(
+    fallbackBothErrors.retryAlternate,
+    true,
+    'decideTmdbFallback still retries the alternate after a 404'
+  );
+  assertEquals(
+    fallbackBothErrors.useAlternate,
+    false,
+    'decideTmdbFallback does not use a failed alternate'
+  );
+  assertEquals(
+    fallbackBothErrors.finalStatus,
+    'error',
+    'decideTmdbFallback counts an error only when both attempts fail'
+  );
+
+  // 40
+  const fallbackAfterMismatch = decideTmdbFallback('animation', 'title_mismatch', 'ok');
+  assertEquals(
+    fallbackAfterMismatch.retryAlternate,
+    true,
+    'decideTmdbFallback retries the other media type after a title mismatch'
+  );
+  assertEquals(
+    fallbackAfterMismatch.useAlternate,
+    true,
+    'decideTmdbFallback uses the alternate result after a title mismatch'
+  );
+  assertEquals(
+    fallbackAfterMismatch.finalStatus,
+    'ok',
+    'decideTmdbFallback reports ok when the alternate title matches'
+  );
+
+  // 41
+  const fallbackMovie = decideTmdbFallback('movie', 'error', 'ok');
+  assertEquals(
+    fallbackMovie.retryAlternate,
+    false,
+    'decideTmdbFallback never retries for movie films'
+  );
+  assertEquals(
+    fallbackMovie.useAlternate,
+    false,
+    'decideTmdbFallback ignores an alternate result for movie films'
+  );
+  assertEquals(
+    fallbackMovie.finalStatus,
+    'error',
+    'decideTmdbFallback keeps the primary error for movie films'
+  );
+
+  // 42
+  const fallbackMismatchThenError = decideTmdbFallback('animation', 'title_mismatch', 'error');
+  assertEquals(
+    fallbackMismatchThenError.finalStatus,
+    'title_mismatch',
+    'decideTmdbFallback keeps a known title mismatch when the alternate errors'
+  );
+
+  // 43
+  const fallbackNoRetry = decideTmdbFallback('animation', 'unchanged');
+  assertEquals(
+    fallbackNoRetry.retryAlternate,
+    false,
+    'decideTmdbFallback does not retry when the primary result is usable'
   );
 
   console.log(`\n--- Results: ${passed} passed, ${failed} failed ---`);

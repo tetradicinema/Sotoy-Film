@@ -10,10 +10,13 @@
  * - Existing `tmdbId` values are never overwritten.
  * - If two films would receive the same TMDB ID, or the ID is already used by
  *   another film, both films are reported as duplicates and neither is written.
+ * - Manual overrides (`--overrides`) require an existing film without a
+ *   `tmdbId`. Shared TMDB IDs are allowed with a warning because TV and movie
+ *   IDs share numbers.
  *
  * Requirements:
  * - GOOGLE_APPLICATION_CREDENTIALS must point to a valid service account JSON key file.
- * - TMDB_API_KEY must be set (v3 API key or v4 read access token).
+ * - TMDB_API_KEY must be set (v3 API key or v4 read access token) when searching.
  *
  * Usage:
  * Dry-Run Mode (default, no writes):
@@ -22,10 +25,14 @@
  * Apply Mode:
  *   node --env-file=.env --import tsx scripts/fill-tmdb-ids.ts --apply
  *
+ * Manual Overrides (no TMDB search; default file data/tmdb-id-overrides.json):
+ *   node --env-file=.env --import tsx scripts/fill-tmdb-ids.ts --overrides
+ *   node --env-file=.env --import tsx scripts/fill-tmdb-ids.ts --overrides path/to/file.json --apply
+ *
  * The full report is always written to data/tmdb-id-report.json.
  */
 
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { initializeApp, getApps, getApp } from 'firebase-admin/app';
@@ -38,6 +45,7 @@ const REQUEST_DELAY_MS = 120;
 const RETRY_DELAY_MS = 1000;
 const MIN_CONTAINMENT_LENGTH = 4;
 const REPORT_PATH = resolve(process.cwd(), 'data', 'tmdb-id-report.json');
+const DEFAULT_OVERRIDES_PATH = 'data/tmdb-id-overrides.json';
 
 export type TmdbMediaType = 'movie' | 'tv';
 
@@ -77,6 +85,114 @@ export interface DuplicateTmdbId {
   tmdbId: number;
   filmIds: string[];
   existingFilmIds: string[];
+}
+
+export type TmdbOverrideSkipReason =
+  | 'missing_film'
+  | 'already_has_tmdb_id'
+  | 'invalid_film_id'
+  | 'invalid_tmdb_id';
+
+export interface TmdbOverrideFilm {
+  title?: string;
+  tmdbId?: unknown;
+}
+
+export interface ValidTmdbOverride {
+  filmId: string;
+  tmdbId: number;
+  filmTitle: string;
+}
+
+export interface SkippedTmdbOverride {
+  filmId: string;
+  tmdbId?: number;
+  filmTitle: string;
+  reason: TmdbOverrideSkipReason;
+}
+
+export interface TmdbOverrideValidationResult {
+  valid: ValidTmdbOverride[];
+  skipped: SkippedTmdbOverride[];
+}
+
+/**
+ * Validates a manual `{ "<filmId>": <tmdbId> }` override map.
+ *
+ * An override is valid only when the film document exists and does not already
+ * have a truthy `tmdbId`. Missing documents, already-filled films, and invalid
+ * IDs are returned as skipped entries so the caller can report them. Shared
+ * TMDB IDs are intentionally NOT rejected here: TV and movie IDs share numbers.
+ */
+export function validateTmdbOverrides(
+  raw: unknown,
+  filmsById: ReadonlyMap<string, TmdbOverrideFilm>
+): TmdbOverrideValidationResult {
+  const valid: ValidTmdbOverride[] = [];
+  const skipped: SkippedTmdbOverride[] = [];
+
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { valid, skipped };
+  }
+
+  for (const [rawFilmId, rawTmdbId] of Object.entries(raw)) {
+    const filmId = String(rawFilmId).trim();
+
+    if (!filmId) {
+      skipped.push({
+        filmId: String(rawFilmId),
+        filmTitle: '(missing document)',
+        reason: 'invalid_film_id',
+      });
+      continue;
+    }
+
+    const film = filmsById.get(filmId);
+    const numericTmdbId =
+      typeof rawTmdbId === 'number'
+        ? rawTmdbId
+        : typeof rawTmdbId === 'string' && rawTmdbId.trim() !== ''
+          ? Number(rawTmdbId)
+          : Number.NaN;
+
+    if (!Number.isInteger(numericTmdbId) || numericTmdbId <= 0) {
+      skipped.push({
+        filmId,
+        tmdbId: Number.isFinite(numericTmdbId) ? numericTmdbId : undefined,
+        filmTitle: film?.title || '(unknown)',
+        reason: 'invalid_tmdb_id',
+      });
+      continue;
+    }
+
+    if (!film) {
+      skipped.push({
+        filmId,
+        tmdbId: numericTmdbId,
+        filmTitle: '(missing document)',
+        reason: 'missing_film',
+      });
+      continue;
+    }
+
+    if (film.tmdbId) {
+      skipped.push({
+        filmId,
+        tmdbId: numericTmdbId,
+        filmTitle: film.title || '(untitled)',
+        reason: 'already_has_tmdb_id',
+      });
+      continue;
+    }
+
+    valid.push({
+      filmId,
+      tmdbId: numericTmdbId,
+      filmTitle: film.title || '(untitled)',
+    });
+  }
+
+  return { valid, skipped };
 }
 
 interface FilmRecord {
@@ -146,6 +262,26 @@ interface ReportError {
   message: string;
 }
 
+interface ReportOverrideEntry {
+  filmId: string;
+  filmTitle: string;
+  tmdbId: number | null;
+  status: 'written' | 'dry-run' | 'skipped';
+  reason?: TmdbOverrideSkipReason;
+  warning?: {
+    filmId: string;
+    filmTitle: string;
+  };
+}
+
+interface ReportOverrides {
+  source: string;
+  valid: number;
+  skipped: number;
+  written: number;
+  entries: ReportOverrideEntry[];
+}
+
 interface FillSummary {
   scanned: number;
   alreadyHadTmdbId: number;
@@ -165,6 +301,7 @@ interface FillReport {
   notFound: ReportNotFound[];
   duplicates: ReportDuplicate[];
   errors: ReportError[];
+  overrides?: ReportOverrides;
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((resolveSleep) => setTimeout(resolveSleep, ms));
@@ -432,15 +569,218 @@ const toReportCandidate = (candidate: TmdbCandidate): ReportCandidate => ({
   mediaType: candidate.media_type,
 });
 
-async function fillTmdbIds() {
-  const isApply = process.argv.includes('--apply');
+const parseOverridesOption = (): { enabled: boolean; path: string } => {
+  const argv = process.argv;
+  const inlineArg = argv.find((arg) => arg.startsWith('--overrides='));
+  if (inlineArg) {
+    const value = inlineArg.slice('--overrides='.length).trim();
+    return { enabled: true, path: resolve(process.cwd(), value || DEFAULT_OVERRIDES_PATH) };
+  }
+
+  const index = argv.indexOf('--overrides');
+  if (index === -1) {
+    return { enabled: false, path: resolve(process.cwd(), DEFAULT_OVERRIDES_PATH) };
+  }
+
+  const next = argv[index + 1];
+  const value = next && !next.startsWith('--') ? next.trim() : '';
+  return { enabled: true, path: resolve(process.cwd(), value || DEFAULT_OVERRIDES_PATH) };
+};
+
+const writeReportFile = async (report: FillReport): Promise<void> => {
+  await mkdir(dirname(REPORT_PATH), { recursive: true });
+  await writeFile(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+  console.log(`\nReport written to: ${REPORT_PATH}`);
+};
+
+interface OverridesRunArgs {
+  db: ReturnType<typeof getFirestore>;
+  overridesPath: string;
+  isApply: boolean;
+  scanned: number;
+  alreadyHadTmdbId: number;
+  filmsById: ReadonlyMap<string, TmdbOverrideFilm>;
+  tmdbOwners: ReadonlyMap<number, { id: string; title: string }>;
+}
+
+async function fillTmdbIdsFromOverrides({
+  db,
+  overridesPath,
+  isApply,
+  scanned,
+  alreadyHadTmdbId,
+  filmsById,
+  tmdbOwners,
+}: OverridesRunArgs): Promise<void> {
+  console.log(`Overrides source: ${overridesPath}\n`);
+
+  let rawText: string;
+  try {
+    rawText = await readFile(overridesPath, 'utf8');
+  } catch (err: any) {
+    console.error(`[Fatal] Could not read overrides file: ${overridesPath}`);
+    console.error(err?.message || String(err));
+    process.exit(1);
+  }
+
+  let rawOverrides: unknown;
+  try {
+    rawOverrides = JSON.parse(rawText);
+  } catch (err: any) {
+    console.error(`[Fatal] Overrides file is not valid JSON: ${overridesPath}`);
+    console.error(err?.message || String(err));
+    process.exit(1);
+  }
+
+  if (!rawOverrides || typeof rawOverrides !== 'object' || Array.isArray(rawOverrides)) {
+    console.error('[Fatal] Overrides file must contain an object: { "<filmId>": <tmdbId> }.');
+    process.exit(1);
+  }
+
+  const validation = validateTmdbOverrides(rawOverrides, filmsById);
+  const entries: ReportOverrideEntry[] = [];
+  let warningCount = 0;
+
+  for (const entry of validation.valid) {
+    const owner = tmdbOwners.get(entry.tmdbId);
+    const warning = owner
+      ? { filmId: owner.id, filmTitle: owner.title || '(untitled)' }
+      : undefined;
+
+    if (warning) {
+      warningCount++;
+      console.warn(
+        `[Warning] "${entry.filmTitle}" (${entry.filmId}) -> TMDB #${entry.tmdbId} is already used by "${warning.filmTitle}" (${warning.filmId}). Allowing it because TV and movie IDs share numbers.`
+      );
+    }
+
+    entries.push({
+      filmId: entry.filmId,
+      filmTitle: entry.filmTitle,
+      tmdbId: entry.tmdbId,
+      status: isApply ? 'written' : 'dry-run',
+      warning,
+    });
+  }
+
+  for (const entry of validation.skipped) {
+    entries.push({
+      filmId: entry.filmId,
+      filmTitle: entry.filmTitle,
+      tmdbId: entry.tmdbId ?? null,
+      status: 'skipped',
+      reason: entry.reason,
+    });
+  }
 
   console.log('=====================================================');
-  console.log(`Starting Fill Missing TMDB IDs ${isApply ? '(APPLY MODE)' : '(DRY-RUN MODE)'}`);
+  console.log('OVERRIDE ENTRIES');
+  console.log('=====================================================');
+  if (validation.valid.length === 0) {
+    console.log('No valid override entries.');
+  } else {
+    console.table(
+      validation.valid.map((entry) => ({
+        Film: entry.filmTitle,
+        'Film ID': entry.filmId,
+        'TMDB ID': entry.tmdbId,
+        Warning: tmdbOwners.has(entry.tmdbId) ? 'shared TMDB ID' : '-',
+      }))
+    );
+  }
+
+  if (validation.skipped.length > 0) {
+    console.log('\nSkipped override entries:');
+    console.table(
+      validation.skipped.map((entry) => ({
+        Film: entry.filmTitle,
+        'Film ID': entry.filmId,
+        'TMDB ID': entry.tmdbId ?? '-',
+        Reason: entry.reason,
+      }))
+    );
+  }
+
+  let written = 0;
+  if (isApply && validation.valid.length > 0) {
+    for (let i = 0; i < validation.valid.length; i += BATCH_SIZE) {
+      const chunk = validation.valid.slice(i, i + BATCH_SIZE);
+      const batch = db.batch();
+      chunk.forEach((entry) => {
+        // Only the `tmdbId` field is modified.
+        batch.update(db.collection('films').doc(entry.filmId), { tmdbId: entry.tmdbId });
+      });
+      await batch.commit();
+      written += chunk.length;
+      console.log(`Committed batch: ${written}/${validation.valid.length} documents updated.`);
+    }
+  }
+
+  console.log('\n=====================================================');
+  console.log('OVERRIDES SUMMARY');
+  console.log('=====================================================');
+  console.log(`Execution Mode:                    ${isApply ? 'APPLY (WROTE CHANGES)' : 'DRY-RUN (NO CHANGES MADE)'}`);
+  console.log(`Films scanned:                     ${scanned}`);
+  console.log(`Already had tmdbId:                ${alreadyHadTmdbId}`);
+  console.log(`Override entries valid:            ${validation.valid.length}`);
+  console.log(`Override entries skipped:          ${validation.skipped.length}`);
+  console.log(`Shared TMDB ID warnings:           ${warningCount}`);
+  console.log(`Documents written:                 ${written}`);
+
+  const report: FillReport = {
+    generatedAt: new Date().toISOString(),
+    mode: isApply ? 'apply' : 'dry-run',
+    summary: {
+      scanned,
+      alreadyHadTmdbId,
+      confident: 0,
+      ambiguous: 0,
+      notFound: 0,
+      duplicates: 0,
+      errors: 0,
+    },
+    confident: [],
+    ambiguous: [],
+    notFound: [],
+    duplicates: [],
+    errors: [],
+    overrides: {
+      source: overridesPath,
+      valid: validation.valid.length,
+      skipped: validation.skipped.length,
+      written,
+      entries,
+    },
+  };
+
+  await writeReportFile(report);
+
+  if (isApply && validation.valid.length > 0) {
+    console.log(`\nApply complete: ${written} tmdbId values written from overrides.`);
+  } else if (isApply) {
+    console.log('\nNothing to write; no valid override entries.');
+  } else {
+    console.log('\nDry-run complete. Re-run with --apply to write these tmdbId values.');
+  }
+
+  console.log('=====================================================\n');
+  process.exit(0);
+}
+
+async function fillTmdbIds() {
+  const isApply = process.argv.includes('--apply');
+  const overridesOption = parseOverridesOption();
+
+  console.log('=====================================================');
+  console.log(
+    `Starting Fill Missing TMDB IDs ${
+      overridesOption.enabled ? '(OVERRIDES MODE)' : isApply ? '(APPLY MODE)' : '(DRY-RUN MODE)'
+    }`
+  );
   console.log('=====================================================\n');
 
-  const apiKey = process.env.TMDB_API_KEY?.trim();
-  if (!apiKey) {
+  const apiKey = process.env.TMDB_API_KEY?.trim() || '';
+  if (!overridesOption.enabled && !apiKey) {
     console.error('[Fatal] TMDB_API_KEY is not set.');
     console.error('Add TMDB_API_KEY to .env (v3 key or v4 read access token) and run:');
     console.error('  node --env-file=.env --import tsx scripts/fill-tmdb-ids.ts');
@@ -477,16 +817,22 @@ async function fillTmdbIds() {
     }
 
     const films: FilmRecord[] = [];
+    const allFilmsById = new Map<string, TmdbOverrideFilm>();
     const existingTmdbIds = new Map<number, string>();
+    const tmdbOwners = new Map<number, { id: string; title: string }>();
     let alreadyHadTmdbId = 0;
 
     for (const docSnap of filmsSnap.docs) {
       const data = docSnap.data();
       const numericTmdbId = Number(data.tmdbId);
+      const title = typeof data.title === 'string' ? data.title : '';
+
+      allFilmsById.set(docSnap.id, { title, tmdbId: data.tmdbId });
 
       if (data.tmdbId) {
         if (Number.isFinite(numericTmdbId) && numericTmdbId > 0) {
           existingTmdbIds.set(numericTmdbId, docSnap.id);
+          tmdbOwners.set(numericTmdbId, { id: docSnap.id, title });
         }
         alreadyHadTmdbId++;
         continue;
@@ -494,7 +840,7 @@ async function fillTmdbIds() {
 
       films.push({
         id: docSnap.id,
-        title: typeof data.title === 'string' ? data.title : '',
+        title,
         originalTitle: typeof data.originalTitle === 'string' ? data.originalTitle : undefined,
         year: extractYear(data.year),
         type: typeof data.type === 'string' ? data.type.trim().toLowerCase() : undefined,
@@ -504,6 +850,19 @@ async function fillTmdbIds() {
     console.log(
       `Found ${filmsSnap.size} film documents (${alreadyHadTmdbId} already have tmdbId, ${films.length} to check).\n`
     );
+
+    if (overridesOption.enabled) {
+      await fillTmdbIdsFromOverrides({
+        db,
+        overridesPath: overridesOption.path,
+        isApply,
+        scanned: filmsSnap.size,
+        alreadyHadTmdbId,
+        filmsById: allFilmsById,
+        tmdbOwners,
+      });
+      return;
+    }
 
     const confidentMatches: Array<{ film: FilmRecord; candidate: TmdbCandidate }> = [];
     const ambiguousMatches: ReportAmbiguousMatch[] = [];
@@ -675,9 +1034,7 @@ async function fillTmdbIds() {
       errors,
     };
 
-    await mkdir(dirname(REPORT_PATH), { recursive: true });
-    await writeFile(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
-    console.log(`\nReport written to: ${REPORT_PATH}`);
+    await writeReportFile(report);
 
     if (isApply && writable.length > 0) {
       let written = 0;

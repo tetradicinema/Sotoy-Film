@@ -12,6 +12,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { FilmItem } from '../../types';
 import {
+  decideTmdbFallback,
   evaluateFilmSync,
   TmdbSyncData,
 } from '../../utils/tmdbSync';
@@ -188,38 +189,70 @@ export const AdminTmdbSyncModal: React.FC<AdminTmdbSyncModalProps> = ({
 
         try {
           const primaryType = tmdbMediaType(film);
-          let evaluation = evaluateFilmSync({
-            film,
-            sync: await fetchSyncData(film, primaryType),
-            nowPlayingIds,
-            now,
-          });
+          let primaryEvaluation: ReturnType<typeof evaluateFilmSync> | undefined;
+          let primaryError: unknown;
+          try {
+            primaryEvaluation = evaluateFilmSync({
+              film,
+              sync: await fetchSyncData(film, primaryType),
+              nowPlayingIds,
+              now,
+            });
+          } catch (error) {
+            primaryError = error;
+          }
 
-          if (evaluation.status === 'title_mismatch' && film.type === 'animation') {
-            const alternateType = primaryType === 'movie' ? 'tv' : 'movie';
+          const primaryStatus = primaryEvaluation ? primaryEvaluation.status : 'error';
+          let decision = decideTmdbFallback(film.type, primaryStatus);
+          let evaluation = primaryEvaluation;
+          let alternateType: 'movie' | 'tv' | undefined;
+          let alternateError: unknown;
+
+          if (decision.retryAlternate) {
+            alternateType = primaryType === 'movie' ? 'tv' : 'movie';
+            let alternateEvaluation: ReturnType<typeof evaluateFilmSync> | undefined;
             try {
-              const alternateEvaluation = evaluateFilmSync({
+              alternateEvaluation = evaluateFilmSync({
                 film,
                 sync: await fetchSyncData(film, alternateType),
                 nowPlayingIds,
                 now,
               });
-              if (alternateEvaluation.status !== 'title_mismatch') {
-                evaluation = alternateEvaluation;
-              }
             } catch (error) {
-              scanErrors.push(
-                `${film.title} (${alternateType}): ${errorMessage(error, 'Gagal sinkron dari TMDB.')}`
-              );
+              alternateError = error;
+            }
+
+            decision = decideTmdbFallback(
+              film.type,
+              primaryStatus,
+              alternateEvaluation ? alternateEvaluation.status : 'error'
+            );
+
+            if (decision.useAlternate) {
+              evaluation = alternateEvaluation;
+              primaryError = undefined;
             }
           }
 
           if (scanSessionRef.current !== session || stopRequestedRef.current) return;
 
-          if (evaluation.status === 'ok' && evaluation.result) {
+          if (evaluation?.status === 'ok' && evaluation.result) {
             foundRows.push({ film, ...evaluation.result });
-          } else if (evaluation.status === 'title_mismatch') {
+          } else if (evaluation?.status === 'title_mismatch') {
             skippedRows.push({ title: film.title, tmdbId: film.tmdbId });
+          } else if (!evaluation) {
+            const attemptErrors = [primaryError, alternateError].filter(
+              (error) => error !== undefined
+            );
+            const detail = attemptErrors
+              .map((error) => errorMessage(error, 'Gagal sinkron dari TMDB.'))
+              .join(' | ');
+            const attemptLabel = alternateType
+              ? ` (${primaryType} & ${alternateType})`
+              : ` (${primaryType})`;
+            scanErrors.push(
+              `${film.title}${attemptLabel}: ${detail || 'Gagal sinkron dari TMDB.'}`
+            );
           }
         } catch (error) {
           scanErrors.push(`${film.title}: ${errorMessage(error, 'Gagal sinkron dari TMDB.')}`);

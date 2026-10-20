@@ -46,6 +46,56 @@ export interface FilmSyncResult {
 
 export type FilmSyncStatus = 'ok' | 'title_mismatch' | 'no_tmdb_id' | 'unchanged';
 
+export type TmdbSyncAttemptStatus = FilmSyncStatus | 'error';
+
+export interface TmdbFallbackDecision {
+  retryAlternate: boolean;
+  useAlternate: boolean;
+  finalStatus: TmdbSyncAttemptStatus;
+}
+
+/**
+ * Decides whether an animation film should retry TMDB with the other media
+ * type. Animations have no reliable media type, so a 404/fetch error or a
+ * title mismatch on the heuristic type is retried exactly once. Movies and
+ * series never retry.
+ *
+ * When both attempt statuses are supplied, the alternate result wins only
+ * when it is usable. A title mismatch on either attempt is preferred over an
+ * error, so a film is reported as a TMDB error only when both attempts failed
+ * to return any usable or mismatched result.
+ */
+export function decideTmdbFallback(
+  filmType: string | undefined,
+  primaryStatus: TmdbSyncAttemptStatus,
+  alternateStatus?: TmdbSyncAttemptStatus
+): TmdbFallbackDecision {
+  const retryAlternate =
+    filmType === 'animation' &&
+    (primaryStatus === 'error' || primaryStatus === 'title_mismatch');
+
+  if (!retryAlternate || alternateStatus === undefined) {
+    return { retryAlternate, useAlternate: false, finalStatus: primaryStatus };
+  }
+
+  const isUsable = (status: TmdbSyncAttemptStatus): boolean =>
+    status !== 'error' && status !== 'title_mismatch';
+
+  const finalStatus: TmdbSyncAttemptStatus = isUsable(alternateStatus)
+    ? alternateStatus
+    : isUsable(primaryStatus)
+      ? primaryStatus
+      : alternateStatus === 'title_mismatch' || primaryStatus === 'title_mismatch'
+        ? 'title_mismatch'
+        : 'error';
+
+  return {
+    retryAlternate,
+    useAlternate: alternateStatus !== 'error' && finalStatus === alternateStatus,
+    finalStatus,
+  };
+}
+
 export interface FilmSyncEvaluation {
   status: FilmSyncStatus;
   result?: FilmSyncResult;

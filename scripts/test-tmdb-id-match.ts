@@ -3,6 +3,7 @@ import {
   pickTmdbMatch,
   TmdbCandidate,
   TmdbMatchFilm,
+  validateTmdbOverrides,
 } from './fill-tmdb-ids';
 
 const createFilm = (overrides: Partial<TmdbMatchFilm> = {}): TmdbMatchFilm => ({
@@ -182,6 +183,63 @@ const runTests = () => {
     wrongOriginalTitle.status,
     'ambiguous',
     'exact title with a wrong year is ambiguous even when originalTitle is present'
+  );
+
+  // -------------------------------------------------------------------------
+  // validateTmdbOverrides
+  // -------------------------------------------------------------------------
+
+  // 19. valid override
+  const validOverride = validateTmdbOverrides(
+    { 'film-valid': 4200 },
+    new Map([['film-valid', { title: 'Valid Film' }]])
+  );
+  assertEquals(validOverride.valid.length, 1, 'valid override entry is accepted');
+  assertEquals(validOverride.valid[0]?.filmId, 'film-valid', 'valid override keeps the film ID');
+  assertEquals(validOverride.valid[0]?.tmdbId, 4200, 'valid override keeps the TMDB ID');
+  assertEquals(validOverride.skipped.length, 0, 'valid override has no skipped entries');
+
+  // 20. missing document
+  const missingOverride = validateTmdbOverrides(
+    { 'film-missing': 4300 },
+    new Map([['film-valid', { title: 'Valid Film' }]])
+  );
+  assertEquals(
+    missingOverride.valid.length,
+    0,
+    'override for a missing film document is not written'
+  );
+  assertEquals(
+    missingOverride.skipped[0]?.reason,
+    'missing_film',
+    'missing film document is reported as missing_film'
+  );
+
+  // 21. film already has tmdbId
+  const filledOverride = validateTmdbOverrides(
+    { 'film-filled': 4400 },
+    new Map([['film-filled', { title: 'Filled Film', tmdbId: 123 }]])
+  );
+  assertEquals(
+    filledOverride.valid.length,
+    0,
+    'override for a film that already has a tmdbId is not written'
+  );
+  assertEquals(
+    filledOverride.skipped[0]?.reason,
+    'already_has_tmdb_id',
+    'existing tmdbId is reported as already_has_tmdb_id'
+  );
+
+  // 22. invalid TMDB ID
+  const invalidOverride = validateTmdbOverrides(
+    { 'film-valid': 'not-a-number' },
+    new Map([['film-valid', { title: 'Valid Film' }]])
+  );
+  assertEquals(
+    invalidOverride.skipped[0]?.reason,
+    'invalid_tmdb_id',
+    'non-numeric override value is reported as invalid_tmdb_id'
   );
 
   // -------------------------------------------------------------------------
