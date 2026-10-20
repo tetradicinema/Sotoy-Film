@@ -1,6 +1,6 @@
 {
   "name": "Sotoy Film",
-  "description": "Platform komunitas & media pop-culture film, series, anime, cinema gear, dan film studies dengan ulasan Skor Sotoy dan diskusi buzz.",
+  "description": "Platform komunitas & media pop-culture film, series, animation, cinema gear, dan film studies dengan ulasan Skor Sotoy dan diskusi buzz.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

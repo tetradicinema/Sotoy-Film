@@ -69,7 +69,7 @@ export const GuidePage: React.FC = () => {
       tab: 'rating',
       title: 'Cara Memberikan Rating & Ulasan Film',
       keywords: 'rating ulasan skor bintang tulis review nilai',
-      content: 'Cari film, serial, atau anime pilihan Anda di "Database Film". Di halaman detail film, gulir ke bagian "Berikan Penilaian Anda". Pilih skor bintang Anda dari rentang ★ 1.0 sampai 10.0 (menggunakan klik atau slider presisi desimal). Tulis "Headline Ulasan" yang menarik (contoh: "Visualnya Megah, Tapi Naskahnya Lemah"), lalu ketik ulasan lengkap Anda di kotak teks yang disediakan. Terakhir, klik "Kirim Ulasan". Rating Anda akan langsung digabungkan ke Skor Warga!',
+      content: 'Cari film, serial, atau animation pilihan Anda di "Database Film". Di halaman detail film, gulir ke bagian "Berikan Penilaian Anda". Pilih skor bintang Anda dari rentang ★ 1.0 sampai 10.0 (menggunakan klik atau slider presisi desimal). Tulis "Headline Ulasan" yang menarik (contoh: "Visualnya Megah, Tapi Naskahnya Lemah"), lalu ketik ulasan lengkap Anda di kotak teks yang disediakan. Terakhir, klik "Kirim Ulasan". Rating Anda akan langsung digabungkan ke Skor Warga!',
       image: ratingGuide
     },
     {
@@ -91,7 +91,7 @@ export const GuidePage: React.FC = () => {
       tab: 'buzz',
       title: 'Cara Mengirim Gagasan Film di Forum "Buzz"',
       keywords: 'kirim buzz posting tweet gambar foto utas status tag film',
-      content: 'Masuk ke halaman "Buzz Komunitas" dari menu navigasi. Klik tombol bulat melayang berwarna pink bergambar pensil (di handphone) atau kotak "Tulis Buzz Baru" di bagian atas halaman feed (di desktop). Ketik opini singkat Anda seputar industri film, serial, atau anime. Anda dapat melampirkan 1 foto ilustrasi (dengan pratinjau instan), serta menggunakan fitur "Tagging Film atau Artikel" agar postingan Anda langsung tertaut pada halaman film/artikel yang dibicarakan.',
+      content: 'Masuk ke halaman "Buzz Komunitas" dari menu navigasi. Klik tombol bulat melayang berwarna pink bergambar pensil (di handphone) atau kotak "Tulis Buzz Baru" di bagian atas halaman feed (di desktop). Ketik opini singkat Anda seputar industri film, serial, atau animation. Anda dapat melampirkan 1 foto ilustrasi (dengan pratinjau instan), serta menggunakan fitur "Tagging Film atau Artikel" agar postingan Anda langsung tertaut pada halaman film/artikel yang dibicarakan.',
       image: buzzGuide
     },
     {

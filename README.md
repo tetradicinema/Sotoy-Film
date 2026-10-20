@@ -1,6 +1,6 @@
 # 🎬 Sotoy Film — Platform Media Pop-Culture & Komunitas Film Indonesia
 
-Selamat datang di **Sotoy Film**! Platform ini adalah rumah hangat bagi seluruh pencinta film, serial TV, dan anime di Indonesia. Di sini, siapa saja bisa menyalurkan opini sinematik mereka, membaca kajian mendalam, berdiskusi di forum komunitas, hingga berpartisipasi dalam menentukan rating film terdemokratis.
+Selamat datang di **Sotoy Film**! Platform ini adalah rumah hangat bagi seluruh pencinta film, serial TV, dan animation di Indonesia. Di sini, siapa saja bisa menyalurkan opini sinematik mereka, membaca kajian mendalam, berdiskusi di forum komunitas, hingga berpartisipasi dalam menentukan rating film terdemokratis.
 
 ### 🖼️ Pratinjau Antarmuka & Panduan Lengkap
 | 🌟 Tampilan Portal Panduan Utama | 💬 Forum Buzz & Rating Interaktif |

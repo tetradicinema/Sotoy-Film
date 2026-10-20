@@ -35,7 +35,7 @@ export const AboutUsPage: React.FC = () => {
           </h1>
 
           <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-            Sotoy Film adalah media pop-culture film independen dan jejaring sosial film berbasis di Jakarta, Indonesia. Kami merayakan sinema mulai dari film festival prestisius, blockbuster Hollywood, serial televisi, anime legendaris, hingga riset gear sinematografi.
+            Sotoy Film adalah media pop-culture film independen dan jejaring sosial film berbasis di Jakarta, Indonesia. Kami merayakan sinema mulai dari film festival prestisius, blockbuster Hollywood, serial televisi, animation legendaris, hingga riset gear sinematografi.
           </p>
         </div>
 

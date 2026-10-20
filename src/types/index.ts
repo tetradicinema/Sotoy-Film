@@ -100,14 +100,14 @@ export interface UserSettings {
   dataSharingConsent: boolean;
 }
 
-export type MainCategory = 'movies' | 'series' | 'anime' | 'cinema-gear' | 'film-studies';
+export type MainCategory = 'movies' | 'series' | 'animation' | 'cinema-gear' | 'film-studies';
 
 export type SubCategory =
   // Movies & Series
   | 'news'
   | 'lists'
   | 'reviews'
-  // Anime (news, lists)
+  // Animation (news, lists)
   // Cinema Gear
   | 'gear-news'
   | 'gear-reviews'
@@ -532,7 +532,9 @@ export type HomeSidebarWidgetKey =
 export interface SectionConfig {
   title?: string;
   sourceType: 'auto' | 'manual' | 'slider';
-  category?: MainCategory | 'movie' | 'series' | 'anime' | 'animation';
+  // Legacy values 'anime' and 'animasi' are still accepted when reading saved
+  // configurations, and are treated as 'animation'.
+  category?: MainCategory | 'movie' | 'series' | 'anime' | 'animasi' | 'animation';
   subCategory?: SubCategory | string;
   tag?: string;
   sortBy?: 'newest' | 'rating' | 'views' | 'votes' | 'release_soonest';

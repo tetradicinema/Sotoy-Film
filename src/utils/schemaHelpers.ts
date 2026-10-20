@@ -80,7 +80,7 @@ export function generateBreadcrumbSchema(items: BreadcrumbItem[]) {
 export interface MovieSchemaInput {
   title: string;
   originalTitle?: string;
-  type?: 'movie' | 'series' | 'anime' | 'animation';
+  type?: 'movie' | 'series' | 'animation';
   image: string | string[];
   description: string;
   director: string;
@@ -385,7 +385,7 @@ export function generateWebSiteSchema(siteUrl = DEFAULT_BASE_URL) {
     alternateName: ['SotoyFilm', 'Sotoy Film Media'],
     url: cleanUrl,
     description:
-      'Platform komunitas & media pop-culture film, series, anime, cinema gear, dan film studies dengan ulasan Skor Sotoy dan diskusi buzz.',
+      'Platform komunitas & media pop-culture film, series, animation, cinema gear, dan film studies dengan ulasan Skor Sotoy dan diskusi buzz.',
     potentialAction: {
       '@type': 'SearchAction',
       target: {

@@ -90,7 +90,7 @@ export const SITE_NAME = 'Sotoy Film';
 export const DEFAULT_BASE_URL = 'https://www.sotoyfilm.my.id';
 export const DEFAULT_TITLE = 'Sotoy Film - Ulasan & Kritik Film Terpercaya';
 export const DEFAULT_DESCRIPTION =
-  'Platform komunitas & media pop-culture film, series, anime, cinema gear, dan film studies dengan ulasan Skor Sotoy dan diskusi buzz.';
+  'Platform komunitas & media pop-culture film, series, animation, cinema gear, dan film studies dengan ulasan Skor Sotoy dan diskusi buzz.';
 export const DEFAULT_IMAGE = 'https://www.sotoyfilm.my.id/og-default.png';
 export const DEFAULT_KEYWORDS = [
   'ulasan film',
@@ -690,11 +690,11 @@ export const STATIC_ROUTE_METADATA_CONFIG: Record<
     keywords: ['series terbaik', 'netflix series', 'serial tv', 'drama series'],
     type: 'website',
   },
-  '/kategori/anime': {
-    title: 'Anime Populer & Rekomendasi Musiman',
+  '/kategori/animation': {
+    title: 'Animation Populer & Rekomendasi Musiman',
     description:
-      'Berita anime terbaru, review film animasi Jepang, dan daftar tontonan wajib bagi para pecinta anime.',
-    keywords: ['anime terbaru', 'rekomendasi anime', 'film anime', 'wibu indonesia'],
+      'Berita animation terbaru, review film animation Jepang, dan daftar tontonan wajib bagi para pecinta animation.',
+    keywords: ['animation terbaru', 'rekomendasi anime', 'film anime', 'anime terbaru'],
     type: 'website',
   },
   '/kategori/cinema-gear': {

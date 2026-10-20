@@ -64,7 +64,7 @@ export const LeaderboardGuidePage: React.FC = () => {
                 </h3>
               </div>
               <p className="text-slate-300 text-xs leading-relaxed">
-                Panggung bagi seluruh penonton bioskop, penikmat series, dan pecinta anime di komunitas. Setiap ulasan jujur dan penilaian Skor Sotoy kamu berkontribusi langsung pada skor komunitas.
+                Panggung bagi seluruh penonton bioskop, penikmat series, dan pecinta animation di komunitas. Setiap ulasan jujur dan penilaian Skor Sotoy kamu berkontribusi langsung pada skor komunitas.
               </p>
               <div className="text-[11px] text-cyan-400 font-bold">
                 Fokus: Opini penonton murni, diskusi komunitas, dan ulasan kilat.

@@ -444,7 +444,7 @@ export const UserPage: React.FC = () => {
     'Sci-Fi',
     'Psychological Thriller',
     'Neo-Noir',
-    'Anime',
+    'Animation',
     'Cinema Gear & Optics',
     'Drama & Auteur',
     'Horror & Gore',

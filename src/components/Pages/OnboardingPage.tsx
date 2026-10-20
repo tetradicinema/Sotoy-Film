@@ -33,6 +33,7 @@ import {
 } from '../../utils/onboardingHelpers';
 import { sanitizeStoredLinks, validateProfileLinks } from '../../utils/profileLinks';
 import { compressBuzzImage } from '../../utils/imageCompression';
+import { normalizeInterestLabel } from '../../utils/articleCategory';
 import { ProfileLink } from '../../types';
 
 type Step = 1 | 2 | 3 | 4;
@@ -50,7 +51,7 @@ const AVAILABLE_GENRES = [
   'Sci-Fi',
   'Psychological Thriller',
   'Neo-Noir',
-  'Anime',
+  'Animation',
   'Drama & Auteur',
   'Horror & Gore',
   'Action & Martial Arts',
@@ -153,7 +154,7 @@ export const OnboardingPage: React.FC = () => {
   const [avatar, setAvatar] = useState(initialDraft.avatar || '');
   const [links, setLinks] = useState<ProfileLink[]>(initialDraft.links);
   const [selectedGenres, setSelectedGenres] = useState<string[]>(
-    initialDraft.favoriteGenres
+    initialDraft.favoriteGenres.map(normalizeInterestLabel)
   );
   const [acceptedTerms, setAcceptedTerms] = useState(initialDraft.acceptedTerms);
 

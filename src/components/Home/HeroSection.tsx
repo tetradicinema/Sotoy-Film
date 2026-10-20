@@ -132,10 +132,10 @@ export const HeroSection: React.FC = () => {
     setCurrentSlide(prev => (prev + 1) % trendingArticles.length);
   };
 
-  // Default to watch article recommendations (movies, series, anime)
+  // Default to watch article recommendations (movies, series, animation)
   const defaultToWatchArticles = useMemo(() => {
     return articlesPool
-      .filter(a => ['movies', 'series', 'anime'].includes(a.category))
+      .filter(a => ['movies', 'series', 'animation'].includes(a.category))
       .sort((a, b) => {
         const timeA = a.publishedAtTimestamp
           ? new Date(a.publishedAtTimestamp).getTime()

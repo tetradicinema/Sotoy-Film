@@ -42,7 +42,7 @@ export async function generateSitemapXml(db: Firestore): Promise<string> {
   ];
 
   // Add category hubs
-  const categories = ['movies', 'series', 'anime', 'cinema-gear', 'film-studies'];
+  const categories = ['movies', 'series', 'animation', 'cinema-gear', 'film-studies'];
   categories.forEach((cat) => {
     urls.push({
       loc: `${baseUrl}/kategori/${cat}`,

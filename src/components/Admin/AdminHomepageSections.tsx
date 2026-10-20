@@ -61,12 +61,12 @@ import {
   resolveFilmDbSectionOrder,
 } from '../../utils/homepageConfigHelper';
 import { getStreamingPlatforms } from '../../utils/filmSections';
+import { normalizeArticleCategory } from '../../utils/articleCategory';
 
 const CATEGORY_LABELS: Record<string, string> = {
   movies: 'Movie',
   series: 'Series',
-  anime: 'Animasi',
-  animation: 'Animasi',
+  animation: 'Animation',
   'cinema-gear': 'Cinema Gear',
   'film-studies': 'Film Studies',
   movie: 'Movie',
@@ -99,10 +99,10 @@ const CATEGORY_SPECIFIC_SUBCATEGORIES: Record<string, { val: string; label: stri
     { val: 'news', label: 'News / Kabar Serial' },
     { val: 'features', label: 'Features / Bahasan Serial' },
   ],
-  anime: [
-    { val: 'news', label: 'News / Kabar Anime' },
-    { val: 'reviews', label: 'Reviews / Ulasan Anime' },
-    { val: 'lists', label: 'Lists / Rekomendasi Anime' },
+  animation: [
+    { val: 'news', label: 'News / Kabar Animation' },
+    { val: 'reviews', label: 'Reviews / Ulasan Animation' },
+    { val: 'lists', label: 'Lists / Rekomendasi Animation' },
     { val: 'features', label: 'Features / Bahasan Khusus' },
   ],
   'cinema-gear': [
@@ -1091,7 +1091,7 @@ export const AdminHomepageSections: React.FC = () => {
 
   // Subcategory options based on currently selected category
   const availableSubCategories = useMemo(() => {
-    const selectedCategory = currentConfig.category;
+    const selectedCategory = normalizeArticleCategory(currentConfig.category) || '';
     if (selectedCategory && CATEGORY_SPECIFIC_SUBCATEGORIES[selectedCategory]) {
       return CATEGORY_SPECIFIC_SUBCATEGORIES[selectedCategory];
     }
@@ -1123,7 +1123,7 @@ export const AdminHomepageSections: React.FC = () => {
               <p className="text-slate-400 text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
                 {adminAreaTab === 'home'
                   ? 'Kustomisasi judul, mode kurasi otomatis (kategori & sub-kategori), atau pilih item manual secara spesifik untuk tiap seksi di halaman beranda. Geser urutan seksi dengan drag-and-drop. Perubahan tersimpan secara realtime di Firestore.'
-                  : 'Konfigurasi 5 seksi kurasi Film Database (Sedang Tayang di Bioskop, What\'s Streaming, Coming Soon, Animasi Rekomendasi, dan Fan\'s Favourite). Atur urutan seksi, status aktif, filter platform streaming, dan batas minimum voting.'}
+                  : 'Konfigurasi 5 seksi kurasi Film Database (Sedang Tayang di Bioskop, What\'s Streaming, Coming Soon, Animation Rekomendasi, dan Fan\'s Favourite). Atur urutan seksi, status aktif, filter platform streaming, dan batas minimum voting.'}
               </p>
             </div>
           </div>
@@ -1618,7 +1618,7 @@ export const AdminHomepageSections: React.FC = () => {
                   </label>
                   <select
                     id="select-category-auto"
-                    value={currentConfig.category || ''}
+                    value={normalizeArticleCategory(currentConfig.category) || ''}
                     onChange={(e) => updateCurrentDraft({ category: (e.target.value as any) || undefined })}
                     className="w-full px-3 py-2 rounded-xl bg-[#171717] border border-white/[0.1] text-white text-xs outline-none focus:border-[#FF2E7E] transition-colors"
                   >

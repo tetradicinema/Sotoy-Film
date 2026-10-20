@@ -136,7 +136,7 @@ export const HomeExploreBlock: React.FC = () => {
       all: publishedArticles.length,
       movies: 0,
       series: 0,
-      anime: 0,
+      animation: 0,
       'cinema-gear': 0,
       'film-studies': 0,
     };
@@ -169,7 +169,7 @@ export const HomeExploreBlock: React.FC = () => {
               </h2>
             </div>
             <p className="text-slate-400 text-xs sm:text-[13px] mt-1 ml-3.5">
-              Ulasan film, bedah serial, anime musim ini, eksplorasi cinema gear, dan kajian sinematik.
+              Ulasan film, bedah serial, animation musim ini, eksplorasi cinema gear, dan kajian sinematik.
             </p>
           </div>
 
@@ -192,7 +192,7 @@ export const HomeExploreBlock: React.FC = () => {
               all: 'filter-cat-all',
               movies: 'filter-cat-movies',
               series: 'filter-cat-series',
-              anime: 'filter-cat-anime',
+              animation: 'filter-cat-animation',
               'cinema-gear': 'filter-cat-gear',
               'film-studies': 'filter-cat-studies',
             };

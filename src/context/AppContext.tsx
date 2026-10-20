@@ -39,6 +39,7 @@ import { setCachedHomepageLayout, clearCachedHomepageLayout } from '../utils/hom
 import { validateProfileLinks, sanitizeStoredLinks } from '../utils/profileLinks';
 import { TERMS_VERSION } from '../utils/onboardingHelpers';
 import { normalizeFilmType } from '../utils/filmType';
+import { normalizeArticleCategory, normalizeInterestLabel, normalizeInterestProfile } from '../utils/articleCategory';
 import {
   DEFAULT_FALLBACK_AUTHOR,
   INITIAL_BUZZ,
@@ -805,7 +806,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const saved = localStorage.getItem('sotoy_user_settings');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed?.favoriteGenres)) {
+          parsed.favoriteGenres = parsed.favoriteGenres
+            .filter((g: unknown): g is string => typeof g === 'string')
+            .map(normalizeInterestLabel);
+        }
+        return parsed;
       } catch (e) {
         // fallback
       }
@@ -839,7 +846,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [interestProfile, setInterestProfile] = useState<InterestProfile>(() => {
     try {
       const saved = localStorage.getItem('sotoy_interest_profile');
-      return saved ? JSON.parse(saved) : {};
+      return saved ? normalizeInterestProfile(JSON.parse(saved)) : {};
     } catch {
       return {};
     }
@@ -919,8 +926,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentView('category');
       const clean = path.replace(/^\/(kategori|category)\//, '');
       const parts = clean.split('/');
-      if (parts[0]) setActiveCategory(parts[0] as MainCategory);
-      if (parts[1]) setActiveSubCategory(parts[1] as SubCategory);
+      if (parts[0]) {
+        const normalized = normalizeArticleCategory(decodeURIComponent(parts[0]));
+        setActiveCategory((normalized || parts[0]) as MainCategory);
+      }
+      if (parts[1]) setActiveSubCategory(decodeURIComponent(parts[1]) as SubCategory);
     } else if (path === '/film-database') {
       setCurrentView('film-database');
     } else if (path === '/rekomendasi-film' || path === '/film-recommendations') {
@@ -1125,7 +1135,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const data = docSnap.data() as Article;
         const id = data.id || docSnap.id;
         if (id) {
-          articleMap.set(id, { ...data, id });
+          articleMap.set(id, {
+            ...data,
+            id,
+            category: normalizeArticleCategory(data.category) as MainCategory,
+          });
         }
       });
       const getArticleTime = (art: Article): number => {
@@ -1823,10 +1837,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Dynamically resolve article author profiles directly from Firestore users collection
   const resolvedArticles = useMemo(() => {
     return articles.map(article => {
+      const normalizedArticle = {
+        ...article,
+        category: normalizeArticleCategory(article.category) as MainCategory,
+      };
       const user = resolvedAllUsers.find(u => u.id === article.authorId || u.id === article.author?.id);
       if (user) {
         return {
-          ...article,
+          ...normalizedArticle,
           authorId: user.id,
           author: {
             id: user.id,
@@ -1837,7 +1855,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
       }
       return {
-        ...article,
+        ...normalizedArticle,
         authorId: article.authorId || DEFAULT_FALLBACK_AUTHOR.id,
         author: {
           id: article.authorId || DEFAULT_FALLBACK_AUTHOR.id,
@@ -2470,7 +2488,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') {
       try {
         const local = localStorage.getItem('sotoy_interest_profile');
-        if (local) setInterestProfile(JSON.parse(local));
+        if (local) setInterestProfile(normalizeInterestProfile(JSON.parse(local)));
       } catch {}
       return;
     }
@@ -2485,9 +2503,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (snapshot.exists()) {
           const data = snapshot.data();
           if (data?.interestProfile && typeof data.interestProfile === 'object') {
-            setInterestProfile(data.interestProfile);
+            const normalizedProfile = normalizeInterestProfile(data.interestProfile);
+            setInterestProfile(normalizedProfile);
             try {
-              localStorage.setItem('sotoy_interest_profile', JSON.stringify(data.interestProfile));
+              localStorage.setItem('sotoy_interest_profile', JSON.stringify(normalizedProfile));
             } catch {}
           }
         }
@@ -2503,9 +2522,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (snapshot.exists()) {
           const data = snapshot.data();
           if (data?.profile && typeof data.profile === 'object') {
-            setInterestProfile(data.profile);
+            const normalizedProfile = normalizeInterestProfile(data.profile);
+            setInterestProfile(normalizedProfile);
             try {
-              localStorage.setItem('sotoy_interest_profile', JSON.stringify(data.profile));
+              localStorage.setItem('sotoy_interest_profile', JSON.stringify(normalizedProfile));
             } catch {}
           }
         } else {
@@ -2513,7 +2533,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (userSettings?.favoriteGenres && userSettings.favoriteGenres.length > 0) {
             const initial: InterestProfile = {};
             userSettings.favoriteGenres.forEach(g => {
-              if (g) initial[g.toLowerCase().trim()] = 5;
+              if (g) initial[normalizeInterestLabel(g).toLowerCase()] = 5;
             });
             setInterestProfile(initial);
             setDoc(interestDocRef, {
@@ -3993,7 +4013,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateUserSettings = (updates: Partial<UserSettings>) => {
-    setUserSettings(prev => ({ ...prev, ...updates }));
+    setUserSettings(prev => {
+      const next = { ...prev, ...updates };
+      if (Array.isArray(next.favoriteGenres)) {
+        next.favoriteGenres = Array.from(
+          new Set(
+            next.favoriteGenres
+              .filter((g): g is string => typeof g === 'string')
+              .map(normalizeInterestLabel)
+              .filter(Boolean)
+          )
+        );
+      }
+      return next;
+    });
     showToast('Pengaturan pengguna berhasil disimpan!');
   };
 
@@ -4459,7 +4492,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         break;
       }
       case 'category': {
-        const cat = options?.category || activeCategory || 'movies';
+        const rawCat = options?.category || activeCategory || 'movies';
+        const cat = normalizeArticleCategory(rawCat) || rawCat;
         const sub = options?.subCategory !== undefined ? options.subCategory : activeSubCategory;
         targetPath = sub ? `/kategori/${cat}/${sub}` : `/kategori/${cat}`;
         break;

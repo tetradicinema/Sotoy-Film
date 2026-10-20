@@ -136,8 +136,8 @@ export const Navbar: React.FC = () => {
       ],
     },
     {
-      id: 'anime',
-      name: t('nav.anime', 'Anime'),
+      id: 'animation',
+      name: t('nav.animation', 'Animation'),
       icon: Sparkles,
       subCategories: [
         { id: 'news', label: 'News' },

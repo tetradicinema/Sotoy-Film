@@ -415,7 +415,7 @@ export const CriticDashboard: React.FC = () => {
                 <option value="all" className="bg-[#171717]">Semua Tipe</option>
                 <option value="movie" className="bg-[#171717]">Movie</option>
                 <option value="series" className="bg-[#171717]">Series</option>
-                <option value="animation" className="bg-[#171717]">Animasi</option>
+                <option value="animation" className="bg-[#171717]">Animation</option>
               </select>
 
               <select

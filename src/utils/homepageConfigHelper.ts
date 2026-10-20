@@ -1,4 +1,7 @@
 import { FilmItem, Article, SectionConfig, HomepageSectionKey, MainCategory, HomeBlockKey, HomeSidebarWidgetKey } from '../types';
+import { normalizeArticleCategory } from './articleCategory';
+import { normalizeFilmType } from './filmType';
+import { isAnimationFilm } from './filmSections';
 
 export interface SectionMeta {
   key: HomepageSectionKey;
@@ -7,7 +10,7 @@ export interface SectionMeta {
   targetType: 'films' | 'articles';
   description: string;
   defaultRule: string;
-  allowedCategories: (MainCategory | 'movie' | 'series' | 'anime' | 'animation')[];
+  allowedCategories: (MainCategory | 'movie' | 'series' | 'anime' | 'animasi' | 'animation')[];
   area: 'home' | 'film_database';
 }
 
@@ -65,9 +68,9 @@ export const HOME_BLOCKS_META: HomeBlockMeta[] = [
   },
   {
     key: 'watchlists',
-    label: 'Curated Watchlists: Movies, Series & Anime',
+    label: 'Curated Watchlists: Movies, Series & Animation',
     type: 'column',
-    description: 'Daftar vertikal berisi daftar tontonan kurasi untuk film, serial, dan anime',
+    description: 'Daftar vertikal berisi daftar tontonan kurasi untuk film, serial, dan animation',
   },
   {
     key: 'cinema_gear',
@@ -83,9 +86,9 @@ export const HOME_BLOCKS_META: HomeBlockMeta[] = [
   },
   {
     key: 'anime_news',
-    label: 'Anime News & Season Updates',
+    label: 'Animation News & Season Updates',
     type: 'column',
-    description: 'Kawat berita compact dengan update musim anime dan jadwal rilis terkini',
+    description: 'Kawat berita compact dengan update musim animation dan jadwal rilis terkini',
   },
   {
     key: 'film_studies',
@@ -287,7 +290,7 @@ export function clearCachedHomepageLayout(): void {
 export const ALL_ARTICLE_CATEGORIES: MainCategory[] = [
   'movies',
   'series',
-  'anime',
+  'animation',
   'cinema-gear',
   'film-studies',
 ];
@@ -388,7 +391,7 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     defaultTitle: 'To Watch',
     targetType: 'articles',
     description: 'Panel hero, tab artikel rekomendasi tontonan (kanan hero banner)',
-    defaultRule: 'Artikel kategori Movies, Series, dan Anime (urutan terbaru)',
+    defaultRule: 'Artikel kategori Movies, Series, dan Animation (urutan terbaru)',
     allowedCategories: ALL_ARTICLE_CATEGORIES,
     area: 'home',
   },
@@ -434,11 +437,11 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
   },
   {
     key: 'anime_list',
-    label: 'Seksi 1: Anime Lists',
-    defaultTitle: 'Anime Lists',
+    label: 'Seksi 1: Animation Lists',
+    defaultTitle: 'Animation Lists',
     targetType: 'articles',
     description: 'Seksi 1, kolom 3 (daftar vertikal dengan poster)',
-    defaultRule: 'Artikel kategori Anime (urutan terbaru)',
+    defaultRule: 'Artikel kategori Animation (urutan terbaru)',
     allowedCategories: ALL_ARTICLE_CATEGORIES,
     area: 'home',
   },
@@ -474,11 +477,11 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
   },
   {
     key: 'anime_news',
-    label: 'Seksi 4: Anime News Wire',
-    defaultTitle: 'Anime News & Season Updates',
+    label: 'Seksi 4: Animation News Wire',
+    defaultTitle: 'Animation News & Season Updates',
     targetType: 'articles',
     description: 'Seksi 4, grid artikel gaya news ticker',
-    defaultRule: 'Artikel kategori Anime (kabar & berita terkini)',
+    defaultRule: 'Artikel kategori Animation (kabar & berita terkini)',
     allowedCategories: ALL_ARTICLE_CATEGORIES,
     area: 'home',
   },
@@ -530,8 +533,8 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     label: 'Animation Recommendation',
     defaultTitle: 'Animation Recommendation',
     targetType: 'films',
-    description: 'Rekomendasi film & serial animasi terbaik',
-    defaultRule: 'Tipe "animation" / genre animasi, diurutkan skor berbobot Bayesian',
+    description: 'Rekomendasi film & serial animation terbaik',
+    defaultRule: 'Tipe "animation" / genre animation, diurutkan skor berbobot Bayesian',
     allowedCategories: ALL_FILM_CATEGORIES,
     area: 'film_database',
   },
@@ -573,20 +576,10 @@ export function resolveConfigFilms(
   // Auto mode
   let filtered = [...allFilms];
   if (config.category && config.category.trim()) {
-    const cat = config.category.trim().toLowerCase();
+    const cat = normalizeFilmType(config.category);
     filtered = filtered.filter(f => {
-      const filmType = (f.type || '').toLowerCase();
-      if (cat === 'movie' || cat === 'movies') {
-        return filmType === 'movie' || filmType === 'movies' || !filmType;
-      }
-      if (cat === 'animation' || cat === 'anime') {
-        return (
-          filmType === 'animation' ||
-          filmType === 'anime' ||
-          (Array.isArray(f.genres) && f.genres.some((g: string) => /animas?i|animation/i.test(g)))
-        );
-      }
-      return filmType === cat;
+      if (cat === 'animation') return isAnimationFilm(f);
+      return normalizeFilmType(f.type) === cat;
     });
   }
   if (config.subCategory && config.subCategory.trim()) {
@@ -662,8 +655,10 @@ export function resolveConfigArticles(
   // Auto mode
   let filtered = [...allArticles];
   if (config.category && config.category.trim()) {
-    const cat = config.category.trim().toLowerCase();
-    filtered = filtered.filter(a => (a.category || '').toLowerCase() === cat);
+    const cat = (normalizeArticleCategory(config.category) || '').toLowerCase();
+    filtered = filtered.filter(
+      a => (normalizeArticleCategory(a.category) || '').toLowerCase() === cat
+    );
   }
   if (config.subCategory && config.subCategory.trim()) {
     const sub = config.subCategory.trim().toLowerCase();

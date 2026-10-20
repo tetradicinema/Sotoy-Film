@@ -101,7 +101,7 @@ async function run() {
   ];
 
   // Category exploration hubs
-  const categories = ['movies', 'series', 'anime', 'cinema-gear', 'film-studies'];
+  const categories = ['movies', 'series', 'animation', 'cinema-gear', 'film-studies'];
   for (const cat of categories) {
     entries.push({
       loc: `${baseUrl}/kategori/${cat}`,

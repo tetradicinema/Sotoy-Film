@@ -18,7 +18,7 @@ const Section4Skeleton: React.FC = () => (
   </div>
 );
 
-export const HomeAnimeNewsBlock: React.FC = () => {
+export const HomeAnimationNewsBlock: React.FC = () => {
   const {
     publishedArticles,
     isLoadingArticles,
@@ -26,51 +26,51 @@ export const HomeAnimeNewsBlock: React.FC = () => {
     homepageSectionsConfig,
   } = useApp();
 
-  const defaultAnimeNews = useMemo(() => {
+  const defaultAnimationNews = useMemo(() => {
     const newsOnly = publishedArticles.filter(
       (a) =>
-        a.category === 'anime' &&
+        a.category === 'animation' &&
         (a.subCategory === 'news' || a.tags?.some((t) => t.toLowerCase().includes('news')))
     );
     if (newsOnly.length >= 3) return newsOnly.slice(0, 5);
-    return publishedArticles.filter((a) => a.category === 'anime').slice(0, 5);
+    return publishedArticles.filter((a) => a.category === 'animation').slice(0, 5);
   }, [publishedArticles]);
 
-  const animeNews = useMemo(() => {
+  const animationNews = useMemo(() => {
     return resolveConfigArticles(
       publishedArticles,
       homepageSectionsConfig?.sections?.anime_news,
-      defaultAnimeNews
+      defaultAnimationNews
     );
-  }, [publishedArticles, homepageSectionsConfig?.sections?.anime_news, defaultAnimeNews]);
+  }, [publishedArticles, homepageSectionsConfig?.sections?.anime_news, defaultAnimationNews]);
 
   return (
-    <section id="home-anime-news-ticker" aria-labelledby="heading-anime-news">
+    <section id="home-animation-news-ticker" aria-labelledby="heading-animation-news">
       <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 mb-4 pb-3 border-b border-white/[0.08]">
         <div>
-          <h2 id="heading-anime-news" className="font-display font-black text-xl sm:text-2xl text-white tracking-tight">
-            {homepageSectionsConfig?.sections?.anime_news?.title?.trim() || 'Anime News & Season Updates'}
+          <h2 id="heading-animation-news" className="font-display font-black text-xl sm:text-2xl text-white tracking-tight">
+            {homepageSectionsConfig?.sections?.anime_news?.title?.trim() || 'Animation News & Season Updates'}
           </h2>
           <p className="text-slate-400 text-xs sm:text-[13px] mt-1">
-            Warta terkini seputar jadwal tayang musim baru, adaptasi manga, dan kabar resmi dari studio animasi Jepang.
+            Warta terkini seputar jadwal tayang musim baru, adaptasi manga, dan kabar resmi dari studio animation Jepang.
           </p>
         </div>
         <span className="text-[11px] font-mono text-slate-500 self-start sm:self-auto">
-          News Wire ({animeNews.length})
+          News Wire ({animationNews.length})
         </span>
       </div>
 
       {isLoadingArticles ? (
         <Section4Skeleton />
-      ) : animeNews.length === 0 ? (
+      ) : animationNews.length === 0 ? (
         <SectionEmptyState
           icon={<Sparkles className="w-5 h-5 text-slate-500" />}
-          message="Belum ada kabar anime terbaru"
-          submessage="Update jadwal tayang dan kabar terkini anime akan segera diperbarui."
+          message="Belum ada kabar animation terbaru"
+          submessage="Update jadwal tayang dan kabar terkini animation akan segera diperbarui."
         />
       ) : (
         <div className="bg-[#171717] rounded-3xl border border-white/[0.08] divide-y divide-white/[0.06] overflow-hidden">
-          {animeNews.map((article) => (
+          {animationNews.map((article) => (
             <div
               key={article.id}
               onClick={() => navigateTo('article-detail', { articleId: article.id })}
@@ -93,7 +93,7 @@ export const HomeAnimeNewsBlock: React.FC = () => {
                     </span>
                     <span className="w-1.5 h-1.5 rounded-full bg-[#FF2E7E]" />
                     <span className="text-[10px] uppercase font-bold text-[#FF2E7E] tracking-wider">
-                      {article.subCategory || 'Anime Wire'}
+                      {article.subCategory || 'Animation Wire'}
                     </span>
                   </div>
 

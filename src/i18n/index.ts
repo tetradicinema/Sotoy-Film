@@ -6,7 +6,7 @@ const en: Record<string, string> = {
   // Common
   'nav.movies': 'Movies',
   'nav.series': 'Series',
-  'nav.anime': 'Anime',
+  'nav.animation': 'Animation',
   'nav.cinemaGear': 'Cinema Gear',
   'nav.filmStudies': 'Film Studies',
   'nav.filmDatabase': 'Film Database',
@@ -33,7 +33,7 @@ const id: Record<string, string> = {
   // Common
   'nav.movies': 'Film',
   'nav.series': 'Serial',
-  'nav.anime': 'Anime',
+  'nav.animation': 'Animation',
   'nav.cinemaGear': 'Alat Sinema',
   'nav.filmStudies': 'Studi Film',
   'nav.filmDatabase': 'Database Film',

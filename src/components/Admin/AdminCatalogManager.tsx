@@ -650,7 +650,7 @@ export const AdminCatalogManager: React.FC = () => {
                     : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                 }`}
               >
-                {tab === 'all' ? 'Semua Format' : tab === 'movie' ? 'Movie' : tab === 'series' ? 'Series' : 'Animasi'}
+                {tab === 'all' ? 'Semua Format' : tab === 'movie' ? 'Movie' : tab === 'series' ? 'Series' : 'Animation'}
               </button>
             ))}
           </div>
@@ -1220,7 +1220,7 @@ export const AdminCatalogManager: React.FC = () => {
                   >
                     <option value="movie">Movie (Film Layar Lebar)</option>
                     <option value="series">Series (Serial Televisi / Web)</option>
-                    <option value="animation">Animasi</option>
+                    <option value="animation">Animation</option>
                   </select>
                 </div>
 
@@ -1832,7 +1832,7 @@ export const AdminCatalogManager: React.FC = () => {
                 >
                   <div className="text-xs uppercase tracking-wider">{fmt}</div>
                   <div className="text-[10px] text-slate-400 mt-1 capitalize font-normal">
-                    {fmt === 'movie' ? 'Layar Lebar' : fmt === 'series' ? 'Serial TV' : 'Animasi'}
+                    {fmt === 'movie' ? 'Layar Lebar' : fmt === 'series' ? 'Serial TV' : 'Animation'}
                   </div>
                 </button>
               ))}

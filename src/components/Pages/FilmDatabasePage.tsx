@@ -60,7 +60,7 @@ export const GENRE_CATEGORIES: GenreCategory[] = [
     icon: Layers,
     badgeClass: 'text-slate-300 border-slate-700 bg-slate-900/60',
     activeClass: 'bg-white text-slate-950 border-white shadow-lg shadow-white/10 ring-2 ring-white/20 font-black',
-    description: 'Jelajahi seluruh katalog film bioskop, tayangan serial, dan animasi di database Sotoy Film.',
+    description: 'Jelajahi seluruh katalog film bioskop, tayangan serial, dan animation di database Sotoy Film.',
     themeColor: '#ffffff',
   },
   {
@@ -91,12 +91,12 @@ export const GENRE_CATEGORIES: GenreCategory[] = [
     themeColor: '#FF2E7E',
   },
   {
-    id: 'Anime',
-    name: 'Anime',
+    id: 'Animation',
+    name: 'Animation',
     icon: Sparkles,
     badgeClass: 'text-pink-400 border-pink-900/50 bg-pink-950/30 hover:border-pink-600/60',
     activeClass: 'bg-gradient-to-r from-pink-500 to-rose-500 text-white border-pink-400 shadow-lg shadow-pink-500/30 ring-2 ring-pink-300/40 font-black',
-    description: 'Mahakarya animasi Jepang, aksi sakuga spektakuler, adaptasi manga hits, dan film layar lebar studio papan atas.',
+    description: 'Mahakarya animation Jepang, aksi sakuga spektakuler, adaptasi manga hits, dan film layar lebar studio papan atas.',
     themeColor: '#FF2E7E',
   },
   {
@@ -160,7 +160,7 @@ export const FilmDatabasePage: React.FC = () => {
       if (lowerG === lowerTarget) return true;
       if (lowerTarget === 'horror' && (lowerG.includes('horr') || lowerG.includes('misteri') || lowerG.includes('thriller'))) return true;
       if (lowerTarget === 'sci-fi' && (lowerG.includes('sci') || lowerG.includes('fiksi') || lowerG.includes('futur') || lowerG.includes('space'))) return true;
-      if (lowerTarget === 'anime' && (lowerG.includes('anime') || lowerG.includes('animasi') || film.type === 'animation')) return true;
+      if (lowerTarget === 'animation' && (lowerG.includes('animation') || film.type === 'animation')) return true;
       if (lowerTarget === 'drama' && (lowerG.includes('dram') || lowerG.includes('romance') || lowerG.includes('kehidupan'))) return true;
       if (lowerTarget === 'action' && (lowerG.includes('aksi') || lowerG.includes('act') || lowerG.includes('petualangan'))) return true;
       return false;
@@ -293,7 +293,7 @@ export const FilmDatabasePage: React.FC = () => {
             </h1>
 
             <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6">
-              Katalog lengkap film bioskop, series drama prestisius, dan animasi terkini. Bandingkan Skor Komunitas penonton dengan ulasan kurator Si Paling Sotoy, serta telusuri ulasan populer komunitas.
+              Katalog lengkap film bioskop, series drama prestisius, dan animation terkini. Bandingkan Skor Komunitas penonton dengan ulasan kurator Si Paling Sotoy, serta telusuri ulasan populer komunitas.
             </p>
           </div>
         </div>
@@ -316,7 +316,7 @@ export const FilmDatabasePage: React.FC = () => {
                     </span>
                   )}
                 </div>
-                <p className="text-slate-400 text-xs">Pilih kategori genre untuk memfilter katalog film, serial, dan animasi secara instan</p>
+                <p className="text-slate-400 text-xs">Pilih kategori genre untuk memfilter katalog film, serial, dan animation secara instan</p>
               </div>
             </div>
 
@@ -989,7 +989,7 @@ export const FilmDatabasePage: React.FC = () => {
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Cari Dune, Nolan, Shōgun, Horror, Anime..."
+                placeholder="Cari Dune, Nolan, Shōgun, Horror, Animation..."
                 className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 pl-10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] focus:ring-1 focus:ring-[#FF2E7E] transition-all"
               />
               <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
@@ -1050,7 +1050,7 @@ export const FilmDatabasePage: React.FC = () => {
                     : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                 }`}
               >
-                Animasi
+                Animation
               </button>
             </div>
 
@@ -1206,7 +1206,7 @@ export const FilmDatabasePage: React.FC = () => {
 
                           <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[10px] font-bold text-slate-300">
                             <span className="bg-slate-900/90 px-1.5 py-0.5 rounded uppercase">
-                              {film.type === 'animation' ? 'Animasi' : film.type}
+                              {film.type === 'animation' ? 'Animation' : film.type}
                             </span>
                             <span>{film.year}</span>
                           </div>

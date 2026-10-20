@@ -29,9 +29,9 @@ export const CATEGORY_OPTIONS: CategoryOption[] = [
     icon: Tv,
   },
   {
-    id: 'anime',
-    label: 'Anime',
-    description: 'Rekomendasi anime, ulasan musiman, analisis manga, dan pop culture Jepang.',
+    id: 'animation',
+    label: 'Animation',
+    description: 'Rekomendasi animation, ulasan musiman, analisis manga, dan pop culture Jepang.',
     icon: Sparkles,
   },
   {

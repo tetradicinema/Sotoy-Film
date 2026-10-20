@@ -26,7 +26,7 @@ export const Footer: React.FC = () => {
             </div>
 
             <p className="text-slate-400 text-xs leading-relaxed max-w-sm">
-              Platform media & jejaring sosial film pop-culture independen. Mengulas film, serial, anime, cinema gear, dan studi filmmaking dengan sistem penilaian jujur <strong>Skor Sotoy (Bintang 1-5)</strong>.
+              Platform media & jejaring sosial film pop-culture independen. Mengulas film, serial, animation, cinema gear, dan studi filmmaking dengan sistem penilaian jujur <strong>Skor Sotoy (Bintang 1-5)</strong>.
             </p>
 
             <div className="flex items-center gap-2 pt-2">
@@ -63,10 +63,10 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <button
-                  onClick={() => navigateTo('category', { category: 'anime' })}
+                  onClick={() => navigateTo('category', { category: 'animation' })}
                   className="hover:text-white transition-colors"
                 >
-                  Anime (News, Lists)
+                  Animation (News, Lists)
                 </button>
               </li>
               <li>

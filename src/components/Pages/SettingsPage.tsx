@@ -232,7 +232,7 @@ export const SettingsPage: React.FC = () => {
     'Psychological Thriller',
     'Neo-Noir',
     'Cinema Gear',
-    'Anime',
+    'Animation',
     'Indie Cinema',
     'Horror',
     'Action & Epik',

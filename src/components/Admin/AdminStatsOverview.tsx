@@ -156,7 +156,7 @@ export const AdminStatsOverview: React.FC = () => {
             {seriesCount} Series
           </span>
           <span className="px-2 py-0.5 rounded-md bg-white/[0.06] text-slate-300 border border-white/10 font-medium">
-            {animationCount} Animasi
+            {animationCount} Animation
           </span>
         </div>
       </div>

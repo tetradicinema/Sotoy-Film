@@ -162,7 +162,10 @@ interface TestCase {
   name: string;
   userAgent: string;
   path: string;
-  expectedBranch: 'BOT' | 'HUMAN';
+  /** Required unless expectedStatus is set (redirect cases). */
+  expectedBranch?: 'BOT' | 'HUMAN';
+  expectedStatus?: number;
+  expectedLocation?: string;
   expectedMetaPatterns?: string[];
 }
 
@@ -396,6 +399,28 @@ const TEST_CASES: TestCase[] = [
     expectedBranch: 'BOT',
     expectedMetaPatterns: ['Scheduled Past Article Title', 'og:title'],
   },
+
+  // --- CATEGORY TAXONOMY REDIRECTS ---
+  {
+    name: 'Googlebot on canonical Animation category (pass-through)',
+    userAgent: 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+    path: '/kategori/animation',
+    expectedBranch: 'HUMAN',
+  },
+  {
+    name: 'Googlebot on legacy /kategori/anime (301 redirect)',
+    userAgent: 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+    path: '/kategori/anime',
+    expectedStatus: 301,
+    expectedLocation: '/kategori/animation',
+  },
+  {
+    name: 'Human on legacy /kategori/animasi/news (301 redirect, preserves subcategory)',
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+    path: '/kategori/animasi/news',
+    expectedStatus: 301,
+    expectedLocation: '/kategori/animation/news',
+  },
 ];
 
 async function runTests() {
@@ -422,6 +447,25 @@ async function runTests() {
       const response = await middleware(request);
       const isNextPassThrough = response.headers.get('x-middleware-next') === '1';
       const actualBranch = isNextPassThrough ? 'HUMAN' : 'BOT';
+
+      // Redirect assertions (legacy category taxonomy)
+      if (testCase.expectedStatus !== undefined) {
+        const actualStatus = response.status;
+        const actualLocation = response.headers.get('location');
+
+        if (actualStatus !== testCase.expectedStatus || actualLocation !== testCase.expectedLocation) {
+          console.error(`❌ ${num} ${testCase.name}`);
+          console.error(
+            `   Expected ${testCase.expectedStatus} -> ${testCase.expectedLocation}, got ${actualStatus} -> ${actualLocation}`
+          );
+          failedCount++;
+          continue;
+        }
+
+        console.log(`✅ ${num} ${testCase.name} → ${actualStatus} ${actualLocation} (${testCase.path})`);
+        passedCount++;
+        continue;
+      }
 
       // 1. Verify branch detection
       if (actualBranch !== testCase.expectedBranch) {

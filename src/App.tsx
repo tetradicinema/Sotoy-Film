@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { HelmetProvider } from '@dr.pogodin/react-helmet';
 import { SEOHead } from './components/SEO/SEOHead';
 import { AppProvider, useApp } from './context/AppContext';
@@ -11,7 +11,7 @@ import { HomeFilmRecommendations } from './components/Home/HomeFilmRecommendatio
 import { HomeWatchlistsBlock } from './components/Home/HomeWatchlistsBlock';
 import { HomeCinemaGearBlock } from './components/Home/HomeCinemaGearBlock';
 import { HomeReviewsBlock } from './components/Home/HomeReviewsBlock';
-import { HomeAnimeNewsBlock } from './components/Home/HomeAnimeNewsBlock';
+import { HomeAnimationNewsBlock } from './components/Home/HomeAnimationNewsBlock';
 import { HomeFilmStudiesBlock } from './components/Home/HomeFilmStudiesBlock';
 import { HomeExploreBlock } from './components/Home/HomeExploreBlock';
 import { EditorialSidebar } from './components/Common/EditorialSidebar';
@@ -76,6 +76,13 @@ import { GenericPageSkeleton } from './components/Skeletons';
 
 // Fallback loader matching Sotoy Film aesthetic using structured skeleton
 const PageLoadingFallback: React.FC = () => <GenericPageSkeleton />;
+
+// Redirects the legacy "anime"/"animasi" taxonomy URLs to /kategori/animation,
+// preserving the optional subcategory segment.
+const LegacyCategoryRedirect: React.FC<{ target: string }> = ({ target }) => {
+  const { subCategory } = useParams<{ subCategory?: string }>();
+  return <Navigate to={subCategory ? `${target}/${subCategory}` : target} replace />;
+};
 
 const WIDE_BLOCK_KEYS: Set<HomeBlockKey> = new Set(['hero', 'featured_news', 'film_recommendations']);
 
@@ -186,7 +193,7 @@ const HomeView: React.FC = () => {
       case 'reviews':
         return <HomeReviewsBlock key="reviews" />;
       case 'anime_news':
-        return <HomeAnimeNewsBlock key="anime_news" />;
+        return <HomeAnimationNewsBlock key="anime_news" />;
       case 'film_studies':
         return <HomeFilmStudiesBlock key="film_studies" />;
       case 'explore':
@@ -361,6 +368,14 @@ const AppContent: React.FC = () => {
           {/* Category & Exploration Routes */}
           <Route path="/kategori" element={<Navigate to="/kategori/movies" replace />} />
           <Route path="/category" element={<Navigate to="/kategori/movies" replace />} />
+          <Route path="/kategori/anime" element={<Navigate to="/kategori/animation" replace />} />
+          <Route path="/kategori/anime/:subCategory" element={<LegacyCategoryRedirect target="/kategori/animation" />} />
+          <Route path="/kategori/animasi" element={<Navigate to="/kategori/animation" replace />} />
+          <Route path="/kategori/animasi/:subCategory" element={<LegacyCategoryRedirect target="/kategori/animation" />} />
+          <Route path="/category/anime" element={<Navigate to="/kategori/animation" replace />} />
+          <Route path="/category/anime/:subCategory" element={<LegacyCategoryRedirect target="/kategori/animation" />} />
+          <Route path="/category/animasi" element={<Navigate to="/kategori/animation" replace />} />
+          <Route path="/category/animasi/:subCategory" element={<LegacyCategoryRedirect target="/kategori/animation" />} />
           <Route path="/kategori/:name" element={<CategoryPage />} />
           <Route path="/kategori/:name/:subCategory" element={<CategoryPage />} />
           <Route path="/category/:name" element={<CategoryPage />} />

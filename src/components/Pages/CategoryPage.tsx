@@ -18,6 +18,7 @@ import { MainCategory, SubCategory } from '../../types';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { SEOHead } from '../SEO/SEOHead';
 import { generateBreadcrumbSchema } from '../../utils/schemaHelpers';
+import { normalizeArticleCategory } from '../../utils/articleCategory';
 import { BreadcrumbNavigation } from '../Navigation/BreadcrumbNavigation';
 import { ArticleListSkeleton } from '../Skeletons';
 
@@ -31,8 +32,10 @@ export const CategoryPage: React.FC = () => {
   } = useApp();
 
   const { name, subCategory } = useParams<{ name?: string; subCategory?: string }>();
-  const validCategory: MainCategory = (name && ['movies', 'series', 'anime', 'awards', 'lifestyle'].includes(name.toLowerCase()))
-    ? (name.toLowerCase() as MainCategory)
+  const normalizedName = (normalizeArticleCategory(name) || '').toLowerCase();
+  const knownCategories: MainCategory[] = ['movies', 'series', 'animation', 'cinema-gear', 'film-studies'];
+  const validCategory: MainCategory = knownCategories.includes(normalizedName as MainCategory)
+    ? (normalizedName as MainCategory)
     : activeCategory || 'movies';
   const currentCategory: MainCategory = validCategory;
   const currentSubCategory: SubCategory | undefined = (subCategory as SubCategory) || activeSubCategory;
@@ -70,9 +73,9 @@ export const CategoryPage: React.FC = () => {
         { id: 'reviews', label: 'Reviews' },
       ],
     },
-    anime: {
-      title: 'Anime',
-      subtitle: 'Kabar rilisan sakuga, manga adaptasi, anime musiman, dan film animasi layar lebar Jepang.',
+    animation: {
+      title: 'Animation',
+      subtitle: 'Kabar rilisan sakuga, manga adaptasi, animation musiman, dan film animation layar lebar Jepang.',
       accentColor: '#FF2E7E',
       icon: Sparkles,
       allSubCategories: [
@@ -110,7 +113,7 @@ export const CategoryPage: React.FC = () => {
 
   // Filter articles by category and active subcategory
   const filteredArticles = publishedArticles.filter(a => {
-    if (a.category !== currentCategory) return false;
+    if (normalizeArticleCategory(a.category) !== currentCategory) return false;
     if (currentSubCategory && a.subCategory !== currentSubCategory) return false;
     return true;
   });
@@ -178,13 +181,13 @@ export const CategoryPage: React.FC = () => {
                   : 'bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800'
               }`}
             >
-              Semua ({publishedArticles.filter(a => a.category === currentCategory).length})
+              Semua ({publishedArticles.filter(a => normalizeArticleCategory(a.category) === currentCategory).length})
             </button>
 
             {meta.allSubCategories.map(sub => {
               const isCurrent = activeSubCategory === sub.id;
               const count = publishedArticles.filter(
-                a => a.category === currentCategory && a.subCategory === sub.id
+                a => normalizeArticleCategory(a.category) === currentCategory && a.subCategory === sub.id
               ).length;
 
               return (

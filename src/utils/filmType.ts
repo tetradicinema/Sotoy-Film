@@ -13,7 +13,7 @@ export type FilmFormat = 'movie' | 'series' | 'animation';
 export function normalizeFilmType(raw?: string | null): FilmFormat {
   if (!raw) return 'movie';
   const trimmed = raw.trim().toLowerCase();
-  if (trimmed === 'anime' || trimmed === 'animation') {
+  if (trimmed === 'anime' || trimmed === 'animasi' || trimmed === 'animation') {
     return 'animation';
   }
   if (trimmed === 'series' || trimmed === 'tv') {

@@ -34,9 +34,9 @@ export const HomeWatchlistsBlock: React.FC = () => {
   } = useApp();
 
   // Tab state for mobile/tablet responsive view
-  const [mediaListTab, setMediaListTab] = useState<'movie' | 'series' | 'anime'>('movie');
+  const [mediaListTab, setMediaListTab] = useState<'movie' | 'series' | 'animation'>('movie');
 
-  // Curated list articles (movies, series, anime)
+  // Curated list articles (movies, series, animation)
   const defaultMovieListsArticles = useMemo(() => {
     const lists = publishedArticles.filter(
       (a) =>
@@ -77,27 +77,25 @@ export const HomeWatchlistsBlock: React.FC = () => {
     );
   }, [publishedArticles, homepageSectionsConfig?.sections?.series_list, defaultSeriesListsArticles]);
 
-  const defaultAnimeListsArticles = useMemo(() => {
+  const defaultAnimationListsArticles = useMemo(() => {
     const lists = publishedArticles.filter(
       (a) =>
-        (a.category === 'anime' || a.title?.toLowerCase().includes('anime')) &&
+        a.category === 'animation' &&
         (a.subCategory === 'lists' || a.tags?.some((t) => t.toLowerCase().includes('list') || t.toLowerCase().includes('rekomendasi')))
     );
     if (lists.length > 0) return lists.slice(0, 5);
-    const animeCat = publishedArticles.filter(
-      (a) => a.category === 'anime' || a.title?.toLowerCase().includes('anime')
-    );
-    if (animeCat.length > 0) return animeCat.slice(0, 5);
+    const animationCat = publishedArticles.filter((a) => a.category === 'animation');
+    if (animationCat.length > 0) return animationCat.slice(0, 5);
     return publishedArticles.slice(0, 5);
   }, [publishedArticles]);
 
-  const animeListsArticles = useMemo(() => {
+  const animationListsArticles = useMemo(() => {
     return resolveConfigArticles(
       publishedArticles,
       homepageSectionsConfig?.sections?.anime_list,
-      defaultAnimeListsArticles
+      defaultAnimationListsArticles
     );
-  }, [publishedArticles, homepageSectionsConfig?.sections?.anime_list, defaultAnimeListsArticles]);
+  }, [publishedArticles, homepageSectionsConfig?.sections?.anime_list, defaultAnimationListsArticles]);
 
   const renderCuratedArticleList = (items: Article[]) => {
     if (items.length === 0) {
@@ -155,10 +153,10 @@ export const HomeWatchlistsBlock: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 mb-4 pb-3 border-b border-white/[0.08]">
         <div>
           <h2 id="heading-ranked-lists" className="font-display font-black text-xl sm:text-2xl text-white tracking-tight">
-            Curated Watchlists: Movies, Series & Anime
+            Curated Watchlists: Movies, Series & Animation
           </h2>
           <p className="text-slate-400 text-xs sm:text-[13px] mt-1">
-            Koleksi kurasi daftar film terbaik, serial pilihan untuk maraton, dan anime rekomendasi yang dirangkum oleh redaksi.
+            Koleksi kurasi daftar film terbaik, serial pilihan untuk maraton, dan animation rekomendasi yang dirangkum oleh redaksi.
           </p>
         </div>
 
@@ -188,14 +186,14 @@ export const HomeWatchlistsBlock: React.FC = () => {
           </button>
           <button
             type="button"
-            onClick={() => setMediaListTab('anime')}
+            onClick={() => setMediaListTab('animation')}
             className={`px-3 py-1 rounded-lg font-semibold transition-all ${
-              mediaListTab === 'anime'
+              mediaListTab === 'animation'
                 ? 'bg-white/[0.12] text-white shadow-sm'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            {homepageSectionsConfig?.sections?.anime_list?.title?.trim() || 'Anime Lists'} ({animeListsArticles.length})
+            {homepageSectionsConfig?.sections?.anime_list?.title?.trim() || 'Animation Lists'} ({animationListsArticles.length})
           </button>
         </div>
       </div>
@@ -224,10 +222,10 @@ export const HomeWatchlistsBlock: React.FC = () => {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between pb-1 text-xs text-slate-300 font-semibold border-b border-white/[0.04]">
-                <span>{homepageSectionsConfig?.sections?.anime_list?.title?.trim() || 'Anime Lists'}</span>
-                <span className="text-[11px] font-mono text-slate-500">{animeListsArticles.length} artikel</span>
+                <span>{homepageSectionsConfig?.sections?.anime_list?.title?.trim() || 'Animation Lists'}</span>
+                <span className="text-[11px] font-mono text-slate-500">{animationListsArticles.length} artikel</span>
               </div>
-              {renderCuratedArticleList(animeListsArticles)}
+              {renderCuratedArticleList(animationListsArticles)}
             </div>
           </div>
 
@@ -235,7 +233,7 @@ export const HomeWatchlistsBlock: React.FC = () => {
           <div className="md:hidden">
             {mediaListTab === 'movie' && renderCuratedArticleList(movieListsArticles)}
             {mediaListTab === 'series' && renderCuratedArticleList(seriesListsArticles)}
-            {mediaListTab === 'anime' && renderCuratedArticleList(animeListsArticles)}
+            {mediaListTab === 'animation' && renderCuratedArticleList(animationListsArticles)}
           </div>
         </>
       )}

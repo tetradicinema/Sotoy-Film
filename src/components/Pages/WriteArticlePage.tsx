@@ -46,6 +46,7 @@ import { doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, query, where, o
 import { ArticleEditor } from '../CMS/ArticleEditor';
 import { RichTextEditor } from '../CMS/RichTextEditor';
 import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
+import { normalizeArticleCategory } from '../../utils/articleCategory';
 
 interface CoEditor {
   userId: string;
@@ -197,7 +198,7 @@ export const WriteArticlePage: React.FC = () => {
       { id: 'lists', label: 'Lists' },
       { id: 'reviews', label: 'Reviews' },
     ],
-    anime: [
+    animation: [
       { id: 'news', label: 'News' },
       { id: 'lists', label: 'Lists' },
     ],
@@ -338,7 +339,7 @@ export const WriteArticlePage: React.FC = () => {
           setCustomSlug(slugify(found.title || ''));
           setIsSlugManuallyEdited(false);
         }
-        setCategory(found.category || 'movies');
+        setCategory((normalizeArticleCategory(found.category) as MainCategory) || 'movies');
         setSubCategory(found.subCategory || 'news');
         setExcerpt(found.excerpt || '');
         setContent(found.content || '');
@@ -418,7 +419,7 @@ export const WriteArticlePage: React.FC = () => {
       setCustomSlug(autosaveBackupData.slug);
       setIsSlugManuallyEdited(true);
     }
-    setCategory(autosaveBackupData.category || 'movies');
+    setCategory((normalizeArticleCategory(autosaveBackupData.category) as MainCategory) || 'movies');
     setSubCategory(autosaveBackupData.subCategory || 'news');
     setExcerpt(autosaveBackupData.excerpt || '');
     setContent(autosaveBackupData.content || '');
@@ -874,7 +875,7 @@ export const WriteArticlePage: React.FC = () => {
     if (ver.tags && Array.isArray(ver.tags) && ver.tags.length > 0) {
       setTagsInput(ver.tags.join(', '));
     }
-    if (ver.category) setCategory(ver.category);
+    if (ver.category) setCategory(normalizeArticleCategory(ver.category) as MainCategory);
     if (ver.subCategory) setSubCategory(ver.subCategory);
     if (ver.coverImage) setCoverImage(ver.coverImage);
     if (ver.readTime) setReadTime(ver.readTime);
@@ -1426,7 +1427,7 @@ export const WriteArticlePage: React.FC = () => {
                   >
                     <option value="movies">Movies</option>
                     <option value="series">Series</option>
-                    <option value="anime">Anime</option>
+                    <option value="animation">Animation</option>
                     <option value="cinema-gear">Cinema Gear</option>
                     <option value="film-studies">Film Studies</option>
                   </select>

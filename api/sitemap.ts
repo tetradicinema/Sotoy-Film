@@ -16,7 +16,7 @@ interface SitemapItem {
   link: string;
   title: string;
   metaDescription: string;
-  type: 'Halaman' | 'Kategori' | 'Artikel' | 'Film/Series/Anime';
+  type: 'Halaman' | 'Kategori' | 'Artikel' | 'Film/Series/Animation';
   lastmod: string;
   changefreq: string;
   priority: string;
@@ -84,7 +84,7 @@ function getStaticItems(today: string): SitemapItem[] {
     { link: `${BASE_URL}/kriteria-kritikus`, title: 'Kriteria Kritikus', metaDescription: '', type: 'Halaman', lastmod: today, changefreq: 'monthly', priority: '0.5' },
     { link: `${BASE_URL}/kategori/movies`, title: 'Kategori Movies', metaDescription: '', type: 'Kategori', lastmod: today, changefreq: 'weekly', priority: '0.7' },
     { link: `${BASE_URL}/kategori/series`, title: 'Kategori Series', metaDescription: '', type: 'Kategori', lastmod: today, changefreq: 'weekly', priority: '0.7' },
-    { link: `${BASE_URL}/kategori/anime`, title: 'Kategori Anime', metaDescription: '', type: 'Kategori', lastmod: today, changefreq: 'weekly', priority: '0.7' },
+    { link: `${BASE_URL}/kategori/animation`, title: 'Kategori Animation', metaDescription: '', type: 'Kategori', lastmod: today, changefreq: 'weekly', priority: '0.7' },
     { link: `${BASE_URL}/kategori/cinema-gear`, title: 'Kategori Cinema Gear', metaDescription: '', type: 'Kategori', lastmod: today, changefreq: 'weekly', priority: '0.7' },
     { link: `${BASE_URL}/kategori/film-studies`, title: 'Kategori Film Studies', metaDescription: '', type: 'Kategori', lastmod: today, changefreq: 'weekly', priority: '0.7' },
   ];
@@ -242,7 +242,7 @@ async function generateLiveSitemapItems(today: string): Promise<SitemapItem[]> {
       link: `${BASE_URL}/film/${encodeURIComponent(slug)}`,
       title: film.title || 'Film',
       metaDescription: '',
-      type: 'Film/Series/Anime',
+      type: 'Film/Series/Animation',
       lastmod,
       changefreq: 'monthly',
       priority: '0.9',

@@ -16,6 +16,7 @@
     "test:onboarding": "node --import tsx scripts/test-onboarding.ts",
     "test:film-sections": "node --import tsx scripts/test-film-sections.ts",
     "test:film-type": "node --import tsx scripts/test-film-type.ts",
+    "test:article-category": "node --import tsx scripts/test-article-category.ts",
      "test:embeds": "node --import tsx scripts/test-embeds.ts && node --import tsx scripts/test-embeds.iframe.ts"
   },
   "dependencies": {

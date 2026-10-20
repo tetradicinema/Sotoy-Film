@@ -34,6 +34,7 @@ import { Article, MainCategory, SubCategory, UserRole } from '../../types';
 import { RoleBadge } from '../Common/RoleBadge';
 
 import { DEFAULT_FALLBACK_AUTHOR } from '../../data/mockData';
+import { normalizeArticleCategory } from '../../utils/articleCategory';
 export const TARGET_MIGRATION_AUTHOR = DEFAULT_FALLBACK_AUTHOR;
 
 const SUBCATEGORIES_BY_CAT: Record<MainCategory, { value: SubCategory; label: string }[]> = {
@@ -47,7 +48,7 @@ const SUBCATEGORIES_BY_CAT: Record<MainCategory, { value: SubCategory; label: st
     { value: 'news', label: 'News' },
     { value: 'lists', label: 'Lists' },
   ],
-  anime: [
+  animation: [
     { value: 'news', label: 'News' },
     { value: 'lists', label: 'Lists' },
   ],
@@ -242,7 +243,7 @@ export const AdminCMSArticles: React.FC = () => {
       }
 
       // 2. Category Dropdown Filter
-      if (categoryFilter !== 'all' && article.category !== categoryFilter) {
+      if (categoryFilter !== 'all' && normalizeArticleCategory(article.category) !== categoryFilter) {
         return false;
       }
 
@@ -300,7 +301,7 @@ export const AdminCMSArticles: React.FC = () => {
     setQuickForm({
       title: article.title,
       slug: article.slug || article.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-      category: article.category,
+      category: normalizeArticleCategory(article.category) as MainCategory,
       subCategory: subCat,
       status: article.status || 'published',
       scheduledAt: article.scheduledAt || '',
@@ -773,7 +774,7 @@ export const AdminCMSArticles: React.FC = () => {
               <option value="all">Semua Kategori</option>
               <option value="movies">Movies</option>
               <option value="series">Series</option>
-              <option value="anime">Anime</option>
+              <option value="animation">Animation</option>
               <option value="cinema-gear">Cinema Gear</option>
               <option value="film-studies">Film Studies</option>
             </select>
@@ -1164,7 +1165,7 @@ export const AdminCMSArticles: React.FC = () => {
                                   >
                                     <option value="movies">Movies</option>
                                     <option value="series">Series</option>
-                                    <option value="anime">Anime</option>
+                                    <option value="animation">Animation</option>
                                     <option value="cinema-gear">Cinema Gear</option>
                                     <option value="film-studies">Film Studies</option>
                                   </select>

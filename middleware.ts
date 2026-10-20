@@ -8,8 +8,10 @@ export { isBotUserAgent };
 
 export const config = {
   runtime: 'nodejs',
-  matcher: ['/film/:path*', '/artikel/:path*'],
+  matcher: ['/film/:path*', '/artikel/:path*', '/kategori/:path*', '/category/:path*'],
 };
+
+const LEGACY_CATEGORY_PATH = /^\/(?:kategori|category)\/(?:anime|animasi)(?=\/|$)/i;
 
 /**
  * Safely invokes Vercel next() with fallback to raw x-middleware-next header
@@ -49,15 +51,27 @@ export default async function middleware(request: Request): Promise<Response> {
       return safeNext();
     }
 
+    const url = new URL(request.url);
+    const pathname = url.pathname;
+
+    // 0. Permanently redirect the legacy "anime"/"animasi" taxonomy URLs.
+    // This runs for humans and crawlers alike so old links consolidate cleanly.
+    if (LEGACY_CATEGORY_PATH.test(pathname)) {
+      const suffix = pathname.replace(LEGACY_CATEGORY_PATH, '');
+      return new Response(null, {
+        status: 301,
+        headers: {
+          location: `/kategori/animation${suffix}${url.search}`,
+        },
+      });
+    }
+
     const userAgent = request.headers.get('user-agent');
 
     // 1. Pass through immediately for normal human visitors with zero latency penalty
     if (!isBotUserAgent(userAgent)) {
       return safeNext();
     }
-
-    const url = new URL(request.url);
-    const pathname = url.pathname;
 
     let collection: 'films' | 'articles' | null = null;
     let slug = '';
@@ -86,7 +100,7 @@ export default async function middleware(request: Request): Promise<Response> {
     const canonicalUrl = `${baseUrl}/${collection === 'films' ? 'film' : 'artikel'}/${encodeURIComponent(slug)}`;
 
     let title = 'Sotoy Film';
-    let rawDescription = 'Platform komunitas & media pop-culture film, series, anime, dan ulasan Skor Sotoy.';
+    let rawDescription = 'Platform komunitas & media pop-culture film, series, animation, dan ulasan Skor Sotoy.';
     let rawImage = '';
     const type = collection === 'films' ? 'video.movie' : 'article';
 

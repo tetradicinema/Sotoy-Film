@@ -21,6 +21,7 @@ import { useApp } from '../../context/AppContext';
 import { Article, MainCategory, SubCategory, UserRole } from '../../types';
 import { RoleBadge } from '../Common/RoleBadge';
 import { RichTextEditor } from './RichTextEditor';
+import { normalizeArticleCategory } from '../../utils/articleCategory';
 
 const SUBCATEGORIES_BY_CAT: Record<MainCategory, { value: SubCategory; label: string }[]> = {
   movies: [
@@ -33,7 +34,7 @@ const SUBCATEGORIES_BY_CAT: Record<MainCategory, { value: SubCategory; label: st
     { value: 'news', label: 'News' },
     { value: 'lists', label: 'Lists' },
   ],
-  anime: [
+  animation: [
     { value: 'news', label: 'News' },
     { value: 'lists', label: 'Lists' },
   ],
@@ -172,7 +173,7 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
       }
 
       // 2. Category Filter
-      if (categoryFilter !== 'all' && article.category !== categoryFilter) {
+      if (categoryFilter !== 'all' && normalizeArticleCategory(article.category) !== categoryFilter) {
         return false;
       }
 
@@ -218,7 +219,7 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
     setQuickForm({
       title: article.title || '',
       slug: article.slug || '',
-      category: (article.category as MainCategory) || 'movies',
+      category: (normalizeArticleCategory(article.category) as MainCategory) || 'movies',
       subCategory: (article.subCategory as SubCategory) || 'reviews',
       status: article.status || 'published',
       scheduledAt: article.scheduledAt || '',
@@ -335,10 +336,10 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
       } else {
         showToast('Gagal mengubah kategori artikel.', 'error');
       }
-    } else if (bulkActionSelect === 'cat_anime') {
-      const success = await bulkUpdateArticles(selectedIds, { category: 'anime', subCategory: 'news' });
+    } else if (bulkActionSelect === 'cat_animation') {
+      const success = await bulkUpdateArticles(selectedIds, { category: 'animation', subCategory: 'news' });
       if (success !== false) {
-        showToast(`${selectedIds.length} artikel dipindahkan ke kategori Anime.`, 'success');
+        showToast(`${selectedIds.length} artikel dipindahkan ke kategori Animation.`, 'success');
         setSelectedIds([]);
         setBulkActionSelect('');
       } else {
@@ -517,7 +518,7 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
               <option value="draft">Ubah ke Draf Terpilih</option>
               <option value="cat_movies">Ubah Kategori: Movies</option>
               <option value="cat_series">Ubah Kategori: Series</option>
-              <option value="cat_anime">Ubah Kategori: Anime</option>
+              <option value="cat_animation">Ubah Kategori: Animation</option>
               <option value="cat_gear">Ubah Kategori: Cinema Gear</option>
               <option value="cat_studies">Ubah Kategori: Film Studies</option>
               {isAdminView && (
@@ -556,7 +557,7 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
               <option value="all">Semua Kategori</option>
               <option value="movies">Movies</option>
               <option value="series">Series</option>
-              <option value="anime">Anime</option>
+              <option value="animation">Animation</option>
               <option value="cinema-gear">Cinema Gear</option>
               <option value="film-studies">Film Studies</option>
             </select>
@@ -690,7 +691,7 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
                                 >
                                   <option value="movies">Movies</option>
                                   <option value="series">Series</option>
-                                  <option value="anime">Anime</option>
+                                  <option value="animation">Animation</option>
                                   <option value="cinema-gear">Cinema Gear</option>
                                   <option value="film-studies">Film Studies</option>
                                 </select>

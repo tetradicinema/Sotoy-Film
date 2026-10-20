@@ -104,7 +104,7 @@ export function computeBayesianScore(film: FilmItem, meanScore: number, m = 3): 
 /**
  * Checks if a film is classified as animation (type 'animation' / 'anime' or genre containing 'Animation' / 'Animasi').
  */
-function isAnimationFilm(film: FilmItem): boolean {
+export function isAnimationFilm(film: FilmItem): boolean {
   const t = (film.type || '').toLowerCase();
   if (t === 'animation' || t === 'anime') return true;
   if (Array.isArray(film.genres)) {

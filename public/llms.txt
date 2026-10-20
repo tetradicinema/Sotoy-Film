@@ -5,11 +5,11 @@ Sotoy Film (https://www.sotoyfilm.my.id) is a premier community-driven film crit
 ## Content Architecture
 
 - **Home**: Latest reviews, trending news, and community buzz.
-- **Film Database**: Exhaustive catalog of movies, series, and anime with "Skor Sotoy" (decimal ratings).
+- **Film Database**: Exhaustive catalog of movies, series, and animation with "Skor Sotoy" (decimal ratings).
 - **Article Categories**:
   - **Movies**: Reviews of local and international theatrical films.
   - **Series**: Deep dives into streaming and broadcast serials.
-  - **Anime**: Specialized Japanese animation culture coverage.
+  - **Animation**: Specialized Japanese animation culture coverage.
   - **Cinema Gear**: Professional evaluations of cameras, lenses, and production tools.
   - **Film Studies**: Educational content for aspiring filmmakers.
 

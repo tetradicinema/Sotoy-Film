@@ -4,6 +4,16 @@
       "includeFiles": "data/sitemap-snapshot.xml"
     }
   },
+  "redirects": [
+    { "source": "/kategori/anime", "destination": "/kategori/animation", "permanent": true },
+    { "source": "/kategori/anime/:path*", "destination": "/kategori/animation/:path*", "permanent": true },
+    { "source": "/kategori/animasi", "destination": "/kategori/animation", "permanent": true },
+    { "source": "/kategori/animasi/:path*", "destination": "/kategori/animation/:path*", "permanent": true },
+    { "source": "/category/anime", "destination": "/kategori/animation", "permanent": true },
+    { "source": "/category/anime/:path*", "destination": "/kategori/animation/:path*", "permanent": true },
+    { "source": "/category/animasi", "destination": "/kategori/animation", "permanent": true },
+    { "source": "/category/animasi/:path*", "destination": "/kategori/animation/:path*", "permanent": true }
+  ],
   "rewrites": [
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },
     { "source": "/sitemap.csv", "destination": "/api/sitemap?format=csv" },
