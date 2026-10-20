@@ -232,8 +232,109 @@ export async function handleTmdbRequest(req: any, res: any) {
       return res.status(200).json(results);
     }
 
+    if (action === 'sync') {
+      if (!/^\d+$/.test(id) || Number(id) <= 0) {
+        return res.status(400).json({
+          error: 'Valid numerical parameter "id" is required for sync action.'
+        });
+      }
+
+      const endpoint = normalizedType === 'tv' ? `tv/${id}` : `movie/${id}`;
+      const tmdbUrl = new URL(`https://api.themoviedb.org/3/${endpoint}`);
+      if (!isBearer) {
+        tmdbUrl.searchParams.set('api_key', apiKey);
+      }
+      tmdbUrl.searchParams.set(
+        'append_to_response',
+        normalizedType === 'movie' ? 'release_dates,watch/providers' : 'watch/providers'
+      );
+      tmdbUrl.searchParams.set('watch_region', 'ID');
+      tmdbUrl.searchParams.set('language', 'en-US');
+
+      const response = await fetch(tmdbUrl.toString(), {
+        method: 'GET',
+        headers: authHeaders,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return res.status(response.status).json({
+          error: data.status_message || `TMDB API error (${response.status})`,
+          code: 'TMDB_API_ERROR'
+        });
+      }
+
+      const releaseDatesID = normalizedType === 'movie'
+        ? ((data.release_dates?.results || []).find((entry: any) => entry.iso_3166_1 === 'ID')?.release_dates || [])
+            .map((entry: any) => ({
+              type: Number(entry.type),
+              date: String(entry.release_date || ''),
+            }))
+            .filter((entry: any) => Number.isFinite(entry.type) && entry.date.length > 0)
+        : [];
+
+      const regionProviders = data['watch/providers']?.results?.ID || {};
+      const providerNames = (providerList: any): string[] => {
+        const names = (Array.isArray(providerList) ? providerList : [])
+          .map((provider: any) => String(provider?.provider_name || '').trim())
+          .filter(Boolean);
+        return Array.from(new Set(names));
+      };
+
+      return res.status(200).json({
+        tmdbId: Number(id),
+        type: normalizedType,
+        releaseDate: data.release_date || data.first_air_date || '',
+        releaseDatesID,
+        providersID: {
+          flatrate: providerNames(regionProviders.flatrate),
+          rent: providerNames(regionProviders.rent),
+          buy: providerNames(regionProviders.buy),
+        },
+        status: data.status || '',
+      });
+    }
+
+    if (action === 'now_playing_ids') {
+      const ids = new Set<number>();
+
+      for (let pageNumberToFetch = 1; pageNumberToFetch <= 3; pageNumberToFetch++) {
+        const tmdbUrl = new URL('https://api.themoviedb.org/3/movie/now_playing');
+        if (!isBearer) {
+          tmdbUrl.searchParams.set('api_key', apiKey);
+        }
+        tmdbUrl.searchParams.set('region', 'ID');
+        tmdbUrl.searchParams.set('language', 'en-US');
+        tmdbUrl.searchParams.set('page', String(pageNumberToFetch));
+
+        const response = await fetch(tmdbUrl.toString(), {
+          method: 'GET',
+          headers: authHeaders,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          return res.status(response.status).json({
+            error: data.status_message || `TMDB API error (${response.status})`,
+            code: 'TMDB_API_ERROR'
+          });
+        }
+
+        for (const item of data.results || []) {
+          const numericId = Number(item?.id);
+          if (Number.isFinite(numericId) && numericId > 0) {
+            ids.add(numericId);
+          }
+        }
+      }
+
+      return res.status(200).json({ ids: Array.from(ids) });
+    }
+
     return res.status(400).json({
-      error: 'Invalid action. Supported actions: "search", "details", or "list".'
+      error: 'Invalid action. Supported actions: "search", "details", "list", "sync", or "now_playing_ids".'
     });
   } catch (err: any) {
     console.error('TMDB Proxy Server Error:', err);

@@ -29,6 +29,10 @@ export const Footer: React.FC = () => {
               Platform media & jejaring sosial film pop-culture independen. Mengulas film, serial, animation, cinema gear, dan studi filmmaking dengan sistem penilaian jujur <strong>Skor Sotoy (Bintang 1-5)</strong>.
             </p>
 
+            <p className="text-slate-500 text-[10px] leading-relaxed max-w-sm">
+              Film database ini memakai TMDB API, tetapi tidak didukung atau disertifikasi oleh TMDB.
+            </p>
+
             <div className="flex items-center gap-2 pt-2">
               <span className="bg-[#171717] border border-white/[0.08] text-slate-300 text-[10px] font-semibold px-2.5 py-1 rounded-md">
                 ★ 1-5 Bintang Skor Sotoy

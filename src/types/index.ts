@@ -222,6 +222,7 @@ export interface FilmItem {
     platform: string;
     type: 'stream' | 'cinema' | 'rent';
     badgeColor: string;
+    source?: 'tmdb';
   }[];
   trailerUrl?: string;
   trailerTitle?: string;

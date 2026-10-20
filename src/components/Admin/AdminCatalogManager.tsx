@@ -29,11 +29,13 @@ import {
   Square,
   MinusSquare,
   FileSpreadsheet,
-  Award
+  Award,
+  RefreshCw
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { FilmItem, CastMember } from '../../types';
 import { AdminBatchTmdbModal } from './AdminBatchTmdbModal';
+import { AdminTmdbSyncModal } from './AdminTmdbSyncModal';
 import { slugify } from '../../utils/slugify';
 import { 
   formatDuration, 
@@ -117,6 +119,7 @@ export const AdminCatalogManager: React.FC = () => {
   const [formData, setFormData] = useState<FilmFormData>(DEFAULT_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const [isTmdbSyncModalOpen, setIsTmdbSyncModalOpen] = useState(false);
   const [customTagInput, setCustomTagInput] = useState('');
 
   // TMDB Import State
@@ -614,6 +617,16 @@ export const AdminCatalogManager: React.FC = () => {
           >
             <Layers className="w-4 h-4 text-slate-400" />
             <span>Import Massal TMDB</span>
+          </button>
+
+          <button
+            onClick={() => setIsTmdbSyncModalOpen(true)}
+            id="admin-tmdb-sync-btn"
+            className="px-3.5 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-slate-200 hover:text-white border border-white/10 text-xs font-semibold transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+            title="Sinkronkan tanggal rilis Indonesia dan platform tonton dari TMDB"
+          >
+            <RefreshCw className="w-4 h-4 text-[#FF2E7E]" />
+            <span>Sinkron TMDB</span>
           </button>
 
           <button
@@ -1655,6 +1668,12 @@ export const AdminCatalogManager: React.FC = () => {
         onClose={() => setIsBatchModalOpen(false)}
         onAddFilm={addFilm}
         showToast={showToast}
+      />
+
+      {/* Sync Metadata TMDB Modal */}
+      <AdminTmdbSyncModal
+        isOpen={isTmdbSyncModalOpen}
+        onClose={() => setIsTmdbSyncModalOpen(false)}
       />
 
       {/* Delete Confirmation Modal (In-App, non-blocking for iframes) */}

@@ -335,7 +335,7 @@ export const FilmDatabasePage: React.FC = () => {
                   <div
                     role="tablist"
                     aria-label="Filter platform streaming"
-                    className="flex items-center gap-2 overflow-x-auto pb-1 mb-4 scrollbar-none scroll-smooth touch-pan-x"
+                    className="flex items-center gap-2 overflow-x-auto pb-1 mb-2 scrollbar-none scroll-smooth touch-pan-x"
                     style={{ WebkitOverflowScrolling: 'touch' }}
                   >
                     <button
@@ -371,6 +371,12 @@ export const FilmDatabasePage: React.FC = () => {
                       </button>
                     ))}
                   </div>
+                )}
+
+                {section.key === 'fd_streaming' && (
+                  <p className="text-slate-500 text-[10px] sm:text-[11px] mb-4">
+                    Data platform streaming oleh JustWatch via TMDB.
+                  </p>
                 )}
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
