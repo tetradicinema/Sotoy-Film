@@ -80,7 +80,7 @@ const DEFAULT_STREAM_BADGE_COLOR = '#475569';
  * Normalizes a title for safe comparison: lowercase, no accents, no
  * punctuation, and collapsed whitespace.
  */
-function normalizeTitle(value?: string | null): string {
+export function normalizeTitle(value?: string | null): string {
   if (!value) return '';
 
   return String(value)
