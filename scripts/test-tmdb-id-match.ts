@@ -5,6 +5,7 @@ import {
   TmdbMatchFilm,
   validateTmdbOverrides,
 } from './fill-tmdb-ids';
+import { buildFilmPayloadTmdbId } from '../src/utils/tmdbHelper';
 
 const createFilm = (overrides: Partial<TmdbMatchFilm> = {}): TmdbMatchFilm => ({
   title: 'Test Film',
@@ -183,6 +184,52 @@ const runTests = () => {
     wrongOriginalTitle.status,
     'ambiguous',
     'exact title with a wrong year is ambiguous even when originalTitle is present'
+  );
+
+  // -------------------------------------------------------------------------
+  // buildFilmPayloadTmdbId
+  // -------------------------------------------------------------------------
+
+  // 19. positive number kept
+  assertEquals(
+    buildFilmPayloadTmdbId(12345),
+    { tmdbId: 12345 },
+    'buildFilmPayloadTmdbId keeps a positive TMDB ID'
+  );
+
+  // 20. undefined omitted
+  assertEquals(
+    buildFilmPayloadTmdbId(undefined),
+    {},
+    'buildFilmPayloadTmdbId omits an undefined TMDB ID'
+  );
+
+  // 21. zero omitted
+  assertEquals(
+    buildFilmPayloadTmdbId(0),
+    {},
+    'buildFilmPayloadTmdbId omits a zero TMDB ID'
+  );
+
+  // 22. NaN omitted
+  assertEquals(
+    buildFilmPayloadTmdbId(Number.NaN),
+    {},
+    'buildFilmPayloadTmdbId omits a NaN TMDB ID'
+  );
+
+  // 23. existing id preserved on edit
+  assertEquals(
+    buildFilmPayloadTmdbId(undefined, 9876),
+    { tmdbId: 9876 },
+    'buildFilmPayloadTmdbId preserves an existing TMDB ID on edit'
+  );
+
+  // 24. a new positive id wins over the existing id
+  assertEquals(
+    buildFilmPayloadTmdbId(111, 9876),
+    { tmdbId: 111 },
+    'buildFilmPayloadTmdbId lets an explicit positive TMDB ID replace the old one'
   );
 
   // -------------------------------------------------------------------------

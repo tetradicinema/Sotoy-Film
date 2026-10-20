@@ -125,6 +125,33 @@ export const formatDuration = (minutes?: number): string => {
   return `${m}m`;
 };
 
+const asPositiveTmdbId = (value: unknown): number | undefined => {
+  if (typeof value === 'number') {
+    return Number.isInteger(value) && value > 0 ? value : undefined;
+  }
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+  }
+  return undefined;
+};
+
+/**
+ * Builds the `tmdbId` portion of a film payload. Only a positive integer is
+ * ever written, so undefined/0/NaN values are omitted. On edit, a missing form
+ * value keeps the film's existing ID instead of erasing it.
+ */
+export const buildFilmPayloadTmdbId = (
+  formTmdbId?: unknown,
+  existingTmdbId?: unknown
+): { tmdbId?: number } => {
+  const nextTmdbId = asPositiveTmdbId(formTmdbId);
+  if (nextTmdbId !== undefined) return { tmdbId: nextTmdbId };
+
+  const preservedTmdbId = asPositiveTmdbId(existingTmdbId);
+  return preservedTmdbId !== undefined ? { tmdbId: preservedTmdbId } : {};
+};
+
 // Generates relevant suggested tags based on film's genre, title, year, rating, and synopsis
 export const generateSuggestedTags = (
   title: string,

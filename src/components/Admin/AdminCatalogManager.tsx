@@ -41,13 +41,15 @@ import {
   formatDuration, 
   generateSuggestedTags, 
   mapTmdbDetailsToFilm,
-  fetchTmdbDetails
+  fetchTmdbDetails,
+  buildFilmPayloadTmdbId
 } from '../../utils/tmdbHelper';
 import { classifyFilmType, normalizeFilmType } from '../../utils/filmType';
 
 interface FilmFormData {
   title: string;
   originalTitle: string;
+  tmdbId?: number;
   type: 'movie' | 'series' | 'animation';
   year: number;
   releaseDate: string; // ISO date string e.g. "2024-07-12"
@@ -71,6 +73,7 @@ interface FilmFormData {
 const DEFAULT_FORM: FilmFormData = {
   title: '',
   originalTitle: '',
+  tmdbId: undefined,
   type: 'movie',
   year: new Date().getFullYear(),
   releaseDate: '',
@@ -193,6 +196,7 @@ export const AdminCatalogManager: React.FC = () => {
         ...prev,
         title: mapped.title,
         originalTitle: mapped.originalTitle,
+        tmdbId: mapped.tmdbId,
         type: mapped.type,
         year: mapped.year,
         releaseDate: mapped.releaseDate || prev.releaseDate || '',
@@ -401,7 +405,7 @@ export const AdminCatalogManager: React.FC = () => {
   // Open modal for new film
   const handleOpenAddModal = (focusTmdb = false) => {
     setEditingFilmId(null);
-    setFormData(DEFAULT_FORM);
+    setFormData({ ...DEFAULT_FORM, tmdbId: undefined });
     setTmdbQuery('');
     setTmdbResults([]);
     setTmdbError(null);
@@ -428,6 +432,7 @@ export const AdminCatalogManager: React.FC = () => {
     setFormData({
       title: film.title || '',
       originalTitle: film.originalTitle || '',
+      tmdbId: film.tmdbId,
       type: normalizeFilmType(film.type),
       year: film.year || 2024,
       releaseDate: film.releaseDate || '',
@@ -524,9 +529,14 @@ export const AdminCatalogManager: React.FC = () => {
         }));
       }
 
+      const existingFilm = editingFilmId
+        ? films.find(film => film.id === editingFilmId)
+        : undefined;
+
       const filmPayload = {
         title: formData.title.trim(),
         originalTitle: formData.originalTitle.trim() || undefined,
+        ...buildFilmPayloadTmdbId(formData.tmdbId, existingFilm?.tmdbId),
         slug: ((formData as any).slug?.trim()) || slugify(formData.title.trim()),
         type: formData.type,
         year: parsedYear,
@@ -1205,6 +1215,11 @@ export const AdminCatalogManager: React.FC = () => {
                     placeholder="Contoh: Oppenheimer"
                     className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00F0FF]"
                   />
+                  {typeof formData.tmdbId === 'number' && formData.tmdbId > 0 && (
+                    <p className="text-[10px] font-mono text-slate-500 pt-0.5">
+                      TMDB #{formData.tmdbId}
+                    </p>
+                  )}
                 </div>
 
                 {/* Original Title */}
