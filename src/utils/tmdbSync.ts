@@ -15,6 +15,8 @@ export interface TmdbSyncProviders {
 export interface TmdbSyncData {
   tmdbId: number;
   type: 'movie' | 'tv';
+  title: string;
+  originalTitle: string;
   releaseDate: string;
   releaseDatesID: TmdbReleaseDateEntry[];
   providersID: TmdbSyncProviders;
@@ -30,7 +32,7 @@ export interface BuildWhereToWatchArgs {
 }
 
 export interface ComputeInTheatresArgs {
-  type: FilmItem['type'];
+  mediaType: 'movie' | 'tv';
   tmdbId?: number;
   nowPlayingIds: number[] | Set<number>;
   idReleaseDate?: string;
@@ -40,6 +42,13 @@ export interface ComputeInTheatresArgs {
 export interface FilmSyncResult {
   updates: Partial<FilmItem>;
   changes: string[];
+}
+
+export type FilmSyncStatus = 'ok' | 'title_mismatch' | 'no_tmdb_id' | 'unchanged';
+
+export interface FilmSyncEvaluation {
+  status: FilmSyncStatus;
+  result?: FilmSyncResult;
 }
 
 export interface ComputeFilmSyncUpdateArgs {
@@ -66,6 +75,46 @@ export const STREAM_BADGE_COLORS: Record<string, string> = {
 };
 
 const DEFAULT_STREAM_BADGE_COLOR = '#475569';
+
+/**
+ * Normalizes a title for safe comparison: lowercase, no accents, no
+ * punctuation, and collapsed whitespace.
+ */
+function normalizeTitle(value?: string | null): string {
+  if (!value) return '';
+
+  return String(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+/**
+ * Guards against writing TMDB data to the wrong film. A match is either an
+ * exact normalized title or a containment match where both titles are at
+ * least four characters long.
+ */
+export function titlesMatch(film: FilmItem, sync: TmdbSyncData): boolean {
+  const filmTitles = [film.title, film.originalTitle]
+    .map(normalizeTitle)
+    .filter(Boolean);
+  const syncTitles = [sync.title, sync.originalTitle]
+    .map(normalizeTitle)
+    .filter(Boolean);
+
+  if (filmTitles.length === 0 || syncTitles.length === 0) return false;
+
+  return filmTitles.some(filmTitle =>
+    syncTitles.some(syncTitle => {
+      if (filmTitle === syncTitle) return true;
+      if (filmTitle.length < 4 || syncTitle.length < 4) return false;
+      return filmTitle.includes(syncTitle) || syncTitle.includes(filmTitle);
+    })
+  );
+}
 
 /**
  * Parses a TMDB date into a strict YYYY-MM-DD string. Date-time values are
@@ -212,13 +261,13 @@ export function buildWhereToWatch({
  * now_playing or its Indonesian theatrical release is within the last 56 days.
  */
 export function computeInTheatres({
-  type,
+  mediaType,
   tmdbId,
   nowPlayingIds,
   idReleaseDate,
   now,
 }: ComputeInTheatresArgs): boolean {
-  if (type !== 'movie') return false;
+  if (mediaType !== 'movie') return false;
 
   if (tmdbId !== undefined && tmdbId !== null) {
     const numericId = Number(tmdbId);
@@ -237,17 +286,24 @@ export function computeInTheatres({
 }
 
 /**
- * Computes the minimal metadata update for one film. Only idReleaseDate,
- * releaseDate (when currently empty) and whereToWatch can ever be written.
+ * Evaluates one film against its TMDB sync payload without writing anything.
+ * A title mismatch is returned separately so the admin UI can skip the film
+ * and show it for manual TMDB ID correction.
  */
-export function computeFilmSyncUpdate({
+export function evaluateFilmSync({
   film,
   sync,
   nowPlayingIds,
   now,
-}: ComputeFilmSyncUpdateArgs): FilmSyncResult | null {
+}: ComputeFilmSyncUpdateArgs): FilmSyncEvaluation {
   const numericTmdbId = Number(film.tmdbId);
-  if (!film.tmdbId || !Number.isFinite(numericTmdbId) || numericTmdbId <= 0) return null;
+  if (!film.tmdbId || !Number.isFinite(numericTmdbId) || numericTmdbId <= 0) {
+    return { status: 'no_tmdb_id' };
+  }
+
+  if (!titlesMatch(film, sync)) {
+    return { status: 'title_mismatch' };
+  }
 
   const updates: Partial<FilmItem> = {};
   const changes: string[] = [];
@@ -268,7 +324,7 @@ export function computeFilmSyncUpdate({
 
   const effectiveIdReleaseDate = pickedIdReleaseDate ?? film.idReleaseDate;
   const inTheatres = computeInTheatres({
-    type: film.type,
+    mediaType: sync.type,
     tmdbId: film.tmdbId,
     nowPlayingIds,
     idReleaseDate: effectiveIdReleaseDate,
@@ -308,6 +364,19 @@ export function computeFilmSyncUpdate({
     }
   }
 
-  if (Object.keys(updates).length === 0) return null;
-  return { updates, changes };
+  if (Object.keys(updates).length === 0) {
+    return { status: 'unchanged' };
+  }
+
+  return { status: 'ok', result: { updates, changes } };
+}
+
+/**
+ * Computes the minimal metadata update for one film. Only idReleaseDate,
+ * releaseDate (when currently empty) and whereToWatch can ever be written.
+ */
+export function computeFilmSyncUpdate(
+  args: ComputeFilmSyncUpdateArgs
+): FilmSyncResult | null {
+  return evaluateFilmSync(args).result ?? null;
 }

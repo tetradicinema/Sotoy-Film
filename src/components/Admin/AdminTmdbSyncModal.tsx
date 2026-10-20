@@ -12,7 +12,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { FilmItem } from '../../types';
 import {
-  computeFilmSyncUpdate,
+  evaluateFilmSync,
   TmdbSyncData,
 } from '../../utils/tmdbSync';
 
@@ -33,6 +33,11 @@ interface ApplyResult {
   errors: string[];
 }
 
+interface MismatchRow {
+  title: string;
+  tmdbId?: number;
+}
+
 const LAST_SYNC_KEY = 'lastTmdbSyncAt';
 const CONCURRENCY = 4;
 
@@ -45,6 +50,20 @@ const tmdbMediaType = (film: FilmItem): 'movie' | 'tv' => {
   if (film.type === 'series') return 'tv';
   if (film.type === 'animation' && /episode/i.test(film.duration || '')) return 'tv';
   return 'movie';
+};
+
+const fetchSyncData = async (
+  film: FilmItem,
+  type: 'movie' | 'tv'
+): Promise<TmdbSyncData> => {
+  const response = await fetch(
+    `/api/tmdb?action=sync&type=${type}&id=${encodeURIComponent(String(film.tmdbId))}`
+  );
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error || `TMDB error ${response.status}`);
+  }
+  return data as TmdbSyncData;
 };
 
 const errorMessage = (error: unknown, fallback: string): string => {
@@ -77,6 +96,7 @@ export const AdminTmdbSyncModal: React.FC<AdminTmdbSyncModalProps> = ({
   const [previewRows, setPreviewRows] = useState<PreviewRow[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [noTmdbTitles, setNoTmdbTitles] = useState<string[]>([]);
+  const [mismatchedFilms, setMismatchedFilms] = useState<MismatchRow[]>([]);
 
   const [isApplying, setIsApplying] = useState(false);
   const [applyTotal, setApplyTotal] = useState(0);
@@ -102,6 +122,7 @@ export const AdminTmdbSyncModal: React.FC<AdminTmdbSyncModalProps> = ({
     setPreviewRows([]);
     setErrors([]);
     setNoTmdbTitles([]);
+    setMismatchedFilms([]);
     setIsApplying(false);
     setApplyTotal(0);
     setApplyDone(0);
@@ -120,6 +141,7 @@ export const AdminTmdbSyncModal: React.FC<AdminTmdbSyncModalProps> = ({
     setStep('preview');
     setPreviewRows([]);
     setErrors([]);
+    setMismatchedFilms([]);
     setApplyResult(null);
     setApplyDone(0);
     setApplyTotal(0);
@@ -151,6 +173,7 @@ export const AdminTmdbSyncModal: React.FC<AdminTmdbSyncModalProps> = ({
 
     const queue = [...withTmdb];
     const foundRows: PreviewRow[] = [];
+    const skippedRows: MismatchRow[] = [];
     const now = new Date();
     let completed = 0;
 
@@ -164,25 +187,39 @@ export const AdminTmdbSyncModal: React.FC<AdminTmdbSyncModalProps> = ({
         if (!film) break;
 
         try {
-          const type = tmdbMediaType(film);
-          const response = await fetch(
-            `/api/tmdb?action=sync&type=${type}&id=${encodeURIComponent(String(film.tmdbId))}`
-          );
-          const data = await response.json().catch(() => ({}));
-          if (!response.ok) {
-            throw new Error(data?.error || `TMDB error ${response.status}`);
-          }
-          if (scanSessionRef.current !== session || stopRequestedRef.current) return;
-
-          const computed = computeFilmSyncUpdate({
+          const primaryType = tmdbMediaType(film);
+          let evaluation = evaluateFilmSync({
             film,
-            sync: data as TmdbSyncData,
+            sync: await fetchSyncData(film, primaryType),
             nowPlayingIds,
             now,
           });
 
-          if (computed) {
-            foundRows.push({ film, ...computed });
+          if (evaluation.status === 'title_mismatch' && film.type === 'animation') {
+            const alternateType = primaryType === 'movie' ? 'tv' : 'movie';
+            try {
+              const alternateEvaluation = evaluateFilmSync({
+                film,
+                sync: await fetchSyncData(film, alternateType),
+                nowPlayingIds,
+                now,
+              });
+              if (alternateEvaluation.status !== 'title_mismatch') {
+                evaluation = alternateEvaluation;
+              }
+            } catch (error) {
+              scanErrors.push(
+                `${film.title} (${alternateType}): ${errorMessage(error, 'Gagal sinkron dari TMDB.')}`
+              );
+            }
+          }
+
+          if (scanSessionRef.current !== session || stopRequestedRef.current) return;
+
+          if (evaluation.status === 'ok' && evaluation.result) {
+            foundRows.push({ film, ...evaluation.result });
+          } else if (evaluation.status === 'title_mismatch') {
+            skippedRows.push({ title: film.title, tmdbId: film.tmdbId });
           }
         } catch (error) {
           scanErrors.push(`${film.title}: ${errorMessage(error, 'Gagal sinkron dari TMDB.')}`);
@@ -199,8 +236,10 @@ export const AdminTmdbSyncModal: React.FC<AdminTmdbSyncModalProps> = ({
     if (scanSessionRef.current !== session) return;
 
     foundRows.sort((a, b) => a.film.title.localeCompare(b.film.title));
+    skippedRows.sort((a, b) => a.title.localeCompare(b.title));
     setPreviewRows(foundRows);
     setErrors(scanErrors);
+    setMismatchedFilms(skippedRows);
     setScanned(completed);
     setIsScanning(false);
     setHasScanned(true);
@@ -342,7 +381,7 @@ export const AdminTmdbSyncModal: React.FC<AdminTmdbSyncModalProps> = ({
           </div>
 
           {/* Summary */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
             <div className="bg-[#0A0A0A] border border-slate-800 rounded-xl p-3">
               <div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">
                 Dipindai
@@ -357,6 +396,14 @@ export const AdminTmdbSyncModal: React.FC<AdminTmdbSyncModalProps> = ({
                 Akan berubah
               </div>
               <div className="text-lg font-black text-[#FF2E7E] mt-1">{previewRows.length}</div>
+            </div>
+            <div className="bg-[#0A0A0A] border border-slate-800 rounded-xl p-3">
+              <div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+                Judul tidak cocok
+              </div>
+              <div className={`text-lg font-black mt-1 ${mismatchedFilms.length > 0 ? 'text-amber-300' : 'text-white'}`}>
+                {mismatchedFilms.length}
+              </div>
             </div>
             <div className="bg-[#0A0A0A] border border-slate-800 rounded-xl p-3">
               <div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">
@@ -455,6 +502,26 @@ export const AdminTmdbSyncModal: React.FC<AdminTmdbSyncModalProps> = ({
                 ))}
               </ul>
             </details>
+          )}
+
+          {/* Title safety mismatches */}
+          {step === 'preview' && mismatchedFilms.length > 0 && (
+            <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3">
+              <h4 className="text-xs font-bold text-amber-300">
+                Judul tidak cocok (dilewati) ({mismatchedFilms.length})
+              </h4>
+              <p className="text-[11px] text-amber-200/70 mt-1">
+                Film ini tidak ditulis. Perbaiki TMDB ID secara manual jika datanya salah.
+              </p>
+              <ul className="mt-2 space-y-1 text-[11px] text-amber-100/80 max-h-40 overflow-y-auto">
+                {mismatchedFilms.map((film, index) => (
+                  <li key={`${film.tmdbId ?? 'no-id'}-${film.title}-${index}`}>
+                    <span className="font-semibold">{film.title}</span>
+                    <span className="text-amber-300/70"> — TMDB #{film.tmdbId}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
 
           {/* Preview table */}

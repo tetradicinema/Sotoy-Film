@@ -285,6 +285,8 @@ export async function handleTmdbRequest(req: any, res: any) {
       return res.status(200).json({
         tmdbId: Number(id),
         type: normalizedType,
+        title: data.title || data.name || '',
+        originalTitle: data.original_title || data.original_name || '',
         releaseDate: data.release_date || data.first_air_date || '',
         releaseDatesID,
         providersID: {

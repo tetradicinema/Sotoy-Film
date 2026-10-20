@@ -5,6 +5,8 @@ import {
   buildWhereToWatch,
   computeInTheatres,
   computeFilmSyncUpdate,
+  evaluateFilmSync,
+  titlesMatch,
   TmdbSyncData,
 } from '../src/utils/tmdbSync';
 
@@ -27,6 +29,8 @@ const createFilm = (overrides: Partial<FilmItem> = {}): FilmItem => ({
 const createSync = (overrides: Partial<TmdbSyncData> = {}): TmdbSyncData => ({
   tmdbId: 123,
   type: 'movie',
+  title: 'Test Film',
+  originalTitle: 'Test Film',
   releaseDate: '2026-10-02',
   releaseDatesID: [],
   providersID: { flatrate: [], rent: [], buy: [] },
@@ -262,33 +266,33 @@ const runTests = () => {
   // 19
   assertEquals(
     computeInTheatres({
-      type: 'series',
+      mediaType: 'tv',
       tmdbId: 123,
       nowPlayingIds: [123],
       idReleaseDate: daysAgoIso(1),
       now: FIXED_NOW,
     }),
     false,
-    'computeInTheatres is false for series even when in now playing'
+    'computeInTheatres is false for tv media even when in now playing'
   );
 
   // 20
   assertEquals(
     computeInTheatres({
-      type: 'animation',
+      mediaType: 'movie',
       tmdbId: 123,
       nowPlayingIds: [123],
       idReleaseDate: daysAgoIso(1),
       now: FIXED_NOW,
     }),
-    false,
-    'computeInTheatres is false for animation titles'
+    true,
+    'computeInTheatres is true for an animation film fetched as movie and in now playing'
   );
 
   // 21
   assertEquals(
     computeInTheatres({
-      type: 'movie',
+      mediaType: 'movie',
       tmdbId: 123,
       nowPlayingIds: [999, 123],
       now: FIXED_NOW,
@@ -300,7 +304,7 @@ const runTests = () => {
   // 22
   assertEquals(
     computeInTheatres({
-      type: 'movie',
+      mediaType: 'movie',
       tmdbId: 123,
       nowPlayingIds: [],
       idReleaseDate: daysAgoIso(56),
@@ -313,7 +317,7 @@ const runTests = () => {
   // 23
   assertEquals(
     computeInTheatres({
-      type: 'movie',
+      mediaType: 'movie',
       tmdbId: 123,
       nowPlayingIds: [],
       idReleaseDate: daysAgoIso(57),
@@ -326,7 +330,7 @@ const runTests = () => {
   // 24
   assertEquals(
     computeInTheatres({
-      type: 'movie',
+      mediaType: 'movie',
       tmdbId: 123,
       nowPlayingIds: [],
       now: FIXED_NOW,
@@ -338,7 +342,7 @@ const runTests = () => {
   // 25
   assertEquals(
     computeInTheatres({
-      type: 'movie',
+      mediaType: 'movie',
       tmdbId: 123,
       nowPlayingIds: [],
       idReleaseDate: '2026-12-01',
@@ -351,7 +355,7 @@ const runTests = () => {
   // 26
   assertEquals(
     computeInTheatres({
-      type: 'movie',
+      mediaType: 'movie',
       tmdbId: 123,
       nowPlayingIds: [],
       idReleaseDate: 'not-a-date',
@@ -359,6 +363,195 @@ const runTests = () => {
     }),
     false,
     'computeInTheatres is false for an invalid release date'
+  );
+
+  // -------------------------------------------------------------------------
+  // titlesMatch
+  // -------------------------------------------------------------------------
+
+  // 27
+  assertEquals(
+    titlesMatch(createFilm({ title: 'Dune' }), createSync({ title: 'Dune' })),
+    true,
+    'titlesMatch accepts an exact normalized title'
+  );
+
+  // 28
+  assertEquals(
+    titlesMatch(createFilm({ title: 'Amelie' }), createSync({ title: 'Amélie' })),
+    true,
+    'titlesMatch ignores accents'
+  );
+
+  // 29
+  assertEquals(
+    titlesMatch(
+      createFilm({ title: 'Spider-Man: No Way Home' }),
+      createSync({ title: 'Spider Man No Way Home' })
+    ),
+    true,
+    'titlesMatch ignores punctuation differences'
+  );
+
+  // 30
+  assertEquals(
+    titlesMatch(createFilm({ title: 'Dune' }), createSync({ title: 'Dune: Part Two' })),
+    true,
+    'titlesMatch accepts a longer TMDB subtitle containing the film title'
+  );
+
+  // 31
+  assertEquals(
+    titlesMatch(createFilm({ title: 'Dune: Part Two' }), createSync({ title: 'Dune' })),
+    true,
+    'titlesMatch accepts a film title containing the TMDB title'
+  );
+
+  // 32
+  assertEquals(
+    titlesMatch(
+      createFilm({ title: 'The Rainbow Troops', originalTitle: 'Laskar Pelangi' }),
+      createSync({ title: 'Laskar Pelangi' })
+    ),
+    true,
+    'titlesMatch checks the film originalTitle'
+  );
+
+  // 33
+  assertEquals(
+    titlesMatch(
+      createFilm({ title: 'The Rainbow Troops' }),
+      createSync({ title: 'Unknown', originalTitle: 'The Rainbow Troops' })
+    ),
+    true,
+    'titlesMatch checks the TMDB originalTitle'
+  );
+
+  // 34
+  assertEquals(
+    titlesMatch(createFilm({ title: 'Up' }), createSync({ title: 'Up' })),
+    true,
+    'titlesMatch accepts a short exact title'
+  );
+
+  // 35
+  assertEquals(
+    titlesMatch(createFilm({ title: 'Up' }), createSync({ title: 'Up in the Air' })),
+    false,
+    'titlesMatch does not use containment for short titles'
+  );
+
+  // 36
+  assertEquals(
+    titlesMatch(createFilm({ title: 'Dune' }), createSync({ title: 'Arrival' })),
+    false,
+    'titlesMatch rejects unrelated titles'
+  );
+
+  // 37
+  assertEquals(
+    titlesMatch(
+      createFilm({ title: '', originalTitle: '' }),
+      createSync({ title: 'Dune' })
+    ),
+    false,
+    'titlesMatch rejects an empty film title'
+  );
+
+  // 38
+  assertEquals(
+    titlesMatch(
+      createFilm({ title: 'Dune' }),
+      createSync({ title: '', originalTitle: '' })
+    ),
+    false,
+    'titlesMatch rejects an empty TMDB title'
+  );
+
+  // -------------------------------------------------------------------------
+  // evaluateFilmSync
+  // -------------------------------------------------------------------------
+
+  // 39
+  const noTmdbEvaluation = evaluateFilmSync({
+    film: createFilm({ tmdbId: undefined }),
+    sync: createSync(),
+    nowPlayingIds: [],
+    now: FIXED_NOW,
+  });
+  assertEquals(
+    noTmdbEvaluation.status,
+    'no_tmdb_id',
+    'evaluateFilmSync returns no_tmdb_id without a TMDB ID'
+  );
+  assertEquals(
+    noTmdbEvaluation.result,
+    undefined,
+    'evaluateFilmSync returns no result for no_tmdb_id'
+  );
+
+  // 40
+  const mismatchEvaluation = evaluateFilmSync({
+    film: createFilm({ title: 'Dune' }),
+    sync: createSync({ title: 'Arrival' }),
+    nowPlayingIds: [],
+    now: FIXED_NOW,
+  });
+  assertEquals(
+    mismatchEvaluation.status,
+    'title_mismatch',
+    'evaluateFilmSync returns title_mismatch for a different title'
+  );
+  assertEquals(
+    mismatchEvaluation.result,
+    undefined,
+    'evaluateFilmSync returns no result for title_mismatch'
+  );
+
+  // 41
+  const unchangedFilm = createFilm({
+    idReleaseDate: '2026-10-02',
+    releaseDate: '2026-10-02',
+    whereToWatch: [
+      { type: 'cinema', platform: 'Bioskop', badgeColor: '#E50914', source: 'tmdb' },
+      { type: 'stream', platform: 'Netflix', badgeColor: '#E50914', source: 'tmdb' },
+    ],
+  });
+  const unchangedEvaluation = evaluateFilmSync({
+    film: unchangedFilm,
+    sync: createSync({
+      releaseDatesID: [{ type: 3, date: '2026-10-02' }],
+      providersID: { flatrate: ['Netflix'], rent: [], buy: [] },
+    }),
+    nowPlayingIds: [123],
+    now: FIXED_NOW,
+  });
+  assertEquals(
+    unchangedEvaluation.status,
+    'unchanged',
+    'evaluateFilmSync returns unchanged when nothing differs'
+  );
+  assertEquals(
+    unchangedEvaluation.result,
+    undefined,
+    'evaluateFilmSync returns no result for unchanged'
+  );
+
+  // 42
+  const okEvaluation = evaluateFilmSync({
+    film: createFilm({ title: 'Dune' }),
+    sync: createSync({
+      title: 'Dune',
+      releaseDatesID: [{ type: 3, date: '2026-10-02' }],
+    }),
+    nowPlayingIds: [],
+    now: FIXED_NOW,
+  });
+  assertEquals(okEvaluation.status, 'ok', 'evaluateFilmSync returns ok when there are updates');
+  assertEquals(
+    okEvaluation.result?.updates.idReleaseDate,
+    '2026-10-02',
+    'evaluateFilmSync exposes the update result for ok'
   );
 
   // -------------------------------------------------------------------------
