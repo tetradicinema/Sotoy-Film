@@ -63,13 +63,13 @@ import {
 import { getStreamingPlatforms } from '../../utils/filmSections';
 
 const CATEGORY_LABELS: Record<string, string> = {
-  movies: 'Movies',
+  movies: 'Movie',
   series: 'Series',
   anime: 'Animasi',
   animation: 'Animasi',
   'cinema-gear': 'Cinema Gear',
   'film-studies': 'Film Studies',
-  movie: 'Movies',
+  movie: 'Movie',
 };
 
 const SUBCATEGORY_LABELS: Record<string, string> = {
@@ -1727,9 +1727,15 @@ export const AdminHomepageSections: React.FC = () => {
                       <option value="newest">Terbaru (Newest)</option>
                     )}
                     <option value="rating">Rating / Skor Sotoy Tertinggi</option>
-                    <option value="views">Paling Banyak Dilihat (Views)</option>
-                    <option value="votes">Jumlah Suara Terbanyak (Total Votes)</option>
-                    <option value="release_soonest">Rilis Paling Dekat (Release Soonest)</option>
+                    {currentMeta.targetType !== 'films' && (
+                      <option value="views">Paling Banyak Dilihat (Views)</option>
+                    )}
+                    {currentMeta.targetType === 'films' && (
+                      <>
+                        <option value="votes">Jumlah Suara Terbanyak (Total Votes)</option>
+                        <option value="release_soonest">Rilis Paling Dekat (Release Soonest)</option>
+                      </>
+                    )}
                   </select>
                 </div>
 

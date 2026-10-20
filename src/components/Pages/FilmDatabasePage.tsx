@@ -160,7 +160,7 @@ export const FilmDatabasePage: React.FC = () => {
       if (lowerG === lowerTarget) return true;
       if (lowerTarget === 'horror' && (lowerG.includes('horr') || lowerG.includes('misteri') || lowerG.includes('thriller'))) return true;
       if (lowerTarget === 'sci-fi' && (lowerG.includes('sci') || lowerG.includes('fiksi') || lowerG.includes('futur') || lowerG.includes('space'))) return true;
-      if (lowerTarget === 'anime' && (lowerG.includes('anime') || lowerG.includes('animasi') || film.type === 'anime')) return true;
+      if (lowerTarget === 'anime' && (lowerG.includes('anime') || lowerG.includes('animasi') || film.type === 'animation')) return true;
       if (lowerTarget === 'drama' && (lowerG.includes('dram') || lowerG.includes('romance') || lowerG.includes('kehidupan'))) return true;
       if (lowerTarget === 'action' && (lowerG.includes('aksi') || lowerG.includes('act') || lowerG.includes('petualangan'))) return true;
       return false;

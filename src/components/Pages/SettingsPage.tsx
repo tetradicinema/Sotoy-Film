@@ -655,13 +655,13 @@ export const SettingsPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 w-full min-w-0">
                     <label className="text-xs font-bold text-slate-300">Bio Sinematik & Filosofi Menonton</label>
                     <textarea
                       value={bio}
                       onChange={e => setBio(e.target.value)}maxLength={300}
                       rows={3}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] resize-none"
+                      className="w-full max-w-full box-border bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E] resize-none"
                       placeholder="Ceritakan seleramu tentang film, sutradara favorit, atau gaya visual yang kamu sukai..."
                     />
                     <p className="text-[11px] text-slate-500 text-right">{bio.length}/300</p>

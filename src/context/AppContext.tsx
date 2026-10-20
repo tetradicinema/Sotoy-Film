@@ -38,6 +38,7 @@ import {
 import { setCachedHomepageLayout, clearCachedHomepageLayout } from '../utils/homepageConfigHelper';
 import { validateProfileLinks, sanitizeStoredLinks } from '../utils/profileLinks';
 import { TERMS_VERSION } from '../utils/onboardingHelpers';
+import { normalizeFilmType } from '../utils/filmType';
 import {
   DEFAULT_FALLBACK_AUTHOR,
   INITIAL_BUZZ,
@@ -541,12 +542,13 @@ const hydrateCachedFilms = (): { films: FilmItem[]; ts: number } | null => {
     const ts = parseInt(rawTs, 10);
     if (isNaN(ts) || Date.now() - ts > FILMS_CACHE_TTL_MS) return null; // Expired
     const parsed = JSON.parse(raw);
-    // Backward compatible with old payloads that wrapped films in an object.
-    // Any legacy `removedMarkers` field is ignored entirely.
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return { films: parsed, ts };
-      } else if (parsed && typeof parsed === 'object' && Array.isArray(parsed.films) && parsed.films.length > 0) {
-      return { films: parsed.films, ts };
+    const rawFilms = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === 'object' && Array.isArray(parsed.films)) ? parsed.films : null;
+    if (rawFilms && rawFilms.length > 0) {
+      const normalized = rawFilms.map((f: any) => ({
+        ...f,
+        type: normalizeFilmType(f?.type),
+      }));
+      return { films: normalized, ts };
     }
   } catch {
     // If parsing fails, ignore the cache silently
@@ -1069,6 +1071,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               filmMap.set(id, {
                 ...data,
                 id,
+                type: normalizeFilmType(data.type),
                 skorSotoy: normalizedSkor,
                 criticsSkorSotoy: normalizedCriticsSkor || normalizedSkor,
               });
@@ -1689,6 +1692,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (v === undefined) {
         if (k === 'itemIds') mergedSection[k] = [];
         else if (k === 'limit') mergedSection[k] = 5;
+        else if (k === 'enabled') mergedSection[k] = true;
+        else if (k === 'minVotes') continue;
         else mergedSection[k] = '';
       } else {
         mergedSection[k] = v;

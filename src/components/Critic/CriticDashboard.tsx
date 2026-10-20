@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { normalizeFilmType } from '../../utils/filmType';
 import {
   Award,
   Star,
@@ -54,7 +55,7 @@ export const CriticDashboard: React.FC = () => {
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilmType, setSelectedFilmType] = useState<'all' | 'movie' | 'series' | 'anime'>('all');
+  const [selectedFilmType, setSelectedFilmType] = useState<'all' | 'movie' | 'series' | 'animation'>('all');
   const [sortBy, setSortBy] = useState<'date-desc' | 'score-desc' | 'likes-desc' | 'views-desc'>('date-desc');
   const [ratingToDelete, setRatingToDelete] = useState<UserRating | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -121,7 +122,7 @@ export const CriticDashboard: React.FC = () => {
         const matchesSearch = 
           r.headline.toLowerCase().includes(searchQuery.toLowerCase()) ||
           r.film?.title.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesType = selectedFilmType === 'all' || r.film?.type === selectedFilmType;
+        const matchesType = selectedFilmType === 'all' || normalizeFilmType(r.film?.type) === selectedFilmType;
         return matchesSearch && matchesType;
       })
       .sort((a, b) => {
@@ -414,7 +415,7 @@ export const CriticDashboard: React.FC = () => {
                 <option value="all" className="bg-[#171717]">Semua Tipe</option>
                 <option value="movie" className="bg-[#171717]">Movie</option>
                 <option value="series" className="bg-[#171717]">Series</option>
-                <option value="anime" className="bg-[#171717]">Anime</option>
+                <option value="animation" className="bg-[#171717]">Animasi</option>
               </select>
 
               <select

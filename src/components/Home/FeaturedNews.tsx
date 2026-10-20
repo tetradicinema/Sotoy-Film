@@ -102,6 +102,10 @@ export const FeaturedNews: React.FC = () => {
     return featured.slice(0, 5);
   }, [publishedArticles]);
 
+  if (!isLoadingArticles && featuredArticles.length === 0) {
+    return null;
+  }
+
   return (
     <section id="featured-news-section" className="py-6 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

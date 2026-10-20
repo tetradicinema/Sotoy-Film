@@ -1,11 +1,12 @@
 import { CastMember, CrewMember } from '../types';
 import { slugify } from './slugify';
+import { classifyFilmType, FilmFormat } from './filmType';
 
 export interface MappedTmdbFilm {
   title: string;
   originalTitle: string;
   slug?: string;
-  type: 'movie' | 'series' | 'anime';
+  type: FilmFormat;
   year: number;
   releaseDate?: string;
   duration: string;
@@ -429,7 +430,10 @@ export const mapTmdbDetailsToFilm = (details: any, type: 'movie' | 'tv'): Mapped
     title: mappedTitle,
     originalTitle: mappedOriginalTitle,
     slug: slugify(mappedTitle),
-    type: isMovie ? 'movie' : 'series',
+    type: classifyFilmType({
+      mediaType: isMovie ? 'movie' : 'tv',
+      genres: (details.genres || []).map((g: any) => g.id ?? g.name),
+    }),
     year: mappedYear,
     releaseDate: rawDate || undefined,
     duration: mappedDuration,

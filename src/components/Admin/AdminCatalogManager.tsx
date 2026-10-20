@@ -41,11 +41,12 @@ import {
   mapTmdbDetailsToFilm,
   fetchTmdbDetails
 } from '../../utils/tmdbHelper';
+import { classifyFilmType, normalizeFilmType } from '../../utils/filmType';
 
 interface FilmFormData {
   title: string;
   originalTitle: string;
-  type: 'movie' | 'series' | 'anime' | 'animation';
+  type: 'movie' | 'series' | 'animation';
   year: number;
   releaseDate: string; // ISO date string e.g. "2024-07-12"
   duration: string;
@@ -92,14 +93,14 @@ export const AdminCatalogManager: React.FC = () => {
   const { films, addFilm, updateFilm, deleteFilm, bulkDeleteFilms, bulkUpdateFilms, navigateTo, showToast } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'movie' | 'series' | 'anime'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'movie' | 'series' | 'animation'>('all');
 
   // Bulk Selection State
   const [selectedFilmIds, setSelectedFilmIds] = useState<string[]>([]);
   const [isBulkOperating, setIsBulkOperating] = useState(false);
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [showBulkFormatModal, setShowBulkFormatModal] = useState(false);
-  const [bulkTargetFormat, setBulkTargetFormat] = useState<'movie' | 'series' | 'anime'>('movie');
+  const [bulkTargetFormat, setBulkTargetFormat] = useState<'movie' | 'series' | 'animation'>('movie');
   const [showBulkTagModal, setShowBulkTagModal] = useState(false);
   const [bulkTagInput, setBulkTagInput] = useState('');
   const [bulkSuggestedTags, setBulkSuggestedTags] = useState<string[]>([
@@ -227,7 +228,7 @@ export const AdminCatalogManager: React.FC = () => {
       if (!film || !film.id) return false;
       if (seenIds.has(film.id)) return false;
       seenIds.add(film.id);
-      if (typeFilter !== 'all' && film.type !== typeFilter) return false;
+      if (typeFilter !== 'all' && normalizeFilmType(film.type) !== typeFilter) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchTitle = film.title?.toLowerCase().includes(q);
@@ -282,7 +283,7 @@ export const AdminCatalogManager: React.FC = () => {
     }
   };
 
-  const handleBulkFormatChange = async (targetFormat: 'movie' | 'series' | 'anime') => {
+  const handleBulkFormatChange = async (targetFormat: 'movie' | 'series' | 'animation') => {
     if (selectedFilmIds.length === 0) return;
     setIsBulkOperating(true);
     try {
@@ -424,7 +425,7 @@ export const AdminCatalogManager: React.FC = () => {
     setFormData({
       title: film.title || '',
       originalTitle: film.originalTitle || '',
-      type: film.type || 'movie',
+      type: normalizeFilmType(film.type),
       year: film.year || 2024,
       releaseDate: film.releaseDate || '',
       duration: film.duration || '',
@@ -639,7 +640,7 @@ export const AdminCatalogManager: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           {/* Format Filter Pills */}
           <div className="flex items-center gap-1.5 overflow-x-auto text-xs font-medium pb-1 sm:pb-0 scrollbar-none">
-            {(['all', 'movie', 'series', 'anime'] as const).map(tab => (
+            {(['all', 'movie', 'series', 'animation'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setTypeFilter(tab)}
@@ -649,7 +650,7 @@ export const AdminCatalogManager: React.FC = () => {
                     : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                 }`}
               >
-                {tab === 'all' ? 'Semua Format' : tab}
+                {tab === 'all' ? 'Semua Format' : tab === 'movie' ? 'Movie' : tab === 'series' ? 'Series' : 'Animasi'}
               </button>
             ))}
           </div>
@@ -1818,7 +1819,7 @@ export const AdminCatalogManager: React.FC = () => {
             </p>
 
             <div className="grid grid-cols-3 gap-3">
-              {(['movie', 'series', 'anime'] as const).map(fmt => (
+              {(['movie', 'series', 'animation'] as const).map(fmt => (
                 <button
                   key={fmt}
                   type="button"
@@ -1831,7 +1832,7 @@ export const AdminCatalogManager: React.FC = () => {
                 >
                   <div className="text-xs uppercase tracking-wider">{fmt}</div>
                   <div className="text-[10px] text-slate-400 mt-1 capitalize font-normal">
-                    {fmt === 'movie' ? 'Layar Lebar' : fmt === 'series' ? 'Serial TV' : 'Anime'}
+                    {fmt === 'movie' ? 'Layar Lebar' : fmt === 'series' ? 'Serial TV' : 'Animasi'}
                   </div>
                 </button>
               ))}

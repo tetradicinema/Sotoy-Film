@@ -199,7 +199,7 @@ export interface FilmItem {
   tmdbId?: number;
   title: string;
   originalTitle?: string;
-  type: 'movie' | 'series' | 'anime' | 'animation';
+  type: 'movie' | 'series' | 'animation';
   year: number;
   releaseDate?: string; // ISO date string, e.g. "2024-07-12"
   idReleaseDate?: string; // ISO date of the Indonesian theatrical release
@@ -310,7 +310,7 @@ export interface BuzzPost {
   taggedFilm?: {
     id: string;
     title: string;
-    type?: 'movie' | 'series' | 'anime' | string;
+    type?: 'movie' | 'series' | 'animation' | string;
     poster?: string;
     year?: number;
     skorSotoy?: number;

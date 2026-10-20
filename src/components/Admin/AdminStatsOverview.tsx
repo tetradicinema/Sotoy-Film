@@ -30,7 +30,7 @@ export const AdminStatsOverview: React.FC = () => {
   const totalFilms = films.length;
   const moviesCount = films.filter(f => f.type === 'movie' || !f.type).length;
   const seriesCount = films.filter(f => f.type === 'series').length;
-  const animeCount = films.filter(f => f.type === 'anime').length;
+  const animationCount = films.filter(f => f.type === 'animation').length;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -156,7 +156,7 @@ export const AdminStatsOverview: React.FC = () => {
             {seriesCount} Series
           </span>
           <span className="px-2 py-0.5 rounded-md bg-white/[0.06] text-slate-300 border border-white/10 font-medium">
-            {animeCount} Anime
+            {animationCount} Animasi
           </span>
         </div>
       </div>

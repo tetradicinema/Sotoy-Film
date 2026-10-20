@@ -1212,7 +1212,7 @@ export const UserPage: React.FC = () => {
                           <textarea
                             value={editingBuzzContent}
                             onChange={e => setEditingBuzzContent(e.target.value)}
-                            className="w-full bg-neutral-900 border border-neutral-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-[#FF2E7E] resize-none"
+                            className="w-full max-w-full box-border bg-neutral-900 border border-neutral-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-[#FF2E7E] resize-none"
                             rows={3}
                           />
                           <div className="flex items-center justify-between gap-2">
@@ -1478,7 +1478,7 @@ export const UserPage: React.FC = () => {
                             <textarea
                               value={editingReplyContent}
                               onChange={e => setEditingReplyContent(e.target.value)}
-                              className="w-full bg-neutral-900 border border-neutral-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-[#FF2E7E] resize-none"
+                              className="w-full max-w-full box-border bg-neutral-900 border border-neutral-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-[#FF2E7E] resize-none"
                               rows={2}
                             />
                             <div className="flex justify-end gap-2">
@@ -2154,7 +2154,7 @@ export const UserPage: React.FC = () => {
                               onChange={e => setTabNewCollectionDesc(e.target.value)}
                               maxLength={100}
                               rows={2}
-                              className="w-full px-3 py-1.5 text-xs bg-slate-850 border border-slate-800 rounded-xl text-white resize-none focus:outline-none focus:border-[#FF2E7E]"
+                              className="w-full max-w-full box-border px-3 py-1.5 text-xs bg-slate-850 border border-slate-800 rounded-xl text-white resize-none focus:outline-none focus:border-[#FF2E7E]"
                             />
 
                             {/* Public/Private Toggle Switch matching SettingsPage */}
@@ -2484,7 +2484,7 @@ export const UserPage: React.FC = () => {
                             placeholder="Tulis ulasan jujurmu..."
                             value={editingReviewText}
                             onChange={e => setEditingReviewText(e.target.value)}
-                            className="w-full bg-neutral-900 border border-neutral-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-[#FF2E7E] resize-none"
+                            className="w-full max-w-full box-border bg-neutral-900 border border-neutral-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-[#FF2E7E] resize-none"
                             rows={3}
                           />
                           <div className="flex justify-end gap-2">
