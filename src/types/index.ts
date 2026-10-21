@@ -512,6 +512,8 @@ export type HomepageSectionKey =
   | 'fd_coming_soon'
   | 'fd_animation'
   | 'fd_fans_favourite'
+  | 'fd_editors_pick'
+  | 'fd_hidden_gems'
   | 'home_film_recs'
   | 'home_streaming';
 
@@ -549,6 +551,8 @@ export interface SectionConfig {
   enabled?: boolean;
   platform?: string;
   minVotes?: number;
+  minScore?: number;
+  maxVotes?: number;
 }
 
 export interface HomepageSectionsConfig {

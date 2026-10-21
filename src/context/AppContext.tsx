@@ -136,6 +136,7 @@ import {
   writeBatch,
   runTransaction,
   documentId,
+  deleteField,
 } from 'firebase/firestore';
 import { 
   onAuthStateChanged, 
@@ -1708,6 +1709,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         else if (k === 'limit') mergedSection[k] = 5;
         else if (k === 'enabled') mergedSection[k] = true;
         else if (k === 'minVotes') continue;
+        else if (k === 'minScore' || k === 'maxVotes') mergedSection[k] = deleteField();
         else mergedSection[k] = '';
       } else {
         mergedSection[k] = v;

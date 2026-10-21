@@ -346,6 +346,8 @@ export const DEFAULT_FILM_DB_SECTION_ORDER: HomepageSectionKey[] = [
   'fd_coming_soon',
   'fd_animation',
   'fd_fans_favourite',
+  'fd_editors_pick',
+  'fd_hidden_gems',
 ];
 
 export function resolveSectionOrder(saved?: HomepageSectionKey[]): HomepageSectionKey[] {
@@ -574,6 +576,28 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     targetType: 'films',
     description: 'Film paling disukai dan dinilai tinggi oleh warga Sotoy',
     defaultRule: 'Skor berbobot Bayesian tertinggi dengan batas minimum votes',
+    allowedCategories: ALL_FILM_CATEGORIES,
+    area: 'film_database',
+  },
+  {
+    key: 'fd_editors_pick',
+    label: 'Pilihan Redaksi',
+    defaultTitle: 'Pilihan Redaksi',
+    defaultDescription: 'Film dan series pilihan tim redaksi Sotoy yang layak masuk daftar tonton Anda.',
+    targetType: 'films',
+    description: 'Daftar film pilihan redaksi, dipilih manual oleh admin',
+    defaultRule: 'Daftar manual dari admin. Kosong = seksi disembunyikan',
+    allowedCategories: ALL_FILM_CATEGORIES,
+    area: 'film_database',
+  },
+  {
+    key: 'fd_hidden_gems',
+    label: 'Hidden Gems',
+    defaultTitle: 'Hidden Gems',
+    defaultDescription: 'Film dan series berskor tinggi yang belum banyak dibicarakan.',
+    targetType: 'films',
+    description: 'Skor Sotoy tinggi dengan jumlah vote masih sedikit',
+    defaultRule: 'Skor minimal 8, vote antara 1 dan 15 (bisa diubah admin). Skor tertinggi dulu',
     allowedCategories: ALL_FILM_CATEGORIES,
     area: 'film_database',
   },

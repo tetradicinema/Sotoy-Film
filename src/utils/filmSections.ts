@@ -369,6 +369,55 @@ export function resolveFilmDbSection(
       break;
     }
 
+    case 'fd_editors_pick': {
+      // Auto mode starts empty so the section stays hidden until the admin
+      // either picks films manually or sets at least one filter.
+      const hasFilter = Boolean(
+        config?.category?.trim() || config?.subCategory?.trim() || config?.tag?.trim()
+      );
+      filtered = hasFilter ? [...films] : [];
+      break;
+    }
+
+    case 'fd_hidden_gems': {
+      // High Sotoy score with a small number of votes. Thresholds are
+      // configurable but fall back to 8 / 1 / 15.
+      let minScore = 8;
+      if (typeof config?.minScore === 'number' && !isNaN(config.minScore)) {
+        minScore = config.minScore;
+      } else if (config?.minScore !== undefined && (config?.minScore as any) !== '' && (config?.minScore as any) !== null) {
+        const parsed = Number(config.minScore);
+        minScore = isNaN(parsed) ? 8 : parsed;
+      }
+      minScore = Math.min(10, Math.max(0, minScore));
+
+      let minVotes = 1;
+      if (typeof config?.minVotes === 'number') {
+        minVotes = config.minVotes;
+      } else if (config?.minVotes === '' || (config?.minVotes as any) === null) {
+        minVotes = 1;
+      } else if (config?.minVotes !== undefined) {
+        const parsed = Number(config.minVotes);
+        minVotes = isNaN(parsed) ? 1 : parsed;
+      }
+      minVotes = Math.max(0, minVotes);
+
+      let maxVotes = 15;
+      if (typeof config?.maxVotes === 'number' && !isNaN(config.maxVotes)) {
+        maxVotes = config.maxVotes;
+      } else if (config?.maxVotes !== undefined && (config?.maxVotes as any) !== '' && (config?.maxVotes as any) !== null) {
+        const parsed = Number(config.maxVotes);
+        maxVotes = isNaN(parsed) ? 15 : parsed;
+      }
+      maxVotes = Math.max(minVotes, maxVotes);
+
+      filtered = films.filter(f => {
+        const votes = f.totalVotes || 0;
+        return normalizeFilmScore(f) >= minScore && votes >= minVotes && votes <= maxVotes;
+      });
+      break;
+    }
+
     default: {
       filtered = [...films];
       break;
@@ -416,6 +465,16 @@ export function resolveFilmDbSection(
     filtered = filtered.filter(f =>
       f.whereToWatch?.some(w => normalizePlatform(w.platform).toLowerCase() === targetPlatform)
     );
+  }
+
+  // New configurable sections must never render the same film twice.
+  if (key === 'fd_editors_pick' || key === 'fd_hidden_gems') {
+    const seenIds = new Set<string>();
+    filtered = filtered.filter(f => {
+      if (seenIds.has(f.id)) return false;
+      seenIds.add(f.id);
+      return true;
+    });
   }
 
   // 3. Sorting
@@ -485,12 +544,25 @@ export function resolveFilmDbSection(
       }
 
       case 'fd_animation':
-      case 'fd_fans_favourite': {
+      case 'fd_fans_favourite':
+      case 'fd_editors_pick': {
         // Weighted score (Bayesian) descending
         filtered.sort((a, b) => {
           const scoreB = computeBayesianScore(b, meanScore);
           const scoreA = computeBayesianScore(a, meanScore);
           return scoreB - scoreA;
+        });
+        break;
+      }
+
+      case 'fd_hidden_gems': {
+        // Normalized score descending, then fewer votes first, then title.
+        filtered.sort((a, b) => {
+          const scoreDiff = normalizeFilmScore(b) - normalizeFilmScore(a);
+          if (scoreDiff !== 0) return scoreDiff;
+          const votesDiff = (a.totalVotes || 0) - (b.totalVotes || 0);
+          if (votesDiff !== 0) return votesDiff;
+          return (a.title || '').localeCompare(b.title || '');
         });
         break;
       }

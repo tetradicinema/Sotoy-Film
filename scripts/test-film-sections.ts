@@ -4,7 +4,7 @@ import {
   buildFilmDbSections,
   getStreamingPlatforms,
 } from '../src/utils/filmSections';
-import { HOMEPAGE_SECTIONS_META } from '../src/utils/homepageConfigHelper';
+import { HOMEPAGE_SECTIONS_META, resolveFilmDbSectionOrder } from '../src/utils/homepageConfigHelper';
 import { FilmItem, SectionConfig, HomepageSectionKey, HomepageSectionsConfig } from '../src/types';
 
 // Fixed now for deterministic tests
@@ -513,7 +513,11 @@ const runTests = () => {
     ];
     const config: HomepageSectionsConfig = { filmDbSectionOrder: order };
     const result = buildFilmDbSections(sectionFilms, config, { now: FIXED_NOW });
-    assertEquals(result.map(s => s.key), order, 'buildFilmDbSections follows saved filmDbSectionOrder');
+    assertEquals(
+      result.map(s => s.key),
+      [...order, 'fd_hidden_gems'],
+      'buildFilmDbSections follows saved filmDbSectionOrder'
+    );
   }
 
   // 33. missing key is appended
@@ -524,7 +528,7 @@ const runTests = () => {
     const result = buildFilmDbSections(sectionFilms, config, { now: FIXED_NOW });
     assertEquals(
       result.map(s => s.key),
-      ['fd_coming_soon', 'fd_on_theatres', 'fd_streaming', 'fd_animation', 'fd_fans_favourite'],
+      ['fd_coming_soon', 'fd_on_theatres', 'fd_streaming', 'fd_animation', 'fd_fans_favourite', 'fd_hidden_gems'],
       'buildFilmDbSections appends missing keys in default order'
     );
   }
@@ -543,7 +547,7 @@ const runTests = () => {
     );
     assertEquals(
       result.map(s => s.key),
-      ['fd_on_theatres', 'fd_streaming', 'fd_coming_soon', 'fd_fans_favourite'],
+      ['fd_on_theatres', 'fd_streaming', 'fd_coming_soon', 'fd_fans_favourite', 'fd_hidden_gems'],
       'disabled section does not disturb the remaining order'
     );
   }
@@ -873,6 +877,275 @@ const runTests = () => {
       streaming?.description,
       'Film dan series yang bisa ditonton sekarang di Netflix, Prime Video, dan platform streaming lainnya.',
       'buildFilmDbSections falls back to the default when the description override is blank'
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Pilihan Redaksi (fd_editors_pick) and Hidden Gems (fd_hidden_gems)
+  // ---------------------------------------------------------------------------
+
+  const pickFilms = [
+    createFilm({ id: 'ep-a', skorSotoy: 9, totalVotes: 10 }),
+    createFilm({ id: 'ep-b', skorSotoy: 8, totalVotes: 5 }),
+    createFilm({ id: 'ep-c', skorSotoy: 7, totalVotes: 2 }),
+  ];
+
+  // 50. editors pick auto with no filters stays hidden
+  {
+    const result = resolveFilmDbSection('fd_editors_pick', pickFilms, {
+      sourceType: 'auto',
+    } as SectionConfig, { now: FIXED_NOW });
+    assertEquals(result.map(f => f.id), [], 'fd_editors_pick auto without filters returns no films');
+  }
+
+  // 51. editors pick manual keeps order and skips missing ids
+  {
+    const result = resolveFilmDbSection('fd_editors_pick', pickFilms, {
+      sourceType: 'manual',
+      itemIds: ['ep-c', 'missing-id', 'ep-a'],
+    } as SectionConfig, { now: FIXED_NOW });
+    assertEquals(result.map(f => f.id), ['ep-c', 'ep-a'], 'fd_editors_pick manual keeps order and skips missing ids');
+  }
+
+  // 52. editors pick manual respects limit
+  {
+    const result = resolveFilmDbSection('fd_editors_pick', pickFilms, {
+      sourceType: 'manual',
+      itemIds: ['ep-a', 'ep-b', 'ep-c'],
+      limit: 2,
+    } as SectionConfig, { now: FIXED_NOW });
+    assertEquals(result.map(f => f.id), ['ep-a', 'ep-b'], 'fd_editors_pick manual respects limit');
+  }
+
+  // 53. editors pick auto with a tag filter
+  {
+    const films = [
+      createFilm({ id: 'ep-tag-high', skorSotoy: 9, totalVotes: 5, tags: ['redaksi'] }),
+      createFilm({ id: 'ep-tag-low', skorSotoy: 7, totalVotes: 5, tags: ['redaksi'] }),
+      createFilm({ id: 'ep-tag-other', skorSotoy: 9.5, totalVotes: 5, tags: ['lain'] }),
+    ];
+    const result = resolveFilmDbSection('fd_editors_pick', films, {
+      sourceType: 'auto',
+      tag: 'redaksi',
+    } as SectionConfig, { now: FIXED_NOW });
+    assertEquals(
+      result.map(f => f.id).sort(),
+      ['ep-tag-high', 'ep-tag-low'],
+      'fd_editors_pick auto with a tag filter returns matching films'
+    );
+  }
+
+  // 54. editors pick disabled
+  {
+    const result = resolveFilmDbSection('fd_editors_pick', pickFilms, {
+      sourceType: 'manual',
+      itemIds: ['ep-a'],
+      enabled: false,
+    } as SectionConfig, { now: FIXED_NOW });
+    assertEquals(result.map(f => f.id), [], 'fd_editors_pick disabled returns no films');
+  }
+
+  // 55. hidden gems default thresholds include 8.5 with 5 votes
+  {
+    const result = resolveFilmDbSection('fd_hidden_gems', [
+      createFilm({ id: 'hg-in', skorSotoy: 8.5, scoreScale: 10, totalVotes: 5 }),
+    ], undefined, { now: FIXED_NOW });
+    assertEquals(result.map(f => f.id), ['hg-in'], 'fd_hidden_gems default thresholds include score 8.5 with 5 votes');
+  }
+
+  // 56. hidden gems excludes score below 8
+  {
+    const result = resolveFilmDbSection('fd_hidden_gems', [
+      createFilm({ id: 'hg-low-score', skorSotoy: 7.5, scoreScale: 10, totalVotes: 5 }),
+    ], undefined, { now: FIXED_NOW });
+    assertEquals(result.map(f => f.id), [], 'fd_hidden_gems excludes score 7.5');
+  }
+
+  // 57. hidden gems excludes zero votes
+  {
+    const result = resolveFilmDbSection('fd_hidden_gems', [
+      createFilm({ id: 'hg-zero-votes', skorSotoy: 9, scoreScale: 10, totalVotes: 0 }),
+    ], undefined, { now: FIXED_NOW });
+    assertEquals(result.map(f => f.id), [], 'fd_hidden_gems excludes films with 0 votes');
+  }
+
+  // 58. hidden gems excludes more than 15 votes
+  {
+    const result = resolveFilmDbSection('fd_hidden_gems', [
+      createFilm({ id: 'hg-many-votes', skorSotoy: 9, scoreScale: 10, totalVotes: 20 }),
+    ], undefined, { now: FIXED_NOW });
+    assertEquals(result.map(f => f.id), [], 'fd_hidden_gems excludes films with 20 votes');
+  }
+
+  // 59. hidden gems custom minScore and maxVotes
+  {
+    const films = [
+      createFilm({ id: 'hg-custom-low', skorSotoy: 7.5, scoreScale: 10, totalVotes: 5 }),
+      createFilm({ id: 'hg-custom-high', skorSotoy: 9, scoreScale: 10, totalVotes: 8 }),
+      createFilm({ id: 'hg-custom-too-many', skorSotoy: 9, scoreScale: 10, totalVotes: 12 }),
+    ];
+    const result = resolveFilmDbSection('fd_hidden_gems', films, {
+      minScore: 7,
+      maxVotes: 10,
+    } as SectionConfig, { now: FIXED_NOW });
+    assertEquals(
+      result.map(f => f.id),
+      ['hg-custom-high', 'hg-custom-low'],
+      'fd_hidden_gems respects custom minScore and maxVotes'
+    );
+  }
+
+  // 60. hidden gems sorts by score desc, then fewer votes first
+  {
+    const films = [
+      createFilm({ id: 'hg-sort-lower', skorSotoy: 8.5, scoreScale: 10, totalVotes: 1 }),
+      createFilm({ id: 'hg-sort-many', skorSotoy: 9, scoreScale: 10, totalVotes: 8 }),
+      createFilm({ id: 'hg-sort-few', skorSotoy: 9, scoreScale: 10, totalVotes: 3 }),
+    ];
+    const result = resolveFilmDbSection('fd_hidden_gems', films, undefined, { now: FIXED_NOW });
+    assertEquals(
+      result.map(f => f.id),
+      ['hg-sort-few', 'hg-sort-many', 'hg-sort-lower'],
+      'fd_hidden_gems sorts score desc with fewer votes first on ties'
+    );
+  }
+
+  // 61. hidden gems normalizes scores using scoreScale
+  {
+    const films = [
+      createFilm({ id: 'hg-scale-in', skorSotoy: 85, scoreScale: 100, totalVotes: 5 }),
+      createFilm({ id: 'hg-scale-out', skorSotoy: 75, scoreScale: 100, totalVotes: 5 }),
+    ];
+    const result = resolveFilmDbSection('fd_hidden_gems', films, undefined, { now: FIXED_NOW });
+    assertEquals(result.map(f => f.id), ['hg-scale-in'], 'fd_hidden_gems normalizes scores with a non-10 scoreScale');
+  }
+
+  // 62. hidden gems explicit sortBy newest overrides the default order
+  {
+    const films = [
+      createFilm({ id: 'hg-newest-old', skorSotoy: 9.5, scoreScale: 10, totalVotes: 5, idReleaseDate: daysAgo(30) }),
+      createFilm({ id: 'hg-newest-new', skorSotoy: 8.2, scoreScale: 10, totalVotes: 5, idReleaseDate: daysAgo(1) }),
+    ];
+    const result = resolveFilmDbSection('fd_hidden_gems', films, {
+      sortBy: 'newest',
+    } as SectionConfig, { now: FIXED_NOW });
+    assertEquals(
+      result.map(f => f.id),
+      ['hg-newest-new', 'hg-newest-old'],
+      'fd_hidden_gems sortBy newest overrides the default order'
+    );
+  }
+
+  // 63. hidden gems category filter
+  {
+    const films = [
+      createFilm({ id: 'hg-series', type: 'series', skorSotoy: 9, scoreScale: 10, totalVotes: 5 }),
+      createFilm({ id: 'hg-movie', type: 'movie', skorSotoy: 9, scoreScale: 10, totalVotes: 5 }),
+    ];
+    const result = resolveFilmDbSection('fd_hidden_gems', films, {
+      category: 'series',
+    } as SectionConfig, { now: FIXED_NOW });
+    assertEquals(result.map(f => f.id), ['hg-series'], 'fd_hidden_gems applies the category filter');
+  }
+
+  // 64. hidden gems default and explicit limit
+  {
+    const films = Array.from({ length: 15 }, (_, i) =>
+      createFilm({ id: `hg-limit-${i}`, skorSotoy: 8 + (i % 5) * 0.1, scoreScale: 10, totalVotes: 5 })
+    );
+    const defaultResult = resolveFilmDbSection('fd_hidden_gems', films, undefined, { now: FIXED_NOW });
+    assertEquals(defaultResult.length, 12, 'fd_hidden_gems defaults to a limit of 12');
+
+    const limitedResult = resolveFilmDbSection('fd_hidden_gems', films, {
+      limit: 5,
+    } as SectionConfig, { now: FIXED_NOW });
+    assertEquals(limitedResult.length, 5, 'fd_hidden_gems respects an explicit limit');
+  }
+
+  // 65. hidden gems never returns the same film twice
+  {
+    const films = [
+      createFilm({ id: 'hg-dup', skorSotoy: 9, scoreScale: 10, totalVotes: 5 }),
+      createFilm({ id: 'hg-dup', skorSotoy: 9, scoreScale: 10, totalVotes: 5 }),
+    ];
+    const result = resolveFilmDbSection('fd_hidden_gems', films, undefined, { now: FIXED_NOW });
+    assertEquals(result.map(f => f.id), ['hg-dup'], 'fd_hidden_gems does not return duplicate films');
+  }
+
+  // 66. buildFilmDbSections omits both new sections when empty
+  {
+    const films = [
+      createFilm({
+        id: 'hg-empty-stream',
+        skorSotoy: 0,
+        scoreScale: 10,
+        totalVotes: 0,
+        whereToWatch: [{ type: 'stream', platform: 'Netflix' }],
+      }),
+    ];
+    const result = buildFilmDbSections(films, undefined, { now: FIXED_NOW });
+    assert(
+      !result.some(s => s.key === 'fd_editors_pick' || s.key === 'fd_hidden_gems'),
+      'buildFilmDbSections omits empty editors pick and hidden gems sections'
+    );
+  }
+
+  // 67. buildFilmDbSections shows both new sections when they have films
+  {
+    const films = [
+      createFilm({ id: 'hg-show-pick', skorSotoy: 0, scoreScale: 10, totalVotes: 0 }),
+      createFilm({ id: 'hg-show-gem', skorSotoy: 9, scoreScale: 10, totalVotes: 2 }),
+    ];
+    const config: HomepageSectionsConfig = {
+      sections: {
+        fd_editors_pick: { sourceType: 'manual', itemIds: ['hg-show-pick'] },
+        fd_hidden_gems: { sourceType: 'auto' },
+      },
+    };
+    const result = buildFilmDbSections(films, config, { now: FIXED_NOW });
+    assertEquals(
+      result.map(s => s.key),
+      ['fd_editors_pick', 'fd_hidden_gems'],
+      'buildFilmDbSections shows both new sections when they resolve films'
+    );
+    assertEquals(
+      result.find(s => s.key === 'fd_editors_pick')?.films.map(f => f.id),
+      ['hg-show-pick'],
+      'buildFilmDbSections resolves the manual editors pick list'
+    );
+    assertEquals(
+      result.find(s => s.key === 'fd_hidden_gems')?.films.map(f => f.id),
+      ['hg-show-gem'],
+      'buildFilmDbSections resolves the hidden gems list'
+    );
+  }
+
+  // 68. saved order without the new keys appends them at the end
+  {
+    const order = resolveFilmDbSectionOrder(['fd_streaming']);
+    assertEquals(order[0], 'fd_streaming', 'resolveFilmDbSectionOrder keeps the saved first key');
+    assertEquals(
+      order.slice(-2),
+      ['fd_editors_pick', 'fd_hidden_gems'],
+      'resolveFilmDbSectionOrder appends the new keys at the end'
+    );
+  }
+
+  // 69. new section metadata
+  {
+    const editorsMeta = HOMEPAGE_SECTIONS_META.find(m => m.key === 'fd_editors_pick');
+    const gemsMeta = HOMEPAGE_SECTIONS_META.find(m => m.key === 'fd_hidden_gems');
+    assertEquals(editorsMeta?.label, 'Pilihan Redaksi', 'fd_editors_pick uses the Pilihan Redaksi label');
+    assertEquals(
+      editorsMeta?.defaultRule,
+      'Daftar manual dari admin. Kosong = seksi disembunyikan',
+      'fd_editors_pick exposes its default rule'
+    );
+    assertEquals(gemsMeta?.label, 'Hidden Gems', 'fd_hidden_gems uses the Hidden Gems label');
+    assertEquals(
+      gemsMeta?.defaultDescription,
+      'Film dan series berskor tinggi yang belum banyak dibicarakan.',
+      'fd_hidden_gems exposes its default description'
     );
   }
 

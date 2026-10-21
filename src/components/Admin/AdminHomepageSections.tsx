@@ -136,7 +136,7 @@ const getDefaultSectionConfig = (key: HomepageSectionKey, meta: SectionMeta): Se
   return {
     title: '',
     description: '',
-    sourceType: 'auto',
+    sourceType: key === 'fd_editors_pick' ? 'manual' : 'auto',
     category: undefined,
     subCategory: '',
     tag: '',
@@ -145,7 +145,8 @@ const getDefaultSectionConfig = (key: HomepageSectionKey, meta: SectionMeta): Se
     itemIds: [],
     enabled: true,
     platform: '',
-    minVotes: key === 'fd_fans_favourite' ? 3 : undefined,
+    minVotes: key === 'fd_fans_favourite' ? 3 : key === 'fd_hidden_gems' ? 1 : undefined,
+    ...(key === 'fd_hidden_gems' ? { minScore: undefined, maxVotes: undefined } : {}),
   };
 };
 
@@ -417,7 +418,9 @@ const SortableSectionItem: React.FC<SortableSectionItemProps> = ({
   const meta = HOMEPAGE_SECTIONS_META.find((m) => m.key === keyId) || HOMEPAGE_SECTIONS_META[0];
   const active = keyId === activeSectionKey;
   const sectionConfig = draftConfigs[keyId] || homepageSectionsConfig?.sections?.[keyId];
-  const isManual = sectionConfig?.sourceType === 'manual';
+  const effectiveSourceType =
+    sectionConfig?.sourceType ?? (keyId === 'fd_editors_pick' ? 'manual' : 'auto');
+  const isManual = effectiveSourceType === 'manual';
   const hasCustomTitle = !!sectionConfig?.title && sectionConfig.title.trim().length > 0;
   const isEnabled = sectionConfig?.enabled !== false;
 
@@ -1698,9 +1701,34 @@ export const AdminHomepageSections: React.FC = () => {
                   </div>
                 )}
 
-                {/* MinVotes (only for fd_fans_favourite) */}
-                {activeSectionKey === 'fd_fans_favourite' && (
-                  <div className="space-y-1.5 sm:col-span-2">
+                {/* Hidden Gems: minimum normalized Sotoy score */}
+                {activeSectionKey === 'fd_hidden_gems' && (
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-semibold text-slate-400">
+                      Skor Minimal (Min Score)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={10}
+                      step={0.5}
+                      value={typeof currentConfig.minScore === 'number' ? currentConfig.minScore : 8}
+                      onChange={(e) => {
+                        const parsed = parseFloat(e.target.value);
+                        const next = isNaN(parsed) ? 8 : Math.min(10, Math.max(0, parsed));
+                        updateCurrentDraft({ minScore: next });
+                      }}
+                      className="w-full px-3 py-2 rounded-xl bg-[#171717] border border-white/[0.1] text-white text-xs outline-none focus:border-[#FF2E7E] transition-colors"
+                    />
+                    <p className="text-[10px] text-slate-500">
+                      Skor Sotoy minimal (skala 0–10) agar film masuk Hidden Gems (default: 8).
+                    </p>
+                  </div>
+                )}
+
+                {/* MinVotes (fd_fans_favourite / fd_hidden_gems) */}
+                {(activeSectionKey === 'fd_fans_favourite' || activeSectionKey === 'fd_hidden_gems') && (
+                  <div className={`space-y-1.5 ${activeSectionKey === 'fd_fans_favourite' ? 'sm:col-span-2' : ''}`}>
                     <label className="block text-[11px] font-semibold text-slate-400">
                       Batas Minimum Suara (Min Votes)
                     </label>
@@ -1708,14 +1736,48 @@ export const AdminHomepageSections: React.FC = () => {
                       type="number"
                       min={1}
                       max={100}
-                      value={currentConfig.minVotes !== undefined ? currentConfig.minVotes : 3}
+                      value={
+                        typeof currentConfig.minVotes === 'number'
+                          ? currentConfig.minVotes
+                          : activeSectionKey === 'fd_hidden_gems'
+                          ? 1
+                          : 3
+                      }
                       onChange={(e) => updateCurrentDraft({ minVotes: Math.max(1, parseInt(e.target.value, 10) || 1) })}
                       className="w-full px-3 py-2 rounded-xl bg-[#171717] border border-white/[0.1] text-white text-xs outline-none focus:border-[#FF2E7E] transition-colors"
                     />
                     <p className="text-[10px] text-slate-500">
-                      Film harus memiliki minimal total suara ini agar masuk ke Fan's Favourite (default: 3).
+                      {activeSectionKey === 'fd_hidden_gems'
+                        ? 'Film harus memiliki minimal total suara ini agar masuk ke Hidden Gems (default: 1).'
+                        : "Film harus memiliki minimal total suara ini agar masuk ke Fan's Favourite (default: 3)."}
                     </p>
                   </div>
+                )}
+
+                {/* Hidden Gems: maximum votes */}
+                {activeSectionKey === 'fd_hidden_gems' && (
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-semibold text-slate-400">
+                      Vote Maksimal (Max Votes)
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={1000}
+                      value={typeof currentConfig.maxVotes === 'number' ? currentConfig.maxVotes : 15}
+                      onChange={(e) => updateCurrentDraft({ maxVotes: Math.max(1, parseInt(e.target.value, 10) || 15) })}
+                      className="w-full px-3 py-2 rounded-xl bg-[#171717] border border-white/[0.1] text-white text-xs outline-none focus:border-[#FF2E7E] transition-colors"
+                    />
+                    <p className="text-[10px] text-slate-500">
+                      Batas maksimal total suara agar film dianggap belum banyak dibicarakan (default: 15).
+                    </p>
+                  </div>
+                )}
+
+                {activeSectionKey === 'fd_hidden_gems' && (
+                  <p className="sm:col-span-2 text-[10px] text-slate-500">
+                    Hidden Gems menampilkan film berskor tinggi dengan vote sedikit. Naikkan Vote maksimal jika seksi terlalu kosong.
+                  </p>
                 )}
 
                 {/* Optional Tag Filter */}
@@ -1795,6 +1857,12 @@ export const AdminHomepageSections: React.FC = () => {
                   {(currentConfig.itemIds || []).length} item aktif
                 </span>
               </div>
+
+              {activeSectionKey === 'fd_editors_pick' && (
+                <p className="text-[10px] text-slate-500">
+                  Pilih film satu per satu. Kosong = seksi disembunyikan di halaman Film Database.
+                </p>
+              )}
 
               {/* Legacy hero_to_watch data may still contain article ids */}
               {activeSectionKey === 'hero_to_watch' &&
