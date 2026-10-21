@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx server.ts",
     "generate:sitemap": "tsx scripts/generate-sitemap.ts",
+    "sync:tmdb": "tsx scripts/sync-tmdb-cron.ts",
     "build": "tsc --noEmit && tsx scripts/generate-sitemap.ts && vite build",
     "build:server": "esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "NODE_ENV=production node dist/server.cjs",
@@ -17,6 +18,7 @@
     "test:film-sections": "node --import tsx scripts/test-film-sections.ts",
     "test:home-film-sections": "node --import tsx scripts/test-home-film-sections.ts",
     "test:tmdb-sync": "node --import tsx scripts/test-tmdb-sync.ts",
+    "test:tmdb-cron": "node --import tsx scripts/test-tmdb-cron.ts",
     "test:tmdb-id": "node --import tsx scripts/test-tmdb-id-match.ts",
     "test:film-type": "node --import tsx scripts/test-film-type.ts",
     "test:article-category": "node --import tsx scripts/test-article-category.ts",

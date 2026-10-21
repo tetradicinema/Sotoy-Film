@@ -25,6 +25,19 @@ export interface TmdbSyncData {
 
 export type WhereToWatchEntry = FilmItem['whereToWatch'][number];
 
+/**
+ * Heuristic TMDB media type for a film. Series are always TV; animations are
+ * TV when their duration mentions episodes, otherwise movie. Shared by the
+ * admin sync modal and the scheduled cron sync.
+ */
+export function tmdbMediaType(
+  film: Pick<FilmItem, 'type' | 'duration'>
+): 'movie' | 'tv' {
+  if (film.type === 'series') return 'tv';
+  if (film.type === 'animation' && /episode/i.test(film.duration || '')) return 'tv';
+  return 'movie';
+}
+
 export interface BuildWhereToWatchArgs {
   existing?: WhereToWatchEntry[];
   providersFlatrate?: string[];
@@ -432,4 +445,65 @@ export function computeFilmSyncUpdate(
   args: ComputeFilmSyncUpdateArgs
 ): FilmSyncResult | null {
   return evaluateFilmSync(args).result ?? null;
+}
+
+export interface SyncGuardInput {
+  /** Films with a TMDB ID that were actually scanned. */
+  scanned: number;
+  /** Films that would be written. */
+  toChange: number;
+  /** Films whose TMDB request failed. */
+  errors: number;
+  /** Bypass every guard condition. */
+  force?: boolean;
+}
+
+export interface SyncGuardResult {
+  ok: boolean;
+  reason?: string;
+}
+
+export const SYNC_GUARD_MAX_ERROR_RATE = 0.1;
+export const SYNC_GUARD_MAX_CHANGE_RATE = 0.3;
+
+/**
+ * Safety guard for the unattended sync. A run is rejected when nothing was
+ * scanned, when more than 10% of scanned films failed, or when more than 30%
+ * of scanned films would change. Exactly 10% and 30% are accepted. `force`
+ * bypasses all conditions.
+ */
+export function evaluateSyncGuard({
+  scanned,
+  toChange,
+  errors,
+  force,
+}: SyncGuardInput): SyncGuardResult {
+  if (force) {
+    return { ok: true };
+  }
+
+  if (scanned <= 0) {
+    return {
+      ok: false,
+      reason: 'Tidak ada film dengan TMDB ID yang dipindai.',
+    };
+  }
+
+  const errorRate = errors / scanned;
+  if (errorRate > SYNC_GUARD_MAX_ERROR_RATE) {
+    return {
+      ok: false,
+      reason: `Tingkat error TMDB ${(errorRate * 100).toFixed(1)}% melebihi batas 10%.`,
+    };
+  }
+
+  const changeRate = toChange / scanned;
+  if (changeRate > SYNC_GUARD_MAX_CHANGE_RATE) {
+    return {
+      ok: false,
+      reason: `Jumlah perubahan ${(changeRate * 100).toFixed(1)}% melebihi batas 30%.`,
+    };
+  }
+
+  return { ok: true };
 }

@@ -9,11 +9,14 @@ import {
   Clock,
   Database,
 } from 'lucide-react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 import { useApp } from '../../context/AppContext';
 import { FilmItem } from '../../types';
 import {
   decideTmdbFallback,
   evaluateFilmSync,
+  tmdbMediaType,
   TmdbSyncData,
 } from '../../utils/tmdbSync';
 
@@ -45,12 +48,6 @@ const CONCURRENCY = 4;
 const hasTmdbId = (film: FilmItem): boolean => {
   const numericId = Number(film.tmdbId);
   return Boolean(film.tmdbId) && Number.isFinite(numericId) && numericId > 0;
-};
-
-const tmdbMediaType = (film: FilmItem): 'movie' | 'tv' => {
-  if (film.type === 'series') return 'tv';
-  if (film.type === 'animation' && /episode/i.test(film.duration || '')) return 'tv';
-  return 'movie';
 };
 
 const fetchSyncData = async (
@@ -105,6 +102,7 @@ export const AdminTmdbSyncModal: React.FC<AdminTmdbSyncModalProps> = ({
   const [applyResult, setApplyResult] = useState<ApplyResult | null>(null);
 
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
+  const [lastCronSyncAt, setLastCronSyncAt] = useState<string | null>(null);
   const stopRequestedRef = useRef(false);
   const scanSessionRef = useRef(0);
 
@@ -129,6 +127,30 @@ export const AdminTmdbSyncModal: React.FC<AdminTmdbSyncModalProps> = ({
     setApplyDone(0);
     setApplyResult(null);
     setLastSyncAt(localStorage.getItem(LAST_SYNC_KEY));
+  }, [isOpen]);
+
+  // Read the cron status once per open. Failures or a missing document simply
+  // hide the line; no listener is attached.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let cancelled = false;
+    setLastCronSyncAt(null);
+
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, 'siteConfig', 'tmdbSync'));
+        if (cancelled) return;
+        const value = snap.exists() ? snap.data()?.lastRunAt : null;
+        setLastCronSyncAt(typeof value === 'string' && value ? value : null);
+      } catch {
+        if (!cancelled) setLastCronSyncAt(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen]);
 
   const handleScan = async () => {
@@ -369,6 +391,12 @@ export const AdminTmdbSyncModal: React.FC<AdminTmdbSyncModalProps> = ({
               <Clock className="w-3 h-3" />
               Terakhir sinkron: {formatLastSync(lastSyncAt)}
             </p>
+            {lastCronSyncAt && (
+              <p className="text-slate-500 text-[11px] mt-1 flex items-center gap-1.5">
+                <Clock className="w-3 h-3" />
+                Sinkron otomatis terakhir: {formatLastSync(lastCronSyncAt)}
+              </p>
+            )}
           </div>
           <button
             type="button"
