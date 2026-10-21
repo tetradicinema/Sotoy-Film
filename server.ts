@@ -10,6 +10,15 @@ import { buildRouteMetadata } from "./src/utils/seoMetadata";
 import { fetchEntityData } from "./src/lib/edge/firestoreRest";
 import { isArticleUnpublished } from "./src/utils/articleHelpers";
 
+// Safely load .env if it exists
+if (fs.existsSync(".env") && typeof process.loadEnvFile === "function") {
+  try {
+    process.loadEnvFile(".env");
+  } catch {
+    // Ignore malformed env file in production
+  }
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
