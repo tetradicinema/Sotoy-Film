@@ -665,22 +665,94 @@ const runTests = () => {
   }
 
   // ---------------------------------------------------------------------------
-  // getStreamingPlatforms - major platform ordering
+  // getStreamingPlatforms - count ordering, tie-breaks, singleton filtering
   // ---------------------------------------------------------------------------
 
-  // 41. known platforms first, in the fixed major order
+  // 41. sorted by count descending (not by major-platform order)
   {
     const films = createPlatformFilms([
-      ['iQIYI', 1],
-      ['Max', 1],
-      ['Netflix', 1],
-      ['Bioskop Online', 1],
-      ['Prime Video', 1],
-      ['Disney+ Hotstar', 1],
-      ['Apple TV+', 1],
-      ['Vidio', 1],
+      ['Netflix', 2],
+      ['MUBI', 4],
+      ['Prime Video', 3],
+      ['Vidio', 2],
     ]);
     const result = getStreamingPlatforms(films);
+    assertEquals(
+      result.map(p => p.name),
+      ['MUBI', 'Prime Video', 'Netflix', 'Vidio'],
+      'getStreamingPlatforms sorts by count descending'
+    );
+  }
+
+  // 42. count ties follow the major-platform order, then alphabetically
+  {
+    const films = createPlatformFilms([
+      ['Disney+ Hotstar', 2],
+      ['Netflix', 2],
+      ['Zeta', 2],
+      ['Alpha', 2],
+      ['Max', 2],
+    ]);
+    const result = getStreamingPlatforms(films);
+    assertEquals(
+      result.map(p => p.name),
+      ['Netflix', 'Disney+ Hotstar', 'Max', 'Alpha', 'Zeta'],
+      'getStreamingPlatforms breaks count ties by major order then alphabetically'
+    );
+  }
+
+  // 43. single-film platforms are hidden when at least 4 platforms remain
+  {
+    const films = createPlatformFilms([
+      ['Netflix', 3],
+      ['Prime Video', 2],
+      ['Disney+ Hotstar', 2],
+      ['Max', 2],
+      ['Viu', 1],
+      ['Criterion', 1],
+    ]);
+    const result = getStreamingPlatforms(films);
+    assertEquals(
+      result.map(p => p.name),
+      ['Netflix', 'Prime Video', 'Disney+ Hotstar', 'Max'],
+      'getStreamingPlatforms hides single-film platforms when 4 or more remain'
+    );
+  }
+
+  // 44. single-film platforms are kept when fewer than 4 platforms would remain
+  {
+    const films = createPlatformFilms([
+      ['Netflix', 3],
+      ['Prime Video', 2],
+      ['MUBI', 1],
+      ['Criterion', 1],
+    ]);
+    const result = getStreamingPlatforms(films);
+    assertEquals(
+      result.map(p => p.name),
+      ['Netflix', 'Prime Video', 'Criterion', 'MUBI'],
+      'getStreamingPlatforms keeps single-film platforms when fewer than 4 would remain'
+    );
+    assertEquals(result.length, 4, 'getStreamingPlatforms keeps singletons to reach four platforms');
+  }
+
+  // 45. max 8 platforms, still ordered by the major-platform tie-break
+  {
+    const films = createPlatformFilms([
+      ['WeTV', 2],
+      ['iQIYI', 2],
+      ['Netflix', 2],
+      ['Bioskop Online', 2],
+      ['Prime Video', 2],
+      ['Crunchyroll', 2],
+      ['Disney+ Hotstar', 2],
+      ['Max', 2],
+      ['Apple TV+', 2],
+      ['Vidio', 2],
+      ['Viu', 2],
+    ]);
+    const result = getStreamingPlatforms(films);
+    assertEquals(result.length, 8, 'getStreamingPlatforms returns at most 8 platforms');
     assertEquals(
       result.map(p => p.name),
       [
@@ -690,77 +762,63 @@ const runTests = () => {
         'Max',
         'Apple TV+',
         'Vidio',
-        'iQIYI',
-        'Bioskop Online',
+        'Viu',
+        'WeTV',
       ],
-      'getStreamingPlatforms puts known platforms first in the fixed order'
+      'getStreamingPlatforms caps the list after tie-break ordering'
     );
   }
 
-  // 42. unknown platforms come after known ones, sorted by count
+  // 46. normalization: MAX Stream / HBO Max variants collapse to Max
   {
     const films = createPlatformFilms([
-      ['Netflix', 1],
-      ['Prime Video', 2],
-      ['Mubi', 5],
-      ['Criterion', 3],
-    ]);
-    const result = getStreamingPlatforms(films);
-    assertEquals(
-      result.map(p => p.name),
-      ['Netflix', 'Prime Video', 'Mubi', 'Criterion'],
-      'getStreamingPlatforms places unknown platforms after known ones by count'
-    );
-  }
-
-  // 43. max 8 platforms
-  {
-    const films = createPlatformFilms([
-      ['Netflix', 1],
-      ['Platform A', 1],
-      ['Platform B', 1],
-      ['Platform C', 1],
-      ['Platform D', 1],
-      ['Platform E', 1],
-      ['Platform F', 1],
-      ['Platform G', 1],
-      ['Platform H', 1],
-      ['Platform I', 1],
-    ]);
-    const result = getStreamingPlatforms(films);
-    assertEquals(result.length, 8, 'getStreamingPlatforms returns at most 8 platforms');
-    assertEquals(result[0]?.name, 'Netflix', 'getStreamingPlatforms keeps the known platform in the capped list');
-  }
-
-  // 44. counts are included
-  {
-    const films = createPlatformFilms([
-      ['Netflix', 3],
-      ['Prime Video', 2],
+      ['MAX Stream', 2],
+      ['HBO Max', 1],
     ]);
     const result = getStreamingPlatforms(films);
     assertEquals(
       result,
-      [
-        { name: 'Netflix', count: 3 },
-        { name: 'Prime Video', count: 2 },
-      ],
-      'getStreamingPlatforms includes per-platform counts'
+      [{ name: 'Max', count: 3 }],
+      'getStreamingPlatforms normalizes MAX Stream and HBO Max to Max'
     );
   }
 
-  // 45. ties between unknown platforms sort alphabetically
+  // 47. normalization: Netflix Kids and ad tiers collapse to Netflix
   {
     const films = createPlatformFilms([
-      ['Zeta', 2],
-      ['Alpha', 2],
-      ['Mubi', 2],
+      ['Netflix Kids', 2],
+      ['Netflix basic with Ads', 1],
     ]);
     const result = getStreamingPlatforms(films);
     assertEquals(
-      result.map(p => p.name),
-      ['Alpha', 'Mubi', 'Zeta'],
-      'getStreamingPlatforms sorts unknown platform ties alphabetically'
+      result,
+      [{ name: 'Netflix', count: 3 }],
+      'getStreamingPlatforms normalizes Netflix variants to Netflix'
+    );
+  }
+
+  // 48. normalization: Crunchyroll
+  {
+    const films = createPlatformFilms([['Crunchyroll', 3]]);
+    const result = getStreamingPlatforms(films);
+    assertEquals(
+      result,
+      [{ name: 'Crunchyroll', count: 3 }],
+      'getStreamingPlatforms normalizes Crunchyroll'
+    );
+  }
+
+  // 49. normalization: Catchplay variants collapse to Catchplay
+  {
+    const films = createPlatformFilms([
+      ['Catchplay', 2],
+      ['Catchplay+', 1],
+    ]);
+    const result = getStreamingPlatforms(films);
+    assertEquals(
+      result,
+      [{ name: 'Catchplay', count: 3 }],
+      'getStreamingPlatforms normalizes Catchplay variants to Catchplay'
     );
   }
 

@@ -122,6 +122,9 @@ export const STREAM_BADGE_COLORS: Record<string, string> = {
   WeTV: '#2F7DE1',
   iQIYI: '#19B259',
   'Bioskop Online': '#D31F26',
+  Crunchyroll: '#F47521',
+  Catchplay: '#E4007F',
+  MUBI: '#1E1E1E',
 };
 
 const DEFAULT_STREAM_BADGE_COLOR = '#475569';

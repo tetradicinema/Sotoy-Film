@@ -10,23 +10,29 @@ export function normalizePlatform(name: string): string {
   const trimmed = name.trim();
   const lower = trimmed.toLowerCase();
 
-  if (lower === 'netflix') return 'Netflix';
+  if (lower.includes('netflix')) return 'Netflix';
   if (lower.includes('prime') || lower.includes('amazon')) return 'Prime Video';
   if (lower.includes('disney') || lower.includes('hotstar')) return 'Disney+ Hotstar';
-  if (lower === 'max' || lower.includes('hbo')) return 'Max';
+  if (lower === 'max' || lower.includes('hbo max') || lower.includes('max stream') || lower.includes('hbo')) {
+    return 'Max';
+  }
   if (lower.includes('apple tv') || lower.includes('appletv')) return 'Apple TV+';
   if (lower === 'vidio') return 'Vidio';
   if (lower === 'viu') return 'Viu';
   if (lower === 'wetv') return 'WeTV';
   if (lower === 'iqiyi' || lower === 'i-qiyi') return 'iQIYI';
   if (lower.includes('bioskop online')) return 'Bioskop Online';
+  if (lower.includes('crunchyroll')) return 'Crunchyroll';
+  if (lower.includes('catchplay')) return 'Catchplay';
+  if (lower.includes('iflix')) return 'iflix';
+  if (lower.includes('mubi')) return 'MUBI';
 
   return trimmed;
 }
 
 /**
- * Canonical major streaming platforms, in the fixed display order they should
- * always appear before any other (unknown) platform.
+ * Canonical major streaming platforms, in the fixed order used to break ties
+ * between platforms with the same film count.
  */
 export const MAJOR_STREAMING_PLATFORMS: string[] = [
   'Netflix',
@@ -39,12 +45,15 @@ export const MAJOR_STREAMING_PLATFORMS: string[] = [
   'WeTV',
   'iQIYI',
   'Bioskop Online',
+  'Crunchyroll',
+  'Catchplay',
 ];
 
 /**
- * Returns up to 8 normalized platform names with counts. Major platforms come
- * first in their fixed order, then remaining platforms by frequency descending
- * (ties alphabetically).
+ * Returns up to 8 normalized platform names with counts. Platforms are sorted
+ * by film count descending; ties follow the fixed major-platform order, then
+ * alphabetically. Platforms with a single film are hidden unless hiding them
+ * would leave fewer than 4 platforms.
  */
 export function getStreamingPlatforms(films: FilmItem[]): { name: string; count: number }[] {
   const map = new Map<string, number>();
@@ -69,19 +78,22 @@ export function getStreamingPlatforms(films: FilmItem[]): { name: string; count:
   }
 
   const majorIndex = new Map(MAJOR_STREAMING_PLATFORMS.map((name, index) => [name, index]));
+  const majorRank = (name: string): number => {
+    const index = majorIndex.get(name);
+    return index === undefined ? MAJOR_STREAMING_PLATFORMS.length : index;
+  };
 
   list.sort((a, b) => {
-    const aMajor = majorIndex.get(a.name);
-    const bMajor = majorIndex.get(b.name);
-
-    if (aMajor !== undefined && bMajor !== undefined) return aMajor - bMajor;
-    if (aMajor !== undefined) return -1;
-    if (bMajor !== undefined) return 1;
-
-    return b.count - a.count || a.name.localeCompare(b.name);
+    if (b.count !== a.count) return b.count - a.count;
+    const rankDiff = majorRank(a.name) - majorRank(b.name);
+    if (rankDiff !== 0) return rankDiff;
+    return a.name.localeCompare(b.name);
   });
 
-  return list.slice(0, 8);
+  const multiFilmPlatforms = list.filter(p => p.count > 1);
+  const visible = multiFilmPlatforms.length >= 4 ? multiFilmPlatforms : list;
+
+  return visible.slice(0, 8);
 }
 
 /**

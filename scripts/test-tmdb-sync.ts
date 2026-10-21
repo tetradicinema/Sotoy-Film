@@ -148,6 +148,26 @@ const runTests = () => {
     'getBadgeColor falls back to the default slate color'
   );
 
+  // 9a
+  assertEquals(
+    getBadgeColor('Crunchyroll'),
+    '#F47521',
+    'getBadgeColor returns the Crunchyroll color'
+  );
+
+  // 9b
+  assertEquals(
+    {
+      catchplay: getBadgeColor('Catchplay'),
+      mubi: getBadgeColor('Mubi'),
+    },
+    {
+      catchplay: '#E4007F',
+      mubi: '#1E1E1E',
+    },
+    'getBadgeColor returns the Catchplay and MUBI colors'
+  );
+
   // 10
   assertEquals(
     buildWhereToWatch({
