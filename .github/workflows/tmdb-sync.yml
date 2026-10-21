@@ -1,60 +1,17 @@
-name: TMDB Daily Sync
-
-on:
-  schedule:
-    # 22:00 UTC = 05:00 WIB
-    - cron: '0 22 * * *'
-  workflow_dispatch:
-    inputs:
-      apply:
-        description: 'Write changes to Firestore'
-        type: boolean
-        default: false
-      force:
-        description: 'Bypass the safety guard'
-        type: boolean
-        default: false
-
-permissions:
-  contents: read
-
-concurrency:
-  group: tmdb-sync
-  cancel-in-progress: false
-
-jobs:
-  sync:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-
-      - name: Write service account key
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        run: |
-          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
-
       - name: Run TMDB sync
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_APPLY: ${{ github.event.inputs.apply }}
+          INPUT_FORCE: ${{ github.event.inputs.force }}
+          CRON_APPLY: ${{ vars.TMDB_CRON_APPLY }}
         run: |
           ARGS=()
-          if [[ "${{ github.event_name }}" == "schedule" || "${{ github.event.inputs.apply }}" == "true" ]]; then
+          if [[ "$EVENT_NAME" == "schedule" && "$CRON_APPLY" == "true" ]] || [[ "$EVENT_NAME" == "workflow_dispatch" && "$INPUT_APPLY" == "true" ]]; then
             ARGS+=(--apply)
           fi
-          if [[ "${{ github.event.inputs.force }}" == "true" ]]; then
+          if [[ "$INPUT_FORCE" == "true" ]]; then
             ARGS+=(--force)
           fi
           npx tsx scripts/sync-tmdb-cron.ts "${ARGS[@]}"
