@@ -32,6 +32,7 @@ export const DEFAULT_BLOCK_ORDER: HomeBlockKey[] = [
   'hero',
   'featured_news',
   'film_recommendations',
+  'streaming',
   'watchlists',
   'cinema_gear',
   'reviews',
@@ -65,7 +66,13 @@ export const HOME_BLOCKS_META: HomeBlockMeta[] = [
     key: 'film_recommendations',
     label: 'Curated Film Recommendations',
     type: 'wide',
-    description: 'Koleksi poster film kurasi dengan filter Semua / Terbaru / Populer',
+    description: 'Koleksi poster film kurasi redaksi pilihan dengan Skor Sotoy',
+  },
+  {
+    key: 'streaming',
+    label: "Explore What's Streaming",
+    type: 'wide',
+    description: 'Baris film dan series yang sedang tayang di platform streaming, dengan tab platform',
   },
   {
     key: 'watchlists',
@@ -148,11 +155,25 @@ export function resolveBlockOrder(saved?: HomeBlockKey[]): HomeBlockKey[] {
     }
   }
 
+  const savedHasRecs = result.includes('film_recommendations');
+
   for (const defKey of DEFAULT_BLOCK_ORDER) {
+    if (defKey === 'streaming') continue;
     if (!seen.has(defKey)) {
       result.push(defKey);
       seen.add(defKey);
     }
+  }
+
+  // "Explore What's Streaming" is newer than saved layouts: place it directly
+  // after film_recommendations (or at the end when that block is absent).
+  if (!seen.has('streaming')) {
+    if (savedHasRecs) {
+      result.splice(result.indexOf('film_recommendations') + 1, 0, 'streaming');
+    } else {
+      result.push('streaming');
+    }
+    seen.add('streaming');
   }
 
   return result;
@@ -183,7 +204,7 @@ export function resolveSidebarWidgetOrder(saved?: HomeSidebarWidgetKey[]): HomeS
   return result;
 }
 
-export const WIDE_BLOCK_KEYS: Set<HomeBlockKey> = new Set(['hero', 'featured_news', 'film_recommendations']);
+export const WIDE_BLOCK_KEYS: Set<HomeBlockKey> = new Set(['hero', 'featured_news', 'film_recommendations', 'streaming']);
 
 export function isBlockWide(key: HomeBlockKey): boolean {
   return WIDE_BLOCK_KEYS.has(key);
@@ -315,6 +336,8 @@ export const DEFAULT_SECTION_ORDER: HomepageSectionKey[] = [
   'reviews_series',
   'anime_news',
   'film_studies',
+  'home_film_recs',
+  'home_streaming',
 ];
 
 export const DEFAULT_FILM_DB_SECTION_ORDER: HomepageSectionKey[] = [
@@ -553,6 +576,31 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     defaultRule: 'Skor berbobot Bayesian tertinggi dengan batas minimum votes',
     allowedCategories: ALL_FILM_CATEGORIES,
     area: 'film_database',
+  },
+  // -------------------------------------------------------------
+  // BERANDA FILM SECTIONS
+  // -------------------------------------------------------------
+  {
+    key: 'home_film_recs',
+    label: 'Curated Film Recommendations',
+    defaultTitle: 'Curated Film Recommendations',
+    defaultDescription: 'Kurasi film bioskop dan serial pilihan redaksi lengkap dengan Skor Sotoy.',
+    targetType: 'films',
+    description: 'Koleksi poster film kurasi redaksi di halaman beranda',
+    defaultRule: 'Film unggulan redaksi (featuredRecommendation), lalu skor tertinggi. Maks 6',
+    allowedCategories: ALL_FILM_CATEGORIES,
+    area: 'home',
+  },
+  {
+    key: 'home_streaming',
+    label: "Explore What's Streaming (Beranda)",
+    defaultTitle: "Explore What's Streaming",
+    defaultDescription: 'Film dan series yang bisa ditonton sekarang di Netflix, Prime Video, dan platform streaming lainnya.',
+    targetType: 'films',
+    description: 'Baris film dan series yang sedang tayang di platform streaming, dengan tab platform',
+    defaultRule: 'Film/series dengan platform streaming, terbaru dulu. Maks 12',
+    allowedCategories: ALL_FILM_CATEGORIES,
+    area: 'home',
   },
 ];
 

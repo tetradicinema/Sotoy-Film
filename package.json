@@ -15,6 +15,7 @@
     "test:profile-links": "node --import tsx scripts/test-profile-links.ts",
     "test:onboarding": "node --import tsx scripts/test-onboarding.ts",
     "test:film-sections": "node --import tsx scripts/test-film-sections.ts",
+    "test:home-film-sections": "node --import tsx scripts/test-home-film-sections.ts",
     "test:tmdb-sync": "node --import tsx scripts/test-tmdb-sync.ts",
     "test:tmdb-id": "node --import tsx scripts/test-tmdb-id-match.ts",
     "test:film-type": "node --import tsx scripts/test-film-type.ts",

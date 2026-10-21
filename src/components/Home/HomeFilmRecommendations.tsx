@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Star,
   ChevronRight,
@@ -10,6 +10,8 @@ import { FilmItem } from '../../types';
 import { DEFAULT_POSTER } from '../../data/mockData';
 import { RateFilmModal } from '../Modals/RateFilmModal';
 import { AddToCollectionModal } from '../Modals/AddToCollectionModal';
+import { HOMEPAGE_SECTIONS_META } from '../../utils/homepageConfigHelper';
+import { resolveHomeFilmRecs } from '../../utils/filmSections';
 
 export const HomeFilmRecommendations: React.FC = () => {
   const {
@@ -17,7 +19,7 @@ export const HomeFilmRecommendations: React.FC = () => {
     navigateTo,
     isLoggedIn,
     setLoginModalOpen,
-    collections,
+    homepageSectionsConfig,
     isItemInAnyCollection,
     addItemToCollection,
     removeItemFromCollection,
@@ -25,86 +27,55 @@ export const HomeFilmRecommendations: React.FC = () => {
     showToast,
   } = useApp();
 
-  const [filterType, setFilterType] = useState<'all' | 'recent' | 'popular'>('all');
   const [activeFilmToRate, setActiveFilmToRate] = useState<FilmItem | null>(null);
   const [collectionModalFilm, setCollectionModalFilm] = useState<FilmItem | null>(null);
 
-  const filteredFilms = films.filter(f => {
-    if (filterType === 'recent') return f.isRecentRelease || f.year >= 2024;
-    if (filterType === 'popular') return f.isPopularRelease || f.isPopularThisWeek || f.skorSotoy >= 4.8;
-    return true;
-  });
+  const config = homepageSectionsConfig?.sections?.home_film_recs;
+  const meta = HOMEPAGE_SECTIONS_META.find(item => item.key === 'home_film_recs');
+
+  const title = config?.title?.trim() || meta?.defaultTitle || 'Curated Film Recommendations';
+  const description = config?.description?.trim() || meta?.defaultDescription || '';
+
+  const resolvedFilms = useMemo(
+    () => resolveHomeFilmRecs(films, config),
+    [films, config]
+  );
+
+  if (resolvedFilms.length === 0) return null;
 
   return (
     <section id="home-film-recommendations" className="py-6 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+
         {/* Section Header */}
         <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 mb-6 pb-4 border-b border-white/[0.08]">
           <div>
             <div className="flex items-center gap-2">
-              <span className="w-1.5 h-4 bg-white rounded-full inline-block" />
+              <span className="w-1.5 h-4 bg-[#FF2E7E] rounded-full inline-block" />
               <h2 className="font-display font-black text-xl sm:text-2xl text-white tracking-tight">
-                Curated Film Recommendations
+                {title}
               </h2>
             </div>
-            <p className="text-slate-400 text-xs sm:text-[13px] mt-1 ml-3.5">
-              Kurasi film bioskop & serial pilihan redaksi lengkap dengan Skor Sotoy dan catatan kuratorial.
-            </p>
+            {description && (
+              <p className="text-slate-400 text-xs sm:text-[13px] mt-1 ml-3.5">
+                {description}
+              </p>
+            )}
           </div>
 
-          <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
-            {/* Clean Segmented Control Tabs */}
-            <div className="flex items-center p-1 bg-black/40 rounded-xl border border-white/[0.08] text-xs">
-              <button
-                id="rec-filter-all"
-                onClick={() => setFilterType('all')}
-                className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                  filterType === 'all'
-                    ? 'bg-white/[0.12] text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Semua
-              </button>
-              <button
-                id="rec-filter-recent"
-                onClick={() => setFilterType('recent')}
-                className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                  filterType === 'recent'
-                    ? 'bg-white/[0.12] text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Terbaru
-              </button>
-              <button
-                id="rec-filter-popular"
-                onClick={() => setFilterType('popular')}
-                className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                  filterType === 'popular'
-                    ? 'bg-white/[0.12] text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Populer
-              </button>
-            </div>
-
-            <button
-              id="goto-database-btn"
-              onClick={() => navigateTo('film-database')}
-              className="text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1 transition-colors px-3 py-1.5 rounded-xl border border-white/[0.08] hover:border-white/20 shrink-0"
-            >
-              <span>Katalog</span>
-              <ChevronRight className="w-3.5 h-3.5 text-white" />
-            </button>
-          </div>
+          <button
+            id="goto-database-btn"
+            onClick={() => navigateTo('film-database')}
+            className="self-start sm:self-auto text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1 transition-colors px-3 py-1.5 rounded-xl border border-white/[0.08] hover:border-white/20 shrink-0"
+          >
+            <span>Katalog</span>
+            <ChevronRight className="w-3.5 h-3.5 text-[#FF2E7E]" />
+          </button>
         </div>
 
         {/* Film Posters Cards Grid (2 to 6 columns) */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {filteredFilms.slice(0, 6).map(film => {
+          {resolvedFilms.map(film => {
             const inWatchlist = isItemInAnyCollection(film.id, 'film');
 
             return (
@@ -123,7 +94,6 @@ export const HomeFilmRecommendations: React.FC = () => {
                     alt={film.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#171717] via-transparent to-transparent opacity-80" />
 
                   {/* Rating Tag */}
                   <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/30 text-[#FFD000] text-xs font-mono tabular-nums flex items-center gap-1 shadow-md">

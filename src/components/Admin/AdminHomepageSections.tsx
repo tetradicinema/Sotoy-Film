@@ -120,6 +120,34 @@ const CATEGORY_SPECIFIC_SUBCATEGORIES: Record<string, { val: string; label: stri
   ],
 };
 
+// Beranda film sections use film-specific defaults (no default article sort).
+const isHomeFilmSectionKey = (key: HomepageSectionKey): boolean =>
+  key === 'home_film_recs' || key === 'home_streaming';
+
+const getDefaultSectionConfig = (key: HomepageSectionKey, meta: SectionMeta): SectionConfig => {
+  const isFilmDb = meta.area === 'film_database';
+  const isHomeFilm = isHomeFilmSectionKey(key);
+
+  let limit = 5;
+  if (key === 'hero_slider' || key === 'home_film_recs') limit = 6;
+  else if (key === 'home_streaming' || isFilmDb) limit = 12;
+
+  return {
+    title: '',
+    description: '',
+    sourceType: 'auto',
+    category: undefined,
+    subCategory: '',
+    tag: '',
+    sortBy: isFilmDb || isHomeFilm ? undefined : 'newest',
+    limit,
+    itemIds: [],
+    enabled: true,
+    platform: '',
+    minVotes: key === 'fd_fans_favourite' ? 3 : undefined,
+  };
+};
+
 interface SortableBlockItemProps {
   blockKey: HomeBlockKey;
   idx: number;
@@ -956,22 +984,7 @@ export const AdminHomepageSections: React.FC = () => {
 
   // Current working section config (draft or from firestore or default)
   const currentConfig: SectionConfig = useMemo(() => {
-    const isFilmDb = currentMeta.area === 'film_database';
-    const isFdSection = activeSectionKey.startsWith('fd_');
-    const defaultVal: SectionConfig = {
-      title: '',
-      description: '',
-      sourceType: 'auto',
-      category: undefined,
-      subCategory: '',
-      tag: '',
-      sortBy: isFilmDb || isFdSection ? undefined : 'newest',
-      limit: activeSectionKey === 'hero_slider' ? 6 : isFilmDb ? 12 : 5,
-      itemIds: [],
-      enabled: true,
-      platform: '',
-      minVotes: activeSectionKey === 'fd_fans_favourite' ? 3 : undefined,
-    };
+    const defaultVal = getDefaultSectionConfig(activeSectionKey, currentMeta);
     const draft = draftConfigs[activeSectionKey];
     const fromRemote = homepageSectionsConfig?.sections?.[activeSectionKey];
     const base: Partial<SectionConfig> = draft || fromRemote || {};
@@ -981,7 +994,7 @@ export const AdminHomepageSections: React.FC = () => {
       itemIds: base.itemIds || [],
       enabled: base.enabled !== undefined ? base.enabled : true,
     };
-  }, [draftConfigs, homepageSectionsConfig, activeSectionKey, currentMeta.area]);
+  }, [draftConfigs, homepageSectionsConfig, activeSectionKey, currentMeta]);
 
   const updateCurrentDraft = (changes: Partial<SectionConfig>) => {
     setDraftConfigs(prev => ({
@@ -1012,21 +1025,8 @@ export const AdminHomepageSections: React.FC = () => {
   };
 
   const handleResetSection = async (key: HomepageSectionKey) => {
-    const isFilmDb = key.startsWith('fd_');
-    const defaultReset: SectionConfig = {
-      title: '',
-      description: '',
-      sourceType: 'auto',
-      category: undefined,
-      subCategory: '',
-      tag: '',
-      sortBy: isFilmDb ? undefined : 'newest',
-      limit: key === 'hero_slider' ? 6 : isFilmDb ? 12 : 5,
-      itemIds: [],
-      enabled: true,
-      platform: '',
-      minVotes: key === 'fd_fans_favourite' ? 3 : undefined,
-    };
+    const meta = HOMEPAGE_SECTIONS_META.find(m => m.key === key) || HOMEPAGE_SECTIONS_META[0];
+    const defaultReset: SectionConfig = getDefaultSectionConfig(key, meta);
     setDraftConfigs(prev => ({
       ...prev,
       [key]: defaultReset,
@@ -1274,7 +1274,7 @@ export const AdminHomepageSections: React.FC = () => {
             <div className="flex items-center justify-between pb-1">
               <div>
                 <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-                  Urutan 9 Blok Beranda
+                  Urutan {orderedBlockKeys.length} Blok Beranda
                 </span>
                 <span className="text-[11px] text-slate-500">
                   Tarik ikon ⋮⋮ atau panah ↑ ↓, serta gunakan ikon mata untuk menampilkan/menyembunyikan
@@ -1554,26 +1554,24 @@ export const AdminHomepageSections: React.FC = () => {
             </p>
           </div>
 
-          {/* Form Field 1b: Custom Description (Film Database sections) */}
-          {currentMeta.area === 'film_database' && (
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-300">
-                Deskripsi
-              </label>
-              <input
-                id={`input-section-description-${currentMeta.key}`}
-                type="text"
-                value={currentConfig.description || ''}
-                onChange={(e) => updateCurrentDraft({ description: e.target.value })}
-                placeholder={`Default: ${currentMeta.defaultDescription || ''}`}
-                maxLength={140}
-                className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-white/[0.1] focus:border-[#FF2E7E] text-white text-xs sm:text-sm placeholder:text-slate-600 outline-none transition-colors"
-              />
-              <p className="text-[11px] text-slate-500">
-                Maksimal 140 karakter. Kosongkan untuk memakai deskripsi bawaan kode.
-              </p>
-            </div>
-          )}
+          {/* Form Field 1b: Custom Description */}
+          <div className="space-y-2">
+            <label className="block text-xs font-bold text-slate-300">
+              Deskripsi
+            </label>
+            <input
+              id={`input-section-description-${currentMeta.key}`}
+              type="text"
+              value={currentConfig.description || ''}
+              onChange={(e) => updateCurrentDraft({ description: e.target.value })}
+              placeholder={`Default: ${currentMeta.defaultDescription || ''}`}
+              maxLength={140}
+              className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-white/[0.1] focus:border-[#FF2E7E] text-white text-xs sm:text-sm placeholder:text-slate-600 outline-none transition-colors"
+            />
+            <p className="text-[11px] text-slate-500">
+              Maksimal 140 karakter. Kosongkan untuk memakai deskripsi bawaan kode.
+            </p>
+          </div>
 
           {/* Form Field 2: Source Type Toggle */}
           <div className="space-y-2">
@@ -1674,8 +1672,8 @@ export const AdminHomepageSections: React.FC = () => {
                   </select>
                 </div>
 
-                {/* Platform select (only for fd_streaming, fed by getStreamingPlatforms) */}
-                {activeSectionKey === 'fd_streaming' && (
+                {/* Platform select (only for streaming sections, fed by getStreamingPlatforms) */}
+                {(activeSectionKey === 'fd_streaming' || activeSectionKey === 'home_streaming') && (
                   <div className="space-y-1.5 sm:col-span-2">
                     <label className="block text-[11px] font-semibold text-slate-400">
                       Filter Platform Streaming (Khusus Explore What's Streaming)
@@ -1744,20 +1742,24 @@ export const AdminHomepageSections: React.FC = () => {
                     onChange={(e) => updateCurrentDraft({ sortBy: (e.target.value as any) || undefined })}
                     className="w-full px-3 py-2 rounded-xl bg-[#171717] border border-white/[0.1] text-white text-xs outline-none focus:border-[#FF2E7E] transition-colors"
                   >
-                    {(currentMeta.area === 'film_database' || activeSectionKey.startsWith('fd_')) ? (
-                      <option value="">Bawaan seksi (otomatis)</option>
+                    {currentMeta.targetType === 'films' ? (
+                      <>
+                        <option value="">Bawaan seksi (otomatis)</option>
+                        <option value="newest">Terbaru (Newest)</option>
+                      </>
                     ) : (
                       <option value="newest">Terbaru (Newest)</option>
                     )}
                     <option value="rating">Rating / Skor Sotoy Tertinggi</option>
-                    {currentMeta.targetType !== 'films' && (
-                      <option value="views">Paling Banyak Dilihat (Views)</option>
-                    )}
-                    {currentMeta.targetType === 'films' && (
+                    {currentMeta.targetType === 'films' ? (
                       <>
                         <option value="votes">Jumlah Suara Terbanyak (Total Votes)</option>
-                        <option value="release_soonest">Rilis Paling Dekat (Release Soonest)</option>
+                        {currentMeta.area === 'film_database' && (
+                          <option value="release_soonest">Rilis Paling Dekat (Release Soonest)</option>
+                        )}
                       </>
+                    ) : (
+                      <option value="views">Paling Banyak Dilihat (Views)</option>
                     )}
                   </select>
                 </div>
@@ -1771,7 +1773,7 @@ export const AdminHomepageSections: React.FC = () => {
                     type="number"
                     min={1}
                     max={50}
-                    value={currentConfig.limit || (currentMeta.area === 'film_database' ? 12 : 5)}
+                    value={currentConfig.limit || getDefaultSectionConfig(activeSectionKey, currentMeta).limit || 12}
                     onChange={(e) => updateCurrentDraft({ limit: parseInt(e.target.value, 10) || 5 })}
                     className="w-full px-3 py-2 rounded-xl bg-[#171717] border border-white/[0.1] text-white text-xs outline-none focus:border-[#FF2E7E] transition-colors"
                   />

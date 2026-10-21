@@ -1,5 +1,9 @@
 import { FilmItem, SectionConfig, HomepageSectionKey, HomepageSectionsConfig } from '../types';
-import { HOMEPAGE_SECTIONS_META, resolveFilmDbSectionOrder } from './homepageConfigHelper';
+import {
+  HOMEPAGE_SECTIONS_META,
+  resolveFilmDbSectionOrder,
+  resolveConfigFilms,
+} from './homepageConfigHelper';
 
 /**
  * Normalizes streaming platform names to canonical forms.
@@ -94,6 +98,88 @@ export function getStreamingPlatforms(films: FilmItem[]): { name: string; count:
   const visible = multiFilmPlatforms.length >= 4 ? multiFilmPlatforms : list;
 
   return visible.slice(0, 8);
+}
+
+/**
+ * Default "Curated Film Recommendations" list: films flagged as editorial
+ * featured recommendations first, then the remaining catalogue. Both groups
+ * are ordered by Bayesian score descending. Each film appears at most once.
+ */
+export function getHomeFilmRecsDefault(films: FilmItem[], limit = 6): FilmItem[] {
+  const meanScore = computeMeanScore(films);
+  const byScore = (a: FilmItem, b: FilmItem): number =>
+    computeBayesianScore(b, meanScore) - computeBayesianScore(a, meanScore);
+
+  const featured = films.filter(f => f.featuredRecommendation === true).sort(byScore);
+  const rest = films.filter(f => f.featuredRecommendation !== true).sort(byScore);
+
+  const seen = new Set<string>();
+  const result: FilmItem[] = [];
+  for (const film of [...featured, ...rest]) {
+    if (seen.has(film.id)) continue;
+    seen.add(film.id);
+    result.push(film);
+  }
+
+  return result.slice(0, Math.max(0, limit));
+}
+
+/**
+ * Resolves the homepage "Curated Film Recommendations" film list from the
+ * saved section configuration. Manual selections keep their saved order and
+ * fall back to the default list when nothing matches. Auto mode applies
+ * optional category/sub-category/tag/sort filters; without filters the
+ * editorial default rule is used.
+ */
+export function resolveHomeFilmRecs(films: FilmItem[], config?: SectionConfig): FilmItem[] {
+  if (config && config.enabled === false) return [];
+
+  const rawLimit = config?.limit ?? 6;
+  const limit = Number.isFinite(rawLimit)
+    ? Math.min(12, Math.max(1, Math.floor(rawLimit)))
+    : 6;
+
+  const defaultFilms = getHomeFilmRecsDefault(films, limit);
+
+  if (config?.sourceType === 'manual') {
+    return resolveConfigFilms(films, config, defaultFilms).slice(0, limit);
+  }
+
+  const hasFilters = Boolean(
+    config?.category?.trim() ||
+      config?.subCategory?.trim() ||
+      config?.tag?.trim() ||
+      config?.sortBy?.trim()
+  );
+
+  if (config && hasFilters) {
+    return resolveConfigFilms(films, { ...config, limit }, defaultFilms).slice(0, limit);
+  }
+
+  return defaultFilms;
+}
+
+/**
+ * Resolves the homepage "Explore What's Streaming" film list. When a platform
+ * is supplied (platform tab) it overrides the admin-fixed platform, and the
+ * platform filter is applied before the section limit.
+ */
+export function resolveHomeStreaming(
+  films: FilmItem[],
+  config?: SectionConfig,
+  platform?: string,
+  opts?: { now?: Date }
+): FilmItem[] {
+  if (config && config.enabled === false) return [];
+
+  const merged: SectionConfig = {
+    sourceType: 'auto',
+    ...config,
+    platform: platform || config?.platform,
+    limit: config?.limit ?? 12,
+  };
+
+  return resolveFilmDbSection('fd_streaming', films, merged, opts);
 }
 
 /**

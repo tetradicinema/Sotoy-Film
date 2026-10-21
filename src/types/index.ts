@@ -510,12 +510,15 @@ export type HomepageSectionKey =
   | 'fd_streaming'
   | 'fd_coming_soon'
   | 'fd_animation'
-  | 'fd_fans_favourite';
+  | 'fd_fans_favourite'
+  | 'home_film_recs'
+  | 'home_streaming';
 
 export type HomeBlockKey =
   | 'hero'
   | 'featured_news'
   | 'film_recommendations'
+  | 'streaming'
   | 'watchlists'
   | 'cinema_gear'
   | 'reviews'
