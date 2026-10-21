@@ -125,19 +125,24 @@ export function getHomeFilmRecsDefault(films: FilmItem[], limit = 6): FilmItem[]
 }
 
 /**
- * Resolves the homepage "Curated Film Recommendations" film list from the
- * saved section configuration. Manual selections keep their saved order and
- * fall back to the default list when nothing matches. Auto mode applies
- * optional category/sub-category/tag/sort filters; without filters the
- * editorial default rule is used.
+ * Shared editorial resolver used by the homepage recommendations section and
+ * the hero "To Watch" tab. Manual selections keep their saved order and fall
+ * back to the default list when nothing matches. Auto mode applies optional
+ * category/sub-category/tag/sort filters; without filters the editorial
+ * default rule (featured first, then Bayesian score) is used.
  */
-export function resolveHomeFilmRecs(films: FilmItem[], config?: SectionConfig): FilmItem[] {
+function resolveCuratedFilms(
+  films: FilmItem[],
+  config: SectionConfig | undefined,
+  defaultLimit: number,
+  maxLimit: number
+): FilmItem[] {
   if (config && config.enabled === false) return [];
 
-  const rawLimit = config?.limit ?? 6;
+  const rawLimit = config?.limit ?? defaultLimit;
   const limit = Number.isFinite(rawLimit)
-    ? Math.min(12, Math.max(1, Math.floor(rawLimit)))
-    : 6;
+    ? Math.min(maxLimit, Math.max(1, Math.floor(rawLimit)))
+    : defaultLimit;
 
   const defaultFilms = getHomeFilmRecsDefault(films, limit);
 
@@ -157,6 +162,23 @@ export function resolveHomeFilmRecs(films: FilmItem[], config?: SectionConfig): 
   }
 
   return defaultFilms;
+}
+
+/**
+ * Resolves the homepage "Curated Film Recommendations" film list from the
+ * saved section configuration. Default limit 6, capped at 12.
+ */
+export function resolveHomeFilmRecs(films: FilmItem[], config?: SectionConfig): FilmItem[] {
+  return resolveCuratedFilms(films, config, 6, 12);
+}
+
+/**
+ * Resolves the hero "To Watch" tab film list. Same editorial rule and
+ * manual/auto handling as the homepage recommendations, with a default limit
+ * of 5 and a cap of 8.
+ */
+export function getHeroToWatch(films: FilmItem[], config?: SectionConfig): FilmItem[] {
+  return resolveCuratedFilms(films, config, 5, 8);
 }
 
 /**

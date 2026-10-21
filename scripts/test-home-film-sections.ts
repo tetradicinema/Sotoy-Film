@@ -6,6 +6,7 @@ import {
 } from '../src/utils/homepageConfigHelper';
 import {
   getHomeFilmRecsDefault,
+  getHeroToWatch,
   resolveHomeFilmRecs,
   resolveHomeStreaming,
 } from '../src/utils/filmSections';
@@ -418,6 +419,128 @@ const runTests = () => {
       result.map(f => f.id),
       ['override-nf'],
       'resolveHomeStreaming lets a platform tab override the admin-fixed platform'
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Hero: To Watch
+  // ---------------------------------------------------------------------------
+
+  const heroFilms: FilmItem[] = [
+    createFilm({ id: 'hero-rest-a', title: 'Rest A', skorSotoy: 9, totalVotes: 100 }),
+    createFilm({ id: 'hero-rest-b', title: 'Rest B', skorSotoy: 8, totalVotes: 50 }),
+    createFilm({ id: 'hero-rest-c', title: 'Rest C', skorSotoy: 7, totalVotes: 20 }),
+    createFilm({ id: 'hero-rest-d', title: 'Rest D', skorSotoy: 6, totalVotes: 10 }),
+    createFilm({ id: 'hero-feat-low', title: 'Featured Low', skorSotoy: 5, totalVotes: 4, featuredRecommendation: true }),
+    createFilm({ id: 'hero-feat-high', title: 'Featured High', skorSotoy: 9.5, totalVotes: 1, featuredRecommendation: true }),
+  ];
+
+  // 25
+  {
+    const result = getHeroToWatch(heroFilms);
+    assertEquals(result.length, 5, 'getHeroToWatch defaults to 5 films');
+  }
+
+  // 26
+  {
+    const result = getHeroToWatch(heroFilms);
+    assertEquals(
+      result.slice(0, 2).map(f => f.id),
+      ['hero-feat-high', 'hero-feat-low'],
+      'getHeroToWatch puts featured films first, ordered by Bayesian score'
+    );
+  }
+
+  // 27
+  {
+    const result = getHeroToWatch(heroFilms);
+    assertEquals(
+      result.slice(2).map(f => f.id),
+      ['hero-rest-a', 'hero-rest-b', 'hero-rest-c'],
+      'getHeroToWatch fills the remaining slots by Bayesian score'
+    );
+  }
+
+  // 28
+  {
+    const withDuplicate = [...heroFilms, heroFilms[0], heroFilms[2]];
+    const ids = getHeroToWatch(withDuplicate).map(f => f.id);
+    assertEquals(ids.length, new Set(ids).size, 'getHeroToWatch never returns duplicate films');
+  }
+
+  // 29
+  {
+    const result = getHeroToWatch(heroFilms, {
+      sourceType: 'manual',
+      itemIds: ['hero-rest-c', 'missing-id', 'hero-rest-a'],
+      limit: 10,
+    } as SectionConfig);
+    assertEquals(
+      result.map(f => f.id),
+      ['hero-rest-c', 'hero-rest-a'],
+      'getHeroToWatch manual mode keeps saved order and skips missing ids'
+    );
+  }
+
+  // 30
+  {
+    const expected = getHeroToWatch(heroFilms).map(f => f.id);
+    const result = getHeroToWatch(heroFilms, {
+      sourceType: 'manual',
+      itemIds: ['legacy-article-1', 'legacy-article-2'],
+    } as SectionConfig);
+    assertEquals(
+      result.map(f => f.id),
+      expected,
+      'getHeroToWatch falls back to the default list when itemIds are articles'
+    );
+  }
+
+  // 31
+  {
+    assertEquals(
+      getHeroToWatch(heroFilms, { sourceType: 'auto', enabled: false } as SectionConfig),
+      [],
+      'getHeroToWatch returns [] when disabled'
+    );
+  }
+
+  // 32
+  {
+    const manyFilms = Array.from({ length: 12 }, (_, i) =>
+      createFilm({ id: `hero-cap-${i}`, skorSotoy: 5 + (i % 5), totalVotes: 10 })
+    );
+    const result = getHeroToWatch(manyFilms, {
+      sourceType: 'auto',
+      limit: 50,
+    } as SectionConfig);
+    assertEquals(result.length, 8, 'getHeroToWatch caps the limit at 8');
+  }
+
+  // 33
+  {
+    const order = DEFAULT_SECTION_ORDER;
+    assertEquals(
+      order[order.indexOf('hero_to_watch') + 1],
+      'hero_film_studies',
+      'DEFAULT_SECTION_ORDER places hero_film_studies after hero_to_watch'
+    );
+    assert(!order.includes('gear' as any), 'DEFAULT_SECTION_ORDER no longer includes the hero gear tab');
+  }
+
+  // 34
+  {
+    const metaKeys = HOMEPAGE_SECTIONS_META.map(item => item.key);
+    assert(!metaKeys.includes('gear' as any), 'HOMEPAGE_SECTIONS_META no longer includes the hero gear tab');
+    const toWatch = HOMEPAGE_SECTIONS_META.find(item => item.key === 'hero_to_watch');
+    const filmStudies = HOMEPAGE_SECTIONS_META.find(item => item.key === 'hero_film_studies');
+    assert(
+      toWatch?.targetType === 'films' && toWatch?.defaultTitle === 'To Watch',
+      'hero_to_watch meta targets films with the To Watch title'
+    );
+    assert(
+      filmStudies?.targetType === 'articles' && filmStudies?.area === 'home',
+      'hero_film_studies meta targets articles in the home area'
     );
   }
 

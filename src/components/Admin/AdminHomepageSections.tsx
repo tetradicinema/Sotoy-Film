@@ -126,7 +126,8 @@ const isHomeFilmSectionKey = (key: HomepageSectionKey): boolean =>
 
 const getDefaultSectionConfig = (key: HomepageSectionKey, meta: SectionMeta): SectionConfig => {
   const isFilmDb = meta.area === 'film_database';
-  const isHomeFilm = isHomeFilmSectionKey(key);
+  // Editorial film sections use their own default rule instead of a default article sort.
+  const usesEditorialFilmDefaults = isHomeFilmSectionKey(key) || key === 'hero_to_watch';
 
   let limit = 5;
   if (key === 'hero_slider' || key === 'home_film_recs') limit = 6;
@@ -139,7 +140,7 @@ const getDefaultSectionConfig = (key: HomepageSectionKey, meta: SectionMeta): Se
     category: undefined,
     subCategory: '',
     tag: '',
-    sortBy: isFilmDb || isHomeFilm ? undefined : 'newest',
+    sortBy: isFilmDb || usesEditorialFilmDefaults ? undefined : 'newest',
     limit,
     itemIds: [],
     enabled: true,
@@ -1794,6 +1795,18 @@ export const AdminHomepageSections: React.FC = () => {
                   {(currentConfig.itemIds || []).length} item aktif
                 </span>
               </div>
+
+              {/* Legacy hero_to_watch data may still contain article ids */}
+              {activeSectionKey === 'hero_to_watch' &&
+                (currentConfig.itemIds || []).length > 0 &&
+                selectedItemsData.length === 0 && (
+                  <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-2 text-[11px] text-amber-300">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-400" />
+                    <span>
+                      Daftar lama berisi artikel. Pilih ulang film atau tekan Reset ke Bawaan Kode.
+                    </span>
+                  </div>
+                )}
 
               {/* Search Box to Find & Add Items */}
               <div className="space-y-2">
