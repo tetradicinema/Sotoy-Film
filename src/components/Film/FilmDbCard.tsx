@@ -32,17 +32,29 @@ export const FilmDbCard: React.FC<FilmDbCardProps> = ({
           : ''
       : '';
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) return;
+    if (event.key !== 'Enter') return;
+
+    event.preventDefault();
+    onOpen(film);
+  };
+
   return (
     <div
       id={`film-db-card-${sectionKey}-${film.id}`}
+      role="button"
+      tabIndex={0}
+      aria-label={`Buka detail film ${film.title}`}
       onClick={() => onOpen(film)}
-      className="bg-[#171717] border border-slate-800 rounded-lg overflow-hidden hover:border-[#FF2E7E]/70 transition-colors duration-300 flex flex-col group cursor-pointer"
+      onKeyDown={handleKeyDown}
+      className="bg-[#171717] border border-slate-800 rounded-lg overflow-hidden hover:border-[#FF2E7E] hover:-translate-y-1 hover:shadow-lg hover:shadow-black/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF2E7E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#171717] transition-all duration-300 motion-reduce:transition-none motion-reduce:transform-none flex flex-col group cursor-pointer"
     >
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
         <img
           src={film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80'}
           alt={film.title}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 motion-reduce:transition-none motion-reduce:transform-none"
         />
 
         {typeLabel && (
@@ -69,7 +81,7 @@ export const FilmDbCard: React.FC<FilmDbCardProps> = ({
             variant="compact"
             hideChevron
             align="right"
-            buttonClassName="w-9 h-9 rounded-md bg-[#0A0A0A] hover:bg-slate-900 text-white border border-slate-700 hover:border-[#FF2E7E] inline-flex items-center justify-center transition-colors"
+            buttonClassName="w-9 h-9 rounded-md bg-[#0A0A0A] hover:bg-slate-800 text-white border border-slate-700 hover:border-[#FF2E7E] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF2E7E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#171717] inline-flex items-center justify-center transition-all duration-200 motion-reduce:transition-none motion-reduce:transform-none"
           />
         </div>
 
@@ -96,7 +108,7 @@ export const FilmDbCard: React.FC<FilmDbCardProps> = ({
 
       <div className="bg-black px-2.5 py-2">
         <h3
-          className="font-display font-bold text-xs sm:text-sm text-white truncate"
+          className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors motion-reduce:transition-none truncate"
           title={film.title}
         >
           {film.title}
