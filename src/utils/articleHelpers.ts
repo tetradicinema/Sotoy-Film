@@ -36,6 +36,19 @@ export interface SplitProfileArticlesResult<T> {
   };
 }
 
+export type EditorialSubTab = 'published' | 'drafts';
+
+/**
+ * Picks which Editorial sub-tab to open by default.
+ *
+ * "Diterbitkan" is the default unless the author has no published articles
+ * and does have drafts, in which case "Draf" is more useful.
+ */
+export function getDefaultEditorialSubTab(counts: { published: number; drafts: number }): EditorialSubTab {
+  if ((counts.published || 0) <= 0 && (counts.drafts || 0) > 0) return 'drafts';
+  return 'published';
+}
+
 const isLiveArticle = (a: ProfileArticleLike, nowMs: number): boolean => {
   if (a.status === 'draft' || a.status === 'trash') return false;
   if (a.status === 'scheduled') {

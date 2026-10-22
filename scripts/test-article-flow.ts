@@ -1,5 +1,5 @@
 import { shouldSyncEditorContent, canAutosave } from '../src/utils/articleFlow';
-import { splitProfileArticles } from '../src/utils/articleHelpers';
+import { splitProfileArticles, getDefaultEditorialSubTab } from '../src/utils/articleHelpers';
 
 let passed = 0;
 let failed = 0;
@@ -225,6 +225,30 @@ const runTests = () => {
     ids(undefinedStatus.published),
     ['legacy'],
     'splitProfileArticles: articles without a status are treated as published'
+  );
+
+  // ---------------------------------------------------------------------------
+  // getDefaultEditorialSubTab
+  // ---------------------------------------------------------------------------
+  assertEquals(
+    getDefaultEditorialSubTab({ published: 3, drafts: 2 }),
+    'published',
+    'getDefaultEditorialSubTab: both groups filled defaults to published'
+  );
+  assertEquals(
+    getDefaultEditorialSubTab({ published: 0, drafts: 2 }),
+    'drafts',
+    'getDefaultEditorialSubTab: only drafts defaults to drafts'
+  );
+  assertEquals(
+    getDefaultEditorialSubTab({ published: 3, drafts: 0 }),
+    'published',
+    'getDefaultEditorialSubTab: only published defaults to published'
+  );
+  assertEquals(
+    getDefaultEditorialSubTab({ published: 0, drafts: 0 }),
+    'published',
+    'getDefaultEditorialSubTab: both groups empty defaults to published'
   );
 
   console.log(`\nSummary: ${passed} passed, ${failed} failed`);
