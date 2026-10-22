@@ -1,7 +1,7 @@
 import { CastMember, CrewMember } from '../types';
 import { slugify } from './slugify';
 import { classifyFilmType, FilmFormat } from './filmType';
-import { mapTmdbOriginCountry } from './tmdbSync';
+import { mapTmdbOriginCountry } from './tmdbCountry';
 
 export interface MappedTmdbFilm {
   title: string;

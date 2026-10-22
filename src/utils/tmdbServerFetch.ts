@@ -7,7 +7,7 @@
  */
 
 import type { TmdbSyncData } from './tmdbSync';
-import { mapTmdbOriginCountry } from './tmdbSync';
+import { mapTmdbOriginCountry } from './tmdbCountry.js';
 
 const TMDB_API_BASE = 'https://api.themoviedb.org/3';
 const WATCH_REGION = 'ID';

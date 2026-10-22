@@ -20,6 +20,7 @@
     "test:tmdb-sync": "node --import tsx scripts/test-tmdb-sync.ts",
     "test:tmdb-cron": "node --import tsx scripts/test-tmdb-cron.ts",
     "test:tmdb-id": "node --import tsx scripts/test-tmdb-id-match.ts",
+    "test:api-imports": "node --import tsx scripts/test-api-imports.ts",
     "test:film-type": "node --import tsx scripts/test-film-type.ts",
     "test:article-category": "node --import tsx scripts/test-article-category.ts",
      "test:embeds": "node --import tsx scripts/test-embeds.ts && node --import tsx scripts/test-embeds.iframe.ts"
