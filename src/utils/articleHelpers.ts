@@ -126,6 +126,95 @@ export function getArticleSizeIssues({
   };
 }
 
+/** Maximum cover/inline image alt text length recommended for SEO. */
+export const ALT_TEXT_MAX_LENGTH = 125;
+
+export interface AltTextValidation {
+  valid: boolean;
+  warning: string | null;
+}
+
+/**
+ * Detects alt text that is really a camera/file name rather than a
+ * description of the image (IMG_1234, DSC0123, screenshot, only digits).
+ */
+export function looksLikeFileName(alt: unknown): boolean {
+  if (typeof alt !== 'string') return false;
+  const value = alt.trim().toLowerCase();
+  if (!value) return false;
+
+  if (/^\d+$/.test(value)) return true;
+  if (/\.(jpe?g|png|gif|webp|svg|bmp|heic|avif)$/i.test(value)) return true;
+  if (/^(img|dsc|dscf|dji|gopr|mvimg|screenshot|screencap)$/i.test(value)) return true;
+  if (/^(img|dsc|dscf|dji|gopr|mvimg)[\s_-]*\d/i.test(value)) return true;
+  if (/^(screenshot|screen[\s_-]?shot|screencap|screen[\s_-]?capture)/i.test(value)) return true;
+  if (/^(photo|foto|image|gambar)[\s_-]*\d{2,}/i.test(value)) return true;
+  if (/^\d{8}[\s_-]\d{6}/.test(value)) return true;
+
+  return false;
+}
+
+/**
+ * Soft validation for image alt text. Empty, file-like and overlong values
+ * are reported with a human-readable warning.
+ */
+export function validateAltText(alt: unknown): AltTextValidation {
+  const value = typeof alt === 'string' ? alt.trim() : '';
+
+  if (!value) {
+    return { valid: false, warning: 'Teks alternatif belum diisi.' };
+  }
+  if (value.length > ALT_TEXT_MAX_LENGTH) {
+    return { valid: false, warning: `Teks alternatif maksimal ${ALT_TEXT_MAX_LENGTH} karakter.` };
+  }
+  if (looksLikeFileName(value)) {
+    return { valid: false, warning: 'Teks alternatif terlihat seperti nama berkas. Jelaskan isi gambar.' };
+  }
+
+  return { valid: true, warning: null };
+}
+
+export interface ArticleSaveGuardInput {
+  coverImage?: unknown;
+  ogImage?: unknown;
+  content?: unknown;
+  contentJson?: unknown;
+}
+
+/**
+ * Returns the blocking message for content that must not be written, or null
+ * when the article is safe to persist. The message names the offending image
+ * field so the editor can point the writer at the right input.
+ */
+export function getArticleSaveBlockMessage(form: ArticleSaveGuardInput): string | null {
+  const dataUrlImages = findDataUrlImages(form);
+  if (dataUrlImages.coverImage) {
+    return 'Gambar cover belum terunggah. Unggah ulang gambar cover.';
+  }
+  if (dataUrlImages.ogImage) {
+    return 'Gambar OG (SEO) belum terunggah. Kosongkan atau samakan dengan cover.';
+  }
+  if (containsInlineDataImages(form.content) || containsInlineDataImages(form.contentJson)) {
+    return 'Ada gambar yang belum terunggah ke penyimpanan. Hapus lalu unggah ulang gambarnya.';
+  }
+
+  const contentLength = typeof form.content === 'string' ? form.content.length : 0;
+  const contentJsonLength = typeof form.contentJson === 'string' ? form.contentJson.length : 0;
+  const issues = getArticleSizeIssues({
+    content: form.content,
+    contentJson: form.contentJson,
+  });
+
+  if (issues.contentTooLarge) {
+    return `Artikel terlalu panjang (${contentLength} dari ${ARTICLE_CONTENT_MAX_LENGTH} karakter).`;
+  }
+  if (issues.contentJsonTooLarge) {
+    return `Artikel terlalu panjang (${contentJsonLength} dari ${ARTICLE_CONTENT_JSON_MAX_LENGTH} karakter).`;
+  }
+
+  return null;
+}
+
 const isLiveArticle = (a: ProfileArticleLike, nowMs: number): boolean => {
   if (a.status === 'draft' || a.status === 'trash') return false;
   if (a.status === 'scheduled') {

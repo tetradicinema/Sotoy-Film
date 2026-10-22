@@ -13,6 +13,8 @@ declare module '@tiptap/core' {
         src: string;
         alt?: string;
         caption?: string;
+        width?: number;
+        height?: number;
       }) => ReturnType;
     };
   }
@@ -56,6 +58,26 @@ export const FigureImageNode = Node.create<FigureImageOptions>({
         },
         renderHTML: (attributes) => (attributes.caption ? { 'data-caption': attributes.caption } : {}),
       },
+      width: {
+        default: null,
+        parseHTML: (element) => {
+          const img = element.querySelector('img');
+          const value = img ? img.getAttribute('width') : element.getAttribute('data-width');
+          const parsed = value ? Number(value) : 0;
+          return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+        },
+        renderHTML: (attributes) => (attributes.width ? { width: attributes.width } : {}),
+      },
+      height: {
+        default: null,
+        parseHTML: (element) => {
+          const img = element.querySelector('img');
+          const value = img ? img.getAttribute('height') : element.getAttribute('data-height');
+          const parsed = value ? Number(value) : 0;
+          return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+        },
+        renderHTML: (attributes) => (attributes.height ? { height: attributes.height } : {}),
+      },
     };
   },
 
@@ -79,7 +101,13 @@ export const FigureImageNode = Node.create<FigureImageOptions>({
     return [
       'figure',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, { 'data-figure-image': '' }),
-      ['img', { src: HTMLAttributes['data-src'], alt: HTMLAttributes['data-alt'] || '' }],
+      ['img', {
+        src: HTMLAttributes['data-src'],
+        alt: HTMLAttributes['data-alt'] || '',
+        width: HTMLAttributes.width || undefined,
+        height: HTMLAttributes.height || undefined,
+        loading: 'lazy',
+      }],
       ['figcaption', {}, HTMLAttributes['data-caption'] || ''],
     ];
   },

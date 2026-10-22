@@ -44,6 +44,44 @@ const PublicSocialEmbedNode = SocialEmbedNode.extend({
   },
 });
 
+// Read-only figure renderer: no editing controls, dimensions preserved to
+// avoid layout shift and lazy loading for below-the-fold images.
+const PublicFigureImageView: React.FC<NodeViewProps> = ({ node }) => {
+  const { src, alt, caption, width, height } = node.attrs as {
+    src?: string;
+    alt?: string;
+    caption?: string;
+    width?: number | null;
+    height?: number | null;
+  };
+
+  return (
+    <NodeViewWrapper className="my-6">
+      <figure className="rounded-2xl overflow-hidden border border-slate-800 bg-neutral-950/80">
+        <img
+          src={src || ''}
+          alt={alt || ''}
+          width={width || undefined}
+          height={height || undefined}
+          className="w-full h-auto max-h-[560px] object-contain bg-black"
+          loading="lazy"
+        />
+        {caption ? (
+          <figcaption className="p-3 text-center text-xs text-slate-400 italic border-t border-slate-800/80 bg-neutral-900/60">
+            {caption}
+          </figcaption>
+        ) : null}
+      </figure>
+    </NodeViewWrapper>
+  );
+};
+
+const PublicFigureImageNode = FigureImageNode.extend({
+  addNodeView() {
+    return ReactNodeViewRenderer(PublicFigureImageView);
+  },
+});
+
 export interface TiptapContentRendererProps {
   contentJson: string;
 }
@@ -96,7 +134,7 @@ export const TiptapContentRenderer: React.FC<TiptapContentRendererProps> = ({ co
           },
         }),
         PublicSocialEmbedNode,
-        FigureImageNode,
+        PublicFigureImageNode,
       ],
       content: parsedContent || '',
       editable: false,

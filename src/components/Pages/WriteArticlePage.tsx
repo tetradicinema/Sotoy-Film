@@ -50,12 +50,16 @@ import { RichTextEditor } from '../CMS/RichTextEditor';
 import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 import { normalizeArticleCategory } from '../../utils/articleCategory';
 import {
-  containsInlineDataImages,
-  findDataUrlImages,
-  getArticleSizeIssues,
-  ARTICLE_CONTENT_MAX_LENGTH,
-  ARTICLE_CONTENT_JSON_MAX_LENGTH,
+  ALT_TEXT_MAX_LENGTH,
+  getArticleSaveBlockMessage,
+  validateAltText,
 } from '../../utils/articleHelpers';
+import {
+  buildImageStorageFileName,
+  describeImageOptimization,
+  imageFileExtension,
+  optimizeImageForWeb,
+} from '../../utils/imageOptimize';
 
 interface CoEditor {
   userId: string;
@@ -64,43 +68,6 @@ interface CoEditor {
   roleTitle?: string;
   lastActive: number;
 }
-
-interface ArticleSaveGuardInput {
-  coverImage?: unknown;
-  ogImage?: unknown;
-  content?: unknown;
-  contentJson?: unknown;
-}
-
-/**
- * Returns the blocking message for content that must not be written, or null
- * when the article is safe to persist.
- */
-const getArticleSaveBlockMessage = (form: ArticleSaveGuardInput): string | null => {
-  const dataUrlImages = findDataUrlImages(form);
-  if (dataUrlImages.coverImage || dataUrlImages.ogImage) {
-    return 'Gambar cover belum terunggah. Unggah ulang gambar cover.';
-  }
-  if (containsInlineDataImages(form.content) || containsInlineDataImages(form.contentJson)) {
-    return 'Ada gambar yang belum terunggah ke penyimpanan. Hapus lalu unggah ulang gambarnya.';
-  }
-
-  const contentLength = typeof form.content === 'string' ? form.content.length : 0;
-  const contentJsonLength = typeof form.contentJson === 'string' ? form.contentJson.length : 0;
-  const issues = getArticleSizeIssues({
-    content: form.content,
-    contentJson: form.contentJson,
-  });
-
-  if (issues.contentTooLarge) {
-    return `Artikel terlalu panjang (${contentLength} dari ${ARTICLE_CONTENT_MAX_LENGTH} karakter).`;
-  }
-  if (issues.contentJsonTooLarge) {
-    return `Artikel terlalu panjang (${contentJsonLength} dari ${ARTICLE_CONTENT_JSON_MAX_LENGTH} karakter).`;
-  }
-
-  return null;
-};
 
 export const WriteArticlePage: React.FC = () => {
   const {
@@ -133,6 +100,9 @@ export const WriteArticlePage: React.FC = () => {
   const [contentFormat, setContentFormat] = useState<'markdown' | 'tiptap'>('tiptap');
   const [contentJson, setContentJson] = useState<string>('');
   const [coverImage, setCoverImage] = useState('https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80');
+  const [coverImageAlt, setCoverImageAlt] = useState('');
+  const [coverImageWidth, setCoverImageWidth] = useState<number | undefined>(undefined);
+  const [coverImageHeight, setCoverImageHeight] = useState<number | undefined>(undefined);
   const [tagsInput, setTagsInput] = useState('Film, Bioskop, Review');
   const [readTime, setReadTime] = useState('5 mnt baca');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -169,6 +139,7 @@ export const WriteArticlePage: React.FC = () => {
   const [coverMode, setCoverMode] = useState<'file' | 'url'>('file');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const ogImageFollowsCoverRef = useRef(true);
 
   // Related Film Selection State (Multiple Films Supported)
   const [selectedFilmIds, setSelectedFilmIds] = useState<string[]>([]);
@@ -190,6 +161,53 @@ export const WriteArticlePage: React.FC = () => {
       .replace(/[^\w\s-]/g, '')
       .replace(/[\s_-]+/g, '-')
       .replace(/^-+|-+$/g, '');
+  };
+
+  const isDataImageUrl = (value: unknown): boolean =>
+    typeof value === 'string' && /^data:/i.test(value.trim());
+
+  const sanitizeLoadedImage = (value?: string): string => {
+    if (!value || typeof value !== 'string') return '';
+    return isDataImageUrl(value) ? '' : value;
+  };
+
+  /**
+   * Applies a new cover and keeps the OG image in sync while it still follows
+   * the cover. Custom OG URLs are preserved.
+   */
+  const applyCoverImage = (
+    nextCover: string,
+    dimensions?: { width?: number; height?: number }
+  ) => {
+    const shouldSyncOg =
+      ogImageFollowsCoverRef.current ||
+      !ogImage.trim() ||
+      isDataImageUrl(ogImage);
+    setCoverImage(nextCover);
+    setCoverImageWidth(dimensions?.width || undefined);
+    setCoverImageHeight(dimensions?.height || undefined);
+    if (shouldSyncOg) {
+      ogImageFollowsCoverRef.current = true;
+      setOgImage(nextCover);
+    }
+  };
+
+  const handleCoverUrlChange = (value: string) => {
+    if (isDataImageUrl(value)) {
+      showToast('URL cover tidak boleh berupa data URL. Unggah gambar dari perangkat.', 'error');
+      return;
+    }
+    applyCoverImage(value);
+  };
+
+  const handleOgImageChange = (value: string) => {
+    setOgImage(value);
+    ogImageFollowsCoverRef.current = !value.trim() || value.trim() === coverImage.trim();
+  };
+
+  const handleUseCoverAsOg = () => {
+    setOgImage(coverImage);
+    ogImageFollowsCoverRef.current = true;
   };
 
   const handleTitleChange = (newTitle: string) => {
@@ -316,6 +334,9 @@ export const WriteArticlePage: React.FC = () => {
     contentFormat,
     contentJson,
     coverImage,
+    coverImageAlt,
+    coverImageWidth,
+    coverImageHeight,
     tagsInput,
     readTime,
     selectedFilmIds,
@@ -340,6 +361,9 @@ export const WriteArticlePage: React.FC = () => {
       contentFormat,
       contentJson,
       coverImage,
+      coverImageAlt,
+      coverImageWidth,
+      coverImageHeight,
       tagsInput,
       readTime,
       selectedFilmIds,
@@ -362,6 +386,9 @@ export const WriteArticlePage: React.FC = () => {
     contentFormat,
     contentJson,
     coverImage,
+    coverImageAlt,
+    coverImageWidth,
+    coverImageHeight,
     tagsInput,
     readTime,
     selectedFilmIds,
@@ -403,7 +430,22 @@ export const WriteArticlePage: React.FC = () => {
         setContent(found.content || '');
         setContentFormat(found.contentFormat || 'markdown');
         setContentJson(found.contentJson || '');
-        setCoverImage(found.coverImage || '');
+        const safeCover = sanitizeLoadedImage(found.coverImage);
+        const safeOg = sanitizeLoadedImage(found.ogImage);
+        setCoverImage(safeCover);
+        setCoverImageAlt(found.coverImageAlt || '');
+        setCoverImageWidth(
+          typeof found.coverImageWidth === 'number' && found.coverImageWidth > 0
+            ? found.coverImageWidth
+            : undefined
+        );
+        setCoverImageHeight(
+          typeof found.coverImageHeight === 'number' && found.coverImageHeight > 0
+            ? found.coverImageHeight
+            : undefined
+        );
+        const ogFollowsCover = !safeOg || safeOg === safeCover;
+        ogImageFollowsCoverRef.current = ogFollowsCover;
         setTagsInput((found.tags || []).join(', '));
         setReadTime(found.readTime || '5 mnt baca');
         const validStatus: 'published' | 'draft' | 'scheduled' = 
@@ -422,7 +464,7 @@ export const WriteArticlePage: React.FC = () => {
         }
         setSeoTitle(found.seoTitle || found.title || '');
         setMetaDescription(found.metaDescription || found.excerpt || '');
-        setOgImage(found.ogImage || found.coverImage || '');
+        setOgImage(ogFollowsCover ? safeCover : safeOg);
         setSeoKeywords(found.seoKeywords || (found.tags || []).join(', '));
         if (found.relatedFilmIds && Array.isArray(found.relatedFilmIds) && found.relatedFilmIds.length > 0) {
           setSelectedFilmIds(found.relatedFilmIds);
@@ -469,6 +511,10 @@ export const WriteArticlePage: React.FC = () => {
         setSeoTitle('');
         setMetaDescription('');
         setOgImage('');
+        setCoverImageAlt('');
+        setCoverImageWidth(undefined);
+        setCoverImageHeight(undefined);
+        ogImageFollowsCoverRef.current = true;
         setSeoKeywords('');
       }
     }
@@ -491,7 +537,16 @@ export const WriteArticlePage: React.FC = () => {
     if (autosaveBackupData.contentJson) {
       setContentJson(autosaveBackupData.contentJson);
     }
-    setCoverImage(autosaveBackupData.coverImage || '');
+    const backupCover = sanitizeLoadedImage(autosaveBackupData.coverImage);
+    const backupOg = sanitizeLoadedImage(autosaveBackupData.ogImage);
+    const backupOgFollowsCover = !backupOg || backupOg === backupCover;
+    ogImageFollowsCoverRef.current = backupOgFollowsCover;
+    applyCoverImage(backupCover, {
+      width: typeof autosaveBackupData.coverImageWidth === 'number' ? autosaveBackupData.coverImageWidth : undefined,
+      height: typeof autosaveBackupData.coverImageHeight === 'number' ? autosaveBackupData.coverImageHeight : undefined,
+    });
+    setCoverImageAlt(autosaveBackupData.coverImageAlt || '');
+    setOgImage(backupOgFollowsCover ? backupCover : backupOg);
     setTagsInput((autosaveBackupData.tags || []).join(', '));
     if (autosaveBackupData.relatedFilmIds) setSelectedFilmIds(autosaveBackupData.relatedFilmIds);
     setShowRestoreBanner(false);
@@ -532,6 +587,9 @@ export const WriteArticlePage: React.FC = () => {
           contentFormat: 'tiptap',
           contentJson: form.contentJson || '',
           coverImage: form.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80',
+          coverImageAlt: form.coverImageAlt.trim(),
+          coverImageWidth: form.coverImageWidth || undefined,
+          coverImageHeight: form.coverImageHeight || undefined,
           category: form.category,
           subCategory: form.subCategory,
           readTime: form.readTime,
@@ -541,7 +599,7 @@ export const WriteArticlePage: React.FC = () => {
           publishedAtTimestamp: new Date().toISOString(),
           seoTitle: form.seoTitle.trim() || form.title.trim(),
           metaDescription: form.metaDescription.trim() || form.excerpt,
-          ogImage: ogImage.trim() || form.coverImage,
+          ogImage: form.ogImage.trim() || form.coverImage,
           seoKeywords: form.seoKeywords.trim() || cleanTags.join(', '),
           author: {
             id: currentUser.id,
@@ -611,6 +669,9 @@ export const WriteArticlePage: React.FC = () => {
       content: form.content,
       contentJson: form.contentJson,
       coverImage: form.coverImage,
+      coverImageAlt: form.coverImageAlt,
+      coverImageWidth: form.coverImageWidth,
+      coverImageHeight: form.coverImageHeight,
       tagsInput: form.tagsInput,
       selectedFilmIds: form.selectedFilmIds,
       seoTitle: form.seoTitle,
@@ -657,6 +718,9 @@ export const WriteArticlePage: React.FC = () => {
         contentFormat: 'tiptap',
         contentJson: form.contentJson || '',
         coverImage: form.coverImage,
+        coverImageAlt: form.coverImageAlt.trim(),
+        coverImageWidth: form.coverImageWidth || undefined,
+        coverImageHeight: form.coverImageHeight || undefined,
         category: form.category,
         subCategory: form.subCategory,
         readTime: form.readTime,
@@ -731,6 +795,9 @@ export const WriteArticlePage: React.FC = () => {
       content: form.content,
       contentJson: form.contentJson,
       coverImage: form.coverImage,
+      coverImageAlt: form.coverImageAlt,
+      coverImageWidth: form.coverImageWidth,
+      coverImageHeight: form.coverImageHeight,
       tagsInput: form.tagsInput,
       selectedFilmIds: form.selectedFilmIds,
       seoTitle: form.seoTitle,
@@ -759,7 +826,11 @@ export const WriteArticlePage: React.FC = () => {
           subCategory: currentForm.subCategory,
           excerpt: currentForm.excerpt,
           content: currentForm.content,
+          contentJson: currentForm.contentJson,
           coverImage: currentForm.coverImage,
+          coverImageAlt: currentForm.coverImageAlt,
+          coverImageWidth: currentForm.coverImageWidth,
+          coverImageHeight: currentForm.coverImageHeight,
           tagsInput: currentForm.tagsInput,
           selectedFilmIds: currentForm.selectedFilmIds,
           seoTitle: currentForm.seoTitle,
@@ -790,6 +861,9 @@ export const WriteArticlePage: React.FC = () => {
     excerpt,
     content,
     coverImage,
+    coverImageAlt,
+    coverImageWidth,
+    coverImageHeight,
     tagsInput,
     selectedFilmIds,
     seoTitle,
@@ -997,7 +1071,7 @@ export const WriteArticlePage: React.FC = () => {
     }
     if (ver.category) setCategory(normalizeArticleCategory(ver.category) as MainCategory);
     if (ver.subCategory) setSubCategory(ver.subCategory);
-    if (ver.coverImage) setCoverImage(ver.coverImage);
+    if (ver.coverImage) applyCoverImage(sanitizeLoadedImage(ver.coverImage));
     if (ver.readTime) setReadTime(ver.readTime);
 
     setIsVersionModalOpen(false);
@@ -1029,7 +1103,7 @@ export const WriteArticlePage: React.FC = () => {
     setSubCategory(subCategoryOptions[newCat][0].id);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -1044,70 +1118,39 @@ export const WriteArticlePage: React.FC = () => {
     }
 
     setIsUploadingImage(true);
-    const reader = new FileReader();
 
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        const maxWidth = 1200;
+    try {
+      const userId = currentUser?.id;
+      if (!userId) {
+        showToast('Silakan masuk kembali untuk mengunggah gambar cover.', 'error');
+        return;
+      }
 
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width = maxWidth;
-        }
+      const optimized = await optimizeImageForWeb(file, {
+        maxLongSide: 1600,
+        quality: 0.82,
+        targetKB: 250,
+      });
+      const extension = imageFileExtension(optimized.mimeType);
+      const fileName = buildImageStorageFileName(title || 'cover', extension);
+      const storageRef = ref(storage, `articles_media/${userId}/${fileName}`);
 
-        canvas.width = width;
-        canvas.height = height;
+      await uploadBytes(storageRef, optimized.file, { contentType: optimized.mimeType });
+      const downloadUrl = await getDownloadURL(storageRef);
 
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-
-        canvas.toBlob(async (blob) => {
-          if (!blob) {
-            setIsUploadingImage(false);
-            showToast('Gagal memproses gambar.', 'error');
-            return;
-          }
-
-          try {
-            const userId = currentUser?.id;
-            if (!userId) {
-              showToast('Silakan masuk kembali untuk mengunggah gambar cover.', 'error');
-              return;
-            }
-
-            const storageRef = ref(storage, `articles_media/${userId}/cover_${Date.now()}.jpg`);
-            await uploadBytes(storageRef, blob, { contentType: 'image/jpeg' });
-            const downloadUrl = await getDownloadURL(storageRef);
-
-            setCoverImage(downloadUrl);
-            showToast('Gambar cover berhasil diunggah dari perangkat!', 'success');
-          } catch (err: any) {
-            const errorCode = err?.code || 'storage/unknown';
-            console.error('[Cover Upload] Error:', err);
-            showToast(`Gagal mengunggah gambar cover (${errorCode}). Coba lagi.`, 'error');
-          } finally {
-            setIsUploadingImage(false);
-            if (fileInputRef.current) fileInputRef.current.value = '';
-          }
-        }, 'image/jpeg', 0.85);
-      };
-      img.onerror = () => {
-        setIsUploadingImage(false);
-        showToast('Gagal memproses gambar.');
-      };
-      img.src = event.target?.result as string;
-    };
-
-    reader.onerror = () => {
+      applyCoverImage(downloadUrl, {
+        width: optimized.width,
+        height: optimized.height,
+      });
+      showToast(describeImageOptimization(optimized), 'success');
+    } catch (err: any) {
+      const errorCode = err?.code || err?.message || 'unknown-error';
+      console.error('[Cover Upload] Error:', err);
+      showToast(`Gagal mengunggah gambar cover (${errorCode}). Coba lagi.`, 'error');
+    } finally {
       setIsUploadingImage(false);
-      showToast('Gagal membaca berkas.');
-    };
-
-    reader.readAsDataURL(file);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const resetForm = () => {
@@ -1126,6 +1169,10 @@ export const WriteArticlePage: React.FC = () => {
     setContentFormat('tiptap');
     setContentJson('');
     setCoverImage('https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80');
+    setCoverImageAlt('');
+    setCoverImageWidth(undefined);
+    setCoverImageHeight(undefined);
+    ogImageFollowsCoverRef.current = true;
     setTagsInput('Film, Bioskop, Review');
     setReadTime('5 mnt baca');
     setSelectedFilmIds([]);
@@ -1235,6 +1282,9 @@ export const WriteArticlePage: React.FC = () => {
         contentFormat: 'tiptap',
         contentJson: contentJson || '',
         coverImage,
+        coverImageAlt: coverImageAlt.trim(),
+        coverImageWidth: coverImageWidth || undefined,
+        coverImageHeight: coverImageHeight || undefined,
         category,
         subCategory,
         readTime,
@@ -1293,6 +1343,9 @@ export const WriteArticlePage: React.FC = () => {
           content,
           contentJson,
           coverImage,
+          coverImageAlt,
+          coverImageWidth,
+          coverImageHeight,
           tagsInput,
           selectedFilmIds,
           seoTitle,
@@ -1714,7 +1767,7 @@ export const WriteArticlePage: React.FC = () => {
                     <input
                       type="text"
                       value={coverImage}
-                      onChange={e => setCoverImage(e.target.value)}
+                      onChange={e => handleCoverUrlChange(e.target.value)}
                       placeholder="Masukkan URL gambar (e.g. https://images.unsplash.com/...)"
                       className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
                     />
@@ -1724,14 +1777,14 @@ export const WriteArticlePage: React.FC = () => {
                 {/* Cover Image Live Preview Thumbnail */}
                 {coverImage?.trim() ? (
                   <div className="relative rounded-xl overflow-hidden border border-slate-700 bg-slate-950 group">
-                    <img src={coverImage.trim()} alt="Cover preview" className="w-full h-40 object-cover" />
+                    <img src={coverImage.trim()} alt={coverImageAlt.trim() || title || 'Pratinjau cover'} className="w-full h-40 object-contain bg-black" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end justify-between p-3">
                       <span className="text-[10px] font-mono text-slate-300 truncate max-w-xs bg-black/60 px-2 py-1 rounded">
                         Cover Aktif
                       </span>
                       <button
                         type="button"
-                        onClick={() => setCoverImage('')}
+                        onClick={() => applyCoverImage('')}
                         className="p-1.5 rounded-lg bg-rose-600/80 hover:bg-rose-600 text-white text-xs flex items-center gap-1 transition-colors cursor-pointer"
                         title="Hapus Cover"
                       >
@@ -1741,6 +1794,40 @@ export const WriteArticlePage: React.FC = () => {
                     </div>
                   </div>
                 ) : null}
+
+                {/* Cover alt text for SEO */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="block text-xs font-bold text-slate-300">
+                      Teks alternatif cover (SEO)
+                    </label>
+                    <span className="text-[11px] font-mono text-slate-500">
+                      {coverImageAlt.length}/{ALT_TEXT_MAX_LENGTH}
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    value={coverImageAlt}
+                    maxLength={ALT_TEXT_MAX_LENGTH}
+                    onChange={e => setCoverImageAlt(e.target.value.slice(0, ALT_TEXT_MAX_LENGTH))}
+                    placeholder="Contoh: Pemeran utama berjalan di lorong bioskop yang remang."
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
+                  />
+                  <p className="text-[11px] text-slate-500">
+                    Jelaskan isi gambar, bukan menulis "gambar". Jika kosong, judul artikel dipakai saat render.
+                  </p>
+                  {coverImageAlt.trim() ? (
+                    !validateAltText(coverImageAlt).valid ? (
+                      <p className="text-[11px] text-amber-400">
+                        {validateAltText(coverImageAlt).warning}
+                      </p>
+                    ) : null
+                  ) : (
+                    <p className="text-[11px] text-slate-500">
+                      Teks alternatif belum diisi.
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Tag Film Terkait / Film yang Dibahas Section (Mendukung Beberapa Film) */}
@@ -2117,13 +2204,13 @@ export const WriteArticlePage: React.FC = () => {
                         <input
                           type="text"
                           value={ogImage}
-                          onChange={e => setOgImage(e.target.value)}
+                          onChange={e => handleOgImageChange(e.target.value)}
                           placeholder="URL gambar khusus kartu media sosial..."
                           className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
                         />
                         <button
                           type="button"
-                          onClick={() => setOgImage(coverImage)}
+                          onClick={handleUseCoverAsOg}
                           className="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-bold whitespace-nowrap cursor-pointer transition-colors"
                         >
                           Sama Cover
@@ -2163,7 +2250,7 @@ export const WriteArticlePage: React.FC = () => {
                           <img
                             src={ogImage?.trim() || coverImage?.trim() || DEFAULT_COVER}
                             alt="OG Card Preview"
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-contain bg-black"
                           />
                         ) : (
                           <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 gap-1 bg-slate-900">

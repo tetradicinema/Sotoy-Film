@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NodeViewWrapper, NodeViewProps } from '@tiptap/react';
-import { Trash2, Edit2, Image as ImageIcon } from 'lucide-react';
+import { Trash2, Check } from 'lucide-react';
+import { ALT_TEXT_MAX_LENGTH, validateAltText } from '../../../utils/articleHelpers';
 
 export const FigureImageEditorView: React.FC<NodeViewProps> = ({
   node,
@@ -8,18 +9,30 @@ export const FigureImageEditorView: React.FC<NodeViewProps> = ({
   deleteNode,
   selected,
 }) => {
-  const { src, alt, caption } = node.attrs as {
+  const { src, alt, caption, width, height } = node.attrs as {
     src: string;
     alt: string;
     caption?: string;
+    width?: number | null;
+    height?: number | null;
   };
 
+  const [altText, setAltText] = useState(alt || '');
   const [captionText, setCaptionText] = useState(caption || '');
-  const [isEditingCaption, setIsEditingCaption] = useState(false);
 
-  const handleSaveCaption = () => {
-    updateAttributes({ caption: captionText.trim() });
-    setIsEditingCaption(false);
+  useEffect(() => {
+    if (!selected) return;
+    setAltText(alt || '');
+    setCaptionText(caption || '');
+  }, [selected, alt, caption]);
+
+  const altValidation = validateAltText(altText);
+
+  const handleSaveDetails = () => {
+    updateAttributes({
+      alt: altText.trim().slice(0, ALT_TEXT_MAX_LENGTH),
+      caption: captionText.trim(),
+    });
   };
 
   return (
@@ -31,11 +44,13 @@ export const FigureImageEditorView: React.FC<NodeViewProps> = ({
             : 'border-slate-800 hover:border-slate-700'
         }`}
       >
-        <div className="relative">
+        <div className="relative bg-black">
           <img
             src={src}
-            alt={alt || 'Gambar Artikel'}
-            className="w-full max-h-[520px] object-cover rounded-t-xl"
+            alt={alt || ''}
+            width={width || undefined}
+            height={height || undefined}
+            className="w-full h-auto max-h-[520px] object-contain rounded-t-xl"
             loading="lazy"
           />
 
@@ -49,39 +64,59 @@ export const FigureImageEditorView: React.FC<NodeViewProps> = ({
           </button>
         </div>
 
-        <figcaption className="p-3 bg-neutral-900/60 border-t border-slate-800/80">
-          {isEditingCaption ? (
-            <div className="flex items-center gap-2">
+        {selected ? (
+          <div className="p-3 bg-neutral-900/80 border-t border-slate-800/80 space-y-3" contentEditable={false}>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-[11px] font-bold text-slate-300">
+                  Teks alternatif (SEO)
+                </label>
+                <span className="text-[10px] font-mono text-slate-500">
+                  {altText.length}/{ALT_TEXT_MAX_LENGTH}
+                </span>
+              </div>
+              <input
+                type="text"
+                value={altText}
+                maxLength={ALT_TEXT_MAX_LENGTH}
+                onChange={e => setAltText(e.target.value.slice(0, ALT_TEXT_MAX_LENGTH))}
+                placeholder="Jelaskan isi gambar untuk pembaca layar dan mesin pencari."
+                className="w-full bg-black/50 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
+              />
+              <p className="text-[10px] text-slate-500">
+                Jelaskan isi gambar, bukan menulis "gambar". Maksimal {ALT_TEXT_MAX_LENGTH} karakter.
+              </p>
+              {!altValidation.valid ? (
+                <p className="text-[10px] text-amber-400">{altValidation.warning}</p>
+              ) : null}
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-slate-300">
+                Keterangan gambar (caption)
+              </label>
               <input
                 type="text"
                 value={captionText}
-                onChange={(e) => setCaptionText(e.target.value)}
-                placeholder="Tulis takarir / sumber gambar..."
-                className="flex-1 bg-black/50 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleSaveCaption();
-                  }
-                }}
+                onChange={e => setCaptionText(e.target.value)}
+                placeholder="Tulis keterangan atau sumber gambar."
+                className="w-full bg-black/50 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#FF2E7E]"
               />
-              <button
-                type="button"
-                onClick={handleSaveCaption}
-                className="px-3 py-1.5 bg-[#FF2E7E] text-white text-xs font-bold rounded-lg cursor-pointer"
-              >
-                Simpan
-              </button>
             </div>
-          ) : (
-            <div
-              onClick={() => setIsEditingCaption(true)}
-              className="text-center text-xs text-slate-400 hover:text-slate-200 italic cursor-pointer py-0.5 flex items-center justify-center gap-1.5"
+
+            <button
+              type="button"
+              onClick={handleSaveDetails}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#FF2E7E] hover:bg-[#e0266e] text-white text-[11px] font-bold rounded-lg cursor-pointer transition-colors"
             >
-              <span>{caption || alt || '+ Tambahkan takarir atau sumber gambar...'}</span>
-              <Edit2 className="w-3 h-3 text-slate-600 group-hover:text-slate-400" />
-            </div>
-          )}
+              <Check className="w-3.5 h-3.5" />
+              <span>Simpan detail gambar</span>
+            </button>
+          </div>
+        ) : null}
+
+        <figcaption className="p-3 bg-neutral-900/60 border-t border-slate-800/80 text-center text-xs text-slate-400 italic">
+          {caption || alt || 'Belum ada keterangan gambar.'}
         </figcaption>
       </figure>
     </NodeViewWrapper>

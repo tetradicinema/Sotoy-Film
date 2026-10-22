@@ -467,8 +467,10 @@ export const ArticleDetailPage: React.FC = () => {
             <div className="rounded-2xl overflow-hidden max-h-[440px] w-full relative">
               <img
                 src={article.coverImage.trim()}
-                alt={article.title}
-                className="w-full h-full object-cover"
+                alt={article.coverImageAlt?.trim() || article.title}
+                width={article.coverImageWidth || undefined}
+                height={article.coverImageHeight || undefined}
+                className="w-full h-auto max-h-[440px] object-contain bg-black"
               />
             </div>
           ) : null}

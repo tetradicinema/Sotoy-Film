@@ -127,6 +127,9 @@ export interface Article {
   contentFormat?: 'markdown' | 'tiptap';
   contentJson?: string;
   coverImage: string;
+  coverImageAlt?: string;
+  coverImageWidth?: number;
+  coverImageHeight?: number;
   category: MainCategory;
   subCategory: SubCategory;
   authorId?: string;

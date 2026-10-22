@@ -10,11 +10,16 @@ import { TableCell } from '@tiptap/extension-table-cell';
 import Placeholder from '@tiptap/extension-placeholder';
 import CharacterCount from '@tiptap/extension-character-count';
 import { Markdown } from 'tiptap-markdown';
-import imageCompression from 'browser-image-compression';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../lib/firebase';
 import { useApp } from '../../context/AppContext';
 import { shouldSyncEditorContent } from '../../utils/articleFlow';
+import {
+  buildImageStorageFileName,
+  describeImageOptimization,
+  imageFileExtension,
+  optimizeImageForWeb,
+} from '../../utils/imageOptimize';
 import { SocialEmbedNode } from './extensions/SocialEmbedNode';
 import { FigureImageNode } from './extensions/FigureImageNode';
 import {
@@ -376,35 +381,28 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({
       setIsUploadingImage(true);
       setUploadProgressText('Mengompresi gambar...');
 
-      let fileToUpload = file;
-      if (file.size > 1 * 1024 * 1024) {
-        try {
-          fileToUpload = await imageCompression(file, {
-            maxSizeMB: 1.2,
-            maxWidthOrHeight: 1600,
-            useWebWorker: true,
-          });
-        } catch (compErr) {
-          console.warn('[ImageCompression] Warning:', compErr);
-          fileToUpload = file;
-        }
-      }
-
       const authorId = currentUser?.id;
       if (!authorId) {
         showToast('Silakan masuk kembali untuk mengunggah gambar.', 'error');
         return;
       }
 
+      const optimized = await optimizeImageForWeb(file, {
+        maxLongSide: 1600,
+        quality: 0.82,
+        targetKB: 400,
+      });
+
       setUploadProgressText('Mengunggah ke penyimpanan...');
-      const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const storagePath = `articles_media/${authorId}/${Date.now()}_${cleanFileName}`;
+      const extension = imageFileExtension(optimized.mimeType);
+      const fileName = buildImageStorageFileName(file.name, extension);
+      const storagePath = `articles_media/${authorId}/${fileName}`;
       const storageRef = ref(storage, storagePath);
 
       let downloadUrl = '';
       try {
-        await uploadBytes(storageRef, fileToUpload, {
-          contentType: fileToUpload.type || 'image/jpeg',
+        await uploadBytes(storageRef, optimized.file, {
+          contentType: optimized.mimeType,
         });
         downloadUrl = await getDownloadURL(storageRef);
       } catch (storageErr: any) {
@@ -420,8 +418,10 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({
           src: downloadUrl,
           alt: altText,
           caption: altText,
+          width: optimized.width,
+          height: optimized.height,
         }).run();
-        showToast('Gambar berhasil diunggah dan disisipkan!', 'success');
+        showToast(describeImageOptimization(optimized), 'success');
       }
     } catch (err) {
       console.error('[Article Image Upload] Error:', err);

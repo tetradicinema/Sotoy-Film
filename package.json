@@ -24,6 +24,7 @@
     "test:film-type": "node --import tsx scripts/test-film-type.ts",
     "test:article-category": "node --import tsx scripts/test-article-category.ts",
     "test:article-flow": "node --import tsx scripts/test-article-flow.ts",
+    "test:image-optimize": "node --import tsx scripts/test-image-optimize.ts",
     "test:film-card": "node --import tsx scripts/test-film-card.ts",
     "test:collections": "node --import tsx scripts/test-collections.ts",
      "test:embeds": "node --import tsx scripts/test-embeds.ts && node --import tsx scripts/test-embeds.iframe.ts"
