@@ -1035,12 +1035,12 @@ export const CommunityFeedPage: React.FC = () => {
                       className="bg-transparent text-slate-300 text-xs focus:outline-none cursor-pointer"
                     >
                       <option value="" className="bg-[#171717] text-slate-300">Beri Skor Film?</option>
-                      <option value="5.0" className="bg-[#171717] text-slate-300">5.0 (Masterpiece)</option>
-                      <option value="4.5" className="bg-[#171717] text-slate-300">4.5 (Keren Banget)</option>
-                      <option value="4.0" className="bg-[#171717] text-slate-300">4.0 (Bagus)</option>
-                      <option value="3.5" className="bg-[#171717] text-slate-300">3.5 (Lumayan)</option>
-                      <option value="3.0" className="bg-[#171717] text-slate-300">3.0 (Biasa Aja)</option>
-                      <option value="2.0" className="bg-[#171717] text-slate-300">2.0 (Kurang)</option>
+                      <option value="5.0" className="bg-[#171717] text-slate-300">5.0</option>
+                      <option value="4.5" className="bg-[#171717] text-slate-300">4.5</option>
+                      <option value="4.0" className="bg-[#171717] text-slate-300">4.0</option>
+                      <option value="3.5" className="bg-[#171717] text-slate-300">3.5</option>
+                      <option value="3.0" className="bg-[#171717] text-slate-300">3.0</option>
+                      <option value="2.0" className="bg-[#171717] text-slate-300">2.0</option>
                     </select>
                   </div>
                 )}

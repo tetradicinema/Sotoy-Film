@@ -3,12 +3,13 @@ import { ChevronRight } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { HOMEPAGE_SECTIONS_META } from '../../utils/homepageConfigHelper';
 import { resolveHomeFilmIndonesia } from '../../utils/filmSections';
+import { HOME_FILM_GRID_CLASS, getResponsiveCardVisibilityClass } from '../../utils/filmGrid';
 import { FilmDbCard } from '../Film/FilmDbCard';
 
 /**
  * Homepage wide block: "Film Indonesia".
- * Renders a horizontally scrollable row of Indonesian film posters resolved
- * from TMDB country of origin or the manual "Film Indonesia" tag override.
+ * Renders a responsive grid of Indonesian film posters resolved from TMDB
+ * country of origin or the manual "Film Indonesia" tag override.
  */
 export const HomeFilmIndonesiaBlock: React.FC = () => {
   const { films, homepageSectionsConfig, navigateTo } = useApp();
@@ -55,13 +56,13 @@ export const HomeFilmIndonesiaBlock: React.FC = () => {
           </button>
         </div>
 
-        {/* Horizontally scrollable poster row */}
-        <div
-          className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 scrollbar-none scroll-smooth touch-pan-x"
-          style={{ WebkitOverflowScrolling: 'touch' }}
-        >
-          {visibleFilms.map(film => (
-            <div key={film.id} className="w-36 sm:w-40 shrink-0 snap-start">
+        {/* Responsive poster grid, trimmed to complete rows per breakpoint */}
+        <div className={HOME_FILM_GRID_CLASS}>
+          {visibleFilms.map((film, index) => (
+            <div
+              key={film.id}
+              className={getResponsiveCardVisibilityClass(index, visibleFilms.length)}
+            >
               <FilmDbCard
                 film={film}
                 sectionKey="fd_film_indonesia"

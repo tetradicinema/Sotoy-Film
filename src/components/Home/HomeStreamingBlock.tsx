@@ -3,11 +3,12 @@ import { ChevronRight } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { HOMEPAGE_SECTIONS_META } from '../../utils/homepageConfigHelper';
 import { getStreamingPlatforms, resolveHomeStreaming } from '../../utils/filmSections';
+import { HOME_FILM_GRID_CLASS, getResponsiveCardVisibilityClass } from '../../utils/filmGrid';
 import { FilmDbCard } from '../Film/FilmDbCard';
 
 /**
  * Homepage wide block: "Explore What's Streaming".
- * Renders platform tabs plus a horizontally scrollable row of film posters.
+ * Renders platform tabs plus a responsive grid of film posters.
  */
 export const HomeStreamingBlock: React.FC = () => {
   const { films, homepageSectionsConfig, navigateTo } = useApp();
@@ -35,7 +36,6 @@ export const HomeStreamingBlock: React.FC = () => {
   if (visibleFilms.length === 0) return null;
 
   const showPlatformTabs = !config?.platform && platforms.length > 0;
-  const selectedPlatform = activePlatform === 'all' ? undefined : activePlatform;
 
   return (
     <section id="home-streaming" className="py-6 sm:py-8">
@@ -109,17 +109,16 @@ export const HomeStreamingBlock: React.FC = () => {
           </div>
         )}
 
-        {/* Horizontally scrollable poster row */}
-        <div
-          className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 scrollbar-none scroll-smooth touch-pan-x"
-          style={{ WebkitOverflowScrolling: 'touch' }}
-        >
-          {visibleFilms.map(film => (
-            <div key={film.id} className="w-36 sm:w-40 shrink-0 snap-start">
+        {/* Responsive poster grid, trimmed to complete rows per breakpoint */}
+        <div className={HOME_FILM_GRID_CLASS}>
+          {visibleFilms.map((film, index) => (
+            <div
+              key={film.id}
+              className={getResponsiveCardVisibilityClass(index, visibleFilms.length)}
+            >
               <FilmDbCard
                 film={film}
                 sectionKey="fd_streaming"
-                activePlatform={selectedPlatform}
                 onOpen={item => navigateTo('film-detail', { filmId: item.id })}
               />
             </div>

@@ -75,15 +75,6 @@ export const formatRoleLabel = (role?: string): string => {
   return '';
 };
 
-export const getScoreVerdict = (score: number): string => {
-  if (score >= 4.8) return 'MASTERPIECE MUTLAK';
-  if (score >= 4.0) return 'LUAR BIASA KEREN';
-  if (score >= 3.5) return 'SANGAT BAGUS';
-  if (score >= 3.0) return 'LAYAK DITONTON';
-  if (score >= 2.0) return 'KURANG SOTOY';
-  return 'SKIP SAJA';
-};
-
 export const getStarsString = (score: number): string => {
   const fullStars = Math.min(5, Math.max(1, Math.round(score)));
   return '★'.repeat(fullStars) + '☆'.repeat(5 - fullStars);
@@ -349,9 +340,6 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
               {displayScore.toFixed(1)}
             </span>
             <span className="text-[26px] text-slate-400 font-bold self-end mb-2">/ 10.0</span>
-          </div>
-          <div className="text-[20px] font-black text-[#00F0FF] uppercase tracking-widest mt-1">
-            ★ {getScoreVerdict(displayScore)} ★
           </div>
         </div>
 
@@ -1469,9 +1457,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
 
         const ratingBlockGap = 20;
         const ratingScoreRowH = 92;
-        const verdictGap = 8;
-        const verdictH = 26;
-        const ratingTotalH = ratingBlockGap + ratingScoreRowH + verdictGap + verdictH;
+        const ratingTotalH = ratingBlockGap + ratingScoreRowH;
 
         const reviewerName = data.reviewerName || data.authorName;
         const reviewerRole = data.reviewerRole;
@@ -1538,7 +1524,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           yCursor += metaLineH;
         }
 
-        // C. Rating Display (Star + Score + / 10.0 + Verdict)
+        // C. Rating Display (Star + Score + / 10.0)
         yCursor += ratingBlockGap;
         const scoreStr = displayScore.toFixed(1);
 
@@ -1569,14 +1555,6 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         ctx.fillText('/ 10.0', startRatingX + starW + 14 + scoreW + 12, yCursor + 52);
 
         yCursor += ratingScoreRowH;
-
-        // Draw Verdict
-        yCursor += verdictGap;
-        ctx.fillStyle = '#00F0FF';
-        ctx.font = "900 20px 'Geist', 'Plus Jakarta Sans', sans-serif";
-        ctx.textAlign = 'center';
-        ctx.fillText(`★ ${getScoreVerdict(displayScore)} ★`, width / 2, yCursor);
-        yCursor += verdictH;
 
         // D. Reviewer Row
         if (hasReviewer) {
@@ -2072,10 +2050,6 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           ctx.font = 'bold 20px sans-serif';
           ctx.fillText('/ 10.0', rightX + 175, rY + 54);
 
-          ctx.fillStyle = '#FF2E7E';
-          ctx.font = '900 16px sans-serif';
-          ctx.fillText(getScoreVerdict(displayScore), rightX + 240, rY + 52);
-
           rY += scoreBoxH + 30;
 
           // Reviewer & Quote box
@@ -2338,9 +2312,6 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                     <span className="bg-[#FF2E7E]/20 text-[#FF2E7E] border border-[#FF2E7E]/40 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
                       <Star className="w-3 h-3 fill-current" />
                       <span>{displayScore.toFixed(1)} / 10.0</span>
-                    </span>
-                    <span className="text-[10px] font-bold text-cyan-400">
-                      {getScoreVerdict(displayScore)}
                     </span>
                   </div>
                 )}

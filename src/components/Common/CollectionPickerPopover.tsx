@@ -20,6 +20,7 @@ interface CollectionPickerPopoverProps {
   buttonClassName?: string;
   align?: 'left' | 'right';
   variant?: 'full' | 'compact';
+  hideChevron?: boolean;
 }
 
 export const CollectionPickerPopover: React.FC<CollectionPickerPopoverProps> = ({
@@ -30,6 +31,7 @@ export const CollectionPickerPopover: React.FC<CollectionPickerPopoverProps> = (
   buttonClassName,
   align = 'left',
   variant = 'full',
+  hideChevron = false,
 }) => {
   const {
     isLoggedIn,
@@ -40,7 +42,6 @@ export const CollectionPickerPopover: React.FC<CollectionPickerPopoverProps> = (
     removeItemFromCollection,
     isItemInAnyCollection,
     getCollectionsContainingItem,
-    getOrCreateDefaultCollection,
     showToast,
   } = useApp();
 
@@ -159,15 +160,6 @@ export const CollectionPickerPopover: React.FC<CollectionPickerPopoverProps> = (
       return;
     }
 
-    // If user with zero existing collections clicks for the first time,
-    // ensure default collection exists and immediately add the item to it!
-    if (collections.length === 0) {
-      const defaultCol = await getOrCreateDefaultCollection();
-      if (defaultCol) {
-        await addItemToCollection(defaultCol.id, itemId, itemType);
-      }
-    }
-
     setIsOpen(prev => !prev);
   };
 
@@ -215,6 +207,15 @@ export const CollectionPickerPopover: React.FC<CollectionPickerPopoverProps> = (
         id={buttonId || `collection-picker-btn-${itemId}`}
         type="button"
         onClick={handleButtonClick}
+        aria-label={
+          variant === 'compact'
+            ? isInAny
+              ? 'Kelola di Koleksi / Watchlist'
+              : itemType === 'film'
+              ? 'Simpan ke Watchlist'
+              : 'Simpan Artikel'
+            : undefined
+        }
         className={
           buttonClassName ||
           (variant === 'compact'
@@ -251,7 +252,9 @@ export const CollectionPickerPopover: React.FC<CollectionPickerPopoverProps> = (
               : 'Simpan Artikel'}
           </span>
         )}
-        <ChevronDown className={`w-3 h-3 transition-transform duration-200 opacity-60 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+        {!hideChevron && (
+          <ChevronDown className={`w-3 h-3 transition-transform duration-200 opacity-60 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+        )}
       </button>
 
       {/* Portaled Popover Dropdown (Not constrained by any parent overflow-hidden!) */}

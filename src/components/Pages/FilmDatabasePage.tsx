@@ -175,17 +175,6 @@ export const FilmDatabasePage: React.FC = () => {
     return getRoleLeaderboard('warga_sotoy', allUsers, ratings, leaderboardPeriod);
   }, [allUsers, ratings, leaderboardPeriod]);
 
-  const scrollToDatabase = () => {
-    const el = document.getElementById('database-lengkap');
-    if (el) el.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const handleGenreClick = (genre: string) => {
-    setSelectedGenre(genre);
-    setVisibleCount(20);
-    scrollToDatabase();
-  };
-
   return (
     <div className="min-h-screen py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
@@ -297,8 +286,6 @@ export const FilmDatabasePage: React.FC = () => {
                       key={film.id}
                       film={film}
                       sectionKey={section.key}
-                      activePlatform={section.key === 'fd_streaming' ? activePlatform : undefined}
-                      onGenreClick={handleGenreClick}
                       onOpen={item => navigateTo('film-detail', { filmId: item.id })}
                     />
                   ))}

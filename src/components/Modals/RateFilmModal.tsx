@@ -252,11 +252,11 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
                   className="w-full accent-[#FF2E7E] cursor-pointer"
                 />
                 <div className="flex justify-between text-[10px] text-slate-500 font-bold px-1">
-                  <span>1.0 (Bencana)</span>
-                  <span>4.0 (Kurang)</span>
-                  <span>6.0 (Lumayan)</span>
-                  <span>8.0 (Bagus)</span>
-                  <span>10.0 (Masterpiece)</span>
+                  <span>1.0</span>
+                  <span>4.0</span>
+                  <span>6.0</span>
+                  <span>8.0</span>
+                  <span>10.0</span>
                 </div>
               </div>
             </div>
