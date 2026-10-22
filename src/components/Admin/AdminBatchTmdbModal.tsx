@@ -189,6 +189,7 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
           crewDetails: mapped.crewDetails,
           genres: genresArray,
           tags: mapped.tags,
+          ...(mapped.originCountry.length > 0 ? { originCountry: mapped.originCountry } : {}),
           skorSotoy: mapped.skorSotoy,
           totalVotes: 1,
           criticsSkorSotoy: mapped.skorSotoy,

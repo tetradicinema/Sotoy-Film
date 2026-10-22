@@ -1,6 +1,7 @@
 import { CastMember, CrewMember } from '../types';
 import { slugify } from './slugify';
 import { classifyFilmType, FilmFormat } from './filmType';
+import { mapTmdbOriginCountry } from './tmdbSync';
 
 export interface MappedTmdbFilm {
   title: string;
@@ -26,6 +27,7 @@ export interface MappedTmdbFilm {
   trailerUrl: string;
   featuredRecommendation: boolean;
   tmdbId: number;
+  originCountry: string[];
 }
 
 export interface TmdbSearchResultItem {
@@ -480,6 +482,7 @@ export const mapTmdbDetailsToFilm = (details: any, type: 'movie' | 'tv'): Mapped
     trailerUrl: mappedTrailerUrl,
     featuredRecommendation: (details.vote_average || 0) >= 8.0,
     tmdbId: details.id,
+    originCountry: mapTmdbOriginCountry(details),
   };
 };
 

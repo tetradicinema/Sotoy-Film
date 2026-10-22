@@ -214,6 +214,7 @@ export interface FilmItem {
   crewDetails?: CrewMember[];
   genres: string[];
   tags?: string[];
+  originCountry?: string[]; // ISO 3166-1 alpha-2 codes, upper case, e.g. ["ID"]
   duration?: string; // e.g. "2h 46m" or "12 Episodes"
   skorSotoy: number; // Average 1.0 - 10.0
   totalVotes: number;
@@ -514,14 +515,17 @@ export type HomepageSectionKey =
   | 'fd_fans_favourite'
   | 'fd_editors_pick'
   | 'fd_hidden_gems'
+  | 'fd_film_indonesia'
   | 'home_film_recs'
-  | 'home_streaming';
+  | 'home_streaming'
+  | 'home_film_indonesia';
 
 export type HomeBlockKey =
   | 'hero'
   | 'featured_news'
   | 'film_recommendations'
   | 'streaming'
+  | 'film_indonesia'
   | 'watchlists'
   | 'cinema_gear'
   | 'reviews'

@@ -8,8 +8,12 @@ import {
   computeFilmSyncUpdate,
   evaluateFilmSync,
   titlesMatch,
+  mapTmdbOriginCountry,
+  normalizeCountryCodes,
+  originCountryEqual,
   TmdbSyncData,
 } from '../src/utils/tmdbSync';
+import { fetchTmdbSyncData } from '../src/utils/tmdbServerFetch';
 
 const FIXED_NOW = new Date('2026-10-19T12:00:00Z');
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -36,6 +40,7 @@ const createSync = (overrides: Partial<TmdbSyncData> = {}): TmdbSyncData => ({
   releaseDatesID: [],
   providersID: { flatrate: [], rent: [], buy: [] },
   status: 'Released',
+  originCountry: [],
   ...overrides,
 });
 
@@ -63,7 +68,26 @@ const assertEquals = (actual: any, expected: any, message: string) => {
   );
 };
 
-const runTests = () => {
+/**
+ * Runs a callback while `globalThis.fetch` returns the supplied TMDB payload,
+ * restoring the original implementation afterwards.
+ */
+const withFakeFetch = async (payload: any, fn: () => Promise<void>): Promise<void> => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => ({
+    ok: true,
+    status: 200,
+    json: async () => payload,
+  })) as any;
+
+  try {
+    await fn();
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+};
+
+const runTests = async () => {
   console.log('Running TMDB Sync Tests...\n');
 
   // -------------------------------------------------------------------------
@@ -692,9 +716,9 @@ const runTests = () => {
   // 34
   assert(
     Object.keys(providerUpdate?.updates || {}).every(key =>
-      ['idReleaseDate', 'releaseDate', 'whereToWatch'].includes(key)
+      ['idReleaseDate', 'releaseDate', 'whereToWatch', 'originCountry'].includes(key)
     ),
-    'computeFilmSyncUpdate only writes idReleaseDate, releaseDate, and whereToWatch'
+    'computeFilmSyncUpdate only writes idReleaseDate, releaseDate, whereToWatch, and originCountry'
   );
 
   // 35
@@ -857,10 +881,219 @@ const runTests = () => {
     'decideTmdbFallback does not retry when the primary result is usable'
   );
 
+  // -------------------------------------------------------------------------
+  // originCountry
+  // -------------------------------------------------------------------------
+
+  // 44
+  assertEquals(
+    normalizeCountryCodes(['id', ' US ', 'id', '', null]),
+    ['ID', 'US'],
+    'normalizeCountryCodes trims, upper-cases, dedupes, and sorts'
+  );
+
+  // 45
+  assertEquals(
+    mapTmdbOriginCountry({ origin_country: ['id', 'us', 'ID'] }),
+    ['ID', 'US'],
+    'mapTmdbOriginCountry maps origin_country to sorted unique codes'
+  );
+
+  // 46
+  assertEquals(
+    mapTmdbOriginCountry({
+      origin_country: [],
+      production_countries: [
+        { iso_3166_1: 'id' },
+        { iso_3166_1: 'MY' },
+        { iso_3166_1: 'ID' },
+      ],
+    }),
+    ['ID', 'MY'],
+    'mapTmdbOriginCountry falls back to production_countries'
+  );
+
+  // 47
+  assertEquals(
+    mapTmdbOriginCountry({ origin_country: ['ID'], production_countries: [{ iso_3166_1: 'US' }] }),
+    ['ID'],
+    'mapTmdbOriginCountry prefers origin_country over production_countries'
+  );
+
+  // 48
+  assertEquals(
+    mapTmdbOriginCountry({}),
+    [],
+    'mapTmdbOriginCountry returns an empty array without country data'
+  );
+
+  // 49
+  assertEquals(
+    originCountryEqual(['ID', 'US'], ['us', 'id']),
+    true,
+    'originCountryEqual compares as sets, ignoring order and case'
+  );
+
+  // 50
+  assertEquals(
+    originCountryEqual(['ID'], ['ID', 'US']),
+    false,
+    'originCountryEqual detects different sets'
+  );
+
+  await withFakeFetch(
+    {
+      id: 501,
+      title: 'Test Film',
+      release_dates: { results: [] },
+      'watch/providers': { results: {} },
+      origin_country: ['id', 'US', 'id'],
+    },
+    async () => {
+      const data = await fetchTmdbSyncData('movie', 501, 'test-key');
+      assertEquals(
+        data.originCountry,
+        ['ID', 'US'],
+        'fetchTmdbSyncData returns the mapped origin_country'
+      );
+    }
+  );
+
+  await withFakeFetch(
+    {
+      id: 502,
+      title: 'Test Film',
+      release_dates: { results: [] },
+      'watch/providers': { results: {} },
+      production_countries: [{ iso_3166_1: 'id' }, { iso_3166_1: 'MY' }],
+    },
+    async () => {
+      const data = await fetchTmdbSyncData('movie', 502, 'test-key');
+      assertEquals(
+        data.originCountry,
+        ['ID', 'MY'],
+        'fetchTmdbSyncData falls back to production_countries'
+      );
+    }
+  );
+
+  await withFakeFetch(
+    {
+      id: 503,
+      title: 'Test Film',
+      release_dates: { results: [] },
+      'watch/providers': { results: {} },
+    },
+    async () => {
+      const data = await fetchTmdbSyncData('movie', 503, 'test-key');
+      assertEquals(
+        data.originCountry,
+        [],
+        'fetchTmdbSyncData returns an empty array when TMDB has no countries'
+      );
+    }
+  );
+
+  // 54
+  const originMissing = evaluateFilmSync({
+    film: createFilm({ title: 'Dune' }),
+    sync: createSync({ title: 'Dune', originCountry: ['ID'] }),
+    nowPlayingIds: [],
+    now: FIXED_NOW,
+  });
+  assertEquals(
+    originMissing.result?.updates.originCountry,
+    ['ID'],
+    'evaluateFilmSync writes originCountry when the film has none'
+  );
+  assert(
+    Boolean(originMissing.result?.changes.includes('negara: ID')),
+    'evaluateFilmSync reports the originCountry change as "negara: ID"'
+  );
+
+  // 55
+  const originEqual = evaluateFilmSync({
+    film: createFilm({ title: 'Dune', releaseDate: '2026-10-02', originCountry: ['US', 'ID'] }),
+    sync: createSync({ title: 'Dune', originCountry: ['id', 'us'] }),
+    nowPlayingIds: [],
+    now: FIXED_NOW,
+  });
+  assertEquals(
+    originEqual.status,
+    'unchanged',
+    'evaluateFilmSync does not write originCountry when the sets are equal in a different order'
+  );
+
+  // 56
+  const originEmpty = evaluateFilmSync({
+    film: createFilm({ title: 'Dune', releaseDate: '2026-10-02', originCountry: ['ID'] }),
+    sync: createSync({ title: 'Dune', originCountry: [] }),
+    nowPlayingIds: [],
+    now: FIXED_NOW,
+  });
+  assertEquals(
+    originEmpty.status,
+    'unchanged',
+    'evaluateFilmSync never clears an existing originCountry with an empty TMDB list'
+  );
+  assert(
+    !('originCountry' in (originEmpty.result?.updates || {})),
+    'evaluateFilmSync never writes an empty originCountry array'
+  );
+
+  // 57
+  const originMismatch = evaluateFilmSync({
+    film: createFilm({ title: 'Dune' }),
+    sync: createSync({ title: 'Arrival', originCountry: ['ID'] }),
+    nowPlayingIds: [],
+    now: FIXED_NOW,
+  });
+  assertEquals(
+    originMismatch.status,
+    'title_mismatch',
+    'evaluateFilmSync still skips a title mismatch even with originCountry data'
+  );
+
+  // 58
+  const originMixed = evaluateFilmSync({
+    film: createFilm({ title: 'Dune', releaseDate: undefined }),
+    sync: createSync({
+      title: 'Dune',
+      releaseDate: '2026-10-02',
+      originCountry: ['ID'],
+    }),
+    nowPlayingIds: [],
+    now: FIXED_NOW,
+  });
+  assertEquals(
+    {
+      originCountry: originMixed.result?.updates.originCountry,
+      releaseDate: originMixed.result?.updates.releaseDate,
+    },
+    { originCountry: ['ID'], releaseDate: '2026-10-02' },
+    'evaluateFilmSync keeps other updates intact when originCountry is added'
+  );
+
+  // 59
+  const multiCountry = evaluateFilmSync({
+    film: createFilm({ title: 'Dune' }),
+    sync: createSync({ title: 'Dune', originCountry: ['US', 'ID'] }),
+    nowPlayingIds: [],
+    now: FIXED_NOW,
+  });
+  assertEquals(
+    multiCountry.result?.updates.originCountry,
+    ['ID', 'US'],
+    'evaluateFilmSync stores normalized, sorted multi-country codes'
+  );
+
   console.log(`\n--- Results: ${passed} passed, ${failed} failed ---`);
   if (failed > 0) {
     process.exit(1);
   }
 };
 
-runTests();
+runTests().catch(error => {
+  console.error(error);
+  process.exit(1);
+});

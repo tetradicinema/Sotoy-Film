@@ -122,7 +122,7 @@ const CATEGORY_SPECIFIC_SUBCATEGORIES: Record<string, { val: string; label: stri
 
 // Beranda film sections use film-specific defaults (no default article sort).
 const isHomeFilmSectionKey = (key: HomepageSectionKey): boolean =>
-  key === 'home_film_recs' || key === 'home_streaming';
+  key === 'home_film_recs' || key === 'home_streaming' || key === 'home_film_indonesia';
 
 const getDefaultSectionConfig = (key: HomepageSectionKey, meta: SectionMeta): SectionConfig => {
   const isFilmDb = meta.area === 'film_database';
@@ -131,7 +131,7 @@ const getDefaultSectionConfig = (key: HomepageSectionKey, meta: SectionMeta): Se
 
   let limit = 5;
   if (key === 'hero_slider' || key === 'home_film_recs') limit = 6;
-  else if (key === 'home_streaming' || isFilmDb) limit = 12;
+  else if (key === 'home_streaming' || key === 'home_film_indonesia' || isFilmDb) limit = 12;
 
   return {
     title: '',
@@ -1634,6 +1634,14 @@ export const AdminHomepageSections: React.FC = () => {
                 <Sliders className="w-3.5 h-3.5 text-[#FF2E7E]" />
                 <span>Pengaturan Filter Otomatis</span>
               </div>
+
+              {(activeSectionKey === 'fd_film_indonesia' ||
+                activeSectionKey === 'home_film_indonesia') && (
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Otomatis menampilkan film dengan negara asal Indonesia atau tag Film Indonesia.
+                  Tambahkan tag Film Indonesia untuk film yang belum punya data TMDB.
+                </p>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Category Dropdown */}

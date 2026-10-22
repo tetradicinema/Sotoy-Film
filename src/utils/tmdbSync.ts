@@ -21,9 +21,54 @@ export interface TmdbSyncData {
   releaseDatesID: TmdbReleaseDateEntry[];
   providersID: TmdbSyncProviders;
   status: string;
+  /** ISO 3166-1 alpha-2 country codes, upper case, unique and sorted. */
+  originCountry: string[];
 }
 
 export type WhereToWatchEntry = FilmItem['whereToWatch'][number];
+
+/**
+ * Normalizes a list of country codes: trims, upper-cases, removes empty
+ * values, de-duplicates and sorts alphabetically.
+ */
+export function normalizeCountryCodes(values: unknown): string[] {
+  if (!Array.isArray(values)) return [];
+
+  return Array.from(
+    new Set(
+      values
+        .map(value => String(value ?? '').trim().toUpperCase())
+        .filter(Boolean)
+    )
+  ).sort();
+}
+
+/**
+ * Maps TMDB's `origin_country` (falling back to `production_countries`'
+ * `iso_3166_1`) into normalized country codes. Returns an empty array when
+ * TMDB has no usable country data.
+ */
+export function mapTmdbOriginCountry(data: any): string[] {
+  const fromOrigin = normalizeCountryCodes(data?.origin_country);
+  if (fromOrigin.length > 0) return fromOrigin;
+
+  const productionCodes = Array.isArray(data?.production_countries)
+    ? data.production_countries.map((country: any) => country?.iso_3166_1)
+    : [];
+
+  return normalizeCountryCodes(productionCodes);
+}
+
+/**
+ * True when both country lists contain the same codes, ignoring order,
+ * duplicates and letter case.
+ */
+export function originCountryEqual(a?: string[], b?: string[]): boolean {
+  const left = normalizeCountryCodes(a);
+  const right = normalizeCountryCodes(b);
+  if (left.length !== right.length) return false;
+  return left.every((code, index) => code === right[index]);
+}
 
 /**
  * Heuristic TMDB media type for a film. Series are always TV; animations are
@@ -388,6 +433,17 @@ export function evaluateFilmSync({
     }
   }
 
+  // Country of origin is filled once and never cleared: an empty TMDB list or
+  // an equal set (regardless of order) produces no update.
+  const syncOriginCountry = normalizeCountryCodes(sync.originCountry);
+  if (
+    syncOriginCountry.length > 0 &&
+    !originCountryEqual(syncOriginCountry, film.originCountry)
+  ) {
+    updates.originCountry = syncOriginCountry;
+    changes.push(`negara: ${syncOriginCountry.join(', ')}`);
+  }
+
   const effectiveIdReleaseDate = pickedIdReleaseDate ?? film.idReleaseDate;
   const inTheatres = computeInTheatres({
     mediaType: sync.type,
@@ -439,12 +495,33 @@ export function evaluateFilmSync({
 
 /**
  * Computes the minimal metadata update for one film. Only idReleaseDate,
- * releaseDate (when currently empty) and whereToWatch can ever be written.
+ * releaseDate (when currently empty), whereToWatch and originCountry (when
+ * currently missing or different) can ever be written.
  */
 export function computeFilmSyncUpdate(
   args: ComputeFilmSyncUpdateArgs
 ): FilmSyncResult | null {
   return evaluateFilmSync(args).result ?? null;
+}
+
+/**
+ * True when a row's only pending update is the one-time originCountry
+ * backfill. Those rows are written as usual but excluded from the change-rate
+ * guard and reported separately.
+ */
+export function isOriginCountryOnlyUpdate(updates: Partial<FilmItem>): boolean {
+  const keys = Object.keys(updates);
+  return keys.length > 0 && keys.every(key => key === 'originCountry');
+}
+
+/**
+ * Counts the rows that count towards the sync guard's change rate. Rows whose
+ * only update is originCountry are excluded.
+ */
+export function countSubstantiveSyncChanges(
+  rows: Array<{ updates: Partial<FilmItem> }>
+): number {
+  return rows.filter(row => !isOriginCountryOnlyUpdate(row.updates)).length;
 }
 
 export interface SyncGuardInput {

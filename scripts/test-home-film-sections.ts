@@ -2,11 +2,14 @@ import {
   DEFAULT_BLOCK_ORDER,
   DEFAULT_SECTION_ORDER,
   HOMEPAGE_SECTIONS_META,
+  WIDE_BLOCK_KEYS,
+  isBlockWide,
   resolveBlockOrder,
 } from '../src/utils/homepageConfigHelper';
 import {
   getHomeFilmRecsDefault,
   getHeroToWatch,
+  resolveHomeFilmIndonesia,
   resolveHomeFilmRecs,
   resolveHomeStreaming,
 } from '../src/utils/filmSections';
@@ -76,11 +79,14 @@ const runTests = () => {
   {
     const metaKeys = HOMEPAGE_SECTIONS_META.map(item => item.key);
     assert(
-      metaKeys.includes('home_film_recs') && metaKeys.includes('home_streaming'),
-      'HOMEPAGE_SECTIONS_META includes the two Beranda film sections'
+      metaKeys.includes('home_film_recs') &&
+        metaKeys.includes('home_streaming') &&
+        metaKeys.includes('home_film_indonesia'),
+      'HOMEPAGE_SECTIONS_META includes the three Beranda film sections'
     );
     const filmRecsMeta = HOMEPAGE_SECTIONS_META.find(item => item.key === 'home_film_recs');
     const streamingMeta = HOMEPAGE_SECTIONS_META.find(item => item.key === 'home_streaming');
+    const indonesiaMeta = HOMEPAGE_SECTIONS_META.find(item => item.key === 'home_film_indonesia');
     assert(
       filmRecsMeta?.area === 'home' && filmRecsMeta?.targetType === 'films',
       'home_film_recs meta uses area home and target films'
@@ -88,6 +94,10 @@ const runTests = () => {
     assert(
       streamingMeta?.area === 'home' && streamingMeta?.targetType === 'films',
       'home_streaming meta uses area home and target films'
+    );
+    assert(
+      indonesiaMeta?.area === 'home' && indonesiaMeta?.targetType === 'films',
+      'home_film_indonesia meta mirrors home_streaming with area home and target films'
     );
     assertEquals(
       filmRecsMeta?.allowedCategories,
@@ -101,8 +111,14 @@ const runTests = () => {
     const tail = DEFAULT_SECTION_ORDER.slice(-2);
     assertEquals(
       tail,
-      ['home_film_recs', 'home_streaming'],
-      'DEFAULT_SECTION_ORDER appends the Beranda film sections'
+      ['home_streaming', 'home_film_indonesia'],
+      'DEFAULT_SECTION_ORDER appends the Beranda film sections, with Film Indonesia last'
+    );
+    const order = DEFAULT_SECTION_ORDER;
+    assertEquals(
+      order[order.indexOf('home_streaming') + 1],
+      'home_film_indonesia',
+      'DEFAULT_SECTION_ORDER places home_film_indonesia after home_streaming'
     );
   }
 
@@ -135,9 +151,9 @@ const runTests = () => {
     const saved = ['hero', 'featured_news', 'watchlists'];
     const order = resolveBlockOrder(saved as any);
     assertEquals(
-      order[order.length - 1],
-      'streaming',
-      'saved order without film_recommendations appends streaming at the end'
+      order.slice(-2),
+      ['streaming', 'film_indonesia'],
+      'saved order without film_recommendations appends streaming then film_indonesia at the end'
     );
   }
 
@@ -146,9 +162,18 @@ const runTests = () => {
     const saved = ['hero', 'streaming', 'featured_news'];
     const order = resolveBlockOrder(saved as any);
     assertEquals(
-      order.slice(0, 3),
-      ['hero', 'streaming', 'featured_news'],
+      order.slice(0, 2),
+      ['hero', 'streaming'],
       'saved order that already has streaming is respected'
+    );
+    assertEquals(
+      order[order.indexOf('streaming') + 1],
+      'film_indonesia',
+      'saved order that already has streaming inserts film_indonesia right after it'
+    );
+    assert(
+      order.includes('featured_news'),
+      'saved order keeps its non-film blocks after the new insert'
     );
   }
 
@@ -541,6 +566,213 @@ const runTests = () => {
     assert(
       filmStudies?.targetType === 'articles' && filmStudies?.area === 'home',
       'hero_film_studies meta targets articles in the home area'
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Film Indonesia block & resolveHomeFilmIndonesia
+  // ---------------------------------------------------------------------------
+
+  const indonesianFilms: FilmItem[] = [
+    createFilm({
+      id: 'id-old',
+      title: 'Old Indonesian Film',
+      originCountry: ['ID'],
+      idReleaseDate: '2024-01-10T00:00:00.000Z',
+    }),
+    createFilm({
+      id: 'id-new',
+      title: 'New Indonesian Film',
+      originCountry: ['ID'],
+      idReleaseDate: '2026-05-01T00:00:00.000Z',
+    }),
+    createFilm({
+      id: 'id-lowercase',
+      title: 'Lowercase Country',
+      originCountry: ['id'],
+      idReleaseDate: '2025-03-01T00:00:00.000Z',
+    }),
+    createFilm({
+      id: 'id-tagged',
+      title: 'Tagged Only',
+      tags: ['Film Indonesia'],
+      idReleaseDate: '2025-06-01T00:00:00.000Z',
+    }),
+    createFilm({
+      id: 'id-wrong-tag',
+      title: 'Similar But Different Tag',
+      tags: ['film indonesia klasik'],
+      idReleaseDate: '2025-07-01T00:00:00.000Z',
+    }),
+    createFilm({
+      id: 'non-id',
+      title: 'Hollywood Film',
+      originCountry: ['US'],
+      idReleaseDate: '2026-06-01T00:00:00.000Z',
+    }),
+    createFilm({
+      id: 'no-country',
+      title: 'Unknown Country',
+      idReleaseDate: '2026-07-01T00:00:00.000Z',
+    }),
+  ];
+
+  // 35
+  {
+    const order = DEFAULT_BLOCK_ORDER;
+    assertEquals(
+      order[order.indexOf('streaming') + 1],
+      'film_indonesia',
+      'DEFAULT_BLOCK_ORDER places film_indonesia right after streaming'
+    );
+  }
+
+  // 36
+  {
+    assert(
+      WIDE_BLOCK_KEYS.has('film_indonesia') && isBlockWide('film_indonesia' as any),
+      'WIDE_BLOCK_KEYS marks film_indonesia as a wide block'
+    );
+  }
+
+  // 37
+  {
+    const order = resolveBlockOrder(['hero', 'streaming', 'reviews'] as any);
+    assertEquals(
+      order.indexOf('film_indonesia'),
+      order.indexOf('streaming') + 1,
+      'saved order without film_indonesia inserts it right after streaming'
+    );
+  }
+
+  // 38
+  {
+    const order = resolveBlockOrder(['hero', 'watchlists'] as any);
+    assertEquals(
+      order.slice(-2),
+      ['streaming', 'film_indonesia'],
+      'saved order without film_recommendations appends streaming then film_indonesia'
+    );
+  }
+
+  // 39
+  {
+    const result = resolveHomeFilmIndonesia(indonesianFilms);
+    assertEquals(
+      result.map(f => f.id),
+      ['id-new', 'id-tagged', 'id-lowercase', 'id-old'],
+      'resolveHomeFilmIndonesia keeps Indonesian films (country or tag) and sorts newest first'
+    );
+  }
+
+  // 40
+  {
+    const ids = resolveHomeFilmIndonesia(indonesianFilms).map(f => f.id);
+    assert(
+      !ids.includes('non-id') && !ids.includes('no-country'),
+      'resolveHomeFilmIndonesia excludes films from other or unknown countries'
+    );
+    assert(
+      !ids.includes('id-wrong-tag'),
+      'resolveHomeFilmIndonesia only matches the exact Film Indonesia tag'
+    );
+  }
+
+  // 41
+  {
+    assertEquals(
+      resolveHomeFilmIndonesia([]),
+      [],
+      'resolveHomeFilmIndonesia returns [] without films'
+    );
+  }
+
+  // 42
+  {
+    assertEquals(
+      resolveHomeFilmIndonesia(indonesianFilms, { sourceType: 'auto', enabled: false }),
+      [],
+      'resolveHomeFilmIndonesia returns [] when disabled'
+    );
+  }
+
+  // 43
+  {
+    const manyFilms = Array.from({ length: 15 }, (_, i) =>
+      createFilm({ id: `id-limit-${i}`, originCountry: ['ID'] })
+    );
+    const result = resolveHomeFilmIndonesia(manyFilms);
+    assertEquals(result.length, 12, 'resolveHomeFilmIndonesia defaults to 12 films');
+  }
+
+  // 44
+  {
+    const result = resolveHomeFilmIndonesia(indonesianFilms, {
+      sourceType: 'manual',
+      itemIds: ['id-old', 'missing-id', 'id-new', 'id-tagged'],
+      limit: 2,
+    } as SectionConfig);
+    assertEquals(
+      result.map(f => f.id),
+      ['id-old', 'id-new'],
+      'resolveHomeFilmIndonesia manual mode keeps order, skips missing ids, and respects the limit'
+    );
+  }
+
+  // 45
+  {
+    const categoryFilms = [
+      createFilm({ id: 'id-movie', originCountry: ['ID'], type: 'movie' }),
+      createFilm({ id: 'id-series', originCountry: ['ID'], type: 'series' }),
+    ];
+    const result = resolveHomeFilmIndonesia(categoryFilms, {
+      sourceType: 'auto',
+      category: 'series',
+    } as SectionConfig);
+    assertEquals(
+      result.map(f => f.id),
+      ['id-series'],
+      'resolveHomeFilmIndonesia applies the category filter'
+    );
+  }
+
+  // 46
+  {
+    const taggedFilms = [
+      createFilm({ id: 'id-horror', originCountry: ['ID'], tags: ['Horor'] }),
+      createFilm({ id: 'id-drama', originCountry: ['ID'], tags: ['Drama'] }),
+      createFilm({ id: 'non-id-horror', originCountry: ['US'], tags: ['Horor'] }),
+    ];
+    const result = resolveHomeFilmIndonesia(taggedFilms, {
+      sourceType: 'auto',
+      tag: 'Horor',
+    } as SectionConfig);
+    assertEquals(
+      result.map(f => f.id),
+      ['id-horror'],
+      'resolveHomeFilmIndonesia applies the tag filter on top of the Indonesian default'
+    );
+  }
+
+  // 47
+  {
+    const withDuplicate = [...indonesianFilms, indonesianFilms[0], indonesianFilms[2]];
+    const ids = resolveHomeFilmIndonesia(withDuplicate).map(f => f.id);
+    assertEquals(ids.length, new Set(ids).size, 'resolveHomeFilmIndonesia never returns duplicate films');
+  }
+
+  // 48
+  {
+    const undatedFilms = [
+      createFilm({ id: 'id-undated-2020', originCountry: ['ID'], year: 2020, title: 'B Film' }),
+      createFilm({ id: 'id-undated-2023', originCountry: ['ID'], year: 2023, title: 'Z Film' }),
+      createFilm({ id: 'id-undated-tie-a', originCountry: ['ID'], year: 2020, title: 'A Film' }),
+    ];
+    const result = resolveHomeFilmIndonesia(undatedFilms);
+    assertEquals(
+      result.map(f => f.id),
+      ['id-undated-2023', 'id-undated-tie-a', 'id-undated-2020'],
+      'resolveHomeFilmIndonesia falls back to year then title without release dates'
     );
   }
 

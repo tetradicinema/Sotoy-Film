@@ -33,6 +33,7 @@ export const DEFAULT_BLOCK_ORDER: HomeBlockKey[] = [
   'featured_news',
   'film_recommendations',
   'streaming',
+  'film_indonesia',
   'watchlists',
   'cinema_gear',
   'reviews',
@@ -73,6 +74,12 @@ export const HOME_BLOCKS_META: HomeBlockMeta[] = [
     label: "Explore What's Streaming",
     type: 'wide',
     description: 'Baris film dan series yang sedang tayang di platform streaming, dengan tab platform',
+  },
+  {
+    key: 'film_indonesia',
+    label: 'Film Indonesia',
+    type: 'wide',
+    description: 'Baris film dan series Indonesia berdasarkan negara asal atau tag Film Indonesia',
   },
   {
     key: 'watchlists',
@@ -158,7 +165,7 @@ export function resolveBlockOrder(saved?: HomeBlockKey[]): HomeBlockKey[] {
   const savedHasRecs = result.includes('film_recommendations');
 
   for (const defKey of DEFAULT_BLOCK_ORDER) {
-    if (defKey === 'streaming') continue;
+    if (defKey === 'streaming' || defKey === 'film_indonesia') continue;
     if (!seen.has(defKey)) {
       result.push(defKey);
       seen.add(defKey);
@@ -174,6 +181,19 @@ export function resolveBlockOrder(saved?: HomeBlockKey[]): HomeBlockKey[] {
       result.push('streaming');
     }
     seen.add('streaming');
+  }
+
+  // "Film Indonesia" follows the streaming block for saved layouts that
+  // predate it, falling back to after film_recommendations or the end.
+  if (!seen.has('film_indonesia')) {
+    if (seen.has('streaming')) {
+      result.splice(result.indexOf('streaming') + 1, 0, 'film_indonesia');
+    } else if (savedHasRecs) {
+      result.splice(result.indexOf('film_recommendations') + 1, 0, 'film_indonesia');
+    } else {
+      result.push('film_indonesia');
+    }
+    seen.add('film_indonesia');
   }
 
   return result;
@@ -204,7 +224,13 @@ export function resolveSidebarWidgetOrder(saved?: HomeSidebarWidgetKey[]): HomeS
   return result;
 }
 
-export const WIDE_BLOCK_KEYS: Set<HomeBlockKey> = new Set(['hero', 'featured_news', 'film_recommendations', 'streaming']);
+export const WIDE_BLOCK_KEYS: Set<HomeBlockKey> = new Set([
+  'hero',
+  'featured_news',
+  'film_recommendations',
+  'streaming',
+  'film_indonesia',
+]);
 
 export function isBlockWide(key: HomeBlockKey): boolean {
   return WIDE_BLOCK_KEYS.has(key);
@@ -338,6 +364,7 @@ export const DEFAULT_SECTION_ORDER: HomepageSectionKey[] = [
   'film_studies',
   'home_film_recs',
   'home_streaming',
+  'home_film_indonesia',
 ];
 
 export const DEFAULT_FILM_DB_SECTION_ORDER: HomepageSectionKey[] = [
@@ -348,6 +375,7 @@ export const DEFAULT_FILM_DB_SECTION_ORDER: HomepageSectionKey[] = [
   'fd_fans_favourite',
   'fd_editors_pick',
   'fd_hidden_gems',
+  'fd_film_indonesia',
 ];
 
 export function resolveSectionOrder(saved?: HomepageSectionKey[]): HomepageSectionKey[] {
@@ -601,6 +629,17 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     allowedCategories: ALL_FILM_CATEGORIES,
     area: 'film_database',
   },
+  {
+    key: 'fd_film_indonesia',
+    label: 'Film Indonesia',
+    defaultTitle: 'Film Indonesia',
+    defaultDescription: 'Film dan series buatan Indonesia, dari yang baru tayang sampai yang wajib ditonton.',
+    targetType: 'films',
+    description: 'Film dan series Indonesia (otomatis dari negara asal)',
+    defaultRule: 'Negara asal Indonesia atau tag Film Indonesia. Terbaru dulu',
+    allowedCategories: ALL_FILM_CATEGORIES,
+    area: 'film_database',
+  },
   // -------------------------------------------------------------
   // BERANDA FILM SECTIONS
   // -------------------------------------------------------------
@@ -623,6 +662,17 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     targetType: 'films',
     description: 'Baris film dan series yang sedang tayang di platform streaming, dengan tab platform',
     defaultRule: 'Film/series dengan platform streaming, terbaru dulu. Maks 12',
+    allowedCategories: ALL_FILM_CATEGORIES,
+    area: 'home',
+  },
+  {
+    key: 'home_film_indonesia',
+    label: 'Film Indonesia (Beranda)',
+    defaultTitle: 'Film Indonesia',
+    defaultDescription: 'Film dan series buatan Indonesia, dari yang baru tayang sampai yang wajib ditonton.',
+    targetType: 'films',
+    description: 'Baris film dan series Indonesia di halaman beranda',
+    defaultRule: 'Negara asal Indonesia atau tag Film Indonesia. Terbaru dulu. Maks 12',
     allowedCategories: ALL_FILM_CATEGORIES,
     area: 'home',
   },

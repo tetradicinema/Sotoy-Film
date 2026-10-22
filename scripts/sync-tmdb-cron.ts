@@ -6,9 +6,9 @@
  * server fetch helpers in `src/utils/tmdbServerFetch.ts`, but writes through
  * the Firebase Admin SDK so it can run unattended.
  *
- * Only `idReleaseDate`, `releaseDate` (when currently empty) and
- * `whereToWatch` are ever written, plus the `siteConfig/tmdbSync` status
- * document after a successful `--apply`.
+ * Only `idReleaseDate`, `releaseDate` (when currently empty), `whereToWatch`
+ * and `originCountry` (when missing or different) are ever written, plus the
+ * `siteConfig/tmdbSync` status document after a successful `--apply`.
  *
  * Requirements:
  * - GOOGLE_APPLICATION_CREDENTIALS must point to a valid service account JSON key file.
@@ -26,15 +26,18 @@
  */
 
 import path from 'node:path';
+import { appendFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { initializeApp, getApps, getApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 import type { FilmItem } from '../src/types';
 import {
+  countSubstantiveSyncChanges,
   decideTmdbFallback,
   evaluateFilmSync,
   evaluateSyncGuard,
+  isOriginCountryOnlyUpdate,
   tmdbMediaType,
 } from '../src/utils/tmdbSync';
 import {
@@ -102,6 +105,21 @@ const errorMessage = (error: unknown, fallback: string): string => {
 
 const delay = (ms: number): Promise<void> =>
   new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Appends a short Markdown summary to the GitHub Actions step summary when
+ * available. Best-effort: a missing or unwritable file never fails the sync.
+ */
+function appendStepSummary(lines: string[]): void {
+  const summaryPath = process.env.GITHUB_STEP_SUMMARY;
+  if (!summaryPath) return;
+
+  try {
+    appendFileSync(summaryPath, `${lines.join('\n')}\n`);
+  } catch {
+    // Ignore summary write failures.
+  }
+}
 
 interface ChangeRow {
   film: FilmItem;
@@ -273,11 +291,20 @@ async function main(): Promise<void> {
   rows.sort((a, b) => a.film.title.localeCompare(b.film.title));
   titleMismatches.sort((a, b) => a.title.localeCompare(b.title));
 
+  // One-time originCountry backfills are written like any other update but do
+  // not count towards the change-rate guard, otherwise a full backfill would
+  // be rejected.
+  const originCountryOnlyRows = rows.filter(row =>
+    isOriginCountryOnlyUpdate(row.updates)
+  );
+  const substantiveChangeCount = countSubstantiveSyncChanges(rows);
+
   console.log('=====================================================');
   console.log('SUMMARY');
   console.log('=====================================================');
   console.log(`Scanned:                         ${scanned}`);
   console.log(`Films to change:                 ${rows.length}`);
+  console.log(`Negara asal diisi:               ${originCountryOnlyRows.length}`);
   console.log(`Title mismatches (skipped):      ${titleMismatches.length}`);
   console.log(`TMDB errors:                     ${errors.length}`);
   console.log(`Films without TMDB ID:           ${withoutTmdbId.length}`);
@@ -312,10 +339,22 @@ async function main(): Promise<void> {
   console.log('\n=====================================================');
   const guard = evaluateSyncGuard({
     scanned,
-    toChange: rows.length,
+    toChange: substantiveChangeCount,
     errors: errors.length,
     force: options.force,
   });
+
+  appendStepSummary([
+    `## TMDB Sync (${options.apply ? 'apply' : 'dry-run'})`,
+    '',
+    `- Scanned: ${scanned}`,
+    `- Films to change: ${rows.length}`,
+    `- negara asal diisi: ${originCountryOnlyRows.length}`,
+    `- Title mismatches (skipped): ${titleMismatches.length}`,
+    `- TMDB errors: ${errors.length}`,
+    `- Films without TMDB ID: ${withoutTmdbId.length}`,
+    `- Guard: ${guard.ok ? 'ok' : `rejected (${guard.reason})`}`,
+  ]);
 
   if (!guard.ok) {
     console.error(`[GUARD] ${guard.reason}`);

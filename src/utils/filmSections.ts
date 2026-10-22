@@ -205,6 +205,26 @@ export function resolveHomeStreaming(
 }
 
 /**
+ * Resolves the homepage "Film Indonesia" film list. Same rules as the Film
+ * Database "Film Indonesia" section, with a default limit of 12.
+ */
+export function resolveHomeFilmIndonesia(
+  films: FilmItem[],
+  config?: SectionConfig,
+  opts?: { now?: Date }
+): FilmItem[] {
+  if (config && config.enabled === false) return [];
+
+  const merged: SectionConfig = {
+    sourceType: 'auto',
+    ...config,
+    limit: config?.limit ?? 12,
+  };
+
+  return resolveFilmDbSection('fd_film_indonesia', films, merged, opts);
+}
+
+/**
  * Extracts effective release date, preferring Indonesian theatrical release (idReleaseDate)
  * over general releaseDate. Returns null if invalid or missing.
  */
@@ -263,6 +283,21 @@ export function isAnimationFilm(film: FilmItem): boolean {
     return film.genres.some(g => /animas?i|animation/i.test(g));
   }
   return false;
+}
+
+/**
+ * Checks if a film is Indonesian: originCountry contains "ID"
+ * (case-insensitive) or tags contains "Film Indonesia" (case-insensitive).
+ * The tag is a manual override for films without TMDB country data.
+ */
+export function isIndonesianFilm(film: FilmItem): boolean {
+  const originCountry = Array.isArray(film.originCountry) ? film.originCountry : [];
+  if (originCountry.some(code => String(code || '').trim().toUpperCase() === 'ID')) {
+    return true;
+  }
+
+  const tags = Array.isArray(film.tags) ? film.tags : [];
+  return tags.some(tag => String(tag || '').trim().toLowerCase() === 'film indonesia');
 }
 
 /**
@@ -351,6 +386,12 @@ export function resolveFilmDbSection(
     case 'fd_animation': {
       // Films with type 'animation' / 'anime' or genre containing Animation / Animasi
       filtered = films.filter(isAnimationFilm);
+      break;
+    }
+
+    case 'fd_film_indonesia': {
+      // Indonesian films by TMDB country of origin, or the manual tag override
+      filtered = films.filter(isIndonesianFilm);
       break;
     }
 
@@ -468,7 +509,11 @@ export function resolveFilmDbSection(
   }
 
   // New configurable sections must never render the same film twice.
-  if (key === 'fd_editors_pick' || key === 'fd_hidden_gems') {
+  if (
+    key === 'fd_editors_pick' ||
+    key === 'fd_hidden_gems' ||
+    key === 'fd_film_indonesia'
+  ) {
     const seenIds = new Set<string>();
     filtered = filtered.filter(f => {
       if (seenIds.has(f.id)) return false;
@@ -529,6 +574,25 @@ export function resolveFilmDbSection(
           if (dateB !== undefined) return 1;
           if (dateA !== undefined) return -1;
           return (b.year || 0) - (a.year || 0);
+        });
+        break;
+      }
+
+      case 'fd_film_indonesia': {
+        // Effective release date newest first, then title.
+        filtered.sort((a, b) => {
+          const dateA = getFilmEffectiveReleaseDate(a)?.getTime();
+          const dateB = getFilmEffectiveReleaseDate(b)?.getTime();
+          if (dateA !== undefined && dateB !== undefined && dateA !== dateB) {
+            return dateB - dateA;
+          }
+          if (dateA !== undefined && dateB === undefined) return -1;
+          if (dateA === undefined && dateB !== undefined) return 1;
+          if (dateA === undefined && dateB === undefined) {
+            const yearDiff = (b.year || 0) - (a.year || 0);
+            if (yearDiff !== 0) return yearDiff;
+          }
+          return (a.title || '').localeCompare(b.title || '');
         });
         break;
       }

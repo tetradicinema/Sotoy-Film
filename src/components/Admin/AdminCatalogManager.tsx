@@ -65,6 +65,7 @@ interface FilmFormData {
   genres: string; // Comma-separated in form
   tags: string[]; // Active selected tags
   suggestedTags: string[]; // Dynamic suggested tags
+  originCountry: string[]; // ISO 3166-1 alpha-2 codes from TMDB
   skorSotoy: number;
   trailerUrl: string;
   featuredRecommendation: boolean;
@@ -89,6 +90,7 @@ const DEFAULT_FORM: FilmFormData = {
   genres: 'Action, Drama',
   tags: ['action-packed', 'drama'],
   suggestedTags: ['action-packed', 'drama', 'thriller', 'must-watch'],
+  originCountry: [],
   skorSotoy: 4.0,
   trailerUrl: '',
   featuredRecommendation: false,
@@ -211,6 +213,7 @@ export const AdminCatalogManager: React.FC = () => {
         genres: mapped.genres || prev.genres,
         tags: mapped.tags,
         suggestedTags: mapped.suggestedTags,
+        originCountry: mapped.originCountry,
         duration: mapped.duration || prev.duration,
         trailerUrl: mapped.trailerUrl || prev.trailerUrl,
         skorSotoy: mapped.skorSotoy || prev.skorSotoy,
@@ -452,6 +455,7 @@ export const AdminCatalogManager: React.FC = () => {
       genres: existingGenres.join(', '),
       tags: film.tags || suggested.slice(0, 4),
       suggestedTags: suggested,
+      originCountry: film.originCountry || [],
       skorSotoy: film.skorSotoy || 4.0,
       trailerUrl: film.trailerUrl || '',
       featuredRecommendation: !!film.featuredRecommendation,
@@ -552,6 +556,7 @@ export const AdminCatalogManager: React.FC = () => {
         castDetails: finalCastDetails,
         genres: genresArray,
         tags: formData.tags,
+        ...(formData.originCountry.length > 0 ? { originCountry: formData.originCountry } : {}),
         skorSotoy: Number(formData.skorSotoy) || 4.0,
         totalVotes: 1,
         criticsSkorSotoy: Number(formData.skorSotoy) || 4.0,

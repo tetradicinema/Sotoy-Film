@@ -7,6 +7,7 @@
  */
 
 import type { TmdbSyncData } from './tmdbSync';
+import { mapTmdbOriginCountry } from './tmdbSync';
 
 const TMDB_API_BASE = 'https://api.themoviedb.org/3';
 const WATCH_REGION = 'ID';
@@ -147,6 +148,7 @@ export async function fetchTmdbSyncData(
       buy: providerNames(regionProviders.buy),
     },
     status: data.status || '',
+    originCountry: mapTmdbOriginCountry(data),
   };
 }
 

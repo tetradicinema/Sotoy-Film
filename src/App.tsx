@@ -9,6 +9,7 @@ import { HeroSection } from './components/Home/HeroSection';
 import { FeaturedNews } from './components/Home/FeaturedNews';
 import { HomeFilmRecommendations } from './components/Home/HomeFilmRecommendations';
 import { HomeStreamingBlock } from './components/Home/HomeStreamingBlock';
+import { HomeFilmIndonesiaBlock } from './components/Home/HomeFilmIndonesiaBlock';
 import { HomeWatchlistsBlock } from './components/Home/HomeWatchlistsBlock';
 import { HomeCinemaGearBlock } from './components/Home/HomeCinemaGearBlock';
 import { HomeReviewsBlock } from './components/Home/HomeReviewsBlock';
@@ -85,7 +86,13 @@ const LegacyCategoryRedirect: React.FC<{ target: string }> = ({ target }) => {
   return <Navigate to={subCategory ? `${target}/${subCategory}` : target} replace />;
 };
 
-const WIDE_BLOCK_KEYS: Set<HomeBlockKey> = new Set(['hero', 'featured_news', 'film_recommendations', 'streaming']);
+const WIDE_BLOCK_KEYS: Set<HomeBlockKey> = new Set([
+  'hero',
+  'featured_news',
+  'film_recommendations',
+  'streaming',
+  'film_indonesia',
+]);
 
 // Dynamic Home Page view rendering sections according to saved layout order
 const HomeView: React.FC = () => {
@@ -189,6 +196,8 @@ const HomeView: React.FC = () => {
         return <HomeFilmRecommendations key="film_recommendations" />;
       case 'streaming':
         return <HomeStreamingBlock key="streaming" />;
+      case 'film_indonesia':
+        return <HomeFilmIndonesiaBlock key="film_indonesia" />;
       case 'watchlists':
         return <HomeWatchlistsBlock key="watchlists" />;
       case 'cinema_gear':

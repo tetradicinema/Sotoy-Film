@@ -3,6 +3,7 @@ import {
   resolveStreamingForPlatform,
   buildFilmDbSections,
   getStreamingPlatforms,
+  isIndonesianFilm,
 } from '../src/utils/filmSections';
 import { HOMEPAGE_SECTIONS_META, resolveFilmDbSectionOrder } from '../src/utils/homepageConfigHelper';
 import { FilmItem, SectionConfig, HomepageSectionKey, HomepageSectionsConfig } from '../src/types';
@@ -1126,7 +1127,7 @@ const runTests = () => {
     assertEquals(order[0], 'fd_streaming', 'resolveFilmDbSectionOrder keeps the saved first key');
     assertEquals(
       order.slice(-2),
-      ['fd_editors_pick', 'fd_hidden_gems'],
+      ['fd_hidden_gems', 'fd_film_indonesia'],
       'resolveFilmDbSectionOrder appends the new keys at the end'
     );
   }
@@ -1147,6 +1148,239 @@ const runTests = () => {
       'Film dan series berskor tinggi yang belum banyak dibicarakan.',
       'fd_hidden_gems exposes its default description'
     );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Film Indonesia (fd_film_indonesia)
+  // ---------------------------------------------------------------------------
+
+  // 70. originCountry ID
+  {
+    assertEquals(
+      isIndonesianFilm(createFilm({ originCountry: ['ID'] })),
+      true,
+      'isIndonesianFilm accepts originCountry ID'
+    );
+  }
+
+  // 71. originCountry lower-case id
+  {
+    assertEquals(
+      isIndonesianFilm(createFilm({ originCountry: ['id'] })),
+      true,
+      'isIndonesianFilm accepts a lower-case originCountry id'
+    );
+  }
+
+  // 72. tag override
+  {
+    assertEquals(
+      isIndonesianFilm(createFilm({ tags: ['Film Indonesia'] })),
+      true,
+      'isIndonesianFilm accepts the Film Indonesia tag override'
+    );
+  }
+
+  // 73. tag with different case and surrounding spaces
+  {
+    assertEquals(
+      isIndonesianFilm(createFilm({ tags: ['  film INDONESIA  '] })),
+      true,
+      'isIndonesianFilm matches the tag case-insensitively and trimmed'
+    );
+  }
+
+  // 74. multi-country containing ID
+  {
+    assertEquals(
+      isIndonesianFilm(createFilm({ originCountry: ['US', 'ID'] })),
+      true,
+      'isIndonesianFilm accepts a multi-country list containing ID'
+    );
+  }
+
+  // 75. empty or missing originCountry and tags
+  {
+    assertEquals(
+      isIndonesianFilm(createFilm({ originCountry: [], tags: [] })),
+      false,
+      'isIndonesianFilm rejects empty country and tag data'
+    );
+    assertEquals(
+      isIndonesianFilm(createFilm({})),
+      false,
+      'isIndonesianFilm rejects films with missing country and tag data'
+    );
+  }
+
+  // 76. non-Indonesian film
+  {
+    assertEquals(
+      isIndonesianFilm(createFilm({ originCountry: ['US'], tags: ['hollywood'] })),
+      false,
+      'isIndonesianFilm rejects a non-Indonesian originCountry'
+    );
+  }
+
+  const indonesianFilms = [
+    createFilm({ id: 'id-origin', title: 'Origin ID', originCountry: ['ID'], idReleaseDate: daysAgo(2) }),
+    createFilm({ id: 'id-tag', title: 'Tag Override', tags: ['Film Indonesia'], idReleaseDate: daysAgo(1) }),
+    createFilm({ id: 'id-none', title: 'Not Indonesian', originCountry: ['US'] }),
+  ];
+
+  // 77. default filter
+  {
+    const result = resolveFilmDbSection('fd_film_indonesia', indonesianFilms, undefined, { now: FIXED_NOW });
+    assertEquals(
+      result.map(f => f.id),
+      ['id-tag', 'id-origin'],
+      'fd_film_indonesia filters Indonesian films by country or tag'
+    );
+  }
+
+  // 78. newest-first default with date fallbacks
+  {
+    const films = [
+      createFilm({ id: 'id-year', title: 'Year Only', originCountry: ['ID'], year: 2020 }),
+      createFilm({ id: 'id-release', title: 'Release Date', originCountry: ['ID'], releaseDate: daysAgo(3) }),
+      createFilm({ id: 'id-idrelease', title: 'ID Release', originCountry: ['ID'], idReleaseDate: daysAgo(1) }),
+    ];
+    const result = resolveFilmDbSection('fd_film_indonesia', films, { sourceType: 'auto' } as SectionConfig, {
+      now: FIXED_NOW,
+    });
+    assertEquals(
+      result.map(f => f.id),
+      ['id-idrelease', 'id-release', 'id-year'],
+      'fd_film_indonesia defaults to newest effective release date first'
+    );
+  }
+
+  // 79. title tie-break on identical dates
+  {
+    const films = [
+      createFilm({ id: 'id-zeta', title: 'Zeta', originCountry: ['ID'], idReleaseDate: daysAgo(2) }),
+      createFilm({ id: 'id-alpha', title: 'Alpha', originCountry: ['ID'], idReleaseDate: daysAgo(2) }),
+    ];
+    const result = resolveFilmDbSection('fd_film_indonesia', films, undefined, { now: FIXED_NOW });
+    assertEquals(
+      result.map(f => f.id),
+      ['id-alpha', 'id-zeta'],
+      'fd_film_indonesia breaks release-date ties by title'
+    );
+  }
+
+  // 80. sortBy override
+  {
+    const films = [
+      createFilm({ id: 'id-rating-low', originCountry: ['ID'], skorSotoy: 5 }),
+      createFilm({ id: 'id-rating-high', originCountry: ['ID'], skorSotoy: 9 }),
+    ];
+    const result = resolveFilmDbSection('fd_film_indonesia', films, {
+      sortBy: 'rating',
+    } as SectionConfig, { now: FIXED_NOW });
+    assertEquals(
+      result.map(f => f.id),
+      ['id-rating-high', 'id-rating-low'],
+      'fd_film_indonesia respects a sortBy override'
+    );
+  }
+
+  // 81. default limit 12
+  {
+    const films = Array.from({ length: 15 }, (_, i) =>
+      createFilm({
+        id: `id-limit-${i}`,
+        originCountry: ['ID'],
+        idReleaseDate: daysAgo(i),
+      })
+    );
+    const result = resolveFilmDbSection('fd_film_indonesia', films, undefined, { now: FIXED_NOW });
+    assertEquals(result.length, 12, 'fd_film_indonesia defaults to a limit of 12');
+  }
+
+  // 82. manual mode keeps saved order and skips missing ids
+  {
+    const result = resolveFilmDbSection('fd_film_indonesia', indonesianFilms, {
+      sourceType: 'manual',
+      itemIds: ['id-tag', 'missing-id', 'id-origin'],
+      limit: 12,
+    } as SectionConfig, { now: FIXED_NOW });
+    assertEquals(
+      result.map(f => f.id),
+      ['id-tag', 'id-origin'],
+      'fd_film_indonesia manual mode keeps saved order and skips missing ids'
+    );
+  }
+
+  // 83. disabled
+  {
+    const result = resolveFilmDbSection('fd_film_indonesia', indonesianFilms, {
+      enabled: false,
+    } as SectionConfig, { now: FIXED_NOW });
+    assertEquals(result, [], 'fd_film_indonesia disabled returns no films');
+  }
+
+  // 84. empty section is hidden in buildFilmDbSections
+  {
+    const films = [createFilm({ id: 'non-id', originCountry: ['US'] })];
+    const result = buildFilmDbSections(films, undefined, { now: FIXED_NOW });
+    assert(
+      !result.some(s => s.key === 'fd_film_indonesia'),
+      'buildFilmDbSections hides fd_film_indonesia when it resolves no films'
+    );
+  }
+
+  // 85. saved order without the key appends it at the end
+  {
+    const order = resolveFilmDbSectionOrder([
+      'fd_streaming',
+      'fd_on_theatres',
+      'fd_hidden_gems',
+    ]);
+    assertEquals(
+      order[order.length - 1],
+      'fd_film_indonesia',
+      'resolveFilmDbSectionOrder appends fd_film_indonesia at the end'
+    );
+  }
+
+  // 86. section meta
+  {
+    const meta = HOMEPAGE_SECTIONS_META.find(m => m.key === 'fd_film_indonesia');
+    assertEquals(meta?.label, 'Film Indonesia', 'fd_film_indonesia uses the Film Indonesia label');
+    assertEquals(meta?.defaultTitle, 'Film Indonesia', 'fd_film_indonesia uses the Film Indonesia default title');
+    assertEquals(meta?.area, 'film_database', 'fd_film_indonesia lives in the Film Database area');
+    assertEquals(
+      meta?.defaultDescription,
+      'Film dan series buatan Indonesia, dari yang baru tayang sampai yang wajib ditonton.',
+      'fd_film_indonesia exposes its default description'
+    );
+    assertEquals(
+      meta?.defaultRule,
+      'Negara asal Indonesia atau tag Film Indonesia. Terbaru dulu',
+      'fd_film_indonesia exposes its default rule'
+    );
+  }
+
+  // 87. never returns the same film twice
+  {
+    const duplicate = createFilm({ id: 'id-dup', originCountry: ['ID'] });
+    const result = resolveFilmDbSection('fd_film_indonesia', [duplicate, duplicate], undefined, {
+      now: FIXED_NOW,
+    });
+    assertEquals(result.map(f => f.id), ['id-dup'], 'fd_film_indonesia does not return duplicates');
+  }
+
+  // 88. generic filters still apply
+  {
+    const films = [
+      createFilm({ id: 'id-series', type: 'series', originCountry: ['ID'] }),
+      createFilm({ id: 'id-movie', type: 'movie', originCountry: ['ID'] }),
+    ];
+    const result = resolveFilmDbSection('fd_film_indonesia', films, {
+      category: 'series',
+    } as SectionConfig, { now: FIXED_NOW });
+    assertEquals(result.map(f => f.id), ['id-series'], 'fd_film_indonesia applies the category filter');
   }
 
   console.log(`\n--- Results: ${passed} passed, ${failed} failed ---`);

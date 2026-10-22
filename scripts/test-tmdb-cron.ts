@@ -1,5 +1,7 @@
 import {
+  countSubstantiveSyncChanges,
   evaluateSyncGuard,
+  isOriginCountryOnlyUpdate,
   tmdbMediaType,
 } from '../src/utils/tmdbSync';
 import { parseSyncCliArgs } from './sync-tmdb-cron';
@@ -217,6 +219,72 @@ const runTests = () => {
       threw = true;
     }
     assert(threw, 'CLI rejects a missing --limit value');
+  }
+
+  // ---------------------------------------------------------------------------
+  // originCountry-only backfills and the change-rate guard
+  // ---------------------------------------------------------------------------
+
+  {
+    assertEquals(
+      isOriginCountryOnlyUpdate({ originCountry: ['ID'] }),
+      true,
+      'isOriginCountryOnlyUpdate detects an originCountry-only update'
+    );
+  }
+
+  {
+    assertEquals(
+      isOriginCountryOnlyUpdate({ originCountry: ['ID'], whereToWatch: [] }),
+      false,
+      'isOriginCountryOnlyUpdate rejects an update that also changes whereToWatch'
+    );
+  }
+
+  {
+    assertEquals(
+      isOriginCountryOnlyUpdate({}),
+      false,
+      'isOriginCountryOnlyUpdate rejects an empty update'
+    );
+  }
+
+  {
+    const rows = [
+      { updates: { originCountry: ['ID'] } },
+      { updates: { originCountry: ['ID'] } },
+      { updates: { originCountry: ['ID'], idReleaseDate: '2026-10-02' } },
+    ];
+    assertEquals(
+      countSubstantiveSyncChanges(rows),
+      1,
+      'countSubstantiveSyncChanges excludes originCountry-only rows and keeps mixed rows'
+    );
+  }
+
+  {
+    // 200 one-time backfills must not trip the 30% change-rate guard.
+    const rows = Array.from({ length: 200 }, () => ({
+      updates: { originCountry: ['ID'] } as any,
+    }));
+    const toChange = countSubstantiveSyncChanges(rows);
+    const result = evaluateSyncGuard({ scanned: 200, toChange, errors: 0 });
+    assertEquals(toChange, 0, 'originCountry-only backfills produce zero guard changes');
+    assertEquals(result, { ok: true }, 'guard accepts a full originCountry backfill run');
+  }
+
+  {
+    // 40 backfills + 20 substantive changes: the guard sees 20/100, not 60/100.
+    const rows = [
+      ...Array.from({ length: 40 }, () => ({ updates: { originCountry: ['ID'] } as any })),
+      ...Array.from({ length: 20 }, () => ({
+        updates: { originCountry: ['ID'], whereToWatch: [] } as any,
+      })),
+    ];
+    const toChange = countSubstantiveSyncChanges(rows);
+    const result = evaluateSyncGuard({ scanned: 100, toChange, errors: 0 });
+    assertEquals(toChange, 20, 'mixed updates still count towards the guard');
+    assertEquals(result, { ok: true }, 'guard accepts a run below 30% after excluding backfills');
   }
 
   console.log(`\n--- Results: ${passed} passed, ${failed} failed ---`);
