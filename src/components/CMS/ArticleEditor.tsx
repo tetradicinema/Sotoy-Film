@@ -14,6 +14,7 @@ import imageCompression from 'browser-image-compression';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../lib/firebase';
 import { useApp } from '../../context/AppContext';
+import { shouldSyncEditorContent } from '../../utils/articleFlow';
 import { SocialEmbedNode } from './extensions/SocialEmbedNode';
 import { FigureImageNode } from './extensions/FigureImageNode';
 import {
@@ -270,6 +271,11 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({
       const plainText = editor.getText();
       const words = plainText.trim().split(/\s+/).filter(Boolean).length;
 
+      // Record our own emitted content before notifying the parent. The parent
+      // echoes it back through initialJson on the next render; remembering it
+      // here makes the sync effect ignore that echo so the caret never moves.
+      lastLoadedContentRef.current = json;
+
       onChange({
         json,
         markdown,
@@ -337,25 +343,26 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({
     setSlashMenu(prev => (prev.open ? { ...prev, open: false } : prev));
   }, [editor]);
 
-  // Sync external changes (e.g. initial load or version restore) into editor
+  // Sync external changes (article opened or version restored). The editor's
+  // own echo is recorded in lastLoadedContentRef by onUpdate, so it is ignored.
   useEffect(() => {
     if (!editor) return;
     const incoming = initialJson || initialMarkdown || '';
-    if (incoming && incoming !== lastLoadedContentRef.current) {
-      lastLoadedContentRef.current = incoming;
-      if (initialJson) {
-        try {
-          const parsed = JSON.parse(initialJson);
-          if (parsed && typeof parsed === 'object') {
-            editor.commands.setContent(parsed, { emitUpdate: false });
-            return;
-          }
-        } catch (e) {
-          console.warn('[ArticleEditor] External sync JSON parse failed:', e);
+    if (!shouldSyncEditorContent(incoming, lastLoadedContentRef.current)) return;
+
+    lastLoadedContentRef.current = incoming;
+    if (initialJson) {
+      try {
+        const parsed = JSON.parse(initialJson);
+        if (parsed && typeof parsed === 'object') {
+          editor.commands.setContent(parsed, { emitUpdate: false });
+          return;
         }
+      } catch (e) {
+        console.warn('[ArticleEditor] External sync JSON parse failed:', e);
       }
-      editor.commands.setContent(initialMarkdown || '', { emitUpdate: false });
     }
+    editor.commands.setContent(initialMarkdown || '', { emitUpdate: false });
   }, [editor, initialJson, initialMarkdown]);
 
   // Image Upload Logic (Compress + Firebase Storage)

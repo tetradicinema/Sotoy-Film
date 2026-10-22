@@ -3,7 +3,7 @@ import { LinkifiedText } from '../Common/LinkifiedText';
 import { useParams } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
-import { isArticleUnpublished } from '../../utils/articleHelpers';
+import { isArticleUnpublished, splitProfileArticles } from '../../utils/articleHelpers';
 import {
   User as UserIcon,
   Star,
@@ -463,12 +463,17 @@ export const UserPage: React.FC = () => {
            (targetUser.name && r.userName && r.userName.toLowerCase() === targetUser.name.toLowerCase())
     );
   }, [isOwnProfile, ratings, targetUserRatings, targetUser.id, targetUser.name]);
-  const myArticles = articles.filter(a => {
+  const isOwnerOrAdmin = isOwnProfile || isAdmin;
+  const myArticles = useMemo(() => articles.filter(a => {
     const isAuthorMatch = (a.authorId && a.authorId === targetUser.id) || a.author?.id === targetUser.id || a.author?.name === targetUser.name;
     if (!isAuthorMatch) return false;
-    if (isOwnProfile || isAdmin) return true;
+    if (isOwnerOrAdmin) return true;
     return !isArticleUnpublished(a);
-  });
+  }), [articles, targetUser.id, targetUser.name, isOwnerOrAdmin]);
+  const articleGroups = useMemo(
+    () => splitProfileArticles(myArticles, { isOwnerOrAdmin }),
+    [myArticles, isOwnerOrAdmin]
+  );
 
   // Derived lists for Replies and Reposts
   const myReplies = React.useMemo(() => {
@@ -962,7 +967,7 @@ export const UserPage: React.FC = () => {
             { id: 'reviews', label: 'Reviews', count: myReviews.length },
             { id: 'watchlist', label: 'Watchlist', count: myWatchlistFilms.length + mySavedArticles.length },
             { id: 'reposts', label: 'Reposts', count: myReposts.length },
-            ...(showArticlesTab ? [{ id: 'articles', label: 'Editorial', count: myArticles.length }] : []),
+            ...(showArticlesTab ? [{ id: 'articles', label: 'Editorial', count: articleGroups.counts.total }] : []),
           ].map(tab => {
             const isActive = activeUserTab === tab.id;
             return (
@@ -2595,14 +2600,14 @@ export const UserPage: React.FC = () => {
 
               <div className="flex items-center gap-2">
                 <span className="px-3 py-1 bg-pink-500/10 border border-pink-500/30 text-pink-300 text-xs font-bold rounded-xl">
-                  {myArticles.length} Artikel
+                  {articleGroups.counts.total} Artikel
                 </span>
                 {isOwnProfile && (targetUser.role === 'penulis_sotoy' || targetUser.role === 'admin') && (
                   <button
                     onClick={() => {
                       showToast('Editor artikel siap! Silakan buat draf artikel barumu.');
                     }}
-                    className="px-3.5 py-1.5 bg-gradient-to-r from-[#FF2E7E] to-[#e0266e] text-white text-xs font-black rounded-xl hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5"
+                    className="px-3.5 py-1.5 bg-[#FF2E7E] hover:bg-[#e0266e] text-white text-xs font-black rounded-xl active:scale-95 transition-colors flex items-center gap-1.5"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Tulis Artikel Baru</span>
@@ -2611,12 +2616,12 @@ export const UserPage: React.FC = () => {
               </div>
             </div>
 
-            {myArticles.length === 0 ? (
+            {articleGroups.counts.total === 0 ? (
               <div className="py-12 text-center space-y-3">
                 <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 text-slate-500 flex items-center justify-center mx-auto">
                   <PenSquare className="w-6 h-6" />
                 </div>
-                <h4 className="text-white font-bold text-sm">Belum Ada Artikel Diterbitkan</h4>
+                <h4 className="text-white font-bold text-sm">Belum Ada Artikel</h4>
                 <p className="text-slate-500 text-xs max-w-sm mx-auto">
                   {isOwnProfile
                     ? 'Kamu belum menerbitkan artikel editorial di Sotoy Film.'
@@ -2624,51 +2629,88 @@ export const UserPage: React.FC = () => {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                {myArticles.map(art => (
-                  <div
-                    key={art.id}
-                    onClick={() => navigateTo('article-detail', { articleId: art.id })}
-                    className="group bg-slate-900/80 hover:bg-slate-900 border border-slate-800/90 hover:border-pink-500/50 rounded-2xl overflow-hidden cursor-pointer transition-all flex flex-col shadow-lg"
-                  >
-                    <div className="relative aspect-video overflow-hidden bg-slate-950">
-                      {art.coverImage?.trim() ? (
-                        <img
-                          src={art.coverImage.trim()}
-                          alt={art.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-700">
-                          <FileText className="w-12 h-12" />
-                        </div>
-                      )}
-                      <div className="absolute top-2.5 left-2.5 bg-black/70 backdrop-blur-sm text-[10px] uppercase font-black text-[#FF2E7E] px-2.5 py-0.5 rounded-md border border-[#FF2E7E]/30">
-                        {art.category}
-                      </div>
-                      <div className="absolute bottom-2.5 right-2.5 bg-black/75 backdrop-blur-sm text-[10px] text-slate-300 font-bold px-2 py-0.5 rounded flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-[#FF2E7E]" />
-                        <span>{art.readTime}</span>
-                      </div>
+              <div className="space-y-7">
+                {[
+                  { key: 'published', label: 'Diterbitkan', items: articleGroups.published, isDraftGroup: false },
+                  ...(isOwnerOrAdmin
+                    ? [{ key: 'drafts', label: 'Draf', items: articleGroups.drafts, isDraftGroup: true }]
+                    : []),
+                ].map(group => group.items.length === 0 ? null : (
+                  <div key={group.key} className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                        {group.label}
+                      </h4>
+                      <span className="px-2 py-0.5 bg-slate-900 border border-slate-700 text-slate-300 text-[10px] font-bold rounded-md">
+                        {group.items.length}
+                      </span>
                     </div>
 
-                    <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
-                      <div className="space-y-1.5">
-                        <h4 className="font-display font-black text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-2 leading-snug">
-                          {art.title}
-                        </h4>
-                        <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
-                          {art.excerpt}
-                        </p>
-                      </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                      {group.items.map(art => (
+                        <div
+                          key={art.id}
+                          onClick={() => {
+                            if (isOwnerOrAdmin && group.isDraftGroup) {
+                              navigateTo('write-article', { articleId: art.id });
+                            } else {
+                              navigateTo('article-detail', { articleId: art.id });
+                            }
+                          }}
+                          className="group bg-slate-900/80 hover:bg-slate-900 border border-slate-800/90 hover:border-pink-500/50 rounded-2xl overflow-hidden cursor-pointer transition-all flex flex-col shadow-lg"
+                        >
+                          <div className="relative aspect-video overflow-hidden bg-slate-950">
+                            {art.coverImage?.trim() ? (
+                              <img
+                                src={art.coverImage.trim()}
+                                alt={art.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-700">
+                                <FileText className="w-12 h-12" />
+                              </div>
+                            )}
+                            <div className="absolute top-2.5 left-2.5 bg-black/70 backdrop-blur-sm text-[10px] uppercase font-black text-[#FF2E7E] px-2.5 py-0.5 rounded-md border border-[#FF2E7E]/30">
+                              {art.category}
+                            </div>
+                            {isOwnerOrAdmin && (
+                              <div
+                                className={`absolute top-2.5 right-2.5 text-[10px] uppercase font-black px-2 py-0.5 rounded-md ${
+                                  art.status === 'scheduled' || group.isDraftGroup
+                                    ? 'bg-amber-500 text-slate-950'
+                                    : 'bg-emerald-600 text-white'
+                                }`}
+                              >
+                                {art.status === 'scheduled' ? 'Terjadwal' : group.isDraftGroup ? 'Draf' : 'Terbit'}
+                              </div>
+                            )}
+                            <div className="absolute bottom-2.5 right-2.5 bg-black/75 backdrop-blur-sm text-[10px] text-slate-300 font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-[#FF2E7E]" />
+                              <span>{art.readTime}</span>
+                            </div>
+                          </div>
 
-                      <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
-                        <span>{art.publishedAt}</span>
-                        <span className="text-[#FF2E7E] font-bold group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                          <span>Baca Artikel</span>
-                          <ChevronRight className="w-3 h-3" />
-                        </span>
-                      </div>
+                          <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                            <div className="space-y-1.5">
+                              <h4 className="font-display font-black text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-2 leading-snug">
+                                {art.title}
+                              </h4>
+                              <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                                {art.excerpt}
+                              </p>
+                            </div>
+
+                            <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
+                              <span>{art.publishedAt}</span>
+                              <span className="text-[#FF2E7E] font-bold group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                                <span>{group.isDraftGroup ? 'Lanjutkan Menulis' : 'Baca Artikel'}</span>
+                                <ChevronRight className="w-3 h-3" />
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}

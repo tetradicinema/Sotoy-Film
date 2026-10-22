@@ -40,6 +40,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { canAutosave } from '../../utils/articleFlow';
 import { MainCategory, SubCategory, FilmItem, ArticleVersion } from '../../types';
 import { db } from '../../lib/firebase';
 import { doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, query, where, orderBy } from 'firebase/firestore';
@@ -91,6 +92,8 @@ export const WriteArticlePage: React.FC = () => {
   const [readTime, setReadTime] = useState('5 mnt baca');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPublishingLoading, setIsPublishingLoading] = useState(false);
+  const [isSubmitLocked, setIsSubmitLocked] = useState(false);
+  const [editorSessionKey, setEditorSessionKey] = useState(0);
   const [publishedSuccessModal, setPublishedSuccessModal] = useState<{
     id: string;
     title: string;
@@ -244,8 +247,12 @@ export const WriteArticlePage: React.FC = () => {
   const creatingDraftPromiseRef = useRef<Promise<string | null> | null>(null);
   const lastSavedHashRef = useRef<string>('');
   const isSavingRef = useRef<boolean>(false);
+  const savingPromiseRef = useRef<Promise<void> | null>(null);
+  const submitLockRef = useRef<boolean>(false);
+  const justCreatedDraftIdRef = useRef<string | null>(null);
   const autosaveTimeoutRef = useRef<any>(null);
   const autosaveIntervalRef = useRef<any>(null);
+  const autosaveRetryTimeoutRef = useRef<any>(null);
   const autosaveErrorRetryCountRef = useRef<number>(0);
 
   const [autosaveStatus, setAutosaveStatus] = useState<'clean' | 'dirty' | 'saving' | 'saved' | 'error'>('clean');
@@ -325,9 +332,14 @@ export const WriteArticlePage: React.FC = () => {
   useEffect(() => {
     if (selectedArticleId) {
       if (loadedArticleIdRef.current === selectedArticleId) return;
+      // A draft just created by autosave/save keeps its form state; it must not
+      // be re-initialized from the early snapshot.
+      if (justCreatedDraftIdRef.current === selectedArticleId) return;
       const found = articles.find(a => a.id === selectedArticleId);
       if (found) {
         loadedArticleIdRef.current = found.id;
+        // A deliberate open of another article ends the "just created" window.
+        justCreatedDraftIdRef.current = null;
         setIsEditMode(true);
         setEditingId(found.id);
         editingIdRef.current = found.id;
@@ -388,6 +400,10 @@ export const WriteArticlePage: React.FC = () => {
             }
           }).catch(() => {});
         }
+
+        // Opening a different article starts a fresh editor session so the
+        // loaded document replaces any stale editor state.
+        setEditorSessionKey(key => key + 1);
       }
     } else {
       if (editingIdRef.current) return;
@@ -446,7 +462,7 @@ export const WriteArticlePage: React.FC = () => {
     showToast('Cadangan perubahan dibuang.', 'info');
   };
 
-  const getOrCreateDraftId = async (): Promise<string | null> => {
+  const getOrCreateDraftId = async (options?: { force?: boolean }): Promise<string | null> => {
     if (editingIdRef.current) return editingIdRef.current;
     if (creatingDraftPromiseRef.current) return creatingDraftPromiseRef.current;
 
@@ -454,7 +470,7 @@ export const WriteArticlePage: React.FC = () => {
       try {
         const form = latestFormRef.current;
         const plainText = form.content.replace(/<[^>]*>/g, '').trim();
-        if (form.title.trim().length < 3 && plainText.length < 30) {
+        if (!options?.force && form.title.trim().length < 3 && plainText.length < 30) {
           return null;
         }
         const newId = `art-draft-${currentUser.id}-${Date.now()}`;
@@ -495,7 +511,10 @@ export const WriteArticlePage: React.FC = () => {
           setEditingId(newId);
           setIsEditMode(true);
           loadedArticleIdRef.current = newId;
-          navigateTo('write-article', { articleId: newId });
+          justCreatedDraftIdRef.current = newId;
+          // Update the URL only. Passing articleId here would change
+          // selectedArticleId and re-run the article loading effect.
+          navigateTo('write-article');
           return newId;
         }
         return null;
@@ -508,7 +527,16 @@ export const WriteArticlePage: React.FC = () => {
   };
 
   const executeAutoSave = async () => {
-    if (isSavingRef.current || isSubmitting) return;
+    if (
+      !canAutosave({
+        isSubmitting,
+        isPublishing: isPublishingLoading,
+        isSaving: isSavingRef.current,
+        isLocked: submitLockRef.current,
+      })
+    ) {
+      return;
+    }
     const form = latestFormRef.current;
     const plainText = form.content.replace(/<[^>]*>/g, '').trim();
     if (form.title.trim().length < 3 && plainText.length < 30) return;
@@ -534,6 +562,10 @@ export const WriteArticlePage: React.FC = () => {
     if (snapshot === lastSavedHashRef.current) return;
 
     isSavingRef.current = true;
+    const savingGate: { release: (() => void) | null } = { release: null };
+    savingPromiseRef.current = new Promise<void>(resolve => {
+      savingGate.release = resolve;
+    });
     setIsAutoSaving(true);
     setAutosaveStatus('saving');
 
@@ -602,18 +634,31 @@ export const WriteArticlePage: React.FC = () => {
       setAutosaveStatus('error');
       const retryCount = autosaveErrorRetryCountRef.current++;
       const delay = retryCount === 0 ? 5000 : retryCount === 1 ? 15000 : 45000;
-      setTimeout(() => {
+      if (autosaveRetryTimeoutRef.current) clearTimeout(autosaveRetryTimeoutRef.current);
+      autosaveRetryTimeoutRef.current = setTimeout(() => {
+        autosaveRetryTimeoutRef.current = null;
         if (autosaveStatus === 'error') executeAutoSave();
       }, delay);
     } finally {
       isSavingRef.current = false;
       setIsAutoSaving(false);
+      savingGate.release?.();
+      savingPromiseRef.current = null;
     }
   };
 
   // Debounce effect + 30s max interval
+  const autosaveAllowed =
+    isAuthorized &&
+    canAutosave({
+      isSubmitting,
+      isPublishing: isPublishingLoading,
+      isSaving: isAutoSaving,
+      isLocked: isSubmitLocked,
+    });
+
   useEffect(() => {
-    if (!isAuthorized || isSubmitting) return;
+    if (!autosaveAllowed) return;
 
     const form = latestFormRef.current;
     const currentHashFields = {
@@ -691,8 +736,7 @@ export const WriteArticlePage: React.FC = () => {
     ogImage,
     seoKeywords,
     articleStatus,
-    isAuthorized,
-    isSubmitting,
+    autosaveAllowed,
   ]);
 
   // beforeunload warning handler
@@ -845,8 +889,23 @@ export const WriteArticlePage: React.FC = () => {
       await setDoc(doc(db, 'article_versions', verId), JSON.parse(JSON.stringify(versionPayload)));
       showToast(`Snapshot Versi v${nextVerNum} berhasil disimpan!`, 'success');
     } catch (err: any) {
-      console.error('[Versioning] Gagal menyimpan snapshot:', err);
-      showToast('Gagal menyimpan versi snapshot.', 'error');
+      const articleDoc = articles.find(a => a.id === artId);
+      const articleAuthorId = articleDoc?.authorId || articleDoc?.author?.id;
+      const errorCode = err?.code || 'unknown-error';
+      console.error('[Article] version failed:', {
+        operation: 'version',
+        articleId: artId,
+        status: articleDoc?.status || articleStatus,
+        authorId: articleAuthorId,
+        currentUserId: currentUser.id,
+        currentUserRole: currentUser.role,
+        errorCode,
+        error: err,
+      });
+      const reason = errorCode === 'permission-denied'
+        ? `Akses ditolak (simpan versi artikel ${artId}, permission-denied)`
+        : `Gagal menyimpan versi artikel ${artId} (${errorCode})`;
+      showToast(reason, 'error');
     } finally {
       setIsCreatingSnapshot(false);
     }
@@ -968,6 +1027,10 @@ export const WriteArticlePage: React.FC = () => {
   const resetForm = () => {
     setIsEditMode(false);
     setEditingId(null);
+    editingIdRef.current = null;
+    loadedArticleIdRef.current = null;
+    justCreatedDraftIdRef.current = null;
+    setEditorSessionKey(key => key + 1);
     setTitle('');
     setCustomSlug('');
     setIsSlugManuallyEdited(false);
@@ -1004,7 +1067,6 @@ export const WriteArticlePage: React.FC = () => {
       showToast('Harap isi judul dan konten artikel!');
       return;
     }
-
     if (targetStatus === 'scheduled') {
       if (!scheduledAtDate) {
         showToast('Harap tentukan tanggal dan waktu penayangan artikel!');
@@ -1024,6 +1086,8 @@ export const WriteArticlePage: React.FC = () => {
 
     const finalSlug = customSlug.trim() || slugify(title) || `artikel-${Date.now()}`;
 
+    submitLockRef.current = true;
+    setIsSubmitLocked(true);
     if (targetStatus === 'published') {
       setIsPublishingLoading(true);
     } else {
@@ -1031,6 +1095,24 @@ export const WriteArticlePage: React.FC = () => {
     }
 
     try {
+      // Stop the debounce timer and interval tick, then let any in-flight
+      // autosave finish so this explicit save is the last write.
+      if (autosaveTimeoutRef.current) {
+        clearTimeout(autosaveTimeoutRef.current);
+        autosaveTimeoutRef.current = null;
+      }
+      if (autosaveIntervalRef.current) {
+        clearInterval(autosaveIntervalRef.current);
+        autosaveIntervalRef.current = null;
+      }
+      if (autosaveRetryTimeoutRef.current) {
+        clearTimeout(autosaveRetryTimeoutRef.current);
+        autosaveRetryTimeoutRef.current = null;
+      }
+      if (isSavingRef.current && savingPromiseRef.current) {
+        await savingPromiseRef.current.catch(() => {});
+      }
+
       let customPublishedAt: string | undefined = undefined;
       let publishedAtTimestamp: string | undefined = undefined;
       const now = new Date();
@@ -1080,69 +1162,79 @@ export const WriteArticlePage: React.FC = () => {
         payload.scheduledAt = scheduledAtDate;
       }
 
-      // Small delay for smooth publishing feedback
-      if (targetStatus === 'published') {
-        await new Promise(res => setTimeout(res, 500));
+      const isNewDocument = !editingIdRef.current;
+      let targetId = editingIdRef.current;
+      if (!targetId) {
+        // Reuse the autosaved draft id when one exists instead of creating a
+        // second document for this article.
+        targetId = await getOrCreateDraftId({ force: true });
       }
 
-      const targetId = editingIdRef.current;
-      if (targetId) {
-        await saveVersionSnapshot(
-          targetStatus === 'published' ? 'Pembaruan Artikel Terbit' : targetStatus === 'scheduled' ? 'Penjadwalan Terbit' : 'Penyimpanan Draf',
-          targetId
-        );
-        const success = await updateArticle(targetId, payload);
-        if (success) {
-          deleteDoc(doc(db, 'articles', targetId, 'autosaves', currentUser.id)).catch(() => {});
-          if (targetStatus === 'published') {
-            setPublishedSuccessModal({
-              id: targetId,
-              title,
-              slug: finalSlug,
-              coverImage,
-              category,
-              readTime,
-            });
-          } else {
-            navigateTo('writer-dashboard');
-          }
-        }
-      } else {
-        const newArtId = `art-${Date.now()}`;
-        const newArticleData = {
-          ...payload,
-          id: newArtId,
-          author: {
-            id: currentUser.id,
-            name: currentUser.name,
-            avatar: currentUser.avatar,
-            role: currentUser.role,
-          },
-        };
-        await saveVersionSnapshot(
-          targetStatus === 'published' ? 'Publikasi Perdana' : targetStatus === 'scheduled' ? 'Draf Terjadwal' : 'Draf Pertama',
-          newArtId
-        );
-        const success = await addArticle(newArticleData as any);
+      if (!targetId) {
+        showToast('Gagal menyiapkan dokumen artikel untuk disimpan.', 'error');
+        return;
+      }
 
-        if (success) {
-          if (targetStatus === 'published') {
-            setPublishedSuccessModal({
-              id: newArtId,
-              title,
-              slug: finalSlug,
-              coverImage,
-              category,
-              readTime,
-            });
-          } else {
-            navigateTo('writer-dashboard');
-          }
+      await saveVersionSnapshot(
+        isNewDocument
+          ? targetStatus === 'published' ? 'Publikasi Perdana' : targetStatus === 'scheduled' ? 'Draf Terjadwal' : 'Draf Pertama'
+          : targetStatus === 'published' ? 'Pembaruan Artikel Terbit' : targetStatus === 'scheduled' ? 'Penjadwalan Terbit' : 'Penyimpanan Draf',
+        targetId
+      );
+      const success = await updateArticle(targetId, payload);
+      if (success) {
+        // Mark the saved state clean so the autosave timer cannot write a
+        // stale draft status over a publish immediately afterwards.
+        setArticleStatus(targetStatus);
+        lastSavedHashRef.current = JSON.stringify({
+          title,
+          slug: customSlug,
+          category,
+          subCategory,
+          excerpt,
+          content,
+          contentJson,
+          coverImage,
+          tagsInput,
+          selectedFilmIds,
+          seoTitle,
+          metaDescription,
+          ogImage,
+          seoKeywords,
+          articleStatus: targetStatus,
+        });
+        deleteDoc(doc(db, 'articles', targetId, 'autosaves', currentUser.id)).catch(() => {});
+        if (targetStatus === 'published') {
+          setPublishedSuccessModal({
+            id: targetId,
+            title,
+            slug: finalSlug,
+            coverImage,
+            category,
+            readTime,
+          });
+        } else {
+          navigateTo('writer-dashboard');
         }
       }
-    } catch (err) {
-      showToast('Terjadi kesalahan saat memproses artikel.');
+    } catch (err: any) {
+      const errorCode = err?.code || 'unknown-error';
+      console.error('[Article] save flow failed:', {
+        operation: targetStatus === 'published' ? 'publish' : 'save',
+        articleId: editingIdRef.current,
+        status: targetStatus,
+        currentUserId: currentUser.id,
+        currentUserRole: currentUser.role,
+        errorCode,
+        error: err,
+      });
+      showToast(
+        `Gagal memproses artikel${editingIdRef.current ? ` ${editingIdRef.current}` : ''} (${errorCode}).`,
+        'error'
+      );
     } finally {
+      submitLockRef.current = false;
+      setIsSubmitLocked(false);
       setIsSubmitting(false);
       setIsPublishingLoading(false);
     }
@@ -1813,7 +1905,7 @@ export const WriteArticlePage: React.FC = () => {
                   </span>
                 </label>
                 <ArticleEditor
-                  key={editingId || (selectedArticleId ? `art-${selectedArticleId}` : 'new-article')}
+                  key={editorSessionKey}
                   initialJson={contentJson}
                   initialMarkdown={content}
                   onChange={({ json, markdown, plainText, wordCount }) => {

@@ -4603,14 +4603,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Publish or Save Draft Article directly to Firestore
   const addArticle = async (newArticle: Omit<Article, 'id' | 'publishedAt' | 'views' | 'likes' | 'commentsCount'>): Promise<boolean> => {
     if (!requireVerified()) return false;
+    const articleId = (newArticle as any).id || `art-${Date.now()}`;
+    const status = newArticle.status || 'published';
     const isPermitted = currentUser.role === 'penulis_sotoy' || currentUser.role === 'admin' || isUserWriter(currentUser) || isUserAdmin(currentUser);
     if (!isPermitted) {
-      showToast('Akses ditolak: Hanya Penulis Sotoy & Admin yang dapat mempublikasikan artikel!', 'error');
+      console.error('[Article] add failed:', {
+        operation: 'add',
+        articleId,
+        status,
+        authorId: (newArticle as any).author?.id || (newArticle as any).authorId,
+        currentUserId: currentUser.id,
+        currentUserRole: currentUser.role,
+        errorCode: 'permission-denied',
+      });
+      showToast(`Akses ditolak (tambah artikel ${articleId}, permission-denied)`, 'error');
       return false;
     }
 
-    const articleId = (newArticle as any).id || `art-${Date.now()}`;
-    const status = newArticle.status || 'published';
     const now = new Date();
     const publishedAtTimestamp = (newArticle as any).publishedAtTimestamp || (
       status === 'scheduled' && (newArticle as any).scheduledAt
@@ -4641,10 +4650,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       showToast(toastMsg, 'success');
       return true;
     } catch (error: any) {
-      console.error('[Article] Error adding article:', error);
-      const reason = error?.code === 'permission-denied'
-        ? 'Akses ditolak: Anda tidak memiliki izin.'
-        : 'Gagal mempublikasikan artikel.';
+      const errorCode = error?.code || 'unknown-error';
+      const authorId = created.author?.id || created.authorId;
+      console.error('[Article] add failed:', {
+        operation: 'add',
+        articleId,
+        status,
+        authorId,
+        currentUserId: currentUser.id,
+        currentUserRole: currentUser.role,
+        errorCode,
+        error,
+      });
+      const reason = errorCode === 'permission-denied'
+        ? `Akses ditolak (tambah artikel ${articleId}, permission-denied)`
+        : `Gagal menambah artikel ${articleId} (${errorCode})`;
       showToast(reason, 'error');
       return false;
     }
@@ -4657,9 +4677,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const isAuthor = targetArticle?.author?.id === currentUser.id || targetArticle?.authorId === currentUser.id;
     const isPermitted = isAuthor || currentUser.role === 'admin' || isUserAdmin(currentUser) || isUserWriter(currentUser);
     if (!isPermitted) {
-      console.error('[Article] Permission denied for update:', { id, currentUser: currentUser.id, role: currentUser.role });
+      console.error('[Article] update failed:', {
+        operation: 'update',
+        articleId: id,
+        status: updatedFields.status || targetArticle?.status,
+        authorId: targetArticle?.authorId || targetArticle?.author?.id,
+        currentUserId: currentUser.id,
+        currentUserRole: currentUser.role,
+        errorCode: 'permission-denied',
+      });
       if (!options?.silent) {
-        showToast('Hanya Penulis pemilik artikel atau Admin yang dapat menyunting artikel.', 'error');
+        showToast(`Akses ditolak (update artikel ${id}, permission-denied)`, 'error');
       }
       return false;
     }
@@ -4687,11 +4715,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return true;
     } catch (error: any) {
-      console.error('[Article] Error updating article:', id, error);
+      const errorCode = error?.code || 'unknown-error';
+      const targetStatus = updatedFields.status || targetArticle?.status;
+      const articleAuthorId = targetArticle?.authorId || targetArticle?.author?.id;
+      console.error('[Article] update failed:', {
+        operation: 'update',
+        articleId: id,
+        status: targetStatus,
+        authorId: articleAuthorId,
+        currentUserId: currentUser.id,
+        currentUserRole: currentUser.role,
+        errorCode,
+        error,
+      });
       if (!options?.silent) {
-        const reason = error?.code === 'permission-denied'
-          ? 'Akses ditolak: Anda tidak memiliki izin.'
-          : 'Gagal memperbarui artikel.';
+        const reason = errorCode === 'permission-denied'
+          ? `Akses ditolak (update artikel ${id}, permission-denied)`
+          : `Gagal memperbarui artikel ${id} (${errorCode})`;
         showToast(reason, 'error');
       }
       return false;
