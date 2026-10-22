@@ -45,17 +45,13 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
 
   const handleShareReview = () => {
     const hasReview = reviewText.trim().length > 0;
-    const defaultHeadline = hasReview
-      ? `Ulasan ${film.title} oleh ${currentUser.name}`
-      : `${currentUser.name} memberi skor ${score.toFixed(1)}/10.0 untuk ${film.title}`;
-    const finalHeadline = headline.trim() || defaultHeadline;
 
     onClose();
     setSubmitted(false);
     openShareModal({
       title: `Rating ${film.title} - ${score.toFixed(1)}/10.0 oleh ${currentUser.name}`,
-      text: hasReview ? reviewText.trim() : `${currentUser.name} memberi skor ${score.toFixed(1)}/10.0 untuk ${film.title}`,
-      headline: finalHeadline,
+      text: hasReview ? reviewText.trim() : film.synopsis || '',
+      headline: headline.trim() || undefined,
       url: window.location.href,
       type: 'film',
       image: film.poster,

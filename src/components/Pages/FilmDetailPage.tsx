@@ -49,6 +49,7 @@ import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { FilmDetailSkeleton } from '../Skeletons';
 import { BreadcrumbNavigation } from '../Navigation/BreadcrumbNavigation';
 import { fetchFullTmdbCredits } from '../../utils/tmdbHelper';
+import { countReviewAudiences } from '../../utils/shareCardText';
 
 const RelatedArticleAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }> = ({ authorId, defaultAuthor }) => {
   const author = useDynamicArticleAuthor(authorId, defaultAuthor);
@@ -303,10 +304,13 @@ export const FilmDetailPage: React.FC = () => {
   );
 
   const handleShare = () => {
+    const audienceCounts = countReviewAudiences(filmReviews);
+    const hasRoleBasedCounts =
+      audienceCounts.critic + audienceCounts.community > 0;
+
     openShareModal({
       title: `${film.title} (${film.year}) - Skor Sotoy: ${film.skorSotoy.toFixed(1)}/10.0`,
       text: film.synopsis,
-      headline: `Film Rating & Skor Sotoy Komunitas: ${film.skorSotoy.toFixed(1)} / 10.0`,
       url: window.location.href,
       type: 'film',
       image: film.poster,
@@ -316,8 +320,10 @@ export const FilmDetailPage: React.FC = () => {
       filmBackdrop: film.backdrop,
       filmGenres: film.genres,
       rating: film.skorSotoy,
-      reviewerName: 'Komunitas Sotoy Film',
-      reviewerRole: `${film.totalVotes.toLocaleString()} Votes Penonton`,
+      criticReviewCount: audienceCounts.critic,
+      communityReviewCount: hasRoleBasedCounts
+        ? audienceCounts.community
+        : film.totalVotes,
       meta: `${film.title} (${film.year}) • ${film.genres.slice(0, 2).join(', ')}`,
     });
   };
