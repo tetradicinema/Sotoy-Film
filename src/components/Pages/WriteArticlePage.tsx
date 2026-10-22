@@ -42,12 +42,20 @@ import {
 import { useApp } from '../../context/AppContext';
 import { canAutosave } from '../../utils/articleFlow';
 import { MainCategory, SubCategory, FilmItem, ArticleVersion } from '../../types';
-import { db } from '../../lib/firebase';
+import { db, storage } from '../../lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, query, where, orderBy } from 'firebase/firestore';
 import { ArticleEditor } from '../CMS/ArticleEditor';
 import { RichTextEditor } from '../CMS/RichTextEditor';
 import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 import { normalizeArticleCategory } from '../../utils/articleCategory';
+import {
+  containsInlineDataImages,
+  findDataUrlImages,
+  getArticleSizeIssues,
+  ARTICLE_CONTENT_MAX_LENGTH,
+  ARTICLE_CONTENT_JSON_MAX_LENGTH,
+} from '../../utils/articleHelpers';
 
 interface CoEditor {
   userId: string;
@@ -56,6 +64,43 @@ interface CoEditor {
   roleTitle?: string;
   lastActive: number;
 }
+
+interface ArticleSaveGuardInput {
+  coverImage?: unknown;
+  ogImage?: unknown;
+  content?: unknown;
+  contentJson?: unknown;
+}
+
+/**
+ * Returns the blocking message for content that must not be written, or null
+ * when the article is safe to persist.
+ */
+const getArticleSaveBlockMessage = (form: ArticleSaveGuardInput): string | null => {
+  const dataUrlImages = findDataUrlImages(form);
+  if (dataUrlImages.coverImage || dataUrlImages.ogImage) {
+    return 'Gambar cover belum terunggah. Unggah ulang gambar cover.';
+  }
+  if (containsInlineDataImages(form.content) || containsInlineDataImages(form.contentJson)) {
+    return 'Ada gambar yang belum terunggah ke penyimpanan. Hapus lalu unggah ulang gambarnya.';
+  }
+
+  const contentLength = typeof form.content === 'string' ? form.content.length : 0;
+  const contentJsonLength = typeof form.contentJson === 'string' ? form.contentJson.length : 0;
+  const issues = getArticleSizeIssues({
+    content: form.content,
+    contentJson: form.contentJson,
+  });
+
+  if (issues.contentTooLarge) {
+    return `Artikel terlalu panjang (${contentLength} dari ${ARTICLE_CONTENT_MAX_LENGTH} karakter).`;
+  }
+  if (issues.contentJsonTooLarge) {
+    return `Artikel terlalu panjang (${contentJsonLength} dari ${ARTICLE_CONTENT_JSON_MAX_LENGTH} karakter).`;
+  }
+
+  return null;
+};
 
 export const WriteArticlePage: React.FC = () => {
   const {
@@ -254,6 +299,7 @@ export const WriteArticlePage: React.FC = () => {
   const autosaveIntervalRef = useRef<any>(null);
   const autosaveRetryTimeoutRef = useRef<any>(null);
   const autosaveErrorRetryCountRef = useRef<number>(0);
+  const autosaveBlockedToastShownRef = useRef<boolean>(false);
 
   const [autosaveStatus, setAutosaveStatus] = useState<'clean' | 'dirty' | 'saving' | 'saved' | 'error'>('clean');
   const [showRestoreBanner, setShowRestoreBanner] = useState(false);
@@ -540,6 +586,21 @@ export const WriteArticlePage: React.FC = () => {
     const form = latestFormRef.current;
     const plainText = form.content.replace(/<[^>]*>/g, '').trim();
     if (form.title.trim().length < 3 && plainText.length < 30) return;
+
+    const autosaveBlockMessage = getArticleSaveBlockMessage({
+      coverImage: form.coverImage,
+      ogImage: form.ogImage,
+      content: form.content,
+      contentJson: form.contentJson,
+    });
+    if (autosaveBlockMessage) {
+      setAutosaveStatus('error');
+      if (!autosaveBlockedToastShownRef.current) {
+        autosaveBlockedToastShownRef.current = true;
+        showToast(autosaveBlockMessage, 'error');
+      }
+      return;
+    }
 
     const currentHashFields = {
       title: form.title,
@@ -1004,10 +1065,35 @@ export const WriteArticlePage: React.FC = () => {
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
 
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        setCoverImage(dataUrl);
-        setIsUploadingImage(false);
-        showToast('Gambar cover berhasil diunggah dari perangkat!');
+        canvas.toBlob(async (blob) => {
+          if (!blob) {
+            setIsUploadingImage(false);
+            showToast('Gagal memproses gambar.', 'error');
+            return;
+          }
+
+          try {
+            const userId = currentUser?.id;
+            if (!userId) {
+              showToast('Silakan masuk kembali untuk mengunggah gambar cover.', 'error');
+              return;
+            }
+
+            const storageRef = ref(storage, `articles_media/${userId}/cover_${Date.now()}.jpg`);
+            await uploadBytes(storageRef, blob, { contentType: 'image/jpeg' });
+            const downloadUrl = await getDownloadURL(storageRef);
+
+            setCoverImage(downloadUrl);
+            showToast('Gambar cover berhasil diunggah dari perangkat!', 'success');
+          } catch (err: any) {
+            const errorCode = err?.code || 'storage/unknown';
+            console.error('[Cover Upload] Error:', err);
+            showToast(`Gagal mengunggah gambar cover (${errorCode}). Coba lagi.`, 'error');
+          } finally {
+            setIsUploadingImage(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+          }
+        }, 'image/jpeg', 0.85);
       };
       img.onerror = () => {
         setIsUploadingImage(false);
@@ -1030,6 +1116,7 @@ export const WriteArticlePage: React.FC = () => {
     editingIdRef.current = null;
     loadedArticleIdRef.current = null;
     justCreatedDraftIdRef.current = null;
+    autosaveBlockedToastShownRef.current = false;
     setEditorSessionKey(key => key + 1);
     setTitle('');
     setCustomSlug('');
@@ -1077,6 +1164,17 @@ export const WriteArticlePage: React.FC = () => {
         showToast('Format tanggal dan waktu tidak valid.');
         return;
       }
+    }
+
+    const saveBlockMessage = getArticleSaveBlockMessage({
+      coverImage,
+      ogImage,
+      content,
+      contentJson,
+    });
+    if (saveBlockMessage) {
+      showToast(saveBlockMessage, 'error');
+      return;
     }
 
     const cleanTags = tagsInput

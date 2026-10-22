@@ -390,8 +390,13 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({
         }
       }
 
+      const authorId = currentUser?.id;
+      if (!authorId) {
+        showToast('Silakan masuk kembali untuk mengunggah gambar.', 'error');
+        return;
+      }
+
       setUploadProgressText('Mengunggah ke penyimpanan...');
-      const authorId = currentUser?.id || 'writer';
       const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
       const storagePath = `articles_media/${authorId}/${Date.now()}_${cleanFileName}`;
       const storageRef = ref(storage, storagePath);
@@ -399,17 +404,14 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({
       let downloadUrl = '';
       try {
         await uploadBytes(storageRef, fileToUpload, {
-          contentType: fileToUpload.type,
+          contentType: fileToUpload.type || 'image/jpeg',
         });
         downloadUrl = await getDownloadURL(storageRef);
-      } catch (storageErr) {
-        console.warn('[Storage] uploadBytes fallback to base64 DataURL:', storageErr);
-        downloadUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(fileToUpload);
-        });
+      } catch (storageErr: any) {
+        const errorCode = storageErr?.code || 'storage/unknown';
+        console.error('[Storage] Image upload failed:', storageErr);
+        showToast(`Gagal mengunggah gambar (${errorCode}). Coba lagi.`, 'error');
+        return;
       }
 
       if (downloadUrl && editor) {

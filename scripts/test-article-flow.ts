@@ -1,5 +1,14 @@
 import { shouldSyncEditorContent, canAutosave } from '../src/utils/articleFlow';
-import { splitProfileArticles, getDefaultEditorialSubTab } from '../src/utils/articleHelpers';
+import {
+  splitProfileArticles,
+  getDefaultEditorialSubTab,
+  isShareableImageUrl,
+  findDataUrlImages,
+  containsInlineDataImages,
+  getArticleSizeIssues,
+  ARTICLE_CONTENT_MAX_LENGTH,
+  ARTICLE_CONTENT_JSON_MAX_LENGTH,
+} from '../src/utils/articleHelpers';
 
 let passed = 0;
 let failed = 0;
@@ -249,6 +258,175 @@ const runTests = () => {
     getDefaultEditorialSubTab({ published: 0, drafts: 0 }),
     'published',
     'getDefaultEditorialSubTab: both groups empty defaults to published'
+  );
+
+  // ---------------------------------------------------------------------------
+  // isShareableImageUrl
+  // ---------------------------------------------------------------------------
+  assert(
+    isShareableImageUrl('https://firebasestorage.googleapis.com/v0/b/bucket/o/cover.jpg'),
+    'isShareableImageUrl: absolute https URL is shareable'
+  );
+  assert(
+    isShareableImageUrl('http://example.com/image.jpg'),
+    'isShareableImageUrl: absolute http URL is shareable'
+  );
+  assert(
+    isShareableImageUrl('HTTPS://EXAMPLE.COM/IMAGE.JPG'),
+    'isShareableImageUrl: scheme matching is case-insensitive'
+  );
+  assert(
+    isShareableImageUrl('//cdn.sotoyfilm.com/cover.jpg'),
+    'isShareableImageUrl: protocol-relative URL is shareable'
+  );
+  assert(
+    isShareableImageUrl('/images/cover.jpg'),
+    'isShareableImageUrl: root-relative path is shareable'
+  );
+  assert(
+    isShareableImageUrl('  https://example.com/image.jpg  '),
+    'isShareableImageUrl: surrounding whitespace is ignored'
+  );
+  assert(
+    !isShareableImageUrl('data:image/png;base64,iVBORw0KGgo='),
+    'isShareableImageUrl: data URL is not shareable'
+  );
+  assert(
+    !isShareableImageUrl('blob:https://example.com/1234-5678'),
+    'isShareableImageUrl: blob URL is not shareable'
+  );
+  assert(!isShareableImageUrl(''), 'isShareableImageUrl: empty string is not shareable');
+  assert(!isShareableImageUrl('   '), 'isShareableImageUrl: whitespace-only string is not shareable');
+  assert(!isShareableImageUrl(null as any), 'isShareableImageUrl: null is not shareable');
+  assert(!isShareableImageUrl(undefined as any), 'isShareableImageUrl: undefined is not shareable');
+  assert(!isShareableImageUrl(123 as any), 'isShareableImageUrl: non-string is not shareable');
+  assert(
+    !isShareableImageUrl('images/cover.jpg'),
+    'isShareableImageUrl: non-root relative path is not shareable'
+  );
+
+  // ---------------------------------------------------------------------------
+  // findDataUrlImages
+  // ---------------------------------------------------------------------------
+  assertEquals(
+    findDataUrlImages({ coverImage: 'data:image/jpeg;base64,AAA', ogImage: 'https://example.com/og.jpg' }),
+    { coverImage: true, ogImage: false },
+    'findDataUrlImages: detects a data URL cover only'
+  );
+  assertEquals(
+    findDataUrlImages({ coverImage: 'https://example.com/cover.jpg', ogImage: 'data:image/png;base64,BBB' }),
+    { coverImage: false, ogImage: true },
+    'findDataUrlImages: detects a data URL OG image only'
+  );
+  assertEquals(
+    findDataUrlImages({ coverImage: 'data:image/jpeg;base64,AAA', ogImage: 'data:image/png;base64,BBB' }),
+    { coverImage: true, ogImage: true },
+    'findDataUrlImages: detects both fields as data URLs'
+  );
+  assertEquals(
+    findDataUrlImages({ coverImage: 'https://example.com/cover.jpg', ogImage: '/images/og.jpg' }),
+    { coverImage: false, ogImage: false },
+    'findDataUrlImages: reports no data URLs for normal images'
+  );
+  assertEquals(
+    findDataUrlImages({}),
+    { coverImage: false, ogImage: false },
+    'findDataUrlImages: missing fields are not data URLs'
+  );
+  assertEquals(
+    findDataUrlImages(null),
+    { coverImage: false, ogImage: false },
+    'findDataUrlImages: null article has no data URLs'
+  );
+  assertEquals(
+    findDataUrlImages({ coverImage: '', ogImage: '   ' }),
+    { coverImage: false, ogImage: false },
+    'findDataUrlImages: empty values are not data URLs'
+  );
+  assertEquals(
+    findDataUrlImages({ coverImage: 'DATA:IMAGE/JPEG;BASE64,AAA', ogImage: 'blob:https://example.com/1' }),
+    { coverImage: true, ogImage: false },
+    'findDataUrlImages: data prefix is case-insensitive and blob is ignored'
+  );
+
+  // ---------------------------------------------------------------------------
+  // containsInlineDataImages
+  // ---------------------------------------------------------------------------
+  assert(
+    containsInlineDataImages('Teks artikel ![gambar](data:image/png;base64,iVBORw0KGgo=)'),
+    'containsInlineDataImages: detects a data image in markdown'
+  );
+  assert(
+    containsInlineDataImages('<p>Isi</p><img src="data:image/jpeg;base64,/9j/4AAQ" />'),
+    'containsInlineDataImages: detects a data image in HTML'
+  );
+  assert(
+    containsInlineDataImages(
+      JSON.stringify({ type: 'doc', content: [{ type: 'image', attrs: { src: 'data:image/gif;base64,R0lGOD' } }] })
+    ),
+    'containsInlineDataImages: detects a data image in JSON'
+  );
+  assert(
+    containsInlineDataImages('Data:Image/PNG;base64,AAA'),
+    'containsInlineDataImages: detection is case-insensitive'
+  );
+  assert(
+    !containsInlineDataImages('Teks artikel ![gambar](https://example.com/gambar.png)'),
+    'containsInlineDataImages: normal remote images are allowed'
+  );
+  assert(
+    !containsInlineDataImages('Teks tanpa gambar sama sekali.'),
+    'containsInlineDataImages: plain text has no inline data images'
+  );
+  assert(!containsInlineDataImages(''), 'containsInlineDataImages: empty string is false');
+  assert(!containsInlineDataImages(undefined as any), 'containsInlineDataImages: undefined is false');
+  assert(
+    !containsInlineDataImages('data:text/plain;base64,AAA'),
+    'containsInlineDataImages: only image data URLs are detected'
+  );
+
+  // ---------------------------------------------------------------------------
+  // getArticleSizeIssues
+  // ---------------------------------------------------------------------------
+  const atContentLimit = 'a'.repeat(ARTICLE_CONTENT_MAX_LENGTH);
+  const overContentLimit = 'a'.repeat(ARTICLE_CONTENT_MAX_LENGTH + 1);
+  const atJsonLimit = 'b'.repeat(ARTICLE_CONTENT_JSON_MAX_LENGTH);
+  const overJsonLimit = 'b'.repeat(ARTICLE_CONTENT_JSON_MAX_LENGTH + 1);
+
+  assertEquals(
+    getArticleSizeIssues({ content: atContentLimit, contentJson: atJsonLimit }),
+    { contentTooLarge: false, contentJsonTooLarge: false },
+    'getArticleSizeIssues: content exactly at the limit is accepted'
+  );
+  assertEquals(
+    getArticleSizeIssues({ content: overContentLimit, contentJson: atJsonLimit }),
+    { contentTooLarge: true, contentJsonTooLarge: false },
+    'getArticleSizeIssues: content one character over the limit is too large'
+  );
+  assertEquals(
+    getArticleSizeIssues({ content: atContentLimit, contentJson: overJsonLimit }),
+    { contentTooLarge: false, contentJsonTooLarge: true },
+    'getArticleSizeIssues: contentJson one character over the limit is too large'
+  );
+  assertEquals(
+    getArticleSizeIssues({ content: overContentLimit, contentJson: overJsonLimit }),
+    { contentTooLarge: true, contentJsonTooLarge: true },
+    'getArticleSizeIssues: both fields over the limit are reported'
+  );
+  assertEquals(
+    getArticleSizeIssues({ content: 'pendek', contentJson: '{"type":"doc"}' }),
+    { contentTooLarge: false, contentJsonTooLarge: false },
+    'getArticleSizeIssues: short article has no issues'
+  );
+  assertEquals(
+    getArticleSizeIssues({}),
+    { contentTooLarge: false, contentJsonTooLarge: false },
+    'getArticleSizeIssues: missing values are treated as empty'
+  );
+  assertEquals(
+    getArticleSizeIssues({ content: undefined, contentJson: undefined }),
+    { contentTooLarge: false, contentJsonTooLarge: false },
+    'getArticleSizeIssues: undefined values are treated as empty'
   );
 
   console.log(`\nSummary: ${passed} passed, ${failed} failed`);

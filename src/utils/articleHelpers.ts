@@ -49,6 +49,83 @@ export function getDefaultEditorialSubTab(counts: { published: number; drafts: n
   return 'published';
 }
 
+/** Maximum `content` length accepted by isValidArticle in firestore.rules. */
+export const ARTICLE_CONTENT_MAX_LENGTH = 100000;
+
+/** Maximum `contentJson` length accepted by isValidArticle in firestore.rules. */
+export const ARTICLE_CONTENT_JSON_MAX_LENGTH = 600000;
+
+export interface ArticleImageFields {
+  coverImage?: unknown;
+  ogImage?: unknown;
+}
+
+export interface DataUrlImageFields {
+  coverImage: boolean;
+  ogImage: boolean;
+}
+
+export interface ArticleSizeIssues {
+  contentTooLarge: boolean;
+  contentJsonTooLarge: boolean;
+}
+
+/**
+ * True when an image URL is safe to persist and share: an absolute http(s)
+ * URL, a protocol-relative URL, or a root-relative path. Data URLs, blob URLs,
+ * empty strings, and non-strings are rejected.
+ */
+export function isShareableImageUrl(url: unknown): boolean {
+  if (typeof url !== 'string') return false;
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  if (/^https?:\/\//i.test(trimmed)) return true;
+  if (trimmed.startsWith('/')) return true;
+  return false;
+}
+
+/**
+ * Reports which article image fields still hold an inline `data:` URL. Such
+ * values cannot be used in link previews, so they must never be persisted.
+ */
+export function findDataUrlImages(article: ArticleImageFields | null | undefined): DataUrlImageFields {
+  const isDataUrl = (value: unknown): boolean =>
+    typeof value === 'string' && /^data:/i.test(value.trim());
+
+  return {
+    coverImage: isDataUrl(article?.coverImage),
+    ogImage: isDataUrl(article?.ogImage),
+  };
+}
+
+/**
+ * True when markdown, HTML or JSON content embeds an inline base64 image.
+ * Inline images make documents too large and break share previews.
+ */
+export function containsInlineDataImages(content: unknown): boolean {
+  return typeof content === 'string' && /data:image\//i.test(content);
+}
+
+/**
+ * Checks the article body against the same size limits enforced by
+ * firestore.rules isValidArticle.
+ */
+export function getArticleSizeIssues({
+  content,
+  contentJson,
+}: {
+  content?: unknown;
+  contentJson?: unknown;
+}): ArticleSizeIssues {
+  const contentLength = typeof content === 'string' ? content.length : 0;
+  const contentJsonLength = typeof contentJson === 'string' ? contentJson.length : 0;
+
+  return {
+    contentTooLarge: contentLength > ARTICLE_CONTENT_MAX_LENGTH,
+    contentJsonTooLarge: contentJsonLength > ARTICLE_CONTENT_JSON_MAX_LENGTH,
+  };
+}
+
 const isLiveArticle = (a: ProfileArticleLike, nowMs: number): boolean => {
   if (a.status === 'draft' || a.status === 'trash') return false;
   if (a.status === 'scheduled') {
