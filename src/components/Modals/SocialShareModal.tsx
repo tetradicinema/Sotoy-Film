@@ -29,10 +29,23 @@ export interface ShareData {
   title: string;
   text: string;
   url?: string;
-  type?: 'article' | 'buzz' | 'film' | 'review';
+  type?: 'article' | 'buzz' | 'film' | 'review' | 'collection';
   image?: string;
   imageUrl?: string;
   meta?: string;
+  description?: string;
+  itemCount?: number;
+  ownerName?: string;
+  previewImages?: string[];
+  isPublic?: boolean;
+  collectionId?: string;
+  collectionName?: string;
+  collectionDescription?: string;
+  collectionItemCount?: number;
+  collectionOwnerId?: string;
+  collectionOwnerName?: string;
+  collectionPreviewImages?: string[];
+  collectionIsPublic?: boolean;
   tags?: string[];
   authorName?: string;
   authorHandle?: string;
@@ -396,6 +409,120 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
   );
 };
 
+interface CollectionSharePreviewProps {
+  data: ShareData;
+  variant?: 'quick' | 'story';
+}
+
+const CollectionShareCollage: React.FC<{ images: string[]; className?: string }> = ({
+  images,
+  className = '',
+}) => {
+  const slots = Array.from({ length: 4 }, (_, index) => images[index] || '');
+
+  return (
+    <div className={`grid grid-cols-2 grid-rows-2 gap-1 bg-slate-900 ${className}`}>
+      {slots.map((src, index) => (
+        <div key={`collection-image-${index}`} className="relative overflow-hidden bg-slate-800 border border-slate-700/60">
+          {src ? (
+            <img
+              src={src}
+              alt=""
+              loading="lazy"
+              className="w-full h-full object-cover"
+              onError={(event) => {
+                event.currentTarget.style.display = 'none';
+              }}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-slate-800 text-slate-600">
+              <Layers className="w-4 h-4" />
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const CollectionSharePreview: React.FC<CollectionSharePreviewProps> = ({
+  data,
+  variant = 'quick',
+}) => {
+  const images =
+    data.collectionPreviewImages || data.previewImages || [];
+  const name = data.collectionName || data.title || 'Koleksi';
+  const description =
+    (data.collectionDescription || data.description || '').trim() ||
+    'Koleksi film dan artikel pilihan di Sotoy Film.';
+  const itemCount = data.collectionItemCount ?? data.itemCount ?? 0;
+  const ownerName =
+    data.collectionOwnerName || data.ownerName || data.authorName || 'Pengguna Sotoy';
+
+  if (variant === 'story') {
+    return (
+      <div className="relative mx-auto w-[240px] aspect-[9/16] rounded-2xl overflow-hidden bg-[#0A0A0A] border border-slate-800 shadow-2xl p-4 flex flex-col text-left select-none">
+        <div className="flex items-center justify-between border-b border-white/10 pb-2">
+          <span className="text-[9px] font-black tracking-widest text-[#FF2E7E] uppercase">
+            Sotoy Film
+          </span>
+          <span className="text-[8px] px-1.5 py-0.5 rounded font-bold text-slate-300 bg-slate-800">
+            KOLEKSI
+          </span>
+        </div>
+
+        <div className="mt-3 overflow-hidden rounded-xl">
+          <CollectionShareCollage images={images} className="aspect-square w-full" />
+        </div>
+
+        <div className="flex-1 flex flex-col justify-end pb-2 space-y-1.5">
+          <h4 className="font-display font-black text-sm text-white line-clamp-3 leading-snug">
+            {name}
+          </h4>
+          <p className="text-[8px] text-slate-400 line-clamp-3 leading-snug">
+            {description}
+          </p>
+          <div className="flex items-center justify-between gap-2 text-[8px] font-bold">
+            <span className="text-[#FF2E7E] shrink-0">{itemCount} judul</span>
+            <span className="text-slate-500 truncate">{ownerName}</span>
+          </div>
+        </div>
+
+        <div className="pt-2 border-t border-white/10 flex items-center justify-between gap-2">
+          <span className="text-[7px] font-bold text-[#FF2E7E] truncate">
+            Koleksi pilihan
+          </span>
+          <span className="text-[7px] text-[#00F0FF] font-mono font-bold shrink-0">
+            sotoyfilm.my.id
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-3.5 space-y-3">
+      <div className="overflow-hidden rounded-xl">
+        <CollectionShareCollage images={images} className="aspect-square w-full" />
+      </div>
+
+      <div className="min-w-0">
+        <h4 className="text-sm font-bold text-white line-clamp-2 leading-snug">
+          {name}
+        </h4>
+        <p className="text-[11px] text-slate-400 line-clamp-2 mt-1 leading-relaxed">
+          {description}
+        </p>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 text-[10px] font-bold">
+          <span className="text-[#FF2E7E]">{itemCount} judul</span>
+          <span className="text-slate-600">•</span>
+          <span className="text-slate-400 truncate max-w-[180px]">{ownerName}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 interface SocialShareModalProps {
   isOpen?: boolean;
   onClose?: () => void;
@@ -409,7 +536,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
   onClose: propOnClose,
   data: propData,
 }) => {
-  const { showToast, shareModalData, closeShareModal } = useApp();
+  const { showToast, shareModalData, closeShareModal, currentUser, shareCollectionToBuzz } = useApp();
   const [activeTab, setActiveTab] = useState<ShareTab>('quick');
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCaption, setCopiedCaption] = useState(false);
@@ -440,10 +567,22 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
   const onClose = propOnClose || closeShareModal;
   const data = propData !== undefined ? propData : shareModalData;
 
+  const isCollection = data?.type === 'collection';
+  const isPrivateCollection = isCollection && data?.collectionIsPublic === false;
   const posterUrl = data ? data.filmPoster || data.image || data.imageUrl || data.filmBackdrop : undefined;
   const currentUrl = data?.url || (typeof window !== 'undefined' ? window.location.href : '');
-  const shareText = data ? `${data.title}\n\n${data.text ? data.text.slice(0, 140) + '...' : ''}\n\nBaca selengkapnya di Sotoy Film:` : '';
-  const igCaption = data ? `${data.title}\n\n"${data.text ? data.text.slice(0, 280) : ''}"\n\n📌 Simak ulasan dan diskusinya di: ${currentUrl}\n\n#SotoyFilm #ReviewFilm #CinephileIndonesia #FilmBagus #PopCulture #DiskusiFilm #KritikFilm` : '';
+  const shareText = data
+    ? isCollection
+      ? `${data.title}\n\n${data.text || ''}\n\nLihat koleksinya di Sotoy Film:`
+      : `${data.title}\n\n${data.text ? data.text.slice(0, 140) + '...' : ''}\n\nBaca selengkapnya di Sotoy Film:`
+    : '';
+  const igCaption = data
+    ? isCollection
+      ? isPrivateCollection
+        ? `${data.title}\n\n${data.text || ''}\n\nKoleksi pilihan di Sotoy Film.\n\n#SotoyFilm #KoleksiFilm #CinephileIndonesia #FilmIndonesia #PopCulture`
+        : `${data.title}\n\n${data.text || ''}\n\nLihat koleksi film dan artikel pilihan ini di: ${currentUrl}\n\n#SotoyFilm #KoleksiFilm #CinephileIndonesia #FilmIndonesia #PopCulture`
+      : `${data.title}\n\n"${data.text ? data.text.slice(0, 280) : ''}"\n\n📌 Simak ulasan dan diskusinya di: ${currentUrl}\n\n#SotoyFilm #ReviewFilm #CinephileIndonesia #FilmBagus #PopCulture #DiskusiFilm #KritikFilm`
+    : '';
 
   const handleCopyLink = () => {
     if (!data) return;
@@ -486,6 +625,12 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
     } else {
       handleCopyLink();
     }
+  };
+
+  const handleCollectionToBuzz = () => {
+    if (!data?.collectionId) return;
+    shareCollectionToBuzz(data.collectionId);
+    onClose();
   };
 
   // Helper to load image for canvas without CORS taint issues
@@ -664,7 +809,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
     c.closePath();
   };
 
-  // Resolve content type: 'buzz', 'article', or 'film' / 'review'
+  // Resolve content type: 'buzz', 'article', 'collection', or 'film' / 'review'
   const isBuzz = data?.type === 'buzz';
   const isArticle = data?.type === 'article';
   const isFilmRating = data
@@ -672,11 +817,14 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
       data.type === 'film' ||
       (!isBuzz &&
         !isArticle &&
+        !isCollection &&
         (typeof data.rating === 'number' ||
           typeof data.skorSotoy === 'number' ||
           !!data.filmPoster ||
           !!data.filmTitle))
     : false;
+  const canShareCollectionToBuzz =
+    isCollection && Boolean(data?.collectionId) && currentUser?.id === data?.collectionOwnerId;
 
   const displayScore = data
     ? typeof data.rating === 'number'
@@ -760,6 +908,281 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
     if (!data) return;
     setIsGeneratingImage(true);
     try {
+      // 0. Collection Story (1080x1920) - solid palette, 2x2 collage
+      if (isCollection) {
+        if (typeof document !== 'undefined' && document.fonts?.ready) {
+          await document.fonts.ready;
+        }
+
+        const width = 1080;
+        const height = 1920;
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+          showToast('Gagal menginisialisasi perender visual.');
+          setIsGeneratingImage(false);
+          return;
+        }
+
+        ctx.fillStyle = '#0A0A0A';
+        ctx.fillRect(0, 0, width, height);
+
+        const sidePad = 60;
+        const topPad = 80;
+        const logoTargetW = 320;
+        let logoTargetH = 90;
+
+        try {
+          const logoImg = await loadCanvasImage('/sotoy-logo-full.png');
+          logoTargetH = logoImg.height * (logoTargetW / logoImg.width);
+          ctx.drawImage(logoImg, sidePad, topPad, logoTargetW, logoTargetH);
+        } catch {
+          ctx.fillStyle = '#FF2E7E';
+          ctx.font = "900 42px 'Geist', 'Plus Jakarta Sans', sans-serif";
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'top';
+          ctx.fillText('SOTOY FILM', sidePad, topPad + 20);
+          logoTargetH = 70;
+        }
+
+        const badgeText = 'KOLEKSI';
+        const badgeFont = "900 26px 'Geist', 'Plus Jakarta Sans', sans-serif";
+        ctx.save();
+        ctx.font = badgeFont;
+        const badgeTextW = ctx.measureText(badgeText).width;
+        ctx.restore();
+
+        const badgeH = 56;
+        const badgePadX = 24;
+        const badgeW = badgeTextW + badgePadX * 2;
+        const badgeX = width - sidePad - badgeW;
+        const logoCenterY = topPad + logoTargetH / 2;
+        const badgeY = logoCenterY - badgeH / 2;
+
+        ctx.save();
+        ctx.fillStyle = '#0A0A0A';
+        ctx.strokeStyle = '#FF2E7E';
+        ctx.lineWidth = 2.5;
+        drawRoundRectPath(ctx, badgeX, badgeY, badgeW, badgeH, badgeH / 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#FF2E7E';
+        ctx.font = badgeFont;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(badgeText, badgeX + badgeW / 2, badgeY + badgeH / 2);
+        ctx.restore();
+
+        const collageW = width - sidePad * 2;
+        const tileGap = 12;
+        const tileSize = (collageW - tileGap) / 2;
+        const collageX = sidePad;
+        const collageY = topPad + Math.max(logoTargetH, badgeH) + 60;
+        const imageUrls = (data.collectionPreviewImages || data.previewImages || [])
+          .filter((src): src is string => Boolean(src && src.trim()))
+          .slice(0, 4);
+
+        const loadedImages = await Promise.all(
+          Array.from({ length: 4 }, async (_, index) => {
+            const src = imageUrls[index];
+            if (!src) return null;
+            try {
+              return await loadCanvasImage(src);
+            } catch {
+              return null;
+            }
+          })
+        );
+
+        for (let index = 0; index < 4; index += 1) {
+          const row = Math.floor(index / 2);
+          const col = index % 2;
+          const x = collageX + col * (tileSize + tileGap);
+          const y = collageY + row * (tileSize + tileGap);
+
+          ctx.save();
+          drawRoundRectPath(ctx, x, y, tileSize, tileSize, 24);
+          ctx.clip();
+          ctx.fillStyle = '#1F2937';
+          ctx.fillRect(x, y, tileSize, tileSize);
+
+          const image = loadedImages[index];
+          if (image) {
+            const imageRatio = image.width / image.height;
+            let drawW = tileSize;
+            let drawH = tileSize;
+            let drawX = x;
+            let drawY = y;
+
+            if (imageRatio > 1) {
+              drawW = tileSize * imageRatio;
+              drawX = x - (drawW - tileSize) / 2;
+            } else {
+              drawH = tileSize / imageRatio;
+              drawY = y - (drawH - tileSize) / 2;
+            }
+
+            ctx.drawImage(image, drawX, drawY, drawW, drawH);
+          }
+          ctx.restore();
+
+          ctx.save();
+          ctx.strokeStyle = '#334155';
+          ctx.lineWidth = 2;
+          drawRoundRectPath(ctx, x, y, tileSize, tileSize, 24);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        const maxTextW = width - sidePad * 2;
+        const wrapText = (text: string, maxWidth: number, maxLines: number): string[] => {
+          const words = text.split(/\s+/).filter(Boolean);
+          const lines: string[] = [];
+          let currentLine = '';
+
+          for (let index = 0; index < words.length; index += 1) {
+            const testLine = currentLine ? `${currentLine} ${words[index]}` : words[index];
+            if (ctx.measureText(testLine).width > maxWidth && currentLine) {
+              lines.push(currentLine);
+              currentLine = words[index];
+              if (lines.length === maxLines - 1) {
+                let lastLine = words.slice(index).join(' ');
+                while (
+                  ctx.measureText(`${lastLine}...`).width > maxWidth &&
+                  lastLine.includes(' ')
+                ) {
+                  lastLine = lastLine.slice(0, lastLine.lastIndexOf(' '));
+                }
+                lines.push(`${lastLine}...`);
+                currentLine = '';
+                break;
+              }
+            } else {
+              currentLine = testLine;
+            }
+          }
+
+          if (currentLine) lines.push(currentLine);
+          return lines.slice(0, maxLines);
+        };
+
+        let textY = collageY + tileSize * 2 + tileGap + 64;
+        const collectionName = data.collectionName || data.title || 'Koleksi';
+        const collectionDescription =
+          (data.collectionDescription || data.description || '').trim() ||
+          'Koleksi film dan artikel pilihan di Sotoy Film.';
+        const itemCount = data.collectionItemCount ?? data.itemCount ?? 0;
+        const ownerName =
+          data.collectionOwnerName || data.ownerName || data.authorName || 'Pengguna Sotoy';
+
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = "900 64px 'Geist', 'Plus Jakarta Sans', sans-serif";
+        const titleLines = wrapText(collectionName, maxTextW, 2);
+        for (const line of titleLines) {
+          ctx.fillText(line, sidePad, textY);
+          textY += 76;
+        }
+
+        textY += 18;
+        ctx.fillStyle = '#A3A3A3';
+        ctx.font = "32px 'Plus Jakarta Sans', sans-serif";
+        const descriptionLines = wrapText(collectionDescription, maxTextW, 3);
+        for (const line of descriptionLines) {
+          ctx.fillText(line, sidePad, textY);
+          textY += 44;
+        }
+
+        textY += 24;
+        ctx.fillStyle = '#FF2E7E';
+        ctx.font = "bold 28px 'Geist', 'Plus Jakarta Sans', sans-serif";
+        ctx.textAlign = 'left';
+        ctx.fillText(`${itemCount} judul`, sidePad, textY);
+        ctx.fillStyle = '#94A3B8';
+        ctx.textAlign = 'right';
+        const ownerLabel =
+          ownerName.length > 34 ? `${ownerName.slice(0, 33)}...` : ownerName;
+        ctx.fillText(ownerLabel, width - sidePad, textY);
+
+        const footerY = height - 90;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(sidePad, footerY - 35);
+        ctx.lineTo(width - sidePad, footerY - 35);
+        ctx.stroke();
+
+        ctx.fillStyle = '#FF2E7E';
+        ctx.font = "bold 22px 'Geist', 'Plus Jakarta Sans', sans-serif";
+        ctx.textAlign = 'left';
+        ctx.fillText('Koleksi film & artikel pilihan', sidePad, footerY);
+
+        ctx.fillStyle = '#00F0FF';
+        ctx.font = "bold 22px 'Geist Mono', monospace";
+        ctx.textAlign = 'right';
+        ctx.fillText('sotoyfilm.my.id', width - sidePad, footerY);
+
+        const blob = await new Promise<Blob | null>((resolve) => {
+          canvas.toBlob((result) => resolve(result), 'image/png');
+        });
+
+        if (!blob) {
+          throw new Error('Gagal mengonversi kanvas koleksi menjadi gambar.');
+        }
+
+        const fileName = `sotoyfilm-collection-story-${Date.now()}.png`;
+        const file = new File([blob], fileName, { type: 'image/png' });
+        const isMobileDevice =
+          typeof navigator !== 'undefined' &&
+          navigator.maxTouchPoints > 0 &&
+          typeof window !== 'undefined' &&
+          window.matchMedia('(pointer: coarse)').matches;
+        const canShareFiles =
+          isMobileDevice &&
+          typeof navigator.share === 'function' &&
+          typeof navigator.canShare === 'function' &&
+          navigator.canShare({ files: [file] });
+
+        let sharedViaSheet = false;
+        if (canShareFiles) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: `Sotoy Film - ${collectionName}`,
+            });
+            sharedViaSheet = true;
+            showToast('Gambar Story (.PNG) siap disimpan ke galeri foto!');
+          } catch (shareErr: any) {
+            if (
+              shareErr?.name === 'AbortError' ||
+              shareErr?.message?.toLowerCase().includes('abort') ||
+              shareErr?.message?.toLowerCase().includes('cancel')
+            ) {
+              return;
+            }
+            console.warn('[SocialShareModal] Native share failed, falling back to direct download:', shareErr);
+          }
+        }
+
+        if (!sharedViaSheet) {
+          const blobUrl = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.download = fileName;
+          link.href = blobUrl;
+          link.click();
+          setTimeout(() => {
+            URL.revokeObjectURL(blobUrl);
+          }, 1000);
+
+          showToast('Gambar Story (.PNG) berhasil diunduh! Siap diunggah ke Instagram Stories.');
+        }
+        return;
+      }
+
       // 1. Buzz Story (Threads-style 1080x1920) - Uses renderBuzzStoryCanvas directly
       if (isBuzz) {
         let canvas = buzzCanvasRef.current;
@@ -2238,10 +2661,12 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
             </div>
             <div>
               <h3 className="font-display font-bold text-white text-base">
-                Bagikan Konten
+                {isCollection ? 'Bagikan Koleksi' : 'Bagikan Konten'}
               </h3>
               <p className="text-[11px] text-slate-400">
-                Opsi share WhatsApp, Twitter, atau Instagram Stories
+                {isCollection
+                  ? 'Bagikan koleksi ke Buzz atau simpan sebagai gambar Story'
+                  : 'Opsi share WhatsApp, Twitter, atau Instagram Stories'}
               </p>
             </div>
           </div>
@@ -2291,6 +2716,9 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         {activeTab === 'quick' && (
           <div className="space-y-4 animate-in fade-in duration-150">
             {/* Item Preview Card */}
+            {isCollection ? (
+              <CollectionSharePreview data={data} />
+            ) : (
             <div className="p-3.5 bg-slate-900/90 border border-slate-800 rounded-2xl flex items-center gap-3">
               {data.filmPoster || data.image || data.imageUrl ? (
                 <img
@@ -2328,7 +2756,20 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                 </div>
               </div>
             </div>
+            )}
 
+            {isCollection && data.collectionIsPublic === false ? (
+              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 space-y-1">
+                <div className="text-xs font-bold text-amber-300">Koleksi ini privat</div>
+                <p className="text-[11px] text-amber-200/80 leading-relaxed">
+                  Tautan publik tidak tersedia.{' '}
+                  {canShareCollectionToBuzz
+                    ? 'Kamu tetap dapat membagikannya ke Buzz sebagai snapshot koleksi.'
+                    : 'Hanya pemilik koleksi yang dapat membagikannya ke Buzz.'}
+                </p>
+              </div>
+            ) : (
+              <>
             {/* Social Share Buttons Grid */}
             <div className="grid grid-cols-2 gap-2.5">
               {shareLinks.map(platform => (
@@ -2353,7 +2794,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
             {typeof navigator !== 'undefined' && typeof navigator.share === 'function' && (
               <button
                 onClick={handleNativeShare}
-                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#FF2E7E]/20 to-[#FF2E7E]/20 border border-[#FF2E7E]/30 hover:border-[#FF2E7E] text-xs font-bold text-white flex items-center justify-center gap-2 transition-all"
+                className="w-full py-2.5 px-4 rounded-xl bg-[#FF2E7E]/15 border border-[#FF2E7E]/30 hover:border-[#FF2E7E] text-xs font-bold text-white flex items-center justify-center gap-2 transition-all"
               >
                 <Share2 className="w-3.5 h-3.5 text-[#FF2E7E]" />
                 <span>Bagikan via Menu Sistem HP (Native Share)</span>
@@ -2390,6 +2831,19 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                 </button>
               </div>
             </div>
+              </>
+            )}
+
+            {canShareCollectionToBuzz && (
+              <button
+                type="button"
+                onClick={handleCollectionToBuzz}
+                className="w-full py-2.5 px-4 rounded-xl bg-[#FF2E7E]/15 border border-[#FF2E7E]/35 hover:bg-[#FF2E7E]/25 hover:border-[#FF2E7E] text-xs font-bold text-white flex items-center justify-center gap-2 transition-colors"
+              >
+                <MessageCircle className="w-3.5 h-3.5 text-[#FF2E7E]" />
+                <span>Bagikan ke Buzz</span>
+              </button>
+            )}
           </div>
         )}
 
@@ -2399,7 +2853,9 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         {activeTab === 'ig_story' && (
           <div className="space-y-4 animate-in fade-in duration-150">
             {/* Visual Story Card Preview */}
-            {isFilmRating ? (
+            {isCollection ? (
+              <CollectionSharePreview data={data} variant="story" />
+            ) : isFilmRating ? (
               <div className="relative mx-auto w-[270px] h-[480px] overflow-hidden shadow-2xl rounded-2xl bg-[#0A0A0A] select-none">
                 <div
                   style={{

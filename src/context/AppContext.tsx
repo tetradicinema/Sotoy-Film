@@ -40,6 +40,7 @@ import { validateProfileLinks, sanitizeStoredLinks } from '../utils/profileLinks
 import { TERMS_VERSION } from '../utils/onboardingHelpers';
 import { normalizeFilmType } from '../utils/filmType';
 import { normalizeArticleCategory, normalizeInterestLabel, normalizeInterestProfile } from '../utils/articleCategory';
+import { getCollectionItemKey, reorderByKeys } from '../utils/collectionHelpers';
 import {
   DEFAULT_FALLBACK_AUTHOR,
   INITIAL_BUZZ,
@@ -310,7 +311,7 @@ interface AppContextType {
   collections: UserCollection[];
   createCollection: (name: string, description?: string, isPublic?: boolean) => Promise<string | null>;
   updateCollectionDetails: (collectionId: string, updates: { name?: string; description?: string }) => Promise<boolean>;
-  renameCollection: (collectionId: string, newName: string) => Promise<boolean>;
+  reorderCollectionItems: (collectionId: string, orderedItemKeys: string[]) => Promise<boolean>;
   deleteCollection: (collectionId: string) => Promise<boolean>;
   addItemToCollection: (collectionId: string, itemId: string, itemType: 'film' | 'article') => Promise<boolean>;
   removeItemFromCollection: (collectionId: string, itemId: string) => Promise<boolean>;
@@ -406,6 +407,7 @@ interface AppContextType {
       description?: string;
       itemCount: number;
       previewImages: string[];
+      isPublic?: boolean;
       items: { itemId: string; itemType: 'film' | 'article' }[];
     }
   ) => Promise<void>;
@@ -418,6 +420,7 @@ interface AppContextType {
       description?: string;
       itemCount: number;
       previewImages: string[];
+      isPublic?: boolean;
       items: { itemId: string; itemType: 'film' | 'article' }[];
     };
   } | null;
@@ -430,6 +433,7 @@ interface AppContextType {
       description?: string;
       itemCount: number;
       previewImages: string[];
+      isPublic?: boolean;
       items: { itemId: string; itemType: 'film' | 'article' }[];
     };
   } | null) => void;
@@ -671,6 +675,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       description?: string;
       itemCount: number;
       previewImages: string[];
+      isPublic?: boolean;
       items: { itemId: string; itemType: 'film' | 'article' }[];
     };
   } | null>(null);
@@ -3038,8 +3043,95 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const renameCollection = async (collectionId: string, newName: string): Promise<boolean> => {
-    return updateCollectionDetails(collectionId, { name: newName });
+  const reorderCollectionItems = async (
+    collectionId: string,
+    orderedItemKeys: string[]
+  ): Promise<boolean> => {
+    if (!isLoggedIn || !currentUser?.id || currentUser.id === 'guest') return false;
+
+    const target = collections.find(c => c.id === collectionId);
+    if (!target) return false;
+
+    const originalItems = target.items;
+    const originalUpdatedAt = target.updatedAt;
+    const nextItems = reorderByKeys(originalItems, orderedItemKeys);
+
+    const originalKeys = originalItems.map(getCollectionItemKey);
+    const nextKeys = nextItems.map(getCollectionItemKey);
+    if (
+      originalKeys.length === nextKeys.length &&
+      originalKeys.every((key, index) => key === nextKeys[index])
+    ) {
+      return true;
+    }
+
+    const nowIso = new Date().toISOString();
+
+    setCollections(prev =>
+      prev.map(c =>
+        c.id === collectionId ? { ...c, items: nextItems, updatedAt: nowIso } : c
+      )
+    );
+
+    try {
+      const collectionRef = doc(db, 'users', currentUser.id, 'collections', collectionId);
+      await updateDoc(collectionRef, {
+        items: nextItems,
+        updatedAt: nowIso,
+      });
+
+      // Keep shared Buzz snapshots in the same order as the live collection.
+      try {
+        const q = query(
+          collection(db, 'buzz'),
+          where('sharedCollection.collectionId', '==', collectionId)
+        );
+        const snap = await getDocs(q);
+        await Promise.all(
+          snap.docs.map(async buzzDocSnap => {
+            const buzzData = buzzDocSnap.data();
+            if (buzzData.author?.id !== currentUser.id) return;
+
+            const snapshotItems = buzzData.sharedCollection?.items;
+            if (!Array.isArray(snapshotItems) || snapshotItems.length === 0) return;
+
+            const validSnapshotItems = snapshotItems.filter(
+              (item: any) =>
+                item &&
+                typeof item.itemId === 'string' &&
+                (item.itemType === 'film' || item.itemType === 'article')
+            );
+            if (validSnapshotItems.length !== snapshotItems.length) return;
+
+            const nextSnapshotItems = reorderByKeys(validSnapshotItems, orderedItemKeys);
+            if (nextSnapshotItems.length !== snapshotItems.length) return;
+
+            try {
+              await updateDoc(doc(db, 'buzz', buzzDocSnap.id), {
+                'sharedCollection.items': nextSnapshotItems,
+              });
+            } catch (err) {
+              console.warn('[Collections] Notice syncing buzz snapshot order:', err);
+            }
+          })
+        );
+      } catch (err) {
+        console.warn('[Collections] Query notice for buzz order sync:', err);
+      }
+
+      return true;
+    } catch (err) {
+      console.error('[Collections] Error reordering collection items:', err);
+      setCollections(prev =>
+        prev.map(c =>
+          c.id === collectionId
+            ? { ...c, items: originalItems, updatedAt: originalUpdatedAt }
+            : c
+        )
+      );
+      showToast('Gagal menyimpan urutan koleksi.', 'error');
+      return false;
+    }
   };
 
   const [likedReviewIds, setLikedReviewIds] = useState<string[]>([]);
@@ -3327,6 +3419,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         description: col.description || '',
         itemCount: col.items.length,
         previewImages,
+        isPublic: col.isPublic !== false,
         items: col.items.map(i => ({ itemId: i.itemId, itemType: i.itemType })),
       }
     });
@@ -4775,6 +4868,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       description?: string;
       itemCount: number;
       previewImages: string[];
+      isPublic?: boolean;
       items: { itemId: string; itemType: 'film' | 'article' }[];
     }
   ) => {
@@ -6736,7 +6830,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isArticleSaved,
         collections,
         createCollection,
-        renameCollection,
+        updateCollectionDetails,
+        reorderCollectionItems,
         deleteCollection,
         addItemToCollection,
         removeItemFromCollection,
@@ -6865,7 +6960,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         hasMoreCriticSubmissions,
         userProfilesCache,
         cacheUserProfile,
-        updateCollectionDetails,
         likedReviewIds,
         syncLikedReviews,
         toggleLikeReview,

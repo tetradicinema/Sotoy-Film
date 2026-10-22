@@ -189,7 +189,8 @@ service cloud.firestore {
         data.name is string && data.name.size() <= 100 &&
         data.isDefault is bool &&
         (!('isPublic' in data) || data.isPublic is bool) &&
-        data.items is list;
+        (!('description' in data) || (data.description is string && data.description.size() <= 300)) &&
+        data.items is list && data.items.size() <= 500;
     }
 
     // Granular delta & diff validation helpers

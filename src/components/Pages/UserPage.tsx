@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
 import { isArticleUnpublished, splitProfileArticles, getDefaultEditorialSubTab, EditorialSubTab } from '../../utils/articleHelpers';
+import { buildCollectionShareData } from '../../utils/collectionHelpers';
 import {
   User as UserIcon,
   Star,
@@ -128,7 +129,6 @@ export const UserPage: React.FC = () => {
     collections,
     createCollection,
     deleteCollection,
-    shareCollectionToBuzz,
     toggleSaveBuzz,
     savedBuzzIds,
     usersById,
@@ -663,8 +663,15 @@ export const UserPage: React.FC = () => {
     showToast('Buzz berhasil diposting ke Feed Komunitas!');
   };
 
-  const handleShareCollectionToBuzz = (collectionId: string) => {
-    shareCollectionToBuzz(collectionId);
+  const handleShareCollection = (collection: (typeof profileCollections)[number]) => {
+    openShareModal(
+      buildCollectionShareData(
+        collection,
+        { id: targetUser.id, name: targetUser.name },
+        typeof window !== 'undefined' ? window.location.origin : 'https://www.sotoyfilm.my.id',
+        { films, articles }
+      )
+    );
   };
 
   const handleSaveProfile = (e: React.FormEvent) => {
@@ -2315,9 +2322,9 @@ export const UserPage: React.FC = () => {
 
                           <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2" onClick={e => e.stopPropagation()}>
                             <button
-                              onClick={() => shareCollectionToBuzz(col.id)}
+                              onClick={() => handleShareCollection(col)}
                               className="text-slate-400 hover:text-[#FF2E7E] p-1.5 rounded-lg bg-slate-800/50 hover:bg-[#FF2E7E]/10 border border-slate-800 hover:border-[#FF2E7E]/30 transition-all text-xs font-bold flex items-center gap-1.5"
-                              title="Bagikan ke Buzz"
+                              title="Bagikan koleksi"
                             >
                               <Share2 className="w-3.5 h-3.5" />
                               <span className="hidden sm:inline text-[10px]">Bagikan</span>
