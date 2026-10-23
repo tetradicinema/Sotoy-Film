@@ -28,6 +28,8 @@ export interface MetaTagsPayload {
   twitterCard?: string;
   twitterSite?: string;
   twitterCreator?: string;
+  // Search engine directives (e.g. "noindex, follow")
+  robots?: string;
   // Schema.org JSON-LD
   schemaJson?: Record<string, any> | Record<string, any>[] | string;
 }
@@ -82,6 +84,11 @@ export function injectMetaTags(html: string, meta: MetaTagsPayload): string {
   if (meta.keywords) {
     const kwStr = Array.isArray(meta.keywords) ? meta.keywords.join(', ') : meta.keywords;
     dynamicExtraTags += `\n    <meta name="keywords" content="${escapeHtml(kwStr)}" />`;
+  }
+
+  // Search engine directives
+  if (meta.robots) {
+    dynamicExtraTags += `\n    <meta name="robots" content="${escapeHtml(meta.robots)}" />`;
   }
 
   // Article Specific Tags

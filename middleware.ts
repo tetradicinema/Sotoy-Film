@@ -1,6 +1,12 @@
 import { next } from '@vercel/edge';
 import { isBotUserAgent } from './src/lib/edge/botDetection.js';
-import { fetchEntityData, fetchWithTimeout } from './src/lib/edge/firestoreRest.js';
+import {
+  fetchEntityData,
+  fetchWithTimeout,
+  fetchCollectionPreview,
+  buildCollectionTitle,
+  buildCollectionDescription,
+} from './src/lib/edge/firestoreRest.js';
 import { injectMetaTags, FALLBACK_HTML_TEMPLATE } from './src/lib/edge/metaInjection.js';
 
 // Re-export for unit tests and external consumers
@@ -8,7 +14,13 @@ export { isBotUserAgent };
 
 export const config = {
   runtime: 'nodejs',
-  matcher: ['/film/:path*', '/artikel/:path*', '/kategori/:path*', '/category/:path*'],
+  matcher: [
+    '/film/:path*',
+    '/artikel/:path*',
+    '/koleksi/:path*',
+    '/kategori/:path*',
+    '/category/:path*',
+  ],
 };
 
 const LEGACY_CATEGORY_PATH = /^\/(?:kategori|category)\/(?:anime|animasi)(?=\/|$)/i;
@@ -71,6 +83,79 @@ export default async function middleware(request: Request): Promise<Response> {
     // 1. Pass through immediately for normal human visitors with zero latency penalty
     if (!isBotUserAgent(userAgent)) {
       return safeNext();
+    }
+
+    // 2. Collection link previews (/koleksi/:userId/:collectionId).
+    // Only public collections render preview HTML; anything else falls through.
+    const collectionMatch = /^\/koleksi\/([^/]+)\/([^/]+)\/?$/.exec(pathname);
+    if (collectionMatch) {
+      let collectionUserId = '';
+      let collectionId = '';
+      try {
+        collectionUserId = decodeURIComponent(collectionMatch[1]);
+        collectionId = decodeURIComponent(collectionMatch[2]);
+      } catch {
+        return safeNext();
+      }
+
+      if (!collectionUserId || !collectionId) {
+        return safeNext();
+      }
+
+      const preview = await fetchCollectionPreview(collectionUserId, collectionId);
+      if (!preview) {
+        return safeNext();
+      }
+
+      const collectionCanonicalUrl = `https://www.sotoyfilm.my.id/koleksi/${encodeURIComponent(collectionUserId)}/${encodeURIComponent(collectionId)}`;
+      const collectionTitle = buildCollectionTitle(preview.name, preview.ownerName);
+      const collectionDescription = truncateDescription(
+        buildCollectionDescription(preview.description, preview.itemCount),
+        200
+      );
+      const collectionImage = preview.image || 'https://www.sotoyfilm.my.id/og-default.png';
+
+      // Fetch the base index.html from origin. Failures fall back to the
+      // local template, exactly like the film/article path.
+      let collectionBaseHtml = '';
+      try {
+        const indexUrl = new URL('/index.html', request.url);
+        const htmlRes = await fetchWithTimeout(
+          indexUrl.toString(),
+          { headers: { 'x-middleware-subrequest': '1' } },
+          2000
+        );
+        if (htmlRes.ok) {
+          collectionBaseHtml = await htmlRes.text();
+        }
+      } catch {
+        // Fall back to local template if sub-request times out
+      }
+
+      if (!collectionBaseHtml) {
+        collectionBaseHtml = FALLBACK_HTML_TEMPLATE;
+      }
+
+      const collectionHtml = injectMetaTags(collectionBaseHtml, {
+        title: collectionTitle,
+        description: collectionDescription,
+        image: collectionImage,
+        url: collectionCanonicalUrl,
+        type: 'website',
+        imageAlt: preview.name || collectionTitle,
+        locale: 'id_ID',
+        twitterCard: 'summary_large_image',
+        robots: 'noindex, follow',
+      });
+
+      return new Response(collectionHtml, {
+        status: 200,
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+          'x-robots-tag': 'noindex, follow',
+          'cache-control': 'public, s-maxage=900, stale-while-revalidate=3600',
+        },
+      });
     }
 
     let collection: 'films' | 'articles' | null = null;

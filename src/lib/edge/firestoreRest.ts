@@ -368,3 +368,262 @@ export async function fetchEntityData(
   negativeCache.set(cacheKey, now + NEGATIVE_CACHE_TTL_MS);
   return null;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Collection link previews (/koleksi/:userId/:collectionId)                  */
+/* -------------------------------------------------------------------------- */
+
+const SITE_BASE_URL = 'https://www.sotoyfilm.my.id';
+export const DEFAULT_OG_IMAGE = `${SITE_BASE_URL}/og-default.png`;
+
+export interface CollectionPreviewItemDoc {
+  itemType: string;
+  data: Record<string, any> | null;
+}
+
+export interface CollectionPreview {
+  userId: string;
+  collectionId: string;
+  name: string;
+  description: string;
+  itemCount: number;
+  ownerName: string;
+  image: string | null;
+}
+
+/**
+ * Missing `isPublic` is treated as public to match the Firestore rules
+ * (`resource.data.get('isPublic', true) == true`).
+ */
+export function isCollectionPublic(data: Record<string, any> | null | undefined): boolean {
+  if (!data || typeof data !== 'object') return false;
+  return data.isPublic !== false;
+}
+
+/**
+ * Builds the collection preview title. Falls back to "Sotoy Film" when the
+ * owner document is missing or has no usable name.
+ */
+export function buildCollectionTitle(name: string, ownerName?: string | null): string {
+  const safeName = typeof name === 'string' ? name.trim() : '';
+  const safeOwner =
+    typeof ownerName === 'string' && ownerName.trim() ? ownerName.trim() : 'Sotoy Film';
+  return `${safeName || 'Koleksi'} — Koleksi ${safeOwner} | Sotoy Film`;
+}
+
+/**
+ * Builds the collection description, falling back to the item-count wording
+ * used by the rest of the collection UI.
+ */
+export function buildCollectionDescription(
+  description: string | null | undefined,
+  itemCount: number
+): string {
+  const text = typeof description === 'string' ? description.trim() : '';
+  if (text) return text;
+  const count =
+    typeof itemCount === 'number' && Number.isFinite(itemCount) && itemCount > 0
+      ? Math.floor(itemCount)
+      : 0;
+  return `${count} judul film dan artikel pilihan di Sotoy Film.`;
+}
+
+/**
+ * Normalizes an image field to a usable absolute http(s) URL. Rejects data:
+ * URLs, empty values, and anything that is not http(s).
+ */
+export function normalizeImageUrl(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (!trimmed || /^data:/i.test(trimmed)) return null;
+  if (trimmed.startsWith('//')) return `https:${trimmed}`;
+  if (trimmed.startsWith('/')) return `${SITE_BASE_URL}${trimmed}`;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return null;
+}
+
+/**
+ * Picks the best image for one collection item document.
+ * Films prefer poster then backdrop; articles prefer ogImage then coverImage.
+ */
+export function pickCollectionItemImage(
+  itemType: string,
+  data: Record<string, any> | null | undefined
+): string | null {
+  if (!data) return null;
+  if (itemType === 'film') {
+    return normalizeImageUrl(data.poster) || normalizeImageUrl(data.backdrop);
+  }
+  if (itemType === 'article') {
+    return normalizeImageUrl(data.ogImage) || normalizeImageUrl(data.coverImage);
+  }
+  return null;
+}
+
+/**
+ * Returns the first valid image from an ordered list of fetched item docs.
+ */
+export function pickCollectionImageFromDocs(
+  docs: ReadonlyArray<CollectionPreviewItemDoc>
+): string | null {
+  if (!Array.isArray(docs)) return null;
+  for (const doc of docs) {
+    if (!doc) continue;
+    const image = pickCollectionItemImage(doc.itemType, doc.data);
+    if (image) return image;
+  }
+  return null;
+}
+
+const COLLECTION_PREVIEW_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const COLLECTION_PREVIEW_NEGATIVE_TTL_MS = 60 * 1000; // 60 seconds
+const COLLECTION_PREVIEW_TIMEOUT_MS = 1500;
+const MAX_EXTRA_COLLECTION_READS = 3;
+
+interface CachedCollectionPreview {
+  preview: CollectionPreview;
+  timestamp: number;
+}
+
+const collectionPreviewCache = new Map<string, CachedCollectionPreview>();
+const collectionPreviewNegativeCache = new Map<string, number>();
+
+/** Test/maintenance helper: clears both positive and negative collection caches. */
+export function clearCollectionPreviewCache(): void {
+  collectionPreviewCache.clear();
+  collectionPreviewNegativeCache.clear();
+}
+
+function readFirestoreDocument(path: string): Promise<Response> {
+  return fetchWithTimeout(
+    `${FIRESTORE_DOCUMENTS_URL}/${path}?key=${FIRESTORE_API_KEY}`,
+    { headers: { Accept: 'application/json' } },
+    COLLECTION_PREVIEW_TIMEOUT_MS
+  );
+}
+
+/**
+ * Fetches a public user collection for link previews.
+ *
+ * Budget: 1 collection GET + at most 3 extra GETs (owner + up to two item
+ * image lookups), each with its own 1500 ms timeout. Private, missing, or
+ * failed collections return null and are negatively cached for 60 seconds.
+ */
+export async function fetchCollectionPreview(
+  userId: string,
+  collectionId: string
+): Promise<CollectionPreview | null> {
+  const safeUserId = typeof userId === 'string' ? userId.trim() : '';
+  const safeCollectionId = typeof collectionId === 'string' ? collectionId.trim() : '';
+  if (!safeUserId || !safeCollectionId) return null;
+
+  const cacheKey = `${safeUserId}:${safeCollectionId}`;
+  const now = Date.now();
+
+  const cached = collectionPreviewCache.get(cacheKey);
+  if (cached) {
+    if (now - cached.timestamp < COLLECTION_PREVIEW_CACHE_TTL_MS) {
+      return cached.preview;
+    }
+    collectionPreviewCache.delete(cacheKey);
+  }
+
+  const negativeUntil = collectionPreviewNegativeCache.get(cacheKey);
+  if (negativeUntil) {
+    if (now < negativeUntil) return null;
+    collectionPreviewNegativeCache.delete(cacheKey);
+  }
+
+  const markNegative = () => {
+    collectionPreviewNegativeCache.set(
+      cacheKey,
+      Date.now() + COLLECTION_PREVIEW_NEGATIVE_TTL_MS
+    );
+    return null;
+  };
+
+  try {
+    const collectionPath = `users/${encodeURIComponent(safeUserId)}/collections/${encodeURIComponent(safeCollectionId)}`;
+    const collectionRes = await readFirestoreDocument(collectionPath);
+    if (!collectionRes.ok) return markNegative();
+
+    const collectionData = parseFirestoreFields(await collectionRes.json());
+    if (!collectionData || Object.keys(collectionData).length === 0) {
+      return markNegative();
+    }
+    if (!isCollectionPublic(collectionData)) return markNegative();
+
+    const name =
+      typeof collectionData.name === 'string' && collectionData.name.trim()
+        ? collectionData.name.trim()
+        : 'Koleksi';
+    const description =
+      typeof collectionData.description === 'string' ? collectionData.description : '';
+    const rawItems = Array.isArray(collectionData.items) ? collectionData.items : [];
+    const items = rawItems.filter(
+      (item: any): item is { itemId: string; itemType: string } =>
+        item &&
+        typeof item === 'object' &&
+        typeof item.itemId === 'string' &&
+        item.itemId.length > 0 &&
+        (item.itemType === 'film' || item.itemType === 'article')
+    );
+
+    let extraReads = 0;
+
+    // Owner name is best-effort: a missing user doc must not break the preview.
+    let ownerName = 'Sotoy Film';
+    if (extraReads < MAX_EXTRA_COLLECTION_READS) {
+      extraReads++;
+      try {
+        const userRes = await readFirestoreDocument(`users/${encodeURIComponent(safeUserId)}`);
+        if (userRes.ok) {
+          const userData = parseFirestoreFields(await userRes.json());
+          if (typeof userData.name === 'string' && userData.name.trim()) {
+            ownerName = userData.name.trim();
+          }
+        }
+      } catch {
+        // Keep the fallback owner name.
+      }
+    }
+
+    // Stop at the first item with a usable image, within the read budget.
+    let image: string | null = null;
+    for (const item of items) {
+      if (extraReads >= MAX_EXTRA_COLLECTION_READS) break;
+      extraReads++;
+      try {
+        const itemCollection = item.itemType === 'film' ? 'films' : 'articles';
+        const itemRes = await readFirestoreDocument(
+          `${itemCollection}/${encodeURIComponent(item.itemId)}`
+        );
+        if (!itemRes.ok) continue;
+        const itemData = parseFirestoreFields(await itemRes.json());
+        const found = pickCollectionItemImage(item.itemType, itemData);
+        if (found) {
+          image = found;
+          break;
+        }
+      } catch {
+        // Try the next item until the read budget is exhausted.
+      }
+    }
+
+    const preview: CollectionPreview = {
+      userId: safeUserId,
+      collectionId: safeCollectionId,
+      name,
+      description,
+      itemCount: rawItems.length,
+      ownerName,
+      image,
+    };
+
+    collectionPreviewCache.set(cacheKey, { preview, timestamp: Date.now() });
+    collectionPreviewNegativeCache.delete(cacheKey);
+    return preview;
+  } catch {
+    return markNegative();
+  }
+}
