@@ -385,6 +385,16 @@ export interface UserCollection {
   updatedAt: string;
 }
 
+/**
+ * A saved collection is stored as a pointer only. The collection document is
+ * always read live from its owner so private/deleted targets stay unavailable.
+ */
+export interface SavedCollectionPointer {
+  ownerId: string;
+  collectionId: string;
+  savedAt?: string;
+}
+
 export interface AdBanner {
   id: string;
   title: string;

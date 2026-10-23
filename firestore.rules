@@ -405,12 +405,41 @@ service cloud.firestore {
         allow read, write: if isOwner(userId);
       }
 
+      match /savedCollections/{key} {
+        allow read, delete: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+          incoming().keys().hasOnly(['ownerId', 'collectionId', 'savedAt']) &&
+          incoming().ownerId != userId &&
+          key == incoming().ownerId + '_' + incoming().collectionId &&
+          isValidId(incoming().ownerId) &&
+          isValidId(incoming().collectionId);
+        allow update: if false;
+      }
+
       match /collections/{collectionId} {
         allow get: if isOwner(userId) || resource.data.get('isPublic', true) == true;
-        allow list: if true;
+        allow list: if isOwner(userId) || resource.data.isPublic == true;
         allow create, update: if isOwner(userId) && isValidCollection(incoming()) && isValidId(collectionId);
         allow delete: if isOwner(userId);
       }
+    }
+
+    // Public collection likes. A like document is keyed by owner + collection +
+    // viewer so each user can only create their own like exactly once.
+    match /collectionLikes/{likeId} {
+      allow read: if true;
+      allow create: if isSignedIn() &&
+        !isSuspended() &&
+        incoming().keys().hasOnly(['ownerId', 'collectionId', 'uid', 'createdAt']) &&
+        incoming().uid == request.auth.uid &&
+        incoming().ownerId != request.auth.uid &&
+        likeId == incoming().ownerId + '_' + incoming().collectionId + '_' + incoming().uid &&
+        isValidId(incoming().ownerId) &&
+        isValidId(incoming().collectionId) &&
+        incoming().createdAt == request.time &&
+        get(/databases/$(database)/documents/users/$(incoming().ownerId)/collections/$(incoming().collectionId)).data.get('isPublic', true) == true;
+      allow update: if false;
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
     }
 
     match /follows/{followId} {

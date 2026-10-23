@@ -1,27 +1,27 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useApp } from '../../context/AppContext';
 import {
   Bookmark,
-  Share2,
-  Trash2,
-  Edit3,
+  BookmarkCheck,
   Check,
-  X,
-  Star,
+  ChevronDown,
   ChevronLeft,
-  Calendar,
-  Layers,
+  ChevronUp,
+  Edit3,
   FileText,
   Film as FilmIcon,
-  MessageCircle,
-  Clock,
-  Lock,
   GripVertical,
-  ChevronUp,
-  ChevronDown,
+  Heart,
+  Layers,
+  Loader2,
+  Lock,
+  Share2,
+  Star,
+  Trash2,
+  X,
 } from 'lucide-react';
 import {
   DndContext,
@@ -46,21 +46,21 @@ import {
   moveItem,
   validateCollectionDetails,
 } from '../../utils/collectionHelpers';
+import { getWallLayout } from '../../utils/collectionShareLayout';
+import {
+  resolveCollectionAvailability,
+  type CollectionSnapshotData,
+} from '../../utils/collectionSocial';
+import { useCollectionSocial } from '../../hooks/useCollectionSocial';
 import type { CollectionItem, UserCollection } from '../../types';
 
-interface SharedCollectionSnapshot {
-  collectionId?: string;
-  ownerId?: string;
-  name?: string;
-  description?: string;
-  itemCount?: number;
-  previewImages?: string[];
-  isPublic?: boolean;
-  items?: {
-    itemId: string;
-    itemType: 'film' | 'article';
-    addedAt?: string;
-  }[];
+type SharedCollectionSnapshot = CollectionSnapshotData;
+
+interface CollectionWallTile {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 interface SortableCollectionCardProps {
@@ -71,6 +71,95 @@ interface SortableCollectionCardProps {
   onMove: (index: number, direction: 'up' | 'down') => void;
   children: React.ReactNode;
 }
+
+const COLLAGE_SIZE = 144;
+const COLLAGE_GUTTER = 4;
+
+const getInitials = (name?: string): string => {
+  const words = (name || 'Koleksi')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2);
+
+  if (words.length === 0) return 'K';
+  return words.map((word) => word.charAt(0).toUpperCase()).join('');
+};
+
+const formatFilmType = (type: string): string => {
+  if (type === 'series') return 'Series';
+  if (type === 'animation' || type === 'anime') return 'Animasi';
+  return 'Film';
+};
+
+const getYearLabel = (value?: string): string => {
+  if (!value) return '';
+  const year = new Date(value).getFullYear();
+  return Number.isFinite(year) ? String(year) : '';
+};
+
+const CollageTile: React.FC<{ image?: string; tile: CollectionWallTile }> = ({
+  image,
+  tile,
+}) => {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [image]);
+
+  const style: React.CSSProperties = {
+    left: `${tile.x}px`,
+    top: `${tile.y}px`,
+    width: `${tile.width}px`,
+    height: `${tile.height}px`,
+  };
+
+  if (!image || failed) {
+    return <div className="absolute bg-[#00F0FF]" style={style} aria-hidden="true" />;
+  }
+
+  return (
+    <img
+      src={image}
+      alt=""
+      loading="lazy"
+      className="absolute object-cover"
+      style={style}
+      onError={() => setFailed(true)}
+    />
+  );
+};
+
+const CollectionCollage: React.FC<{
+  images: string[];
+  name?: string;
+  itemCount: number;
+}> = ({ images, name, itemCount }) => {
+  if (itemCount === 0) {
+    return (
+      <div className="w-36 h-36 rounded-2xl bg-[#FF2E7E] flex items-center justify-center shrink-0">
+        <span className="font-display font-black text-3xl text-black tracking-tight">
+          {getInitials(name)}
+        </span>
+      </div>
+    );
+  }
+
+  const layoutCount = Math.min(Math.max(images.length, 1), 4);
+  const tiles = getWallLayout(layoutCount, COLLAGE_SIZE, COLLAGE_GUTTER, COLLAGE_SIZE);
+
+  return (
+    <div
+      className="relative w-36 h-36 rounded-2xl overflow-hidden bg-[#0A0A0A] shrink-0"
+      aria-label="Kolase poster koleksi"
+    >
+      {tiles.map((tile, index) => (
+        <CollageTile key={`${tile.x}-${tile.y}-${index}`} image={images[index]} tile={tile} />
+      ))}
+    </div>
+  );
+};
 
 const SortableCollectionCard: React.FC<SortableCollectionCardProps> = ({
   itemKey,
@@ -104,7 +193,7 @@ const SortableCollectionCard: React.FC<SortableCollectionCardProps> = ({
       {children}
 
       {isReorderMode && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-950/95 px-2 py-1.5 shadow-xl">
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-950/95 px-2 py-1.5 shadow-xl">
           <button
             type="button"
             onClick={() => onMove(index, 'up')}
@@ -162,40 +251,71 @@ export const CollectionDetailPage: React.FC = () => {
 
   const isOwner = isLoggedIn && currentUser?.id === userId;
 
-  // Local state for non-owner viewing shared snapshots
+  const [liveCollection, setLiveCollection] = useState<UserCollection | null>(null);
+  const [liveReadState, setLiveReadState] = useState<'loading' | 'ready' | 'fallback'>(
+    isOwner ? 'ready' : 'loading'
+  );
   const [sharedSnapshot, setSharedSnapshot] = useState<SharedCollectionSnapshot | null>(null);
-  const [loadingShared, setLoadingShared] = useState<boolean>(!isOwner);
+  const [snapshotReadState, setSnapshotReadState] = useState<
+    'idle' | 'loading' | 'ready' | 'unavailable'
+  >('idle');
 
-  // Combined name + description edit state
   const [isEditingDetails, setIsEditingDetails] = useState<boolean>(false);
   const [editNameValue, setEditNameValue] = useState<string>('');
   const [editDescValue, setEditDescValue] = useState<string>('');
 
-  // Owner-only reorder state
   const [isReordering, setIsReordering] = useState<boolean>(false);
   const [isSavingOrder, setIsSavingOrder] = useState<boolean>(false);
   const [orderedItems, setOrderedItems] = useState<CollectionItem[]>([]);
 
-  // Find the live collection if owner
   const myCollection = isOwner ? collections.find((c) => c.id === collectionId) || null : null;
 
-  // Final collection information to display
-  const collectionName = isOwner ? myCollection?.name : sharedSnapshot?.name;
-  const collectionDesc = isOwner ? myCollection?.description : sharedSnapshot?.description;
+  const availability = useMemo(
+    () =>
+      isOwner
+        ? { source: 'live' as const, collection: myCollection }
+        : resolveCollectionAvailability({
+            liveCollection,
+            snapshot: sharedSnapshot,
+            ownerId: userId,
+            collectionId,
+          }),
+    [isOwner, myCollection, liveCollection, sharedSnapshot, userId, collectionId]
+  );
+
+  const collectionForDisplay = isOwner ? myCollection : availability.collection;
+
+  const collectionName = collectionForDisplay?.name || 'Koleksi';
+  const collectionDesc = collectionForDisplay?.description || '';
   const isDefault = isOwner ? Boolean(myCollection?.isDefault) : false;
-  const itemsList = useMemo<CollectionItem[]>(() => {
-    if (isOwner) return myCollection?.items || [];
-    return (sharedSnapshot?.items || []).map((item) => ({
-      itemId: item.itemId,
-      itemType: item.itemType,
-      addedAt: item.addedAt || '',
-    }));
-  }, [isOwner, myCollection, sharedSnapshot]);
+  const descriptionText = collectionDesc.trim();
+
+  const itemsList = useMemo<CollectionItem[]>(
+    () => collectionForDisplay?.items || [],
+    [collectionForDisplay]
+  );
+
+  const itemCount = useMemo(() => {
+    if (itemsList.length > 0) return itemsList.length;
+    if (!isOwner && sharedSnapshot?.itemCount) {
+      return Math.max(0, sharedSnapshot.itemCount);
+    }
+    return 0;
+  }, [itemsList.length, isOwner, sharedSnapshot?.itemCount]);
 
   const displayItems = isReordering ? orderedItems : itemsList;
-  const descriptionText = collectionDesc?.trim() || '';
+
+  const ownerUser = userId ? getUserById(userId) : undefined;
   const ownerName =
-    (isOwner ? currentUser?.name : getUserById(userId || '')?.name) || 'Pengguna Sotoy';
+    ownerUser?.name || (isOwner ? currentUser?.name : '') || 'Pengguna Sotoy';
+  const ownerAvatar =
+    ownerUser?.avatar?.trim() || (isOwner ? currentUser?.avatar?.trim() : '') || '';
+
+  const social = useCollectionSocial({
+    ownerId: userId,
+    collectionId,
+    isPublic: collectionForDisplay?.isPublic !== false,
+  });
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -209,45 +329,145 @@ export const CollectionDetailPage: React.FC = () => {
     })
   );
 
-  // Fetch shared snapshot if not owner
+  // Visitors read the real collection first. A denied/missing read falls back
+  // to the existing Buzz snapshot so privately shared collections still work.
   useEffect(() => {
-    if (isOwner || !collectionId) {
-      setLoadingShared(false);
+    if (isOwner || !userId || !collectionId) {
+      setLiveCollection(null);
+      setLiveReadState('ready');
+      setSharedSnapshot(null);
+      setSnapshotReadState('idle');
       return;
     }
 
-    setLoadingShared(true);
-    const q = query(
+    let active = true;
+    setLiveCollection(null);
+    setSharedSnapshot(null);
+    setLiveReadState('loading');
+    setSnapshotReadState('idle');
+
+    const unsubscribe = onSnapshot(
+      doc(db, 'users', userId, 'collections', collectionId),
+      (snapshot) => {
+        if (!active) return;
+
+        if (!snapshot.exists()) {
+          setLiveCollection(null);
+          setLiveReadState('fallback');
+          return;
+        }
+
+        const data = snapshot.data() as UserCollection;
+        setLiveCollection({
+          ...data,
+          id: data.id || collectionId,
+          items: Array.isArray(data.items) ? data.items : [],
+        });
+        setLiveReadState('ready');
+      },
+      (err) => {
+        if (!active) return;
+        console.warn('[CollectionDetail] Live collection read unavailable:', err);
+        const code = (err as { code?: string } | null)?.code;
+        setLiveCollection(null);
+        // Only a denied or missing document should fall back to Buzz. Any
+        // other read failure leaves the page in the explicit unavailable state.
+        setLiveReadState(
+          code === 'permission-denied' || code === 'not-found' ? 'fallback' : 'ready'
+        );
+      }
+    );
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [isOwner, userId, collectionId]);
+
+  useEffect(() => {
+    if (isOwner || !userId || !collectionId || liveReadState !== 'fallback') {
+      return;
+    }
+
+    let active = true;
+    setSnapshotReadState('loading');
+
+    const snapshotQuery = query(
       collection(db, 'buzz'),
       where('sharedCollection.collectionId', '==', collectionId)
     );
 
     const unsubscribe = onSnapshot(
-      q,
+      snapshotQuery,
       (snapshot) => {
-        if (!snapshot.empty) {
-          // Grab the first buzz post sharing this collection
-          const post = snapshot.docs[0].data();
-          setSharedSnapshot((post.sharedCollection || null) as SharedCollectionSnapshot | null);
-        } else {
-          setSharedSnapshot(null);
-        }
-        setLoadingShared(false);
+        if (!active) return;
+
+        const candidates: SharedCollectionSnapshot[] = [];
+        snapshot.forEach((postDoc) => {
+          const data = postDoc.data();
+          if (data.sharedCollection) {
+            candidates.push(data.sharedCollection as SharedCollectionSnapshot);
+          }
+        });
+
+        const selected =
+          candidates.find((candidate) => candidate.ownerId === userId) ||
+          candidates[0] ||
+          null;
+
+        setSharedSnapshot(selected);
+        setSnapshotReadState(selected ? 'ready' : 'unavailable');
       },
       (err) => {
-        console.error('[CollectionDetail] Error loading shared snapshot:', err);
-        setLoadingShared(false);
+        if (!active) return;
+        console.warn('[CollectionDetail] Shared snapshot read unavailable:', err);
+        setSharedSnapshot(null);
+        setSnapshotReadState('unavailable');
       }
     );
 
-    return () => unsubscribe();
-  }, [collectionId, isOwner]);
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [isOwner, userId, collectionId, liveReadState]);
+
+  const loadingShared =
+    !isOwner &&
+    (liveReadState === 'loading' ||
+      (liveReadState === 'fallback' &&
+        (snapshotReadState === 'idle' || snapshotReadState === 'loading')));
+
+  const collageImages = useMemo(() => {
+    if (
+      !isOwner &&
+      availability.source === 'snapshot' &&
+      sharedSnapshot?.previewImages?.length
+    ) {
+      return sharedSnapshot.previewImages.slice(0, 4);
+    }
+
+    return itemsList.slice(0, 4).map((item) => {
+      if (item.itemType === 'film') {
+        return films.find((film) => film.id === item.itemId)?.poster?.trim() || '';
+      }
+
+      return articles.find((article) => article.id === item.itemId)?.coverImage?.trim() || '';
+    });
+  }, [
+    isOwner,
+    availability.source,
+    sharedSnapshot?.previewImages,
+    itemsList,
+    films,
+    articles,
+  ]);
 
   // Keep the edit form in sync when the collection changes outside edit mode.
   useEffect(() => {
     if (!isEditingDetails) {
-      setEditNameValue(collectionName || '');
-      setEditDescValue(collectionDesc || '');
+      setEditNameValue(collectionName);
+      setEditDescValue(collectionDesc);
     }
   }, [collectionName, collectionDesc, isEditingDetails]);
 
@@ -259,15 +479,15 @@ export const CollectionDetailPage: React.FC = () => {
   }, [isOwner, myCollection, isReordering]);
 
   const openEditDetails = () => {
-    setEditNameValue(collectionName || '');
-    setEditDescValue(collectionDesc || '');
+    setEditNameValue(collectionName);
+    setEditDescValue(collectionDesc);
     setIsEditingDetails(true);
   };
 
   const closeEditDetails = () => {
     setIsEditingDetails(false);
-    setEditNameValue(collectionName || '');
-    setEditDescValue(collectionDesc || '');
+    setEditNameValue(collectionName);
+    setEditDescValue(collectionDesc);
   };
 
   const handleSaveDetails = async (e: React.FormEvent) => {
@@ -275,7 +495,7 @@ export const CollectionDetailPage: React.FC = () => {
     if (!collectionId) return;
 
     const validation = validateCollectionDetails({
-      name: isDefault ? collectionName || '' : editNameValue,
+      name: isDefault ? collectionName : editNameValue,
       description: editDescValue,
     });
 
@@ -358,33 +578,11 @@ export const CollectionDetailPage: React.FC = () => {
   };
 
   const handleOpenShare = () => {
-    if (!userId) return;
-
-    let shareCollection: UserCollection | null = null;
-    if (isOwner) {
-      shareCollection = myCollection;
-    } else if (sharedSnapshot) {
-      shareCollection = {
-        id: sharedSnapshot.collectionId || collectionId || '',
-        name: sharedSnapshot.name || 'Koleksi',
-        description: sharedSnapshot.description || '',
-        isDefault: false,
-        isPublic: sharedSnapshot.isPublic !== false,
-        items: (sharedSnapshot.items || []).map((item) => ({
-          itemId: item.itemId,
-          itemType: item.itemType,
-          addedAt: item.addedAt || '',
-        })),
-        createdAt: '',
-        updatedAt: '',
-      };
-    }
-
-    if (!shareCollection) return;
+    if (!userId || !collectionForDisplay) return;
 
     openShareModal(
       buildCollectionShareData(
-        shareCollection,
+        collectionForDisplay,
         { id: userId, name: ownerName },
         typeof window !== 'undefined'
           ? window.location.origin
@@ -392,7 +590,10 @@ export const CollectionDetailPage: React.FC = () => {
         {
           films,
           articles,
-          previewImages: isOwner ? undefined : sharedSnapshot?.previewImages,
+          previewImages:
+            !isOwner && availability.source === 'snapshot'
+              ? sharedSnapshot?.previewImages
+              : undefined,
         }
       )
     );
@@ -407,24 +608,27 @@ export const CollectionDetailPage: React.FC = () => {
     );
   }
 
-  // If collection not found or not owner & no shared snapshot exists
-  if ((isOwner && !myCollection) || (!isOwner && !sharedSnapshot)) {
+  if (!collectionForDisplay) {
     return (
       <div className="max-w-md mx-auto px-4 py-20 text-center space-y-6">
         <div className="w-16 h-16 bg-slate-900 rounded-full flex items-center justify-center text-slate-500 mx-auto border border-slate-800">
           <Lock className="w-6 h-6 text-slate-400" />
         </div>
         <div className="space-y-2">
-          <h2 className="font-display font-black text-xl text-white">Koleksi Tidak Dapat Diakses</h2>
+          <h2 className="font-display font-black text-xl text-white">Koleksi Tidak Tersedia</h2>
           <p className="text-slate-400 text-xs leading-relaxed">
-            Koleksi ini bersifat pribadi dan hanya dapat dibaca oleh pemiliknya, atau telah dihapus. Koleksi pribadi hanya dapat diakses orang lain jika dibagikan ke forum <strong>Buzz</strong>.
+            Koleksi ini privat atau sudah dihapus.
           </p>
         </div>
         <button
-          onClick={() => navigateTo('community-feed')}
-          className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold text-xs transition-colors border border-slate-850"
+          onClick={() =>
+            navigateTo('user-profile', {
+              userId: userId || currentUser?.id,
+            })
+          }
+          className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold text-xs transition-colors border border-slate-800"
         >
-          Kembali ke Forum Komunitas
+          Kembali ke Profil
         </button>
       </div>
     );
@@ -432,55 +636,55 @@ export const CollectionDetailPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-in fade-in duration-300">
-      {/* Back button */}
       <button
         onClick={() => navigateTo('user-profile', { userId })}
-        className="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-xs font-bold bg-slate-900/50 hover:bg-slate-900 px-3.5 py-2 rounded-xl border border-slate-850"
+        className="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-xs font-bold bg-slate-900/50 hover:bg-slate-900 px-3.5 py-2 rounded-xl border border-slate-800"
       >
         <ChevronLeft className="w-4 h-4" />
         <span>Kembali ke Profil</span>
       </button>
 
-      {/* Playlist-style Header */}
-      <div className="bg-slate-900/40 border border-slate-800 rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row gap-6 items-start sm:items-center justify-between">
-        <div className="flex flex-col sm:flex-row items-center gap-6 w-full md:w-auto">
-          {/* Cover Art Collage Placeholder */}
-          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-[#FF2E7E]/10 border border-[#FF2E7E]/20 flex items-center justify-center text-[#FF2E7E] shrink-0 shadow-lg">
-            <Layers className="w-8 h-8" />
-          </div>
+      <div className="bg-[#171717] border border-slate-800 rounded-3xl p-5 sm:p-7 space-y-5">
+        <div className="flex flex-col sm:flex-row gap-5 items-start">
+          <CollectionCollage images={collageImages} name={collectionName} itemCount={itemCount} />
 
-          <div className="space-y-2 text-center sm:text-left w-full">
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 text-[10px] uppercase font-extrabold tracking-wider text-slate-400">
-              <span>{isOwner ? 'Koleksi Pribadi' : 'Koleksi Berbagi'}</span>
-              <span>•</span>
-              <span className="text-[#FF2E7E]">{itemsList.length} item</span>
+          <div className="min-w-0 flex-1 space-y-3 w-full">
+            <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase font-black tracking-[0.18em] text-slate-400">
+              <span className="text-[#FF2E7E]">KOLEKSI</span>
+              <span className="text-slate-600">•</span>
+              <span>{itemCount} item</span>
               {isDefault && (
                 <>
-                  <span>•</span>
-                  <span className="bg-[#FF2E7E]/20 text-[#FF2E7E] px-2 py-0.5 rounded border border-[#FF2E7E]/30 text-[9px]">Daftar Utama</span>
+                  <span className="text-slate-600">•</span>
+                  <span className="bg-[#FF2E7E] text-black px-2 py-0.5 rounded text-[9px] font-black tracking-normal">
+                    Daftar Utama
+                  </span>
                 </>
               )}
             </div>
 
             {isEditingDetails ? (
-              <form onSubmit={handleSaveDetails} className="space-y-3 max-w-lg mt-1 w-full text-left">
+              <form onSubmit={handleSaveDetails} className="space-y-3 max-w-lg w-full text-left">
                 <div className="space-y-1">
                   <div className="flex items-center justify-between gap-3">
-                    <label htmlFor="collection-name-input" className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                    <label
+                      htmlFor="collection-name-input"
+                      className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400"
+                    >
                       Nama koleksi
                     </label>
                     <span className="text-[10px] font-bold text-slate-500">
-                      {(isDefault ? collectionName || '' : editNameValue).length}/40
+                      {(isDefault ? collectionName : editNameValue).length}/40
                     </span>
                   </div>
                   <input
                     id="collection-name-input"
                     type="text"
-                    value={isDefault ? collectionName || '' : editNameValue}
+                    value={isDefault ? collectionName : editNameValue}
                     onChange={(e) => setEditNameValue(e.target.value)}
                     maxLength={40}
                     disabled={isDefault}
-                    className="w-full px-3.5 py-2 text-sm bg-slate-850 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-[#FF2E7E] font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-full px-3.5 py-2 text-sm bg-slate-900 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-[#FF2E7E] font-bold disabled:opacity-60 disabled:cursor-not-allowed"
                     autoFocus={!isDefault}
                   />
                   {isDefault && (
@@ -492,7 +696,10 @@ export const CollectionDetailPage: React.FC = () => {
 
                 <div className="space-y-1">
                   <div className="flex items-center justify-between gap-3">
-                    <label htmlFor="collection-description-input" className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                    <label
+                      htmlFor="collection-description-input"
+                      className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400"
+                    >
                       Deskripsi
                     </label>
                     <span className="text-[10px] font-bold text-slate-500">
@@ -506,7 +713,7 @@ export const CollectionDetailPage: React.FC = () => {
                     maxLength={300}
                     rows={3}
                     placeholder="Tulis deskripsi singkat koleksi ini..."
-                    className="w-full max-w-full box-border px-3.5 py-2 text-xs bg-slate-850 border border-slate-800 rounded-xl text-white resize-none focus:outline-none focus:border-[#FF2E7E]"
+                    className="w-full max-w-full box-border px-3.5 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-white resize-none focus:outline-none focus:border-[#FF2E7E]"
                   />
                 </div>
 
@@ -530,24 +737,12 @@ export const CollectionDetailPage: React.FC = () => {
               </form>
             ) : (
               <>
-                <div className="flex items-center justify-center sm:justify-start gap-2.5">
-                  <h1 className="font-display font-black text-xl sm:text-2xl text-white tracking-tight">
-                    {collectionName}
-                  </h1>
-                  {isOwner && (
-                    <button
-                      onClick={openEditDetails}
-                      className="text-slate-500 hover:text-[#FF2E7E] transition-colors p-1"
-                      title="Edit nama & deskripsi koleksi"
-                      aria-label="Edit nama & deskripsi koleksi"
-                    >
-                      <Edit3 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
+                <h1 className="font-display font-black text-3xl sm:text-4xl text-white tracking-tight leading-tight break-words">
+                  {collectionName}
+                </h1>
 
                 {descriptionText ? (
-                  <p className="text-slate-400 text-xs sm:text-sm max-w-2xl leading-relaxed">
+                  <p className="text-slate-400 text-xs sm:text-sm max-w-2xl leading-relaxed line-clamp-3">
                     {descriptionText}
                   </p>
                 ) : isOwner ? (
@@ -561,66 +756,165 @@ export const CollectionDetailPage: React.FC = () => {
                 ) : null}
               </>
             )}
+
+            <div className="flex flex-wrap items-center gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => navigateTo('user-profile', { userId: userId || currentUser?.id })}
+                className="flex items-center gap-2 min-w-0 text-left group"
+                aria-label={`Lihat profil ${ownerName}`}
+              >
+                {ownerAvatar ? (
+                  <img
+                    src={ownerAvatar}
+                    alt=""
+                    className="w-6 h-6 rounded-full object-cover border border-slate-700"
+                  />
+                ) : (
+                  <span className="w-6 h-6 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[10px] font-black text-slate-300">
+                    {getInitials(ownerName)}
+                  </span>
+                )}
+                <span className="text-xs font-bold text-slate-300 group-hover:text-[#FF2E7E] transition-colors truncate">
+                  {ownerName}
+                </span>
+              </button>
+              <span className="text-slate-600">•</span>
+              <span className="text-[11px] font-bold text-slate-500">
+                {itemCount} item
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Header Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-center md:justify-end border-t border-slate-850/60 md:border-t-0 pt-4 md:pt-0">
+        <div className="border-t border-slate-800 pt-4 flex flex-wrap items-center gap-2.5">
+          {!isOwner && (
+            <>
+              <button
+                type="button"
+                onClick={() => void social.toggleLike()}
+                disabled={social.likePending}
+                aria-pressed={social.liked}
+                className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
+                  social.liked
+                    ? 'bg-[#FF2E7E] border-[#FF2E7E] text-white'
+                    : 'bg-[#0A0A0A] border-slate-700 text-slate-300 hover:border-[#FF2E7E]'
+                }`}
+              >
+                {social.likePending ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Heart className={`w-3.5 h-3.5 ${social.liked ? 'fill-current' : ''}`} />
+                )}
+                <span>Suka</span>
+                <span className="text-[11px] tabular-nums opacity-80">
+                  {social.loading ? '...' : social.likeCount}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void social.toggleSave()}
+                disabled={social.savePending}
+                aria-pressed={social.saved}
+                className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
+                  social.saved
+                    ? 'bg-[#FFD000]/10 border-[#FFD000]/60 text-[#FFD000]'
+                    : 'bg-[#0A0A0A] border-slate-700 text-slate-300 hover:border-[#FFD000]'
+                }`}
+              >
+                {social.savePending ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : social.saved ? (
+                  <BookmarkCheck className="w-3.5 h-3.5" />
+                ) : (
+                  <Bookmark className="w-3.5 h-3.5" />
+                )}
+                <span>{social.saved ? 'Tersimpan' : 'Simpan'}</span>
+              </button>
+            </>
+          )}
+
+          {isOwner && (
+            <>
+              {!isEditingDetails && (
+                <button
+                  type="button"
+                  onClick={openEditDetails}
+                  className="px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 bg-[#0A0A0A] border border-slate-700 text-slate-300 hover:text-white hover:border-[#FF2E7E] transition-colors"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Edit</span>
+                </button>
+              )}
+
+              {itemsList.length > 1 && (
+                <button
+                  type="button"
+                  onClick={isReordering ? handleExitReorder : handleStartReorder}
+                  disabled={isSavingOrder}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors border disabled:opacity-60 disabled:cursor-not-allowed ${
+                    isReordering
+                      ? 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border-emerald-500/40'
+                      : 'bg-[#0A0A0A] hover:bg-slate-900 text-slate-300 border-slate-700'
+                  }`}
+                >
+                  {isReordering ? (
+                    <Check className="w-3.5 h-3.5" />
+                  ) : (
+                    <GripVertical className="w-3.5 h-3.5" />
+                  )}
+                  <span>
+                    {isSavingOrder
+                      ? 'Menyimpan...'
+                      : isReordering
+                      ? 'Selesai'
+                      : 'Atur Urutan'}
+                  </span>
+                </button>
+              )}
+            </>
+          )}
+
           <button
+            type="button"
             onClick={handleOpenShare}
-            className="flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 bg-[#FF2E7E] hover:bg-[#E0246F] text-white transition-colors shadow-lg shadow-[#FF2E7E]/25"
+            className="px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 bg-[#FF2E7E] hover:bg-[#E0246F] text-white transition-colors"
           >
             <Share2 className="w-3.5 h-3.5" />
             <span>Bagikan</span>
           </button>
 
-          {isOwner && itemsList.length > 1 && (
-            <button
-              onClick={isReordering ? handleExitReorder : handleStartReorder}
-              disabled={isSavingOrder}
-              className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors border ${
-                isReordering
-                  ? 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border-emerald-500/40'
-                  : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700'
-              } disabled:opacity-60 disabled:cursor-not-allowed`}
-            >
-              {isReordering ? (
-                <Check className="w-3.5 h-3.5" />
-              ) : (
-                <GripVertical className="w-3.5 h-3.5" />
-              )}
-              <span>
-                {isSavingOrder
-                  ? 'Menyimpan...'
-                  : isReordering
-                  ? 'Selesai'
-                  : 'Atur urutan'}
-              </span>
-            </button>
+          {isOwner && (
+            <span className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 px-2">
+              <Heart className="w-3.5 h-3.5 text-[#FF2E7E]" />
+              <span>{social.loading ? '...' : social.likeCount} suka</span>
+            </span>
           )}
         </div>
       </div>
 
-      {/* Grid of mixed items */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <h2 className="font-display font-black text-lg text-white">Item dalam Koleksi ({itemsList.length})</h2>
+          <h2 className="font-display font-black text-lg text-white">
+            Item dalam Koleksi ({itemCount})
+          </h2>
           {isOwner && isReordering && (
             <p className="text-[11px] text-slate-400">
-              Tarik kartu atau gunakan tombol panah. Urutan disimpan otomatis saat selesai.
+              Tarik kartu atau gunakan tombol panah. Urutan disimpan saat selesai.
             </p>
           )}
         </div>
 
         {itemsList.length === 0 ? (
-          <div className="text-center py-20 bg-slate-900/25 rounded-3xl border border-slate-850 flex flex-col items-center justify-center gap-4 max-w-xl mx-auto px-6">
+          <div className="text-center py-20 bg-slate-900/25 rounded-3xl border border-slate-800 flex flex-col items-center justify-center gap-4 max-w-xl mx-auto px-6">
             <Bookmark className="w-12 h-12 text-slate-700" />
             <div className="space-y-1">
               <h4 className="font-display font-bold text-white text-base">Koleksi Masih Kosong</h4>
               <p className="text-slate-400 text-xs max-w-sm leading-relaxed">
                 {isOwner
                   ? 'Koleksi ini belum diisi. Jelajahi katalog film atau artikel dan klik tombol simpan untuk menambahkannya di sini!'
-                  : 'Koleksi snapshot ini tidak memiliki item.'}
+                  : 'Koleksi ini belum memiliki item.'}
               </p>
             </div>
           </div>
@@ -634,13 +928,17 @@ export const CollectionDetailPage: React.FC = () => {
               items={displayItems.map(getCollectionItemKey)}
               strategy={rectSortingStrategy}
             >
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {displayItems.map((item, index) => {
                   const itemKey = getCollectionItemKey(item);
 
                   if (item.itemType === 'film') {
-                    const film = films.find((f) => f.id === item.itemId);
+                    const film = films.find((candidate) => candidate.id === item.itemId);
                     if (!film) return null;
+
+                    const rating = film.criticsSkorSotoy || film.skorSotoy || 0;
+                    const synopsis =
+                      film.synopsis || (film as { kurasiRedaksi?: string }).kurasiRedaksi || '';
 
                     return (
                       <SortableCollectionCard
@@ -657,68 +955,68 @@ export const CollectionDetailPage: React.FC = () => {
                               ? undefined
                               : () => navigateTo('film-detail', { filmId: film.id })
                           }
-                          className={`bg-[#171717] border border-slate-800 rounded-3xl overflow-hidden transition-all duration-300 flex flex-col hover:border-[#FF2E7E]/40 hover:shadow-xl hover:shadow-black/50 hover:-translate-y-1 select-none relative ${
+                          className={`relative bg-[#171717] border border-slate-800 rounded-2xl p-3 flex gap-3 transition-all duration-200 hover:border-[#FF2E7E]/50 select-none ${
                             isReordering ? 'cursor-default' : 'cursor-pointer'
                           }`}
                         >
-                          {/* Image container */}
-                          <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-950">
-                            <img
-                              src={film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80'}
-                              alt={film.title}
-                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                              loading="lazy"
-                            />
-                            <div className="absolute inset-x-0 bottom-0 h-20 bg-[#171717]/85" />
-
-                            {/* Rating Badge */}
-                            <div className="absolute top-2 left-2 bg-black/90 backdrop-blur-md px-2 py-0.5 rounded-lg border border-[#FFD000]/30 text-[#FFD000] text-[11px] font-black flex items-center gap-1 shadow-md">
-                              <Star className="w-3 h-3 fill-current text-[#FFD000]" />
-                              <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
-                            </div>
-
-                            <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[10px] font-bold text-slate-300">
-                              <span className="bg-slate-900/90 px-1.5 py-0.5 rounded uppercase">{film.type}</span>
-                              <span>{film.year}</span>
-                            </div>
+                          <div className="w-20 sm:w-24 shrink-0 aspect-[2/3] rounded-xl overflow-hidden bg-[#0A0A0A]">
+                            {film.poster?.trim() ? (
+                              <img
+                                src={film.poster.trim()}
+                                alt={film.title}
+                                loading="lazy"
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-slate-700">
+                                <FilmIcon className="w-7 h-7" />
+                              </div>
+                            )}
                           </div>
 
-                          {/* Content info */}
-                          <div className="p-4 flex-1 flex flex-col justify-between space-y-2">
-                            <div>
-                              <h3 className="font-display font-black text-sm text-slate-100 group-hover:text-[#FF2E7E] transition-colors line-clamp-1 leading-snug">
+                          <div className="min-w-0 flex-1 flex flex-col justify-between py-0.5 pr-7">
+                            <div className="space-y-1.5">
+                              <h3 className="font-display font-black text-sm text-white leading-snug line-clamp-2">
                                 {film.title}
                               </h3>
-                              <p className="text-slate-400 text-xs line-clamp-2 mt-1">
-                                {film.synopsis || (film as any).kurasiRedaksi || ''}
+
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-bold text-slate-400">
+                                <span>{film.year}</span>
+                                <span className="text-slate-600">•</span>
+                                <span className="uppercase">{formatFilmType(film.type)}</span>
+                                <span className="ml-auto inline-flex items-center gap-1 text-[#FFD000]">
+                                  <Star className="w-3 h-3 fill-current" />
+                                  <span>{rating.toFixed(1)}</span>
+                                  <span className="text-slate-500 font-black">Sotoy</span>
+                                </span>
+                              </div>
+
+                              <p className="text-slate-400 text-xs leading-relaxed line-clamp-1">
+                                {synopsis}
                               </p>
                             </div>
-
-                            <div className="pt-2 border-t border-white/[0.05] flex items-center justify-between text-[10px] font-bold">
-                              <span className="text-[#FF2E7E]">Skor Sotoy</span>
-                              <span className="text-white bg-slate-900/80 px-2 py-0.5 rounded-lg border border-slate-800">
-                                {film.skorSotoy.toFixed(1)} / 10.0
-                              </span>
-                            </div>
                           </div>
-                        </div>
 
-                        {/* Delete Quick Badge (for Owner, outside reorder mode) */}
-                        {isOwner && !isReordering && (
-                          <button
-                            onClick={() => handleRemoveItem(film.id, film.title)}
-                            className="absolute top-2 right-2 w-8 h-8 rounded-xl bg-black/80 hover:bg-rose-600 border border-white/10 text-slate-400 hover:text-white flex items-center justify-center shadow-lg transition-all z-10"
-                            title="Hapus dari Koleksi"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
+                          {isOwner && !isReordering && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void handleRemoveItem(film.id, film.title);
+                              }}
+                              className="absolute top-2 right-2 w-8 h-8 rounded-xl bg-black/80 hover:bg-rose-600 border border-white/10 text-slate-400 hover:text-white flex items-center justify-center transition-all z-10"
+                              title="Hapus dari Koleksi"
+                              aria-label="Hapus dari Koleksi"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </SortableCollectionCard>
                     );
                   }
 
                   if (item.itemType === 'article') {
-                    const article = articles.find((a) => a.id === item.itemId);
+                    const article = articles.find((candidate) => candidate.id === item.itemId);
                     if (!article) return null;
 
                     return (
@@ -734,62 +1032,62 @@ export const CollectionDetailPage: React.FC = () => {
                           onClick={
                             isReordering
                               ? undefined
-                              : () => navigateTo('article-detail', { articleId: article.id })
+                              : () =>
+                                  navigateTo('article-detail', {
+                                    articleId: article.id,
+                                  })
                           }
-                          className={`bg-[#171717] border border-slate-800 rounded-3xl overflow-hidden hover:border-[#FF2E7E]/60 transition-all duration-300 flex flex-col shadow-lg ${
+                          className={`relative bg-[#171717] border border-slate-800 rounded-2xl p-3 flex gap-3 transition-all duration-200 hover:border-[#FF2E7E]/50 select-none ${
                             isReordering ? 'cursor-default' : 'cursor-pointer'
                           }`}
                         >
-                          <div className="relative h-48 w-full overflow-hidden">
-                            <img
-                              src={article.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80'}
-                              alt={article.title}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                            />
-                            <div className="absolute inset-0 bg-black/10" />
-                            <span className="absolute top-3 left-3 bg-[#FF2E7E] text-white text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
-                              {article.subCategory}
-                            </span>
-                            <span className="absolute top-3 right-3 bg-black/80 backdrop-blur text-pink-400 text-xs font-bold px-2.5 py-0.5 rounded-full border border-pink-500/30 flex items-center gap-1">
-                              ♥ {article.likes}
-                            </span>
+                          <div className="w-20 sm:w-24 shrink-0 aspect-[2/3] rounded-xl overflow-hidden bg-[#0A0A0A]">
+                            {article.coverImage?.trim() ? (
+                              <img
+                                src={article.coverImage.trim()}
+                                alt={article.title}
+                                loading="lazy"
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-slate-700">
+                                <FileText className="w-7 h-7" />
+                              </div>
+                            )}
                           </div>
 
-                          <div className="p-5 flex-1 flex flex-col justify-between">
-                            <div>
-                              <div className="flex items-center gap-2 text-slate-400 text-xs mb-2">
-                                <span className="text-slate-300">{article.author.name}</span>
-                                <span>•</span>
-                                <span>{article.readTime}</span>
-                              </div>
-
-                              <h3 className="font-display font-bold text-sm text-white group-hover:text-[#FF2E7E] transition-colors leading-snug mb-2 line-clamp-2">
+                          <div className="min-w-0 flex-1 flex flex-col justify-between py-0.5 pr-7">
+                            <div className="space-y-1.5">
+                              <h3 className="font-display font-black text-sm text-white leading-snug line-clamp-2">
                                 {article.title}
                               </h3>
-                              <p className="text-slate-400 text-xs line-clamp-2 mb-4 leading-relaxed">
+
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-bold text-slate-400">
+                                <span>{getYearLabel(article.publishedAt) || 'Artikel'}</span>
+                                <span className="text-slate-600">•</span>
+                                <span className="uppercase">{article.subCategory}</span>
+                              </div>
+
+                              <p className="text-slate-400 text-xs leading-relaxed line-clamp-1">
                                 {article.excerpt}
                               </p>
                             </div>
-
-                            <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-                              <span className="flex items-center gap-1">
-                                <MessageCircle className="w-3.5 h-3.5" />
-                                <span>{article.commentsCount || 0} Komentar</span>
-                              </span>
-                            </div>
                           </div>
-                        </article>
 
-                        {/* Delete Quick Badge (for Owner, outside reorder mode) */}
-                        {isOwner && !isReordering && (
-                          <button
-                            onClick={() => handleRemoveItem(article.id, article.title)}
-                            className="absolute top-3 right-3 w-8 h-8 rounded-xl bg-black/80 hover:bg-rose-600 border border-white/10 text-slate-400 hover:text-white flex items-center justify-center shadow-lg transition-all z-10"
-                            title="Hapus dari Koleksi"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
+                          {isOwner && !isReordering && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void handleRemoveItem(article.id, article.title);
+                              }}
+                              className="absolute top-2 right-2 w-8 h-8 rounded-xl bg-black/80 hover:bg-rose-600 border border-white/10 text-slate-400 hover:text-white flex items-center justify-center transition-all z-10"
+                              title="Hapus dari Koleksi"
+                              aria-label="Hapus dari Koleksi"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </article>
                       </SortableCollectionCard>
                     );
                   }

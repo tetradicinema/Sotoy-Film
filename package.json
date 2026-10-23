@@ -29,6 +29,7 @@
     "test:film-card": "node --import tsx scripts/test-film-card.ts",
     "test:share-card": "node --import tsx scripts/test-share-card.ts",
     "test:collections": "node --import tsx scripts/test-collections.ts",
+    "test:collection-social": "node --import tsx scripts/test-collection-social.ts",
     "test:collection-share-layout": "node --import tsx scripts/test-collection-share-layout.ts",
     "test:share-analytics": "node --import tsx scripts/test-share-analytics.ts",
     "test:collection-preview": "node --import tsx scripts/test-collection-preview.ts",

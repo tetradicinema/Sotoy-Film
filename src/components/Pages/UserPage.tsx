@@ -5,6 +5,7 @@ import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/fire
 import { db, auth } from '../../lib/firebase';
 import { isArticleUnpublished, splitProfileArticles, getDefaultEditorialSubTab, EditorialSubTab } from '../../utils/articleHelpers';
 import { buildCollectionShareData } from '../../utils/collectionHelpers';
+import { useSavedCollections } from '../../hooks/useCollectionSocial';
 import {
   User as UserIcon,
   Star,
@@ -204,6 +205,16 @@ export const UserPage: React.FC = () => {
 
   const isOwnProfile = isLoggedIn && currentUser.id === targetUser.id;
 
+  const {
+    entries: savedCollectionEntries,
+    loading: savedCollectionsLoading,
+    removeSaved: removeSavedCollection,
+  } = useSavedCollections(isOwnProfile ? currentUser.id : null);
+
+  useEffect(() => {
+    setCollectionsLibraryMode('mine');
+  }, [targetUser.id]);
+
   // Local state to store ratings for the viewed user profile
   const [targetUserRatings, setTargetUserRatings] = useState<UserRating[]>([]);
   const [loadingRatings, setLoadingRatings] = useState<boolean>(false);
@@ -253,6 +264,7 @@ export const UserPage: React.FC = () => {
   const [followModalType, setFollowModalType] = useState<'followers' | 'following' | 'discover' | null>(null);
   const [modalSearchQuery, setModalSearchQuery] = useState('');
   const [librarySubTab, setLibrarySubTab] = useState<'films' | 'articles' | 'collections'>('films');
+  const [collectionsLibraryMode, setCollectionsLibraryMode] = useState<'mine' | 'saved'>('mine');
   const [isCreatingInTab, setIsCreatingInTab] = useState(false);
   const [tabNewCollectionName, setTabNewCollectionName] = useState('');
   const [tabNewCollectionDesc, setTabNewCollectionDesc] = useState('');
@@ -2108,7 +2120,172 @@ export const UserPage: React.FC = () => {
 
             {/* TAB CONTENT: COLLECTIONS */}
             {librarySubTab === 'collections' && (
-              !isOwnProfile && profileCollections.length === 0 ? (
+              <div className="space-y-4">
+                {isOwnProfile && (
+                  <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-slate-900 border border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => setCollectionsLibraryMode('mine')}
+                      className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                        collectionsLibraryMode === 'mine'
+                          ? 'bg-[#FF2E7E] text-white'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Milik Saya
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCollectionsLibraryMode('saved')}
+                      className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                        collectionsLibraryMode === 'saved'
+                          ? 'bg-[#FF2E7E] text-white'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Tersimpan
+                    </button>
+                  </div>
+                )}
+
+                {isOwnProfile && collectionsLibraryMode === 'saved' ? (
+                  savedCollectionsLoading ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-slate-400 space-y-3">
+                      <Loader2 className="w-8 h-8 text-[#FF2E7E] animate-spin" />
+                      <p className="text-xs font-bold">Memuat koleksi tersimpan...</p>
+                    </div>
+                  ) : savedCollectionEntries.length === 0 ? (
+                    <div className="text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800/80 space-y-4 max-w-md mx-auto p-6">
+                      <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center text-slate-500 mx-auto border border-slate-700/50">
+                        <Bookmark className="w-5 h-5 text-slate-400" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <h4 className="font-display font-bold text-white text-base">
+                          Belum Ada Koleksi Tersimpan
+                        </h4>
+                        <p className="text-slate-400 text-xs leading-relaxed">
+                          Simpan koleksi pengguna lain untuk membukanya lagi dari sini.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                      {savedCollectionEntries.map((entry) => {
+                        if (entry.status === 'unavailable' || !entry.collection) {
+                          return (
+                            <div
+                              key={entry.key}
+                              className="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 min-h-[220px] flex flex-col justify-between gap-4"
+                            >
+                              <div>
+                                <div className="aspect-[16/10] rounded-xl border border-slate-800 bg-[#0A0A0A] flex items-center justify-center">
+                                  <Lock className="w-7 h-7 text-slate-700" />
+                                </div>
+                                <h4 className="font-display font-black text-sm text-slate-500 mt-3">
+                                  Tidak tersedia
+                                </h4>
+                                <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
+                                  Koleksi dari {entry.ownerName} sudah privat atau dihapus.
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => void removeSavedCollection(entry.key)}
+                                className="self-start px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white text-[11px] font-bold transition-colors flex items-center gap-1.5"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Hapus</span>
+                              </button>
+                            </div>
+                          );
+                        }
+
+                        const savedCollection = entry.collection;
+                        const imageUrls: string[] = [];
+                        savedCollection.items.slice(0, 4).forEach((item) => {
+                          if (item.itemType === 'film') {
+                            const film = films.find((candidate) => candidate.id === item.itemId);
+                            if (film?.poster?.trim()) imageUrls.push(film.poster.trim());
+                          } else {
+                            const article = articles.find((candidate) => candidate.id === item.itemId);
+                            if (article?.coverImage?.trim()) imageUrls.push(article.coverImage.trim());
+                          }
+                        });
+
+                        return (
+                          <div
+                            key={entry.key}
+                            className="bg-slate-900/60 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl overflow-hidden transition-all flex flex-col group shadow-lg min-h-[260px] cursor-pointer"
+                            onClick={() =>
+                              navigateTo('collection-detail', {
+                                userId: entry.ownerId,
+                                collectionId: entry.collectionId,
+                              })
+                            }
+                          >
+                            <div className="relative aspect-[16/10] bg-[#0A0A0A] overflow-hidden">
+                              {imageUrls.length === 0 ? (
+                                <div className="w-full h-full flex flex-col items-center justify-center text-slate-700 border-b border-slate-800">
+                                  <Layers className="w-8 h-8" />
+                                  <span className="text-[10px] text-slate-600 mt-1">Belum ada item</span>
+                                </div>
+                              ) : imageUrls.length === 1 ? (
+                                <img
+                                  src={imageUrls[0]}
+                                  alt=""
+                                  className="w-full h-full object-cover border-b border-slate-800"
+                                />
+                              ) : (
+                                <div className="grid grid-cols-2 auto-rows-fr gap-0.5 w-full h-full border-b border-slate-800">
+                                  {imageUrls.map((imageUrl, imageIndex) => (
+                                    <img
+                                      key={`${entry.key}-${imageIndex}`}
+                                      src={imageUrl}
+                                      alt=""
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ))}
+                                </div>
+                              )}
+
+                              <div className="absolute top-2.5 right-2.5 bg-black/80 px-2 py-1 rounded-lg text-[10px] font-bold text-slate-300 border border-white/10">
+                                {savedCollection.items.length} item
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void removeSavedCollection(entry.key);
+                                }}
+                                className="absolute top-2.5 left-2.5 w-7 h-7 rounded-lg bg-black/75 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center transition-colors"
+                                title="Hapus dari koleksi tersimpan"
+                                aria-label="Hapus dari koleksi tersimpan"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+
+                            <div className="p-4 flex-1 flex flex-col justify-between gap-3">
+                              <h4 className="font-display font-black text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-1 leading-snug">
+                                {savedCollection.name}
+                              </h4>
+                              <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2 text-[11px] text-slate-400">
+                                <span className="flex items-center gap-1.5 min-w-0">
+                                  <UserIcon className="w-3.5 h-3.5 shrink-0" />
+                                  <span className="truncate">{entry.ownerName}</span>
+                                </span>
+                                <span className="font-bold text-slate-500 shrink-0">
+                                  {savedCollection.items.length} item
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )
+                ) : !isOwnProfile && profileCollections.length === 0 ? (
                 <div className="text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800/80 space-y-4 max-w-md mx-auto p-6">
                   <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center text-slate-500 mx-auto border border-slate-700/50">
                     <Layers className="w-5 h-5 text-slate-400" />
@@ -2349,7 +2526,8 @@ export const UserPage: React.FC = () => {
                     );
                   })}
                 </div>
-              )
+              )}
+              </div>
             )}
           </div>
         )}
