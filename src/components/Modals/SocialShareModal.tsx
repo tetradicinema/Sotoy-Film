@@ -14,6 +14,7 @@ import {
   Camera,
   Star,
 } from 'lucide-react';
+import { toBlob as captureDomToBlob } from 'html-to-image';
 import { useApp } from '../../context/AppContext';
 import {
   renderBuzzStoryCanvas,
@@ -21,6 +22,31 @@ import {
   BuzzCardFilm,
   normalizeHandle,
 } from '../../utils/buzzStoryCard';
+import {
+  buildCollectionStoryItems,
+  COLLECTION_COUNT_STICKER_HEIGHT,
+  COLLECTION_FOOTER_HEIGHT,
+  COLLECTION_FOOTER_TOP,
+  COLLECTION_LOGO_HEIGHT,
+  COLLECTION_LOGO_LEFT,
+  COLLECTION_LOGO_PATH,
+  COLLECTION_LOGO_TEXT_START_RATIO,
+  COLLECTION_LOGO_TOP,
+  COLLECTION_LOGO_WIDTH,
+  COLLECTION_PANEL_LEFT,
+  COLLECTION_PANEL_TOP,
+  COLLECTION_PANEL_WIDTH,
+  COLLECTION_STORY_HEIGHT,
+  COLLECTION_STORY_WIDTH,
+  COLLECTION_WALL_GUTTER,
+  COLLECTION_WALL_HEIGHT,
+  COLLECTION_WALL_SEPARATOR,
+  getCollectionInitials,
+  getCollectionStoryPanelLayout,
+  getWallLayout,
+  type CollectionStoryItem,
+  type CollectionStoryPanelLayout,
+} from '../../utils/collectionShareLayout';
 import {
   fitFontSize,
   formatReviewCountsLine,
@@ -50,6 +76,11 @@ export interface ShareData {
   collectionOwnerName?: string;
   collectionPreviewImages?: string[];
   collectionIsPublic?: boolean;
+  collectionItems?: Array<{
+    title?: string;
+    image?: string;
+    itemType?: 'film' | 'article';
+  }>;
   tags?: string[];
   authorName?: string;
   authorHandle?: string;
@@ -140,19 +171,24 @@ export const ensureBlobUrl = async (url: string): Promise<string> => {
 // Backwards-compatible alias if referenced elsewhere
 export const urlToDataUrl = ensureBlobUrl;
 
-// Module-level cache for Sotoy Film logo data URL
-let cachedLogoDataUrl: string | null = null;
+// Module-level cache for logo data URLs, keyed by the requested asset path.
+const logoDataUrlCache = new Map<string, string>();
 
-export const getLogoDataUrl = async (): Promise<string> => {
-  if (cachedLogoDataUrl) return cachedLogoDataUrl;
+export const getLogoDataUrl = async (
+  path: string = '/sotoy-logo-full.png'
+): Promise<string> => {
+  const encodedPath = encodeURI(path || '/sotoy-logo-full.png');
+  const cached = logoDataUrlCache.get(encodedPath);
+  if (cached) return cached;
+
   try {
-    const dataUrl = await ensureBlobUrl('/sotoy-logo-full.png');
+    const dataUrl = await ensureBlobUrl(encodedPath);
     if (dataUrl && dataUrl.startsWith('data:')) {
-      cachedLogoDataUrl = dataUrl;
+      logoDataUrlCache.set(encodedPath, dataUrl);
       return dataUrl;
     }
     // Direct fetch fallback if ensureBlobUrl returned the plain relative path
-    const res = await fetch('/sotoy-logo-full.png');
+    const res = await fetch(encodedPath);
     if (res.ok) {
       const blob = await res.blob();
       const readerDataUrl = await new Promise<string>((resolve, reject) => {
@@ -164,14 +200,63 @@ export const getLogoDataUrl = async (): Promise<string> => {
         reader.onerror = () => reject(reader.error || new Error('FileReader error'));
         reader.readAsDataURL(blob);
       });
-      cachedLogoDataUrl = readerDataUrl;
+      logoDataUrlCache.set(encodedPath, readerDataUrl);
       return readerDataUrl;
     }
-    console.warn('[getLogoDataUrl] Failed to fetch /sotoy-logo-full.png (non-200), falling back to relative path');
+    console.warn(`[getLogoDataUrl] Failed to fetch ${encodedPath} (non-200), falling back to relative path`);
   } catch (err) {
-    console.warn('[getLogoDataUrl] Error converting /sotoy-logo-full.png to data URL, falling back to relative path:', err);
+    console.warn(`[getLogoDataUrl] Error converting ${encodedPath} to data URL, falling back to relative path:`, err);
   }
-  return '/sotoy-logo-full.png';
+  return encodedPath;
+};
+
+const readBlobAsDataUrl = (blob: Blob): Promise<string> =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') resolve(reader.result);
+      else reject(new Error('FileReader did not produce a data URL'));
+    };
+    reader.onerror = () => reject(reader.error || new Error('FileReader error'));
+    reader.readAsDataURL(blob);
+  });
+
+/**
+ * Converts a collection poster/cover into a data URL for DOM capture. Remote
+ * assets (Firebase Storage, TMDB, etc.) go through the existing image proxy
+ * first so the capture never taints the canvas or silently drops an image.
+ */
+const getCollectionImageDataUrl = async (
+  src: string
+): Promise<string | null> => {
+  const value = typeof src === 'string' ? src.trim() : '';
+  if (!value) return null;
+  if (value.startsWith('data:')) return value;
+
+  const candidates: string[] = [];
+  if (value.startsWith('blob:') || value.startsWith('/') || value.startsWith('.')) {
+    candidates.push(value);
+  } else {
+    candidates.push(`/api/image-proxy?url=${encodeURIComponent(value)}`);
+    candidates.push(value);
+  }
+
+  for (const candidate of candidates) {
+    try {
+      const response = await fetch(candidate, { mode: 'cors' });
+      if (!response.ok) continue;
+      const blob = await response.blob();
+      if (!blob.type.startsWith('image/')) continue;
+      return await readBlobAsDataUrl(blob);
+    } catch (err) {
+      console.warn(
+        `[getCollectionImageDataUrl] Failed to preload "${candidate}":`,
+        err
+      );
+    }
+  }
+
+  return null;
 };
 
 const formatImgSrc = (src: string): string => {
@@ -818,96 +903,8 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
 interface CollectionSharePreviewProps {
   data: ShareData;
   variant?: 'quick' | 'story';
+  items?: CollectionStoryItem[];
 }
-
-const COLLECTION_COLLAGE_SIZE = 780;
-const COLLECTION_COLLAGE_X = (1080 - COLLECTION_COLLAGE_SIZE) / 2;
-const COLLECTION_COLLAGE_Y = 250;
-const COLLECTION_COLLAGE_GAP = 14;
-const COLLECTION_TEXT_TOP =
-  COLLECTION_COLLAGE_Y + COLLECTION_COLLAGE_SIZE + 72;
-const COLLECTION_TITLE_BASE = 68;
-const COLLECTION_TITLE_MIN = 36;
-const COLLECTION_TITLE_DESC_GAP = 22;
-const COLLECTION_DESC_COUNT_GAP = 30;
-const COLLECTION_COUNT_OWNER_GAP = 24;
-
-interface CollectionShareTextLayout {
-  titleLines: string[];
-  titleFontSize: number;
-  titleLineHeight: number;
-  descriptionLines: string[];
-  countText: string;
-  ownerText: string;
-}
-
-const buildCollectionShareLayout = (
-  data: ShareData,
-  measure: TextMeasure
-): CollectionShareTextLayout => {
-  const maxTextW = 960;
-  const name = (data.collectionName || data.title || 'Koleksi').trim();
-  const description =
-    (data.collectionDescription || data.description || '').trim() ||
-    'Koleksi film dan artikel pilihan di Sotoy Film.';
-  const itemCount = data.collectionItemCount ?? data.itemCount ?? 0;
-  const ownerName =
-    data.collectionOwnerName || data.ownerName || data.authorName || 'Pengguna Sotoy';
-
-  const titleFont = (size: number) =>
-    `900 ${size}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
-  const measureAt =
-    (font: string) =>
-    (value: string): number =>
-      measure(font, value);
-
-  let titleFontSize = fitFontSize(
-    measure(titleFont(COLLECTION_TITLE_BASE), name),
-    maxTextW * 2,
-    COLLECTION_TITLE_BASE,
-    COLLECTION_TITLE_MIN
-  );
-  let titleWrap = wrapShareText(
-    name,
-    maxTextW,
-    2,
-    measureAt(titleFont(titleFontSize))
-  );
-  while (titleWrap.truncated && titleFontSize > COLLECTION_TITLE_MIN) {
-    titleFontSize -= 2;
-    titleWrap = wrapShareText(
-      name,
-      maxTextW,
-      2,
-      measureAt(titleFont(titleFontSize))
-    );
-  }
-
-  const descriptionWrap = wrapShareText(
-    description,
-    maxTextW,
-    4,
-    measureAt(`32px 'Plus Jakarta Sans', sans-serif`)
-  );
-
-  const ownerText = `Koleksi oleh ${
-    wrapShareText(
-      ownerName,
-      maxTextW - 220,
-      1,
-      measureAt(`600 26px 'Plus Jakarta Sans', sans-serif`)
-    ).lines[0] || ownerName
-  }`;
-
-  return {
-    titleLines: titleWrap.lines,
-    titleFontSize,
-    titleLineHeight: Math.round(titleFontSize * 1.14),
-    descriptionLines: descriptionWrap.lines,
-    countText: `${itemCount} Judul`,
-    ownerText,
-  };
-};
 
 const CollectionShareCollage: React.FC<{
   images: string[];
@@ -948,9 +945,34 @@ const CollectionShareCollage: React.FC<{
   );
 };
 
-const CollectionShareStoryCard: React.FC<{ data: ShareData }> = ({ data }) => {
-  const images = data.collectionPreviewImages || data.previewImages || [];
-  const logo = '/sotoy-logo-full.png';
+interface CollectionStoryCardProps {
+  data: ShareData;
+  items?: CollectionStoryItem[];
+  imageUrlsForExport?: Array<string | null | undefined>;
+  logoUrlForExport?: string;
+}
+
+export const CollectionStoryCard: React.FC<CollectionStoryCardProps> = ({
+  data,
+  items,
+  imageUrlsForExport,
+  logoUrlForExport,
+}) => {
+  const storyItems = React.useMemo(
+    () => (items !== undefined ? items : buildCollectionStoryItems(data)),
+    [data, items]
+  );
+  const visibleItems = storyItems.slice(0, 5);
+  const [failedImages, setFailedImages] = React.useState<Record<number, boolean>>(
+    {}
+  );
+
+  React.useEffect(() => {
+    setFailedImages((current) =>
+      Object.keys(current).length > 0 ? {} : current
+    );
+  }, [storyItems, imageUrlsForExport]);
+
   const fontRevision = useShareFontRevision();
   const measure = React.useMemo<TextMeasure>(() => {
     if (typeof document === 'undefined') return approximateTextMeasure;
@@ -961,94 +983,429 @@ const CollectionShareStoryCard: React.FC<{ data: ShareData }> = ({ data }) => {
       return context.measureText(text).width;
     };
   }, []);
-  const layout = React.useMemo(
-    () => buildCollectionShareLayout(data, measure),
-    [data, measure, fontRevision]
+
+  const collectionName = (
+    data.collectionName ||
+    data.title ||
+    'Koleksi'
+  ).trim();
+  const collectionDescription =
+    data.collectionDescription !== undefined
+      ? data.collectionDescription
+      : data.description || '';
+  const ownerName =
+    data.collectionOwnerName ||
+    data.ownerName ||
+    data.authorName ||
+    'Pengguna Sotoy';
+  const itemCount =
+    data.collectionItemCount ?? data.itemCount ?? visibleItems.length;
+
+  const panelLayout: CollectionStoryPanelLayout = React.useMemo(
+    () =>
+      getCollectionStoryPanelLayout({
+        title: collectionName,
+        description: collectionDescription,
+        ownerName,
+        itemCount,
+        measure,
+      }),
+    [
+      collectionName,
+      collectionDescription,
+      ownerName,
+      itemCount,
+      measure,
+      fontRevision,
+    ]
   );
+
+  const wallTiles = React.useMemo(
+    () =>
+      getWallLayout(
+        visibleItems.length,
+        COLLECTION_STORY_WIDTH,
+        COLLECTION_WALL_GUTTER,
+        COLLECTION_WALL_HEIGHT
+      ),
+    [visibleItems.length]
+  );
+  const emptyInitials = React.useMemo(
+    () => getCollectionInitials(collectionName, 3).join(''),
+    [collectionName]
+  );
+  const logo = logoUrlForExport || encodeURI(COLLECTION_LOGO_PATH);
+  const emptyWallTile = wallTiles[0] || {
+    x: 0,
+    y: 0,
+    width: COLLECTION_STORY_WIDTH,
+    height: COLLECTION_WALL_HEIGHT,
+  };
 
   return (
     <div
-      className="relative w-[1080px] h-[1920px] bg-[#0A0A0A] overflow-hidden text-left select-none"
-      style={{ width: '1080px', height: '1920px' }}
+      className="relative overflow-hidden select-none text-left"
+      style={{
+        width: `${COLLECTION_STORY_WIDTH}px`,
+        height: `${COLLECTION_STORY_HEIGHT}px`,
+        background: '#FFD000',
+        fontFamily: "'Geist', 'Plus Jakarta Sans', sans-serif",
+      }}
     >
-      <div className="absolute inset-x-0 top-0 px-[60px] pt-[80px] flex items-center justify-between">
-        <img
-          src={logo}
-          alt="Sotoy Film"
-          className="w-[320px] h-auto object-contain"
-        />
-        <div className="px-6 py-3 rounded-full font-black text-[26px] tracking-wider text-[#FF2E7E] bg-[#0A0A0A] border-2 border-[#FF2E7E] whitespace-nowrap uppercase">
-          KOLEKSI
-        </div>
-      </div>
-
       <div
-        className="absolute"
         style={{
-          left: `${COLLECTION_COLLAGE_X}px`,
-          top: `${COLLECTION_COLLAGE_Y}px`,
-          width: `${COLLECTION_COLLAGE_SIZE}px`,
-          height: `${COLLECTION_COLLAGE_SIZE}px`,
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          width: `${COLLECTION_STORY_WIDTH}px`,
+          height: `${COLLECTION_WALL_HEIGHT}px`,
+          overflow: 'hidden',
+          background: '#0A0A0A',
+          zIndex: 1,
         }}
       >
-        <CollectionShareCollage images={images} variant="story" />
+        {visibleItems.length === 0 ? (
+          <div
+            style={{
+              position: 'absolute',
+              left: `${emptyWallTile.x}px`,
+              top: `${emptyWallTile.y}px`,
+              width: `${emptyWallTile.width}px`,
+              height: `${emptyWallTile.height}px`,
+              background: '#FF2E7E',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#0A0A0A',
+              fontFamily: "'Geist', 'Plus Jakarta Sans', sans-serif",
+              fontSize: '300px',
+              fontWeight: 900,
+              lineHeight: 1,
+              letterSpacing: '-0.06em',
+            }}
+          >
+            {emptyInitials}
+          </div>
+        ) : (
+          visibleItems.map((item, index) => {
+            const slot = wallTiles[index];
+            if (!slot) return null;
+            const override = imageUrlsForExport
+              ? imageUrlsForExport[index]
+              : undefined;
+            const src =
+              override === undefined ? item.image || '' : override || '';
+            const showFallback = !src || failedImages[index] === true;
+            const tileTitle = item.title || collectionName;
+
+            return (
+              <div
+                key={`collection-poster-${index}`}
+                style={{
+                  position: 'absolute',
+                  left: `${slot.x}px`,
+                  top: `${slot.y}px`,
+                  width: `${slot.width}px`,
+                  height: `${slot.height}px`,
+                  overflow: 'hidden',
+                  background: '#00F0FF',
+                }}
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '24px',
+                    boxSizing: 'border-box',
+                    background: '#00F0FF',
+                    color: '#0A0A0A',
+                    fontFamily: "'Geist', 'Plus Jakarta Sans', sans-serif",
+                    fontSize: `${Math.max(
+                      20,
+                      Math.min(34, slot.width / 16)
+                    )}px`,
+                    fontWeight: 900,
+                    lineHeight: 1.15,
+                    textAlign: 'center',
+                  }}
+                >
+                  {tileTitle}
+                </div>
+                {!showFallback && (
+                  <img
+                    src={src}
+                    alt={tileTitle}
+                    draggable={false}
+                    onError={(event) => {
+                      event.currentTarget.style.display = 'none';
+                      setFailedImages((current) => ({
+                        ...current,
+                        [index]: true,
+                      }));
+                    }}
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'block',
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      objectPosition: 'center 25%',
+                    }}
+                  />
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
 
       <div
-        className="absolute inset-x-0 px-[60px] text-center"
-        style={{ top: `${COLLECTION_TEXT_TOP}px` }}
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: `${COLLECTION_WALL_HEIGHT}px`,
+          width: `${COLLECTION_STORY_WIDTH}px`,
+          height: `${COLLECTION_WALL_SEPARATOR}px`,
+          background: '#0A0A0A',
+          zIndex: 3,
+        }}
+      />
+
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: `${COLLECTION_PANEL_TOP}px`,
+          width: `${COLLECTION_STORY_WIDTH}px`,
+          height: `${COLLECTION_STORY_HEIGHT - COLLECTION_PANEL_TOP}px`,
+          background: '#FFD000',
+          zIndex: 2,
+        }}
+      />
+
+      {/* Text-only outline under-layer: the filter is on the wrapper so it
+          applies after the inner clip, then the unfiltered logo sits on top. */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          left: `${COLLECTION_LOGO_LEFT}px`,
+          top: `${COLLECTION_LOGO_TOP}px`,
+          width: `${COLLECTION_LOGO_WIDTH}px`,
+          height: `${COLLECTION_LOGO_HEIGHT}px`,
+          filter:
+            'drop-shadow(2px 0 0 #0A0A0A) drop-shadow(-2px 0 0 #0A0A0A) drop-shadow(0 2px 0 #0A0A0A) drop-shadow(0 -2px 0 #0A0A0A)',
+          pointerEvents: 'none',
+          zIndex: 30,
+        }}
       >
-        <h1
-          className="font-display font-black text-white"
+        <div
           style={{
-            fontSize: `${layout.titleFontSize}px`,
-            lineHeight: `${layout.titleLineHeight}px`,
+            position: 'absolute',
+            inset: 0,
+            overflow: 'hidden',
+            clipPath: `inset(0 0 0 ${COLLECTION_LOGO_TEXT_START_RATIO * 100}%)`,
+            WebkitClipPath: `inset(0 0 0 ${COLLECTION_LOGO_TEXT_START_RATIO * 100}%)`,
           }}
         >
-          {layout.titleLines.map((line, index) => (
-            <div key={`collection-title-${index}`}>{line}</div>
-          ))}
-        </h1>
-
-        {layout.descriptionLines.length > 0 && (
-          <div
-            className="text-[32px] text-slate-400 leading-[44px]"
-            style={{ marginTop: `${COLLECTION_TITLE_DESC_GAP}px` }}
-          >
-            {layout.descriptionLines.map((line, index) => (
-              <div key={`collection-description-${index}`}>{line}</div>
-            ))}
-          </div>
-        )}
-
-        <div
-          className="inline-flex items-center justify-center bg-[#0A0A0A] border-[3px] border-[#FFD000] rounded-[18px] px-9 text-[34px] font-black text-white"
-          style={{
-            marginTop: `${COLLECTION_DESC_COUNT_GAP}px`,
-            height: '84px',
-            minWidth: '240px',
-          }}
-        >
-          {layout.countText}
-        </div>
-
-        <div
-          className="text-[26px] text-slate-400 font-semibold truncate"
-          style={{ marginTop: `${COLLECTION_COUNT_OWNER_GAP}px` }}
-        >
-          {layout.ownerText}
+          <img
+            src={logo}
+            alt=""
+            draggable={false}
+            style={{
+              display: 'block',
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+            }}
+          />
         </div>
       </div>
 
-      <div className="absolute inset-x-0 bottom-0 px-[60px] pb-[90px]">
-        <div className="pt-4 border-t border-white/15 flex items-center justify-between">
-          <span className="text-[20px] font-bold text-[#FF2E7E]">
-            Koleksi Pilihan di Sotoy Film
-          </span>
-          <span className="text-[20px] text-[#00F0FF] font-mono font-bold">
-            sotoyfilm.my.id
-          </span>
+      <img
+        src={logo}
+        alt="Sotoy Film"
+        draggable={false}
+        style={{
+          position: 'absolute',
+          left: `${COLLECTION_LOGO_LEFT}px`,
+          top: `${COLLECTION_LOGO_TOP}px`,
+          display: 'block',
+          width: `${COLLECTION_LOGO_WIDTH}px`,
+          height: 'auto',
+          pointerEvents: 'none',
+          zIndex: 31,
+        }}
+      />
+
+      <div
+        style={{
+          position: 'absolute',
+          right: '46px',
+          top: '48px',
+          background: '#FF2E7E',
+          border: '5px solid #0A0A0A',
+          borderRadius: '20px',
+          boxShadow: '8px 8px 0 #0A0A0A',
+          transform: 'rotate(3deg)',
+          padding: '14px 34px',
+          boxSizing: 'border-box',
+          color: '#FFFFFF',
+          fontFamily: "'Geist', 'Plus Jakarta Sans', sans-serif",
+          fontSize: '40px',
+          fontWeight: 900,
+          letterSpacing: '0.08em',
+          lineHeight: 1,
+          whiteSpace: 'nowrap',
+          zIndex: 30,
+        }}
+      >
+        KOLEKSI
+      </div>
+
+      <div
+        style={{
+          position: 'absolute',
+          left: `${panelLayout.titleLeft}px`,
+          top: `${panelLayout.titleTop}px`,
+          width: `${panelLayout.titleWidth}px`,
+          height: `${panelLayout.titleHeight}px`,
+          color: '#0A0A0A',
+          fontFamily: "'Geist', 'Plus Jakarta Sans', sans-serif",
+          fontSize: `${panelLayout.titleFontSize}px`,
+          fontWeight: 900,
+          lineHeight: `${panelLayout.titleLineHeight}px`,
+          letterSpacing: '-0.02em',
+          textTransform: 'uppercase',
+          overflow: 'visible',
+          zIndex: 5,
+        }}
+      >
+        {panelLayout.titleLines.map((line, index) => (
+          <div key={`collection-title-${index}`}>{line}</div>
+        ))}
+      </div>
+
+      {panelLayout.descriptionVisible && (
+        <div
+          style={{
+            position: 'absolute',
+            left: `${COLLECTION_PANEL_LEFT}px`,
+            top: `${panelLayout.descriptionTop}px`,
+            width: `${COLLECTION_PANEL_WIDTH}px`,
+            height: `${panelLayout.descriptionHeight}px`,
+            display: 'flex',
+            flexDirection: 'column',
+            color: '#0A0A0A',
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
+            fontSize: `${panelLayout.descriptionFontSize}px`,
+            fontWeight: 600,
+            lineHeight: `${panelLayout.descriptionLineHeight}px`,
+            overflow: 'hidden',
+            zIndex: 5,
+          }}
+        >
+          {panelLayout.descriptionLines.map((line, index) => (
+            <div key={`collection-description-${index}`}>{line}</div>
+          ))}
         </div>
+      )}
+
+      <div
+        style={{
+          position: 'absolute',
+          left: `${COLLECTION_PANEL_LEFT}px`,
+          top: `${panelLayout.rowTop}px`,
+          width: `${COLLECTION_PANEL_WIDTH}px`,
+          height: `${panelLayout.rowHeight}px`,
+          display: 'flex',
+          alignItems: 'center',
+          zIndex: 5,
+        }}
+      >
+        <div
+          style={{
+            width: `${panelLayout.countStickerWidth}px`,
+            height: `${COLLECTION_COUNT_STICKER_HEIGHT}px`,
+            boxSizing: 'border-box',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            background: '#0A0A0A',
+            border: '5px solid #0A0A0A',
+            borderRadius: '22px',
+            boxShadow: '8px 8px 0 #FF2E7E',
+            transform: 'rotate(-2deg)',
+            color: '#FFD000',
+            fontFamily: "'Geist', 'Plus Jakarta Sans', sans-serif",
+            fontSize: `${panelLayout.countFontSize}px`,
+            fontWeight: 900,
+            letterSpacing: '0.02em',
+            lineHeight: 1,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {panelLayout.countText}
+        </div>
+
+        <div
+          style={{
+            width: `${panelLayout.ownerWidth}px`,
+            marginLeft: '28px',
+            minWidth: 0,
+            overflow: 'hidden',
+            color: '#0A0A0A',
+            fontFamily: "'Geist', 'Plus Jakarta Sans', sans-serif",
+            fontSize: `${panelLayout.ownerFontSize}px`,
+            fontWeight: 800,
+            lineHeight: 1,
+            whiteSpace: 'nowrap',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {panelLayout.ownerLabel}
+        </div>
+      </div>
+
+      <div
+        style={{
+          position: 'absolute',
+          left: '50px',
+          right: '50px',
+          top: `${COLLECTION_FOOTER_TOP}px`,
+          height: `${COLLECTION_FOOTER_HEIGHT}px`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          color: '#0A0A0A',
+          zIndex: 5,
+        }}
+      >
+        <span
+          style={{
+            fontFamily: "'Geist', 'Plus Jakarta Sans', sans-serif",
+            fontSize: '26px',
+            fontWeight: 800,
+            lineHeight: 1,
+          }}
+        >
+          Koleksi Pilihan di Sotoy Film
+        </span>
+        <span
+          style={{
+            fontFamily: "'Geist Mono', monospace",
+            fontSize: '26px',
+            fontWeight: 700,
+            lineHeight: 1,
+          }}
+        >
+          sotoyfilm.my.id
+        </span>
       </div>
     </div>
   );
@@ -1057,8 +1414,13 @@ const CollectionShareStoryCard: React.FC<{ data: ShareData }> = ({ data }) => {
 const CollectionSharePreview: React.FC<CollectionSharePreviewProps> = ({
   data,
   variant = 'quick',
+  items,
 }) => {
   const images = data.collectionPreviewImages || data.previewImages || [];
+  const storyItems = React.useMemo(
+    () => (items !== undefined ? items : buildCollectionStoryItems(data)),
+    [data, items]
+  );
   const name = data.collectionName || data.title || 'Koleksi';
   const description =
     (data.collectionDescription || data.description || '').trim() ||
@@ -1069,7 +1431,7 @@ const CollectionSharePreview: React.FC<CollectionSharePreviewProps> = ({
 
   if (variant === 'story') {
     return (
-      <div className="relative mx-auto w-[240px] h-[426.67px] overflow-hidden shadow-2xl rounded-2xl bg-[#0A0A0A] select-none">
+      <div className="relative mx-auto w-[240px] h-[426.67px] overflow-hidden shadow-2xl rounded-2xl bg-[#FFD000] select-none">
         <div
           style={{
             width: '1080px',
@@ -1079,7 +1441,7 @@ const CollectionSharePreview: React.FC<CollectionSharePreviewProps> = ({
             pointerEvents: 'none',
           }}
         >
-          <CollectionShareStoryCard data={data} />
+          <CollectionStoryCard data={data} items={storyItems} />
         </div>
       </div>
     );
@@ -1126,12 +1488,27 @@ interface SocialShareModalProps {
 
 type ShareTab = 'quick' | 'ig_story';
 
+interface CollectionStoryExportPayload {
+  data: ShareData;
+  items: CollectionStoryItem[];
+  imageUrls: Array<string | null>;
+  logoUrl: string;
+}
+
 export const SocialShareModal: React.FC<SocialShareModalProps> = ({
   isOpen: propIsOpen,
   onClose: propOnClose,
   data: propData,
 }) => {
-  const { showToast, shareModalData, closeShareModal, currentUser, shareCollectionToBuzz } = useApp();
+  const {
+    showToast,
+    shareModalData,
+    closeShareModal,
+    currentUser,
+    shareCollectionToBuzz,
+    films,
+    articles,
+  } = useApp();
   const [activeTab, setActiveTab] = useState<ShareTab>('quick');
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCaption, setCopiedCaption] = useState(false);
@@ -1140,6 +1517,12 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
   const [isRenderingBuzzStory, setIsRenderingBuzzStory] = useState(false);
   const buzzCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isFileShareSupported, setIsFileShareSupported] = useState(false);
+  const [collectionExportPayload, setCollectionExportPayload] =
+    useState<CollectionStoryExportPayload | null>(null);
+  const collectionExportNodeRef = useRef<HTMLDivElement | null>(null);
+  const collectionExportResolveRef = useRef<
+    ((blob: Blob | null) => void) | null
+  >(null);
 
   useEffect(() => {
     if (
@@ -1166,6 +1549,77 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
   const isPrivateCollection = isCollection && data?.collectionIsPublic === false;
   const posterUrl = data ? data.filmPoster || data.image || data.imageUrl || data.filmBackdrop : undefined;
   const currentUrl = data?.url || (typeof window !== 'undefined' ? window.location.href : '');
+  const collectionStoryItems = React.useMemo(
+    () =>
+      data?.type === 'collection'
+        ? buildCollectionStoryItems(data, { films, articles })
+        : [],
+    [data, films, articles]
+  );
+
+  // The offscreen DOM card is rendered by the modal, then captured as a PNG.
+  // Keeping this effect above the early return preserves hook order.
+  useEffect(() => {
+    if (!collectionExportPayload) return;
+
+    let cancelled = false;
+    const renderAndCapture = async () => {
+      let blob: Blob | null = null;
+      try {
+        if (typeof document !== 'undefined' && document.fonts?.ready) {
+          await document.fonts.ready;
+        }
+        await new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        });
+
+        const node = collectionExportNodeRef.current;
+        if (!node) {
+          throw new Error('Collection story export node is not mounted.');
+        }
+
+        await waitForImages(node);
+        blob = await captureDomToBlob(node, {
+          width: 1080,
+          height: 1920,
+          pixelRatio: 1,
+          backgroundColor: '#FFD000',
+          cacheBust: true,
+        });
+      } catch (err) {
+        console.error(
+          '[SocialShareModal] Failed to capture collection story:',
+          err
+        );
+      } finally {
+        if (!cancelled) {
+          const resolve = collectionExportResolveRef.current;
+          collectionExportResolveRef.current = null;
+          setCollectionExportPayload(null);
+          resolve?.(blob);
+        }
+      }
+    };
+
+    void renderAndCapture();
+
+    return () => {
+      cancelled = true;
+      const resolve = collectionExportResolveRef.current;
+      if (resolve) {
+        collectionExportResolveRef.current = null;
+        resolve(null);
+      }
+    };
+  }, [collectionExportPayload]);
+
+  const captureCollectionStory = (
+    payload: CollectionStoryExportPayload
+  ): Promise<Blob | null> =>
+    new Promise<Blob | null>((resolve) => {
+      collectionExportResolveRef.current = resolve;
+      setCollectionExportPayload(payload);
+    });
   const shareText = data
     ? isCollection
       ? `${data.title}\n\n${data.text || ''}\n\nLihat koleksinya di Sotoy Film:`
@@ -1525,206 +1979,35 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
     if (!data) return;
     setIsGeneratingImage(true);
     try {
-      // 0. Collection Story (1080x1920) - solid palette, 2x2 collage
+      // 0. Collection Story (1080x1920) - one DOM card for preview and export
       if (isCollection) {
         if (typeof document !== 'undefined' && document.fonts?.ready) {
           await document.fonts.ready;
         }
 
-        const width = 1080;
-        const height = 1920;
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-
-        if (!ctx) {
-          showToast('Gagal menginisialisasi perender visual.');
-          setIsGeneratingImage(false);
-          return;
-        }
-
-        ctx.fillStyle = '#0A0A0A';
-        ctx.fillRect(0, 0, width, height);
-
-        const sidePad = 60;
-        const topPad = 80;
-        const logoTargetW = 320;
-        let logoTargetH = 90;
-
-        try {
-          const logoImg = await loadCanvasImage('/sotoy-logo-full.png');
-          logoTargetH = logoImg.height * (logoTargetW / logoImg.width);
-          ctx.drawImage(logoImg, sidePad, topPad, logoTargetW, logoTargetH);
-        } catch {
-          ctx.fillStyle = '#FF2E7E';
-          ctx.font = "900 42px 'Geist', 'Plus Jakarta Sans', sans-serif";
-          ctx.textAlign = 'left';
-          ctx.textBaseline = 'top';
-          ctx.fillText('SOTOY FILM', sidePad, topPad + 20);
-          logoTargetH = 70;
-        }
-
-        const badgeText = 'KOLEKSI';
-        const badgeFont = "900 26px 'Geist', 'Plus Jakarta Sans', sans-serif";
-        ctx.save();
-        ctx.font = badgeFont;
-        const badgeTextW = ctx.measureText(badgeText).width;
-        ctx.restore();
-
-        const badgeH = 56;
-        const badgePadX = 24;
-        const badgeW = badgeTextW + badgePadX * 2;
-        const badgeX = width - sidePad - badgeW;
-        const logoCenterY = topPad + logoTargetH / 2;
-        const badgeY = logoCenterY - badgeH / 2;
-
-        ctx.save();
-        ctx.fillStyle = '#0A0A0A';
-        ctx.strokeStyle = '#FF2E7E';
-        ctx.lineWidth = 2.5;
-        drawRoundRectPath(ctx, badgeX, badgeY, badgeW, badgeH, badgeH / 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.fillStyle = '#FF2E7E';
-        ctx.font = badgeFont;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(badgeText, badgeX + badgeW / 2, badgeY + badgeH / 2);
-        ctx.restore();
-
-        const measure: TextMeasure = (font, text) => {
-          ctx.font = font;
-          return ctx.measureText(text).width;
-        };
-        const layout = buildCollectionShareLayout(data, measure);
+        const storyItems =
+          collectionStoryItems.length > 0
+            ? collectionStoryItems
+            : buildCollectionStoryItems(data, { films, articles });
         const collectionName = data.collectionName || data.title || 'Koleksi';
-        const tileGap = COLLECTION_COLLAGE_GAP;
-        const tileSize = (COLLECTION_COLLAGE_SIZE - tileGap) / 2;
-        const imageUrls = (data.collectionPreviewImages || data.previewImages || [])
-          .filter((src): src is string => Boolean(src && src.trim()))
-          .slice(0, 4);
+        const [imageUrls, logoUrl] = await Promise.all([
+          Promise.all(
+            storyItems.map((item) => getCollectionImageDataUrl(item.image))
+          ),
+          getLogoDataUrl(COLLECTION_LOGO_PATH),
+        ]);
 
-        const loadedImages = await Promise.all(
-          Array.from({ length: 4 }, async (_, index) => {
-            const src = imageUrls[index];
-            if (!src) return null;
-            try {
-              return await loadCanvasImage(src);
-            } catch {
-              return null;
-            }
-          })
-        );
-
-        for (let index = 0; index < 4; index += 1) {
-          const row = Math.floor(index / 2);
-          const col = index % 2;
-          const x = COLLECTION_COLLAGE_X + col * (tileSize + tileGap);
-          const y = COLLECTION_COLLAGE_Y + row * (tileSize + tileGap);
-
-          ctx.save();
-          drawRoundRectPath(ctx, x, y, tileSize, tileSize, 24);
-          ctx.clip();
-          ctx.fillStyle = '#171717';
-          ctx.fillRect(x, y, tileSize, tileSize);
-
-          const image = loadedImages[index];
-          if (image) {
-            const imageRatio = image.width / image.height;
-            let drawW = tileSize;
-            let drawH = tileSize;
-            let drawX = x;
-            let drawY = y;
-
-            if (imageRatio > 1) {
-              drawW = tileSize * imageRatio;
-              drawX = x - (drawW - tileSize) / 2;
-            } else {
-              drawH = tileSize / imageRatio;
-              drawY = y - (drawH - tileSize) / 2;
-            }
-
-            ctx.drawImage(image, drawX, drawY, drawW, drawH);
-          }
-          ctx.restore();
-
-          ctx.save();
-          ctx.strokeStyle = '#334155';
-          ctx.lineWidth = 2;
-          drawRoundRectPath(ctx, x, y, tileSize, tileSize, 24);
-          ctx.stroke();
-          ctx.restore();
-        }
-
-        let textY = COLLECTION_TEXT_TOP;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = `900 ${layout.titleFontSize}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
-        for (const line of layout.titleLines) {
-          ctx.fillText(line, width / 2, textY);
-          textY += layout.titleLineHeight;
-        }
-
-        if (layout.descriptionLines.length > 0) {
-          textY += COLLECTION_TITLE_DESC_GAP;
-          ctx.fillStyle = '#A3A3A3';
-          ctx.font = "32px 'Plus Jakarta Sans', sans-serif";
-          for (const line of layout.descriptionLines) {
-            ctx.fillText(line, width / 2, textY);
-            textY += 44;
-          }
-        }
-
-        textY += COLLECTION_DESC_COUNT_GAP;
-        const countFont = "900 34px 'Geist', 'Plus Jakarta Sans', sans-serif";
-        ctx.font = countFont;
-        const countBoxW = Math.max(240, ctx.measureText(layout.countText).width + 72);
-        const countBoxH = 84;
-        const countBoxX = (width - countBoxW) / 2;
-        ctx.fillStyle = '#0A0A0A';
-        ctx.strokeStyle = '#FFD000';
-        ctx.lineWidth = 3;
-        drawRoundRectPath(ctx, countBoxX, textY, countBoxW, countBoxH, 18);
-        ctx.fill();
-        ctx.stroke();
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = countFont;
-        ctx.textBaseline = 'middle';
-        ctx.fillText(layout.countText, width / 2, textY + countBoxH / 2);
-        textY += countBoxH;
-
-        textY += COLLECTION_COUNT_OWNER_GAP;
-        ctx.fillStyle = '#94A3B8';
-        ctx.font = "600 26px 'Plus Jakarta Sans', sans-serif";
-        ctx.textBaseline = 'top';
-        ctx.fillText(layout.ownerText, width / 2, textY);
-
-        const footerY = height - 90;
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(sidePad, footerY - 35);
-        ctx.lineTo(width - sidePad, footerY - 35);
-        ctx.stroke();
-
-        ctx.fillStyle = '#FF2E7E';
-        ctx.font = "bold 20px 'Geist', 'Plus Jakarta Sans', sans-serif";
-        ctx.textAlign = 'left';
-        ctx.fillText('Koleksi Pilihan di Sotoy Film', sidePad, footerY);
-
-        ctx.fillStyle = '#00F0FF';
-        ctx.font = "bold 20px 'Geist Mono', monospace";
-        ctx.textAlign = 'right';
-        ctx.fillText('sotoyfilm.my.id', width - sidePad, footerY);
-
-        const blob = await new Promise<Blob | null>((resolve) => {
-          canvas.toBlob((result) => resolve(result), 'image/png');
+        const blob = await captureCollectionStory({
+          data,
+          items: storyItems,
+          imageUrls,
+          logoUrl,
         });
 
         if (!blob) {
-          throw new Error('Gagal mengonversi kanvas koleksi menjadi gambar.');
+          showToast('Gagal membuat gambar story koleksi. Coba lagi.');
+          setIsGeneratingImage(false);
+          return;
         }
 
         const fileName = `sotoyfilm-collection-story-${Date.now()}.png`;
@@ -3398,7 +3681,11 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           <div className="space-y-4 animate-in fade-in duration-150">
             {/* Visual Story Card Preview */}
             {isCollection ? (
-              <CollectionSharePreview data={data} variant="story" />
+              <CollectionSharePreview
+                data={data}
+                variant="story"
+                items={collectionStoryItems}
+              />
             ) : isFilmRating ? (
               <div className="relative mx-auto w-[270px] h-[480px] overflow-hidden shadow-2xl rounded-2xl bg-[#0A0A0A] select-none">
                 <div
@@ -3596,6 +3883,33 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           </div>
         )}
       </div>
+
+      {collectionExportPayload && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'fixed',
+            left: '-20000px',
+            top: 0,
+            width: '1080px',
+            height: '1920px',
+            zIndex: -1,
+            pointerEvents: 'none',
+          }}
+        >
+          <div
+            ref={collectionExportNodeRef}
+            style={{ width: '1080px', height: '1920px' }}
+          >
+            <CollectionStoryCard
+              data={collectionExportPayload.data}
+              items={collectionExportPayload.items}
+              imageUrlsForExport={collectionExportPayload.imageUrls}
+              logoUrlForExport={collectionExportPayload.logoUrl}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
