@@ -6,6 +6,7 @@ import { db, auth } from '../../lib/firebase';
 import { isArticleUnpublished, splitProfileArticles, getDefaultEditorialSubTab, EditorialSubTab } from '../../utils/articleHelpers';
 import { buildCollectionShareData } from '../../utils/collectionHelpers';
 import { useSavedCollections } from '../../hooks/useCollectionSocial';
+import { useSavedBuzz } from '../../hooks/useSavedBuzz';
 import {
   User as UserIcon,
   Star,
@@ -77,6 +78,7 @@ import { MentionInput } from '../Common/MentionInput';
 import { resolveAuthor } from '../../utils/resolveAuthor';
 import { sanitizeStoredLinks } from '../../utils/profileLinks';
 import { getHost } from '../../utils/safeUrl';
+import { getBuzzExcerpt } from '../../utils/savedBuzz';
 import { PLATFORM_META } from '../Common/ProfileLinksEditor';
 
 const AdminDashboard = React.lazy(() =>
@@ -211,9 +213,16 @@ export const UserPage: React.FC = () => {
     removeSaved: removeSavedCollection,
   } = useSavedCollections(isOwnProfile ? currentUser.id : null);
 
+  const {
+    entries: savedBuzzEntries,
+    loading: savedBuzzLoading,
+    count: savedBuzzCount,
+  } = useSavedBuzz(isOwnProfile ? currentUser.id : null);
+
   useEffect(() => {
     setCollectionsLibraryMode('mine');
-  }, [targetUser.id]);
+    setLibrarySubTab((current) => (current === 'buzz' && !isOwnProfile ? 'films' : current));
+  }, [targetUser.id, isOwnProfile]);
 
   // Local state to store ratings for the viewed user profile
   const [targetUserRatings, setTargetUserRatings] = useState<UserRating[]>([]);
@@ -263,7 +272,7 @@ export const UserPage: React.FC = () => {
   // Follow Modal State: 'followers' | 'following' | 'discover' | null
   const [followModalType, setFollowModalType] = useState<'followers' | 'following' | 'discover' | null>(null);
   const [modalSearchQuery, setModalSearchQuery] = useState('');
-  const [librarySubTab, setLibrarySubTab] = useState<'films' | 'articles' | 'collections'>('films');
+  const [librarySubTab, setLibrarySubTab] = useState<'films' | 'articles' | 'buzz' | 'collections'>('films');
   const [collectionsLibraryMode, setCollectionsLibraryMode] = useState<'mine' | 'saved'>('mine');
   const [isCreatingInTab, setIsCreatingInTab] = useState(false);
   const [tabNewCollectionName, setTabNewCollectionName] = useState('');
@@ -994,7 +1003,7 @@ export const UserPage: React.FC = () => {
             { id: 'buzz', label: 'Buzz', count: myBuzz.length },
             { id: 'replies', label: 'Replies', count: myReplies.length },
             { id: 'reviews', label: 'Reviews', count: myReviews.length },
-            { id: 'watchlist', label: 'Watchlist', count: myWatchlistFilms.length + mySavedArticles.length },
+            { id: 'watchlist', label: 'Saved', count: myWatchlistFilms.length + mySavedArticles.length },
             { id: 'reposts', label: 'Reposts', count: myReposts.length },
             ...(showArticlesTab ? [{ id: 'articles', label: 'Editorial', count: articleGroups.counts.total }] : []),
           ].map(tab => {
@@ -1736,7 +1745,7 @@ export const UserPage: React.FC = () => {
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 2: PERPUSTAKAAN & WATCHLIST (COLLECTIONS, FILMS & ARTICLES) */}
+        {/* TAB 2: SAVED (COLLECTIONS, FILMS, ARTICLES & BUZZ) */}
         {/* ========================================================================= */}
         {activeUserTab === 'watchlist' && (
           <div className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
@@ -1746,18 +1755,18 @@ export const UserPage: React.FC = () => {
                 <h3 className="font-display font-black text-xl text-white flex items-center gap-2.5">
                   <Bookmark className="w-5 h-5 text-[#FF2E7E]" />
                   <span>
-                    {isOwnProfile ? 'Watchlist & Koleksi Saya' : `Watchlist & Koleksi ${targetUser.name}`}
+                    {isOwnProfile ? 'Saved' : `Saved by ${targetUser.name}`}
                   </span>
                 </h3>
                 <p className="text-slate-400 text-xs mt-1">
                   {isOwnProfile
-                    ? 'Daftar tontonan film, artikel tersimpan, dan playlist koleksi pribadimu.'
+                    ? 'Film, artikel, Buzz, dan koleksi yang kamu simpan atau buat.'
                     : `Daftar film dan koleksi publik yang dibagikan oleh ${targetUser.name}.`}
                 </p>
               </div>
             </div>
 
-            {/* Sub-Tabs: Film, Artikel, Koleksi + Bulk action controls */}
+            {/* Sub-Tabs: Film, Artikel, Buzz, Koleksi + Bulk action controls */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-850">
               <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
                 <button
@@ -1785,6 +1794,21 @@ export const UserPage: React.FC = () => {
                   <BookOpen className="w-3.5 h-3.5" />
                   <span>Artikel ({mySavedArticles.length})</span>
                 </button>
+
+                {isOwnProfile && (
+                  <button
+                    id="watchlist-subtab-buzz"
+                    onClick={() => setLibrarySubTab('buzz')}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      librarySubTab === 'buzz'
+                        ? 'bg-[#FF2E7E] text-white'
+                        : 'bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
+                    }`}
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>Buzz ({savedBuzzCount})</span>
+                  </button>
+                )}
 
                 <button
                   id="watchlist-subtab-collections"
@@ -2116,6 +2140,195 @@ export const UserPage: React.FC = () => {
                   })}
                 </div>
               )
+            )}
+
+            {/* TAB CONTENT: SAVED BUZZ */}
+            {isOwnProfile && librarySubTab === 'buzz' && (
+              <div className="space-y-3">
+                {savedBuzzLoading ? (
+                  <div className="space-y-3">
+                    {[0, 1, 2].map((index) => (
+                      <div
+                        key={index}
+                        className="bg-[#171717] border border-slate-800 rounded-2xl p-4 animate-pulse"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-slate-800" />
+                          <div className="space-y-2 flex-1">
+                            <div className="h-3 w-32 rounded bg-slate-800" />
+                            <div className="h-2.5 w-24 rounded bg-slate-800" />
+                          </div>
+                        </div>
+                        <div className="mt-3 space-y-2">
+                          <div className="h-2.5 w-full rounded bg-slate-800" />
+                          <div className="h-2.5 w-11/12 rounded bg-slate-800" />
+                          <div className="h-2.5 w-2/3 rounded bg-slate-800" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : savedBuzzEntries.length === 0 ? (
+                  <div className="text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800/80 space-y-4 max-w-md mx-auto p-6">
+                    <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center text-slate-500 mx-auto border border-slate-700/50">
+                      <MessageSquare className="w-5 h-5 text-slate-400" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <h4 className="font-display font-bold text-white text-base">
+                        Belum ada Buzz tersimpan
+                      </h4>
+                      <p className="text-slate-400 text-xs leading-relaxed">
+                        Gunakan tombol Simpan pada Buzz yang ingin kamu buka lagi nanti.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigateTo('community-feed')}
+                      className="px-4 py-2 rounded-xl bg-[#FF2E7E] hover:bg-[#E0246F] text-white font-bold text-xs transition-colors"
+                    >
+                      Jelajahi Community Feed
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {savedBuzzEntries.map((entry) => {
+                      if (entry.status === 'unavailable' || !entry.post) {
+                        return (
+                          <div
+                            key={entry.buzzId}
+                            className="bg-[#111111] border border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-3"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500 shrink-0">
+                                <MessageSquare className="w-4 h-4" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-bold text-slate-400">Buzz tidak tersedia</p>
+                                <p className="text-[11px] text-slate-500">
+                                  Buzz ini sudah dihapus atau tidak bisa diakses.
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              title="Hapus dari Buzz Tersimpan"
+                              onClick={() => toggleSaveBuzz(entry.buzzId)}
+                              className="w-8 h-8 rounded-xl bg-slate-900 border border-slate-800 hover:border-[#FF2E7E]/60 text-slate-400 hover:text-[#FF2E7E] flex items-center justify-center transition-colors shrink-0"
+                            >
+                              <BookmarkCheck className="w-4 h-4" />
+                            </button>
+                          </div>
+                        );
+                      }
+
+                      const post = entry.post;
+                      const author = resolveAuthor(post.author, usersById) ?? post.author;
+                      const authorName = author?.name || 'Pengguna Sotoy';
+                      const authorHandle = author?.handle
+                        ? author.handle.startsWith('@')
+                          ? author.handle
+                          : `@${author.handle}`
+                        : '@pengguna_sotoy';
+                      const excerpt = getBuzzExcerpt(post.content, 220);
+                      const image = typeof post.image === 'string' ? post.image.trim() : '';
+
+                      return (
+                        <article
+                          key={entry.buzzId}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => navigateTo('buzz-detail', { buzzId: entry.buzzId })}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              navigateTo('buzz-detail', { buzzId: entry.buzzId });
+                            }
+                          }}
+                          className="bg-[#171717] border border-slate-800 rounded-2xl p-4 hover:border-[#FF2E7E]/60 transition-colors cursor-pointer focus:outline-none focus-visible:border-[#00F0FF]"
+                        >
+                          <div className="flex items-start gap-3">
+                            <img
+                              src={author?.avatar?.trim() || DEFAULT_AVATAR}
+                              alt={authorName}
+                              className="w-9 h-9 rounded-xl object-cover border border-slate-700 shrink-0"
+                              loading="lazy"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <span className="font-bold text-sm text-white truncate">{authorName}</span>
+                                    <span className="text-[11px] text-slate-500 truncate">{authorHandle}</span>
+                                  </div>
+                                  <span
+                                    className="text-[11px] text-slate-500"
+                                    title={formatFullDateTime(post.createdAt)}
+                                  >
+                                    {formatRelativeTime(post.createdAt)}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  title="Hapus dari Buzz Tersimpan"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    toggleSaveBuzz(entry.buzzId);
+                                  }}
+                                  onKeyDown={(event) => event.stopPropagation()}
+                                  className="w-8 h-8 rounded-xl bg-slate-900 border border-slate-800 hover:border-[#FF2E7E]/60 text-[#FF2E7E] flex items-center justify-center transition-colors shrink-0"
+                                >
+                                  <BookmarkCheck className="w-4 h-4" />
+                                </button>
+                              </div>
+
+                              <div className="mt-3 flex gap-3">
+                                <p className="flex-1 text-sm text-slate-300 leading-relaxed line-clamp-3">
+                                  {excerpt}
+                                </p>
+                                {image && (
+                                  <img
+                                    src={image}
+                                    alt=""
+                                    className="w-20 h-20 rounded-xl object-cover border border-slate-800 shrink-0"
+                                    loading="lazy"
+                                  />
+                                )}
+                              </div>
+
+                              {(post.taggedFilm || post.taggedArticle) && (
+                                <div className="mt-3 flex flex-wrap items-center gap-2">
+                                  {post.taggedFilm && (
+                                    <span className="inline-flex items-center gap-1.5 max-w-full px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[11px] text-slate-300">
+                                      <Film className="w-3 h-3 text-[#FFD000] shrink-0" />
+                                      <span className="truncate">Film · {post.taggedFilm.title}</span>
+                                    </span>
+                                  )}
+                                  {post.taggedArticle && (
+                                    <span className="inline-flex items-center gap-1.5 max-w-full px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[11px] text-slate-300">
+                                      <FileText className="w-3 h-3 text-[#00F0FF] shrink-0" />
+                                      <span className="truncate">Artikel · {post.taggedArticle.title}</span>
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+
+                              <div className="mt-3 pt-3 border-t border-slate-800 flex items-center gap-4 text-[11px] text-slate-500">
+                                <span className="inline-flex items-center gap-1.5">
+                                  <Heart className="w-3.5 h-3.5" />
+                                  {Number(post.likes) || 0}
+                                </span>
+                                <span className="inline-flex items-center gap-1.5">
+                                  <MessageSquare className="w-3.5 h-3.5" />
+                                  {Number(post.repliesCount) || 0}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             )}
 
             {/* TAB CONTENT: COLLECTIONS */}
