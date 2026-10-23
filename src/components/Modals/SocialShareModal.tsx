@@ -54,12 +54,17 @@ import {
   wrapShareText,
   type ShareLayoutBlock,
 } from '../../utils/shareCardText';
+import {
+  mapShareLinkName,
+  recordShareEvent,
+} from '../../utils/shareAnalytics';
 
 export interface ShareData {
   title: string;
   text: string;
   url?: string;
   type?: 'article' | 'buzz' | 'film' | 'review' | 'collection';
+  contentId?: string;
   image?: string;
   imageUrl?: string;
   meta?: string;
@@ -1505,9 +1510,11 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
     shareModalData,
     closeShareModal,
     currentUser,
+    isLoggedIn,
     shareCollectionToBuzz,
     films,
     articles,
+    buzzList,
   } = useApp();
   const [activeTab, setActiveTab] = useState<ShareTab>('quick');
   const [copiedLink, setCopiedLink] = useState(false);
@@ -1549,6 +1556,8 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
   const isPrivateCollection = isCollection && data?.collectionIsPublic === false;
   const posterUrl = data ? data.filmPoster || data.image || data.imageUrl || data.filmBackdrop : undefined;
   const currentUrl = data?.url || (typeof window !== 'undefined' ? window.location.href : '');
+  // App user ids are Firebase auth UIDs; guests do not contribute a uid.
+  const currentShareUid = isLoggedIn ? currentUser?.id : undefined;
   const collectionStoryItems = React.useMemo(
     () =>
       data?.type === 'collection'
@@ -1556,6 +1565,32 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         : [],
     [data, films, articles]
   );
+
+  // Feed/home share buttons use window.location.href, so resolve a real content
+  // id from the in-memory catalog before the analytics helper falls back to the URL.
+  const analyticsShareData = React.useMemo<ShareData | null>(() => {
+    if (!data || data.contentId || data.type === 'collection') return data;
+
+    if (data.type === 'article') {
+      const article = articles.find((entry) => entry.title === data.title);
+      return article ? { ...data, contentId: article.id } : data;
+    }
+
+    if (data.type === 'film' || data.type === 'review') {
+      const film = films.find(
+        (entry) => entry.title === data.filmTitle || entry.title === data.title
+      );
+      return film ? { ...data, contentId: film.id } : data;
+    }
+
+    if (data.type === 'buzz') {
+      const buzzText = data.text.trim();
+      const buzz = buzzList.find((entry) => entry.content.trim() === buzzText);
+      return buzz ? { ...data, contentId: buzz.id } : data;
+    }
+
+    return data;
+  }, [data, articles, films, buzzList]);
 
   // The offscreen DOM card is rendered by the modal, then captured as a PNG.
   // Keeping this effect above the early return preserves hook order.
@@ -1633,13 +1668,18 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
       : `${data.title}\n\n"${data.text ? data.text.slice(0, 280) : ''}"\n\n📌 Simak ulasan dan diskusinya di: ${currentUrl}\n\n#SotoyFilm #ReviewFilm #CinephileIndonesia #FilmBagus #PopCulture #DiskusiFilm #KritikFilm`
     : '';
 
-  const handleCopyLink = () => {
+  const handleCopyLink = async () => {
     if (!data) return;
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(currentUrl);
-      setCopiedLink(true);
-      showToast('Tautan berhasil disalin ke clipboard!');
-      setTimeout(() => setCopiedLink(false), 2500);
+      try {
+        await navigator.clipboard.writeText(currentUrl);
+        recordShareEvent('copy_link', analyticsShareData, currentShareUid);
+        setCopiedLink(true);
+        showToast('Tautan berhasil disalin ke clipboard!');
+        setTimeout(() => setCopiedLink(false), 2500);
+      } catch {
+        showToast('Gagal menyalin tautan secara otomatis.');
+      }
     } else {
       showToast('Gagal menyalin tautan secara otomatis.');
     }
@@ -1666,6 +1706,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           text: data.text,
           url: currentUrl,
         });
+        recordShareEvent('native', analyticsShareData, currentShareUid);
         showToast('Berhasil dibagikan via menu sistem!');
         onClose();
       } catch (err) {
@@ -1977,6 +2018,12 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
   // Generate high-resolution Instagram Card PNG using Canvas / DOM Capture
   const handleDownloadInstagramVisual = async (format: 'story' = 'story') => {
     if (!data) return;
+    const trackInstagramStory = () =>
+      recordShareEvent('instagram_story', analyticsShareData, currentShareUid);
+    const showInstagramStorySuccess = (message: string) => {
+      trackInstagramStory();
+      showToast(message);
+    };
     setIsGeneratingImage(true);
     try {
       // 0. Collection Story (1080x1920) - one DOM card for preview and export
@@ -2031,7 +2078,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
               title: `Sotoy Film - ${collectionName}`,
             });
             sharedViaSheet = true;
-            showToast('Gambar Story (.PNG) siap disimpan ke galeri foto!');
+            showInstagramStorySuccess('Gambar Story (.PNG) siap disimpan ke galeri foto!');
           } catch (shareErr: any) {
             if (
               shareErr?.name === 'AbortError' ||
@@ -2054,7 +2101,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
             URL.revokeObjectURL(blobUrl);
           }, 1000);
 
-          showToast('Gambar Story (.PNG) berhasil diunduh! Siap diunggah ke Instagram Stories.');
+          showInstagramStorySuccess('Gambar Story (.PNG) berhasil diunduh! Siap diunggah ke Instagram Stories.');
         }
         return;
       }
@@ -2138,7 +2185,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
               title: shareTitle,
             });
             sharedViaSheet = true;
-            showToast('Gambar Story (.PNG) siap disimpan ke galeri foto!');
+            showInstagramStorySuccess('Gambar Story (.PNG) siap disimpan ke galeri foto!');
           } catch (shareErr: any) {
             if (
               shareErr?.name === 'AbortError' ||
@@ -2161,7 +2208,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
             URL.revokeObjectURL(blobUrl);
           }, 1000);
 
-          showToast('Gambar Story (.PNG) berhasil diunduh! Siap diunggah ke Instagram Stories.');
+          showInstagramStorySuccess('Gambar Story (.PNG) berhasil diunduh! Siap diunggah ke Instagram Stories.');
         }
         return;
       }
@@ -2511,7 +2558,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
               title: shareTitle,
             });
             sharedViaSheet = true;
-            showToast('Gambar Story (.PNG) siap disimpan ke galeri foto!');
+            showInstagramStorySuccess('Gambar Story (.PNG) siap disimpan ke galeri foto!');
           } catch (shareErr: any) {
             if (
               shareErr?.name === 'AbortError' ||
@@ -2534,7 +2581,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
             URL.revokeObjectURL(blobUrl);
           }, 1000);
 
-          showToast('Gambar Story (.PNG) berhasil diunduh! Siap diunggah ke Instagram Stories.');
+          showInstagramStorySuccess('Gambar Story (.PNG) berhasil diunduh! Siap diunggah ke Instagram Stories.');
         }
         return;
       }
@@ -2896,7 +2943,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
               title: shareTitle,
             });
             sharedViaSheet = true;
-            showToast('Gambar Story (.PNG) siap disimpan ke galeri foto!');
+            showInstagramStorySuccess('Gambar Story (.PNG) siap disimpan ke galeri foto!');
           } catch (shareErr: any) {
             if (
               shareErr?.name === 'AbortError' ||
@@ -2919,7 +2966,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
             URL.revokeObjectURL(blobUrl);
           }, 1000);
 
-          showToast('Gambar Story (.PNG) berhasil diunduh! Siap diunggah ke Instagram Stories.');
+          showInstagramStorySuccess('Gambar Story (.PNG) berhasil diunduh! Siap diunggah ke Instagram Stories.');
         }
         return;
       }
@@ -3373,11 +3420,13 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
             title: shareTitle,
           });
           sharedViaSheet = true;
-          showToast(
-            format === 'story'
-              ? 'Gambar Story (.PNG) siap disimpan ke galeri foto!'
-              : 'Gambar Feed (.PNG) siap disimpan ke galeri foto!'
-          );
+          if (format === 'story') {
+            showInstagramStorySuccess(
+              'Gambar Story (.PNG) siap disimpan ke galeri foto!'
+            );
+          } else {
+            showToast('Gambar Feed (.PNG) siap disimpan ke galeri foto!');
+          }
         } catch (shareErr: any) {
           // If user dismissed / cancelled the native share sheet, ignore gracefully without showing error toast
           if (
@@ -3403,11 +3452,15 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           URL.revokeObjectURL(blobUrl);
         }, 1000);
 
-        showToast(
-          format === 'story'
-            ? 'Gambar Story (.PNG) berhasil diunduh! Siap diunggah ke Instagram Stories.'
-            : 'Gambar Feed (.PNG) berhasil diunduh! Siap diunggah ke Instagram Feed.'
-        );
+        if (format === 'story') {
+          showInstagramStorySuccess(
+            'Gambar Story (.PNG) berhasil diunduh! Siap diunggah ke Instagram Stories.'
+          );
+        } else {
+          showToast(
+            'Gambar Feed (.PNG) berhasil diunduh! Siap diunggah ke Instagram Feed.'
+          );
+        }
       }
     } catch (err) {
       console.error(err);
@@ -3606,6 +3659,10 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => {
+                    const sharePlatform = mapShareLinkName(platform.name);
+                    if (sharePlatform) {
+                      recordShareEvent(sharePlatform, analyticsShareData, currentShareUid);
+                    }
                     showToast(`Membuka ${platform.name}...`);
                     onClose();
                   }}

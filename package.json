@@ -30,6 +30,7 @@
     "test:share-card": "node --import tsx scripts/test-share-card.ts",
     "test:collections": "node --import tsx scripts/test-collections.ts",
     "test:collection-share-layout": "node --import tsx scripts/test-collection-share-layout.ts",
+    "test:share-analytics": "node --import tsx scripts/test-share-analytics.ts",
     "test:collection-preview": "node --import tsx scripts/test-collection-preview.ts",
      "test:embeds": "node --import tsx scripts/test-embeds.ts && node --import tsx scripts/test-embeds.iframe.ts"
   },

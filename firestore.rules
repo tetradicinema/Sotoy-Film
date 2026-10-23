@@ -587,5 +587,20 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    // Share-click analytics: public create-only, admin-only reads.
+    match /shareEvents/{eventId} {
+      allow create: if request.resource.data.keys().hasOnly(['platform', 'contentType', 'contentId', 'uid', 'createdAt']) &&
+        request.resource.data.platform in ['whatsapp', 'x', 'telegram', 'facebook', 'native', 'copy_link', 'instagram_story'] &&
+        request.resource.data.contentType in ['article', 'buzz', 'film', 'review', 'collection'] &&
+        request.resource.data.contentId is string &&
+        request.resource.data.contentId.size() >= 1 &&
+        request.resource.data.contentId.size() <= 128 &&
+        request.resource.data.createdAt == request.time &&
+        (!request.resource.data.keys().hasAny(['uid']) ||
+          (isSignedIn() && request.resource.data.uid == request.auth.uid));
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
   }
 }

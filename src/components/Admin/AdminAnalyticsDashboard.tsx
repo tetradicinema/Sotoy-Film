@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Users,
   TrendingUp,
@@ -22,7 +22,11 @@ import {
   Repeat,
   HeartHandshake,
   ShieldCheck,
-  TrendingDown
+  TrendingDown,
+  Share2,
+  RefreshCw,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -42,7 +46,22 @@ import {
   Cell,
   ReferenceLine
 } from 'recharts';
+import {
+  collection,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  where,
+} from 'firebase/firestore';
 import { useApp } from '../../context/AppContext';
+import { db } from '../../lib/firebase';
+import {
+  aggregateShareEvents,
+  SHARE_CONTENT_TYPES,
+  type ShareContentType,
+  type SharePlatform,
+} from '../../utils/shareAnalytics';
 
 type TimeRange = '7d' | '14d' | '30d' | '90d';
 type Granularity = 'daily' | 'weekly';
@@ -82,12 +101,54 @@ const ROLE_LABELS: Record<string, string> = {
   admin: 'Admin Utama',
 };
 
+const SHARE_PLATFORM_ORDER: SharePlatform[] = [
+  'whatsapp',
+  'x',
+  'telegram',
+  'facebook',
+  'native',
+  'copy_link',
+  'instagram_story',
+];
+
+const SHARE_PLATFORM_LABELS: Record<SharePlatform, string> = {
+  whatsapp: 'WhatsApp',
+  x: 'X (Twitter)',
+  telegram: 'Telegram',
+  facebook: 'Facebook',
+  native: 'Native Share',
+  copy_link: 'Salin Link',
+  instagram_story: 'Instagram Story',
+};
+
+const SHARE_PLATFORM_COLORS: Record<SharePlatform, string> = {
+  whatsapp: '#34D399',
+  x: '#D4D4D4',
+  telegram: '#22D3EE',
+  facebook: '#A3A3A3',
+  native: '#FF2E7E',
+  copy_link: '#A3A3A3',
+  instagram_story: '#A855F7',
+};
+
+const SHARE_CONTENT_LABELS: Record<ShareContentType, string> = {
+  article: 'Artikel',
+  buzz: 'Buzz',
+  film: 'Film',
+  review: 'Review',
+  collection: 'Koleksi',
+};
+
 export const AdminAnalyticsDashboard: React.FC = () => {
   const { allUsers, buzzList, ratings, articles, films } = useApp();
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
   const [granularity, setGranularity] = useState<Granularity>('daily');
   const [selectedMetric, setSelectedMetric] = useState<'all' | 'users' | 'activity'>('all');
   const [retentionView, setRetentionView] = useState<RetentionView>('overview');
+  const [shareEvents, setShareEvents] = useState<unknown[]>([]);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareError, setShareError] = useState(false);
+  const [shareRefreshKey, setShareRefreshKey] = useState(0);
 
   // Days count from selected timeRange
   const daysCount = useMemo(() => {
@@ -99,6 +160,77 @@ export const AdminAnalyticsDashboard: React.FC = () => {
       default: return 30;
     }
   }, [timeRange]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadShareEvents = async () => {
+      setShareLoading(true);
+      setShareError(false);
+
+      try {
+        const startOfRange = new Date();
+        startOfRange.setHours(0, 0, 0, 0);
+        startOfRange.setDate(startOfRange.getDate() - (daysCount - 1));
+
+        const snapshot = await getDocs(
+          query(
+            collection(db, 'shareEvents'),
+            where('createdAt', '>=', startOfRange),
+            orderBy('createdAt', 'desc'),
+            limit(5000)
+          )
+        );
+
+        if (cancelled) return;
+        setShareEvents(snapshot.docs.map((shareDoc) => shareDoc.data()));
+      } catch {
+        if (cancelled) return;
+        setShareEvents([]);
+        setShareError(true);
+      } finally {
+        if (!cancelled) setShareLoading(false);
+      }
+    };
+
+    void loadShareEvents();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [daysCount, shareRefreshKey]);
+
+  const shareAggregation = useMemo(
+    () => aggregateShareEvents(shareEvents, daysCount),
+    [shareEvents, daysCount]
+  );
+
+  const resolveShareContentTitle = (
+    contentId: string,
+    contentType: ShareContentType
+  ): string => {
+    if (contentType === 'article') {
+      const article = articles.find(
+        (entry) => entry.id === contentId || entry.slug === contentId
+      );
+      return article?.title || contentId;
+    }
+
+    if (contentType === 'film' || contentType === 'review') {
+      const film = films.find(
+        (entry) => entry.id === contentId || entry.slug === contentId
+      );
+      return film?.title || contentId;
+    }
+
+    if (contentType === 'buzz') {
+      const buzz = buzzList.find((entry) => entry.id === contentId);
+      const excerpt = (buzz?.content || '').trim().replace(/\s+/g, ' ');
+      return excerpt ? excerpt.slice(0, 90) : contentId;
+    }
+
+    return contentId;
+  };
 
   // Aggregate daily metrics
   const { chartData, kpis, roleBreakdown, topActiveUsers, retentionStats } = useMemo(() => {
@@ -587,6 +719,232 @@ export const AdminAnalyticsDashboard: React.FC = () => {
             <span className="text-slate-300 font-bold tabular-nums">D30: {retentionStats.avgD30}%</span>
           </div>
         </div>
+      </div>
+
+      {/* 3. SECTION: SHARE ANALYTICS */}
+      <div className="bg-[#171717] border border-white/10 rounded-3xl p-6 shadow-xl space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-[#FF2E7E] shrink-0">
+              <Share2 className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-display font-black text-base text-white">
+                  Aktivitas Share Konten
+                </h3>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-300 border border-white/10 tabular-nums">
+                  {shareAggregation.total} Share
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Kanal share dan konten yang paling banyak dibagikan dalam {daysCount} hari terakhir.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShareRefreshKey((value) => value + 1)}
+            disabled={shareLoading}
+            className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed border border-slate-750 text-slate-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer self-start sm:self-auto"
+          >
+            {shareLoading ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-[#FF2E7E]" />
+            ) : (
+              <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
+            )}
+            <span>{shareLoading ? 'Memuat...' : 'Muat Ulang'}</span>
+          </button>
+        </div>
+
+        {shareLoading ? (
+          <div className="h-48 flex flex-col items-center justify-center gap-3 text-slate-400">
+            <Loader2 className="w-6 h-6 animate-spin text-[#FF2E7E]" />
+            <span className="text-xs font-medium">Memuat data share...</span>
+          </div>
+        ) : shareError || shareAggregation.total === 0 ? (
+          <div className="rounded-2xl border border-white/10 bg-[#0A0A0A] p-5 flex items-center gap-3 text-slate-400">
+            <AlertCircle className="w-4 h-4 text-slate-500 shrink-0" />
+            <span className="text-xs leading-relaxed">
+              {shareError
+                ? 'Data share belum tersedia untuk periode ini. Coba muat ulang.'
+                : 'Belum ada aktivitas share pada periode ini.'}
+            </span>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-4 space-y-2">
+                <div className="flex items-center justify-between pb-2">
+                  <span className="text-xs font-bold text-white">Share per Platform</span>
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    TOTAL {shareAggregation.total}
+                  </span>
+                </div>
+                {SHARE_PLATFORM_ORDER.map((platform) => {
+                  const count = shareAggregation.byPlatform[platform];
+                  const isWhatsApp = platform === 'whatsapp';
+
+                  return (
+                    <div
+                      key={platform}
+                      className={`flex items-center gap-3 rounded-xl border p-2.5 ${
+                        isWhatsApp
+                          ? 'border-emerald-400/35 bg-emerald-400/[0.06]'
+                          : 'border-transparent bg-white/[0.02]'
+                      }`}
+                    >
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: SHARE_PLATFORM_COLORS[platform] }}
+                      />
+                      <span
+                        className={`text-xs flex-1 ${
+                          isWhatsApp
+                            ? 'font-bold text-emerald-300'
+                            : 'font-medium text-slate-300'
+                        }`}
+                      >
+                        {SHARE_PLATFORM_LABELS[platform]}
+                      </span>
+                      {isWhatsApp && (
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-300/80">
+                          Utama
+                        </span>
+                      )}
+                      <span className="text-sm font-black text-white font-mono tabular-nums">
+                        {count}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-4 space-y-4">
+                <div className="flex items-center justify-between pb-2">
+                  <span className="text-xs font-bold text-white">Share per Jenis Konten</span>
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    TOTAL {shareAggregation.total}
+                  </span>
+                </div>
+                {SHARE_CONTENT_TYPES.map((contentType) => {
+                  const count = shareAggregation.byContentType[contentType];
+                  const percentage =
+                    shareAggregation.total > 0
+                      ? (count / shareAggregation.total) * 100
+                      : 0;
+
+                  return (
+                    <div key={contentType} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-300 font-medium">
+                          {SHARE_CONTENT_LABELS[contentType]}
+                        </span>
+                        <span className="text-white font-black font-mono tabular-nums">
+                          {count}
+                        </span>
+                      </div>
+                      <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-[#FF2E7E]"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white">Tren Share Harian</span>
+                <span className="text-[10px] text-slate-500">{daysCount} hari terakhir</span>
+              </div>
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={shareAggregation.daily}
+                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#262626" vertical={false} />
+                    <XAxis
+                      dataKey="displayDate"
+                      stroke="#737373"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={{ stroke: '#404040' }}
+                    />
+                    <YAxis
+                      stroke="#737373"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={{ stroke: '#404040' }}
+                      allowDecimals={false}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar
+                      name="Share"
+                      dataKey="total"
+                      fill="#FF2E7E"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+                <span className="text-xs font-bold text-white">
+                  Top 10 Konten Dibagikan
+                </span>
+                <span className="text-[10px] text-slate-500 font-mono">TOP CONTENT</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-white/[0.02] text-[10px] uppercase tracking-wider text-slate-500">
+                    <tr>
+                      <th className="px-4 py-2.5 font-bold w-12">#</th>
+                      <th className="px-4 py-2.5 font-bold">Konten</th>
+                      <th className="px-4 py-2.5 font-bold">Jenis</th>
+                      <th className="px-4 py-2.5 font-bold text-right">Share</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {shareAggregation.topContent.map((item, index) => (
+                      <tr
+                        key={`${item.contentType}:${item.contentId}`}
+                        className="border-t border-white/10 hover:bg-white/[0.02]"
+                      >
+                        <td className="px-4 py-3 text-slate-500 font-mono">
+                          {index + 1}
+                        </td>
+                        <td className="px-4 py-3 min-w-0">
+                          <div className="font-semibold text-white truncate max-w-[420px]">
+                            {resolveShareContentTitle(item.contentId, item.contentType)}
+                          </div>
+                          <div className="text-[10px] text-slate-500 font-mono truncate max-w-[420px] mt-0.5">
+                            {item.contentId}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-[10px] font-bold text-slate-300 px-2 py-0.5 rounded-md bg-white/[0.06] border border-white/10">
+                            {SHARE_CONTENT_LABELS[item.contentType]}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right font-black text-white font-mono tabular-nums">
+                          {item.shares}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* 3. SECTION: USER RETENTION BREAKDOWN (RECHARTS LINE CHART) */}
