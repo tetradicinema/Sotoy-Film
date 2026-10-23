@@ -194,6 +194,51 @@ const runTests = () => {
     'layout: end position follows from the start and content height'
   );
 
+  // Film story: 2-line title, exact 4x rating pill, counts, headline, and a
+  // 5-line review must all stay inside the 1010-1755 story copy range.
+  const filmStoryBlocks = [
+    { height: 144 },
+    { height: 28, gapBefore: 8 },
+    { height: 112, gapBefore: 22 },
+    { height: 34, gapBefore: 18 },
+    { height: 34, gapBefore: 16 },
+    { height: 190, gapBefore: 18 },
+  ];
+  const filmStory = getShareLayoutBudget({
+    availableTop: 1010,
+    availableBottom: 1755,
+    blocks: filmStoryBlocks,
+    bias: 0.55,
+  });
+  assertEquals(
+    filmStory.contentHeight,
+    624,
+    'film story: includes the 112px scaled rating pill and 5-line review'
+  );
+  assert(
+    filmStory.fits &&
+      filmStory.startY >= 1010 &&
+      filmStory.endY <= 1755,
+    'film story: 2-line title and 5-line review fit the story range'
+  );
+  let filmStoryCursor = filmStory.startY;
+  const filmStoryRanges = filmStoryBlocks.map((block, index) => {
+    filmStoryCursor += index > 0 ? block.gapBefore || 0 : 0;
+    const top = filmStoryCursor;
+    filmStoryCursor += block.height;
+    return { top, bottom: filmStoryCursor };
+  });
+  assert(
+    filmStoryRanges.every(
+      (range, index) => index === 0 || range.top >= filmStoryRanges[index - 1].bottom
+    ),
+    'film story: title, rating, counts, headline, and review never overlap'
+  );
+  assert(
+    filmStoryRanges[filmStoryRanges.length - 1].bottom <= 1755,
+    'film story: the last review line stays above the footer'
+  );
+
   const topAligned = getShareLayoutBudget({
     availableTop: 100,
     availableBottom: 300,

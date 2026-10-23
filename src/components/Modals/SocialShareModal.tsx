@@ -276,7 +276,24 @@ const FILM_META_RATING_GAP = 22;
 const FILM_RATING_AUDIENCE_GAP = 18;
 const FILM_AUDIENCE_HEADLINE_GAP = 16;
 const FILM_HEADLINE_REVIEW_GAP = 18;
-const FILM_RATING_BOX_HEIGHT = 112;
+
+// The rating pill is an exact 4x copy of the FilmDbCard pill:
+// gap-1, px-2, py-1, border, rounded-md, text-lg, text-[10px], and w-3.5.
+const FILM_RATING_SCALE = 4;
+const FILM_RATING_STAR_SIZE = 14 * FILM_RATING_SCALE;
+const FILM_RATING_GAP = 4 * FILM_RATING_SCALE;
+const FILM_RATING_PAD_X = 8 * FILM_RATING_SCALE;
+const FILM_RATING_PAD_Y = 4 * FILM_RATING_SCALE;
+const FILM_RATING_BORDER = 1 * FILM_RATING_SCALE;
+const FILM_RATING_RADIUS = 6 * FILM_RATING_SCALE;
+const FILM_RATING_SCORE_FONT = 18 * FILM_RATING_SCALE;
+const FILM_RATING_DENOM_FONT = 10 * FILM_RATING_SCALE;
+const FILM_RATING_EMPTY_FONT = 10 * FILM_RATING_SCALE;
+const FILM_RATING_BOX_HEIGHT =
+  FILM_RATING_SCORE_FONT + FILM_RATING_PAD_Y * 2 + FILM_RATING_BORDER * 2;
+// Lucide Star path used by FilmDbCard, so the canvas star matches the preview.
+const FILM_RATING_STAR_PATH =
+  'M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z';
 const FILM_AUDIENCE_COUNTS_HEIGHT = 34;
 const FILM_AUDIENCE_REVIEWER_HEIGHT = 46;
 const FILM_HEADLINE_FONT = 26;
@@ -620,12 +637,21 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
           <img
             src={effectivePoster}
             alt={data.filmTitle || data.title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover object-top"
           />
         </div>
       )}
 
-      {/* Single neutral black fade: the only scrim used for text legibility. */}
+      {/* Neutral black fade for the wordmark and badge over the top of the art. */}
+      <div
+        className="absolute inset-x-0 top-0 h-[320px] pointer-events-none"
+        style={{
+          background:
+            'linear-gradient(to bottom, rgba(10, 10, 10, 0.85) 0%, rgba(10, 10, 10, 0) 100%)',
+        }}
+      />
+
+      {/* Neutral black fade blends the poster into the copy below. */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -633,9 +659,6 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
             'linear-gradient(to bottom, rgba(10, 10, 10, 0) 42%, rgba(10, 10, 10, 0.66) 58%, #0A0A0A 74%, #0A0A0A 100%)',
         }}
       />
-
-      {/* Solid header band keeps the wordmark readable without a second scrim. */}
-      <div className="absolute inset-x-0 top-0 h-[250px] bg-[#0A0A0A] border-b border-white/10" />
 
       <div className="relative z-10 pt-[110px] px-[60px] flex items-center justify-between">
         <img
@@ -675,21 +698,47 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
 
         <div style={{ marginTop: `${FILM_META_RATING_GAP}px` }}>
           <div
-            className={`inline-flex items-center justify-center gap-3 rounded-[20px] border-[3px] bg-[#0A0A0A] px-8 ${
+            className={`inline-flex items-center justify-center border bg-[#0A0A0A] ${
               hasScore ? 'border-[#FFD000]' : 'border-slate-600'
             }`}
-            style={{ height: `${FILM_RATING_BOX_HEIGHT}px`, minWidth: hasScore ? '310px' : '360px' }}
+            style={{
+              height: `${FILM_RATING_BOX_HEIGHT}px`,
+              paddingInline: `${FILM_RATING_PAD_X}px`,
+              paddingBlock: `${FILM_RATING_PAD_Y}px`,
+              gap: `${FILM_RATING_GAP}px`,
+              borderWidth: `${FILM_RATING_BORDER}px`,
+              borderRadius: `${FILM_RATING_RADIUS}px`,
+            }}
           >
             {hasScore ? (
               <>
-                <Star className="w-[42px] h-[42px] text-[#FFD000] fill-current" />
-                <span className="font-display font-black text-white text-[66px] leading-none">
+                <Star
+                  className="shrink-0 text-[#FFD000] fill-current"
+                  style={{
+                    width: `${FILM_RATING_STAR_SIZE}px`,
+                    height: `${FILM_RATING_STAR_SIZE}px`,
+                  }}
+                />
+                <span
+                  className="font-display font-black text-white leading-none tabular-nums"
+                  style={{ fontSize: `${FILM_RATING_SCORE_FONT}px` }}
+                >
                   {displayScore.toFixed(1)}
                 </span>
-                <span className="text-[26px] text-slate-400 font-bold self-end mb-3">/10</span>
+                <span
+                  className="font-bold text-slate-400 leading-none"
+                  style={{ fontSize: `${FILM_RATING_DENOM_FONT}px` }}
+                >
+                  /10
+                </span>
               </>
             ) : (
-              <span className="text-[30px] text-slate-400 font-bold">Belum ada skor</span>
+              <span
+                className="font-bold text-slate-400 leading-none"
+                style={{ fontSize: `${FILM_RATING_EMPTY_FONT}px` }}
+              >
+                Belum ada skor
+              </span>
             )}
           </div>
         </div>
@@ -1353,6 +1402,25 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
       c.quadraticCurveTo(x, y, x + r, y);
     }
     c.closePath();
+  };
+
+  // Draws the same filled + stroked Lucide Star used by the card preview.
+  const drawFilmRatingStar = (
+    c: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    size: number
+  ) => {
+    const path = new Path2D(FILM_RATING_STAR_PATH);
+    c.save();
+    c.translate(x, y);
+    c.scale(size / 24, size / 24);
+    c.lineWidth = 2;
+    c.lineJoin = 'round';
+    c.lineCap = 'round';
+    c.fill(path);
+    c.stroke(path);
+    c.restore();
   };
 
   // Resolve content type: 'buzz', 'article', 'collection', or 'film' / 'review'
@@ -2242,7 +2310,14 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           ctx.fillRect(0, 0, width, height);
         }
 
-        // A single neutral black fade keeps the lower copy legible over the art.
+        // Neutral black fade keeps the wordmark and badge legible on the art.
+        const topScrim = ctx.createLinearGradient(0, 0, 0, 320);
+        topScrim.addColorStop(0, 'rgba(10, 10, 10, 0.85)');
+        topScrim.addColorStop(1, 'rgba(10, 10, 10, 0)');
+        ctx.fillStyle = topScrim;
+        ctx.fillRect(0, 0, width, 320);
+
+        // Neutral black fade blends the lower poster into the copy.
         const scrim = ctx.createLinearGradient(0, 0, 0, height);
         scrim.addColorStop(0, 'rgba(10, 10, 10, 0)');
         scrim.addColorStop(0.42, 'rgba(10, 10, 10, 0)');
@@ -2251,16 +2326,6 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         scrim.addColorStop(1, '#0A0A0A');
         ctx.fillStyle = scrim;
         ctx.fillRect(0, 0, width, height);
-
-        // Solid header band for the wordmark and badge.
-        ctx.fillStyle = '#0A0A0A';
-        ctx.fillRect(0, 0, width, 250);
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.10)';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(0, 250);
-        ctx.lineTo(width, 250);
-        ctx.stroke();
 
         const topPad = 110;
         const sidePad = 60;
@@ -2342,67 +2407,82 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
 
         yCursor += FILM_META_RATING_GAP;
         const scoreStr = displayScore.toFixed(1);
-        const starFont = "bold 40px sans-serif";
-        const scoreFont = "900 66px 'Geist', 'Plus Jakarta Sans', sans-serif";
-        const denomFont = "bold 26px 'Geist', 'Plus Jakarta Sans', sans-serif";
-        ctx.font = starFont;
-        const starW = hasScore ? ctx.measureText('★').width : 0;
+        const scoreFont = `900 ${FILM_RATING_SCORE_FONT}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
+        const denomFont = `bold ${FILM_RATING_DENOM_FONT}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
+        const emptyScoreFont = `bold ${FILM_RATING_EMPTY_FONT}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
         ctx.font = scoreFont;
         const scoreW = hasScore ? ctx.measureText(scoreStr).width : 0;
         ctx.font = denomFont;
         const denomW = hasScore ? ctx.measureText('/10').width : 0;
-        ctx.font = "bold 30px 'Geist', 'Plus Jakarta Sans', sans-serif";
+        ctx.font = emptyScoreFont;
         const emptyScoreW = hasScore
           ? 0
           : ctx.measureText('Belum ada skor').width;
 
         const ratingContentW = hasScore
-          ? starW + 12 + scoreW + 10 + denomW
+          ? FILM_RATING_STAR_SIZE +
+            FILM_RATING_GAP +
+            scoreW +
+            FILM_RATING_GAP +
+            denomW
           : emptyScoreW;
-        const ratingBoxW = Math.max(hasScore ? 310 : 360, ratingContentW + 64);
+        const ratingBoxW = Math.ceil(
+          ratingContentW +
+            FILM_RATING_PAD_X * 2 +
+            FILM_RATING_BORDER * 2
+        );
         const ratingBoxH = FILM_RATING_BOX_HEIGHT;
         const ratingBoxX = (width - ratingBoxW) / 2;
         const ratingBoxY = yCursor;
 
         ctx.fillStyle = '#0A0A0A';
         ctx.strokeStyle = hasScore ? '#FFD000' : '#64748B';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = FILM_RATING_BORDER;
         drawRoundRectPath(
           ctx,
           ratingBoxX,
           ratingBoxY,
           ratingBoxW,
           ratingBoxH,
-          20
+          FILM_RATING_RADIUS
         );
         ctx.fill();
         ctx.stroke();
 
         ctx.textBaseline = 'middle';
+        const ratingContentX =
+          ratingBoxX + FILM_RATING_BORDER + FILM_RATING_PAD_X;
+        const ratingCenterY = ratingBoxY + ratingBoxH / 2;
         if (hasScore) {
-          const startX = (width - ratingContentW) / 2;
-          const centerY = ratingBoxY + ratingBoxH / 2;
           ctx.fillStyle = '#FFD000';
-          ctx.font = starFont;
-          ctx.textAlign = 'left';
-          ctx.fillText('★', startX, centerY + 2);
+          ctx.strokeStyle = '#FFD000';
+          drawFilmRatingStar(
+            ctx,
+            ratingContentX,
+            ratingCenterY - FILM_RATING_STAR_SIZE / 2,
+            FILM_RATING_STAR_SIZE
+          );
 
+          const scoreX =
+            ratingContentX + FILM_RATING_STAR_SIZE + FILM_RATING_GAP;
           ctx.fillStyle = '#FFFFFF';
           ctx.font = scoreFont;
-          ctx.fillText(scoreStr, startX + starW + 12, centerY + 2);
+          ctx.textAlign = 'left';
+          ctx.fillText(scoreStr, scoreX, ratingCenterY);
 
           ctx.fillStyle = '#94A3B8';
           ctx.font = denomFont;
+          ctx.textAlign = 'left';
           ctx.fillText(
             '/10',
-            startX + starW + 12 + scoreW + 10,
-            centerY + 18
+            scoreX + scoreW + FILM_RATING_GAP,
+            ratingCenterY
           );
         } else {
           ctx.fillStyle = '#94A3B8';
-          ctx.font = "bold 30px 'Geist', 'Plus Jakarta Sans', sans-serif";
+          ctx.font = emptyScoreFont;
           ctx.textAlign = 'center';
-          ctx.fillText('Belum ada skor', width / 2, ratingBoxY + ratingBoxH / 2);
+          ctx.fillText('Belum ada skor', width / 2, ratingCenterY);
         }
         yCursor += ratingBoxH;
         ctx.textBaseline = 'top';
