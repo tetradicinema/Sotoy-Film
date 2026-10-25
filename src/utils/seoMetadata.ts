@@ -651,10 +651,17 @@ export const STATIC_ROUTE_METADATA_CONFIG: Record<
     type: 'website',
   },
   '/rekomendasi-film': {
-    title: 'Rekomendasi Film & Serial Pilihan Kurator',
+    title: 'Rekomendasi Film Sesuai Mood & Platform Streaming',
     description:
-      'Daftar rekomendasi film dan serial pilihan kurator dengan rating Skor Sotoy tertinggi dan review mendalam.',
-    keywords: ['rekomendasi film', 'film bagus', 'film rating tinggi', 'film trending', 'series wajib tonton'],
+      'Temukan rekomendasi film berdasarkan suasana hati dan platform streaming favoritmu, dari tontonan santai sampai film yang bikin mikir.',
+    keywords: [
+      'rekomendasi film',
+      'film sesuai mood',
+      'film platform streaming',
+      'film bagus',
+      'film rating tinggi',
+      'series wajib tonton',
+    ],
     type: 'website',
   },
   '/film-recommendations': {

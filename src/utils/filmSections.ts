@@ -305,6 +305,45 @@ export function isIndonesianFilm(film: FilmItem): boolean {
 }
 
 /**
+ * Parses a film duration into total minutes.
+ *
+ * Supported inputs: "1h 40m", "2h", "45m", "100 min", bare numeric strings,
+ * and numbers. Anything else ("12 Episodes", empty strings, malformed values)
+ * returns null so callers can exclude films without a real runtime.
+ */
+export function parseDurationMinutes(
+  duration?: string | number | null
+): number | null {
+  if (duration === null || duration === undefined) return null;
+
+  if (typeof duration === 'number') {
+    return Number.isFinite(duration) && duration > 0 ? Math.round(duration) : null;
+  }
+
+  const raw = String(duration).trim();
+  if (!raw) return null;
+
+  const hoursMatch = raw.match(/(\d+(?:[.,]\d+)?)\s*(?:hours?|hrs?|h|jam)(?![a-z])/i);
+  const minutesMatch = raw.match(/(\d+(?:[.,]\d+)?)\s*(?:minutes?|mins?|min|menit|m)(?![a-z])/i);
+
+  if (hoursMatch || minutesMatch) {
+    const toNumber = (value?: string): number =>
+      value ? parseFloat(value.replace(',', '.')) : 0;
+    const hours = toNumber(hoursMatch?.[1]);
+    const minutes = toNumber(minutesMatch?.[1]);
+    const total = Math.round(hours * 60 + minutes);
+    return total > 0 ? total : null;
+  }
+
+  if (/^\d+(?:[.,]\d+)?$/.test(raw)) {
+    const total = Math.round(parseFloat(raw.replace(',', '.')));
+    return total > 0 ? total : null;
+  }
+
+  return null;
+}
+
+/**
  * Resolves a Film Database section by section key, applying default rules,
  * optional user config filters, Bayesian ranking, and limit.
  */
@@ -319,7 +358,8 @@ export function resolveFilmDbSection(
     return [];
   }
 
-  const limit = config?.limit && config.limit > 0 ? config.limit : 12;
+  const isRecSection = key.startsWith('rec_');
+  const limit = config?.limit && config.limit > 0 ? config.limit : isRecSection ? 10 : 12;
 
   // Manual mode: exact itemIds order, skipping missing IDs, capped by limit
   if (config?.sourceType === 'manual') {
@@ -426,7 +466,34 @@ export function resolveFilmDbSection(
       break;
     }
 
-    case 'fd_hidden_gems': {
+    case 'rec_tonight': {
+      // Every film is eligible; the Bayesian ranking below decides the order.
+      filtered = [...films];
+      break;
+    }
+
+    case 'rec_date_night': {
+      // Romantic, comedic and dramatic picks for a shared watch.
+      filtered = films.filter(
+        f =>
+          filmMatchesGenre(f, 'Romance') ||
+          filmMatchesGenre(f, 'Comedy') ||
+          filmMatchesGenre(f, 'Drama')
+      );
+      break;
+    }
+
+    case 'rec_short_runtime': {
+      // 100 minutes or less. Films without a parsable duration are excluded.
+      filtered = films.filter(f => {
+        const minutes = parseDurationMinutes(f.duration);
+        return minutes !== null && minutes <= 100;
+      });
+      break;
+    }
+
+    case 'fd_hidden_gems':
+    case 'rec_hidden_gems': {
       // High Sotoy score with a small number of votes. Thresholds are
       // configurable but fall back to 8 / 1 / 15.
       let minScore = 8;
@@ -515,7 +582,8 @@ export function resolveFilmDbSection(
   if (
     key === 'fd_editors_pick' ||
     key === 'fd_hidden_gems' ||
-    key === 'fd_film_indonesia'
+    key === 'fd_film_indonesia' ||
+    isRecSection
   ) {
     const seenIds = new Set<string>();
     filtered = filtered.filter(f => {
@@ -612,7 +680,10 @@ export function resolveFilmDbSection(
 
       case 'fd_animation':
       case 'fd_fans_favourite':
-      case 'fd_editors_pick': {
+      case 'fd_editors_pick':
+      case 'rec_tonight':
+      case 'rec_date_night':
+      case 'rec_short_runtime': {
         // Weighted score (Bayesian) descending
         filtered.sort((a, b) => {
           const scoreB = computeBayesianScore(b, meanScore);
@@ -622,7 +693,8 @@ export function resolveFilmDbSection(
         break;
       }
 
-      case 'fd_hidden_gems': {
+      case 'fd_hidden_gems':
+      case 'rec_hidden_gems': {
         // Normalized score descending, then fewer votes first, then title.
         filtered.sort((a, b) => {
           const scoreDiff = normalizeFilmScore(b) - normalizeFilmScore(a);

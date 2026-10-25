@@ -13,7 +13,7 @@ export interface SectionMeta {
   description: string;
   defaultRule: string;
   allowedCategories: (MainCategory | 'movie' | 'series' | 'anime' | 'animasi' | 'animation')[];
-  area: 'home' | 'film_database';
+  area: 'home' | 'film_database' | 'recommendations';
 }
 
 export interface HomeBlockMeta {
@@ -379,6 +379,17 @@ export const DEFAULT_FILM_DB_SECTION_ORDER: HomepageSectionKey[] = [
   'fd_film_indonesia',
 ];
 
+/**
+ * Fixed editorial row order for the /rekomendasi-film page. Unlike the home
+ * and Film Database sections this order is not editable by admins.
+ */
+export const DEFAULT_REC_SECTION_ORDER: HomepageSectionKey[] = [
+  'rec_tonight',
+  'rec_date_night',
+  'rec_hidden_gems',
+  'rec_short_runtime',
+];
+
 export function resolveSectionOrder(saved?: HomepageSectionKey[]): HomepageSectionKey[] {
   if (!Array.isArray(saved) || saved.length === 0) {
     return [...DEFAULT_SECTION_ORDER];
@@ -640,6 +651,53 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     defaultRule: 'Negara asal Indonesia atau tag Film Indonesia. Terbaru dulu',
     allowedCategories: ALL_FILM_CATEGORIES,
     area: 'film_database',
+  },
+  // -------------------------------------------------------------
+  // RECOMMENDATIONS PAGE SECTIONS (fixed order)
+  // -------------------------------------------------------------
+  {
+    key: 'rec_tonight',
+    label: 'Malam Ini',
+    defaultTitle: 'Malam Ini',
+    defaultDescription: 'Film terbaik untuk menemani malam ini, diurutkan dari skor berbobot komunitas.',
+    targetType: 'films',
+    description: 'Rekomendasi film terbaik untuk ditonton malam ini',
+    defaultRule: 'Semua film diurutkan skor berbobot Bayesian. Maks 10',
+    allowedCategories: ALL_FILM_CATEGORIES,
+    area: 'recommendations',
+  },
+  {
+    key: 'rec_date_night',
+    label: 'Buat Berdua',
+    defaultTitle: 'Buat Berdua',
+    defaultDescription: 'Film romantis, komedi, dan drama yang pas untuk ditonton berdua.',
+    targetType: 'films',
+    description: 'Pilihan film Romance, Comedy, dan Drama untuk ditonton berdua',
+    defaultRule: 'Genre Romance, Comedy, atau Drama, diurutkan skor berbobot Bayesian. Maks 10',
+    allowedCategories: ALL_FILM_CATEGORIES,
+    area: 'recommendations',
+  },
+  {
+    key: 'rec_hidden_gems',
+    label: 'Hidden Gems',
+    defaultTitle: 'Hidden Gems',
+    defaultDescription: 'Film dan series berskor tinggi yang belum banyak dibicarakan.',
+    targetType: 'films',
+    description: 'Skor Sotoy tinggi dengan jumlah vote masih sedikit',
+    defaultRule: 'Skor minimal 8, vote antara 1 dan 15 (bisa diubah admin). Skor tertinggi dulu. Maks 10',
+    allowedCategories: ALL_FILM_CATEGORIES,
+    area: 'recommendations',
+  },
+  {
+    key: 'rec_short_runtime',
+    label: 'Di Bawah 100 Menit',
+    defaultTitle: 'Di Bawah 100 Menit',
+    defaultDescription: 'Film berdurasi 100 menit atau kurang, pas untuk tontonan singkat.',
+    targetType: 'films',
+    description: 'Film berdurasi 100 menit atau kurang, diurutkan skor berbobot Bayesian',
+    defaultRule: 'Durasi 100 menit atau kurang, diurutkan skor berbobot Bayesian. Film tanpa durasi valid dilewati. Maks 10',
+    allowedCategories: ALL_FILM_CATEGORIES,
+    area: 'recommendations',
   },
   // -------------------------------------------------------------
   // BERANDA FILM SECTIONS

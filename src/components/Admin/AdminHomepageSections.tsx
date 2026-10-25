@@ -49,6 +49,7 @@ import {
   SectionMeta,
   DEFAULT_SECTION_ORDER,
   DEFAULT_FILM_DB_SECTION_ORDER,
+  DEFAULT_REC_SECTION_ORDER,
   DEFAULT_BLOCK_ORDER,
   DEFAULT_SIDEBAR_WIDGET_ORDER,
   HOME_BLOCKS_META,
@@ -138,12 +139,14 @@ const isHomeFilmSectionKey = (key: HomepageSectionKey): boolean =>
 
 const getDefaultSectionConfig = (key: HomepageSectionKey, meta: SectionMeta): SectionConfig => {
   const isFilmDb = meta.area === 'film_database';
+  const isRec = meta.area === 'recommendations';
   // Editorial film sections use their own default rule instead of a default article sort.
-  const usesEditorialFilmDefaults = isHomeFilmSectionKey(key) || key === 'hero_to_watch';
+  const usesEditorialFilmDefaults = isHomeFilmSectionKey(key) || key === 'hero_to_watch' || isRec;
 
   let limit = 5;
   if (key === 'hero_slider' || key === 'home_film_recs') limit = 6;
   else if (key === 'home_streaming' || key === 'home_film_indonesia' || isFilmDb) limit = 12;
+  else if (isRec) limit = 10;
 
   return {
     title: '',
@@ -398,6 +401,8 @@ interface SortableSectionItemProps {
   homepageSectionsConfig: any;
   handleMoveSectionOrder: (index: number, direction: 'up' | 'down') => void;
   orderedLength: number;
+  /** Fixed-order groups (recommendation rows) hide the drag handle and arrows. */
+  fixedOrder?: boolean;
 }
 
 const SortableSectionItem: React.FC<SortableSectionItemProps> = ({
@@ -410,6 +415,7 @@ const SortableSectionItem: React.FC<SortableSectionItemProps> = ({
   homepageSectionsConfig,
   handleMoveSectionOrder,
   orderedLength,
+  fixedOrder = false,
 }) => {
   const {
     attributes,
@@ -448,16 +454,20 @@ const SortableSectionItem: React.FC<SortableSectionItemProps> = ({
           : 'hover:bg-white/[0.04] text-slate-300 border-white/[0.04]'
       }`}
     >
-      {/* Drag Handle Button */}
-      <button
-        type="button"
-        className="p-1 cursor-grab active:cursor-grabbing text-slate-500 hover:text-white transition-colors shrink-0 touch-none"
-        title="Tarik untuk menggeser posisi seksi"
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical className="w-4 h-4" />
-      </button>
+      {/* Drag Handle Button (hidden when the group has a fixed order) */}
+      {fixedOrder ? (
+        <span className="w-6 shrink-0" aria-hidden="true" />
+      ) : (
+        <button
+          type="button"
+          className="p-1 cursor-grab active:cursor-grabbing text-slate-500 hover:text-white transition-colors shrink-0 touch-none"
+          title="Tarik untuk menggeser posisi seksi"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="w-4 h-4" />
+        </button>
+      )}
 
       {/* Position Index Badge */}
       <span className="w-5 text-center font-mono font-bold text-[11px] text-slate-500 shrink-0">
@@ -505,32 +515,34 @@ const SortableSectionItem: React.FC<SortableSectionItemProps> = ({
           {isManual ? 'Manual' : 'Auto'}
         </span>
 
-        <div className="flex flex-col gap-0.5 ml-1">
-          <button
-            type="button"
-            disabled={idx === 0}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleMoveSectionOrder(idx, 'up');
-            }}
-            className="p-0.5 rounded-md text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-20 transition-colors cursor-pointer"
-            title="Geser Seksi ke Atas"
-          >
-            <ChevronUp className="w-3.5 h-3.5" />
-          </button>
-          <button
-            type="button"
-            disabled={idx === orderedLength - 1}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleMoveSectionOrder(idx, 'down');
-            }}
-            className="p-0.5 rounded-md text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-20 transition-colors cursor-pointer"
-            title="Geser Seksi ke Bawah"
-          >
-            <ChevronDown className="w-3.5 h-3.5" />
-          </button>
-        </div>
+        {!fixedOrder && (
+          <div className="flex flex-col gap-0.5 ml-1">
+            <button
+              type="button"
+              disabled={idx === 0}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleMoveSectionOrder(idx, 'up');
+              }}
+              className="p-0.5 rounded-md text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-20 transition-colors cursor-pointer"
+              title="Geser Seksi ke Atas"
+            >
+              <ChevronUp className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              disabled={idx === orderedLength - 1}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleMoveSectionOrder(idx, 'down');
+              }}
+              className="p-0.5 rounded-md text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-20 transition-colors cursor-pointer"
+              title="Geser Seksi ke Bawah"
+            >
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -548,8 +560,10 @@ export const AdminHomepageSections: React.FC = () => {
     showToast,
   } = useApp();
 
-  // Top-level Area Switch: 'home' (Beranda) | 'film_database' (Film Database)
-  const [adminAreaTab, setAdminAreaTab] = useState<'home' | 'film_database'>('home');
+  // Top-level Area Switch: Beranda | Film Database | Halaman Rekomendasi
+  const [adminAreaTab, setAdminAreaTab] = useState<
+    'home' | 'film_database' | 'recommendations'
+  >('home');
 
   // Layout Reordering States (9 Blocks & Sidebar)
   const [orderedBlockKeys, setOrderedBlockKeys] = useState<HomeBlockKey[]>(() => {
@@ -1165,6 +1179,34 @@ export const AdminHomepageSections: React.FC = () => {
     }
   }, [activeSectionKey, currentConfig, currentMeta.targetType, films]);
 
+  // Recommendation rows use a fixed order, so they are never drag-reordered.
+  const isRecArea = adminAreaTab === 'recommendations';
+  const areaSectionKeys: HomepageSectionKey[] =
+    adminAreaTab === 'home'
+      ? orderedKeys
+      : adminAreaTab === 'film_database'
+      ? orderedFilmDbKeys
+      : DEFAULT_REC_SECTION_ORDER;
+  const areaIsSavingOrder =
+    adminAreaTab === 'home' ? isSavingOrder : adminAreaTab === 'film_database' ? isSavingFilmDbOrder : false;
+
+  const handleSaveAreaSectionOrder = () => {
+    if (adminAreaTab === 'home') {
+      handleSaveSectionOrder();
+    } else if (adminAreaTab === 'film_database') {
+      handleSaveFilmDbSectionOrder();
+    }
+  };
+
+  const handleMoveAreaSectionOrder = (index: number, direction: 'up' | 'down') => {
+    if (adminAreaTab === 'home') {
+      handleMoveSectionOrder(index, direction);
+    } else if (adminAreaTab === 'film_database') {
+      handleMoveFilmDbSectionOrder(index, direction);
+    }
+    // Recommendation rows are fixed: no-op.
+  };
+
   return (
     <div className="space-y-6">
       {/* Top Banner & Area Navigation */}
@@ -1174,23 +1216,35 @@ export const AdminHomepageSections: React.FC = () => {
             <div className="w-12 h-12 rounded-2xl bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 flex items-center justify-center shrink-0 text-[#FF2E7E]">
               {adminAreaTab === 'home' ? (
                 <Layout className="w-6 h-6" />
-              ) : (
+              ) : adminAreaTab === 'film_database' ? (
                 <Film className="w-6 h-6" />
+              ) : (
+                <Sparkles className="w-6 h-6" />
               )}
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="font-display font-black text-white text-xl tracking-tight">
-                  {adminAreaTab === 'home' ? 'Kontrol Seksi Beranda' : 'Kontrol Seksi Film Database'}
+                  {adminAreaTab === 'home'
+                    ? 'Kontrol Seksi Beranda'
+                    : adminAreaTab === 'film_database'
+                    ? 'Kontrol Seksi Film Database'
+                    : 'Kontrol Halaman Rekomendasi'}
                 </h2>
                 <span className="px-2.5 py-0.5 rounded-full bg-[#FF2E7E]/15 border border-[#FF2E7E]/30 text-[#FF2E7E] text-[10px] font-bold tracking-wider uppercase">
-                  {adminAreaTab === 'home' ? 'Beranda' : 'Film Database'}
+                  {adminAreaTab === 'home'
+                    ? 'Beranda'
+                    : adminAreaTab === 'film_database'
+                    ? 'Film Database'
+                    : 'Halaman Rekomendasi'}
                 </span>
               </div>
               <p className="text-slate-400 text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
                 {adminAreaTab === 'home'
                   ? 'Kustomisasi judul, mode kurasi otomatis (kategori & sub-kategori), atau pilih item manual secara spesifik untuk tiap seksi di halaman beranda. Geser urutan seksi dengan drag-and-drop. Perubahan tersimpan secara realtime di Firestore.'
-                  : 'Konfigurasi 5 seksi kurasi Film Database (On Theatres Now, What\'s Streaming, Coming Soon, Animation Rekomendasi, dan Fan\'s Favourite). Atur urutan seksi, status aktif, filter platform streaming, dan batas minimum voting.'}
+                  : adminAreaTab === 'film_database'
+                  ? 'Konfigurasi 5 seksi kurasi Film Database (On Theatres Now, What\'s Streaming, Coming Soon, Animation Rekomendasi, dan Fan\'s Favourite). Atur urutan seksi, status aktif, filter platform streaming, dan batas minimum voting.'
+                  : 'Kelola empat baris editorial di halaman Rekomendasi Film: Malam Ini, Buat Berdua, Hidden Gems, dan Di Bawah 100 Menit. Urutan baris tetap, tetapi judul, mode kurasi, filter genre/tag, dan limit bisa diubah.'}
               </p>
             </div>
           </div>
@@ -1199,7 +1253,9 @@ export const AdminHomepageSections: React.FC = () => {
             <span className="text-slate-300 font-semibold">
               {adminAreaTab === 'home'
                 ? `Total ${orderedKeys.length} Seksi Terhubung`
-                : `Total ${orderedFilmDbKeys.length} Seksi Film Database`}
+                : adminAreaTab === 'film_database'
+                ? `Total ${orderedFilmDbKeys.length} Seksi Film Database`
+                : `Total ${DEFAULT_REC_SECTION_ORDER.length} Baris Rekomendasi`}
             </span>
             <div className="text-[11px] text-slate-500 mt-0.5">
               Tersinkronisasi langsung ke pengunjung publik
@@ -1207,8 +1263,8 @@ export const AdminHomepageSections: React.FC = () => {
           </div>
         </div>
 
-        {/* Top-Level Tab Switcher: Beranda | Film Database */}
-        <div className="pt-2 border-t border-white/[0.06] flex items-center gap-2">
+        {/* Top-Level Tab Switcher: Beranda | Film Database | Halaman Rekomendasi */}
+        <div className="pt-2 border-t border-white/[0.06] flex flex-wrap items-center gap-2">
           <button
             type="button"
             id="tab-area-home"
@@ -1245,6 +1301,26 @@ export const AdminHomepageSections: React.FC = () => {
           >
             <Film className="w-4 h-4" />
             <span>Film Database</span>
+          </button>
+
+          <button
+            type="button"
+            id="tab-area-recommendations"
+            onClick={() => {
+              setAdminAreaTab('recommendations');
+              if (currentMeta.area !== 'recommendations') {
+                setActiveSectionKey('rec_tonight');
+              }
+              setSearchQuery('');
+            }}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              adminAreaTab === 'recommendations'
+                ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25'
+                : 'bg-white/[0.04] text-slate-400 hover:text-white hover:bg-white/[0.08] border border-white/[0.06]'
+            }`}
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Halaman Rekomendasi</span>
           </button>
         </div>
       </div>
@@ -1478,39 +1554,57 @@ export const AdminHomepageSections: React.FC = () => {
           <div className="px-2 py-1 flex items-center justify-between">
             <div>
               <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-                {adminAreaTab === 'home' ? 'Sumber Konten Seksi' : 'Urutan Seksi Film Database'}
+                {adminAreaTab === 'home'
+                  ? 'Sumber Konten Seksi'
+                  : adminAreaTab === 'film_database'
+                  ? 'Urutan Seksi Film Database'
+                  : 'Halaman Rekomendasi'}
               </span>
-              <span className="text-[10px] text-slate-500">Tarik ikon ⋮⋮ atau gunakan panah ↑ ↓</span>
+              <span className="text-[10px] text-slate-500">
+                {isRecArea ? 'Urutan baris tetap (tidak bisa digeser)' : 'Tarik ikon ⋮⋮ atau gunakan panah ↑ ↓'}
+              </span>
             </div>
-            <button
-              type="button"
-              id="save-section-order-btn"
-              onClick={adminAreaTab === 'home' ? handleSaveSectionOrder : handleSaveFilmDbSectionOrder}
-              disabled={adminAreaTab === 'home' ? isSavingOrder : isSavingFilmDbOrder}
-              className="px-3 py-1.5 rounded-xl bg-[#FF2E7E] hover:bg-[#FF2E7E]/90 text-white text-[11px] font-bold transition-all shadow-md cursor-pointer disabled:opacity-50 flex items-center gap-1 shrink-0 active:scale-95"
-            >
-              {(adminAreaTab === 'home' ? isSavingOrder : isSavingFilmDbOrder) ? (
-                <span>Menyimpan...</span>
-              ) : (
-                <>
-                  <Save className="w-3 h-3" />
-                  <span>Simpan Urutan</span>
-                </>
-              )}
-            </button>
+            {isRecArea ? (
+              <span className="px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-slate-400 text-[11px] font-bold shrink-0">
+                Urutan tetap
+              </span>
+            ) : (
+              <button
+                type="button"
+                id="save-section-order-btn"
+                onClick={handleSaveAreaSectionOrder}
+                disabled={areaIsSavingOrder}
+                className="px-3 py-1.5 rounded-xl bg-[#FF2E7E] hover:bg-[#FF2E7E]/90 text-white text-[11px] font-bold transition-all shadow-md cursor-pointer disabled:opacity-50 flex items-center gap-1 shrink-0 active:scale-95"
+              >
+                {areaIsSavingOrder ? (
+                  <span>Menyimpan...</span>
+                ) : (
+                  <>
+                    <Save className="w-3 h-3" />
+                    <span>Simpan Urutan</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
 
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
-            onDragEnd={adminAreaTab === 'home' ? handleDragEnd : handleFilmDbDragEnd}
+            onDragEnd={
+              adminAreaTab === 'home'
+                ? handleDragEnd
+                : adminAreaTab === 'film_database'
+                ? handleFilmDbDragEnd
+                : undefined
+            }
           >
             <SortableContext
-              items={adminAreaTab === 'home' ? orderedKeys : orderedFilmDbKeys}
+              items={areaSectionKeys}
               strategy={verticalListSortingStrategy}
             >
               <div className="space-y-1.5 max-h-[660px] overflow-y-auto pr-1">
-                {(adminAreaTab === 'home' ? orderedKeys : orderedFilmDbKeys).map((key, idx) => (
+                {areaSectionKeys.map((key, idx) => (
                   <SortableSectionItem
                     key={key}
                     keyId={key}
@@ -1520,8 +1614,9 @@ export const AdminHomepageSections: React.FC = () => {
                     setSearchQuery={setSearchQuery}
                     draftConfigs={draftConfigs}
                     homepageSectionsConfig={homepageSectionsConfig}
-                    handleMoveSectionOrder={adminAreaTab === 'home' ? handleMoveSectionOrder : handleMoveFilmDbSectionOrder}
-                    orderedLength={(adminAreaTab === 'home' ? orderedKeys : orderedFilmDbKeys).length}
+                    handleMoveSectionOrder={handleMoveAreaSectionOrder}
+                    orderedLength={areaSectionKeys.length}
+                    fixedOrder={isRecArea}
                   />
                 ))}
               </div>

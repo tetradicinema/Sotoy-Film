@@ -18,6 +18,7 @@
     "test:film-sections": "node --import tsx scripts/test-film-sections.ts",
     "test:film-section-genre": "node --import tsx scripts/test-film-section-genre.ts",
     "test:home-film-sections": "node --import tsx scripts/test-home-film-sections.ts",
+    "test:rekomendasi-film": "node --import tsx scripts/test-rekomendasi-film.ts",
     "test:tmdb-sync": "node --import tsx scripts/test-tmdb-sync.ts",
     "test:tmdb-cron": "node --import tsx scripts/test-tmdb-cron.ts",
     "test:tmdb-id": "node --import tsx scripts/test-tmdb-id-match.ts",
