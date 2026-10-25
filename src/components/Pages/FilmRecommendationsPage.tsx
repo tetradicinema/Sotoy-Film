@@ -2,10 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Shuffle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
-import { WatchNextCard } from '../Recommendations/WatchNextCard';
+import { SectionHeader } from '../Common/SectionHeader';
+import { FilmDbCard } from '../Film/FilmDbCard';
 import { WatchNextChip } from '../Recommendations/WatchNextChip';
 import { WatchNextFeaturedPick } from '../Recommendations/WatchNextFeaturedPick';
-import { WatchNextSectionHeader } from '../Recommendations/WatchNextSectionHeader';
 import { FilmItem, HomepageSectionKey, SectionConfig } from '../../types';
 import {
   DEFAULT_REC_SECTION_ORDER,
@@ -27,6 +27,10 @@ interface RecommendationRow {
 
 const filmCountLabel = (count: number): string =>
   `${count} ${count === 1 ? 'film' : 'films'}`;
+
+// The filtered results grid keeps a rec_* card key so shared FilmDbCard ids
+// stay valid even though the editorial rows are not rendered in that view.
+const FILTERED_RESULTS_SECTION_KEY: HomepageSectionKey = 'rec_tonight';
 
 export const FilmRecommendationsPage: React.FC = () => {
   const { films, homepageSectionsConfig, navigateTo } = useApp();
@@ -138,10 +142,10 @@ export const FilmRecommendationsPage: React.FC = () => {
         <header id="recommendation-header" className="border-b border-slate-800 pb-8 sm:pb-12">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div className="max-w-3xl">
-              <h1 className="font-display text-[clamp(3.25rem,9vw,5.75rem)] font-semibold leading-[0.9] tracking-[-0.04em] text-slate-50">
+              <h1 className="font-display font-black text-3xl sm:text-5xl text-white tracking-tight leading-tight">
                 Watch Next
               </h1>
-              <p className="mt-5 max-w-xl text-base leading-7 text-slate-400 sm:text-lg">
+              <p className="mt-3 max-w-xl text-slate-400 text-sm sm:text-base leading-relaxed">
                 Pick a mood, pick a platform, press play.
               </p>
             </div>
@@ -225,25 +229,29 @@ export const FilmRecommendationsPage: React.FC = () => {
           )}
 
           {hasFilter ? (
-            <section id="recommendation-results" className="space-y-6">
-              <WatchNextSectionHeader
+            <section id="recommendation-results">
+              <SectionHeader
                 title="Your matches"
-                count={filmCountLabel(filteredFilms.length)}
-                action={
-                  <button
-                    type="button"
-                    id="reset-rec-filters-btn"
-                    onClick={handleResetFilters}
-                    className="inline-flex min-h-11 items-center rounded-lg border border-slate-700 px-4 text-sm font-medium text-slate-200 transition-colors hover:border-slate-500 hover:text-slate-50 motion-reduce:transition-none"
-                  >
-                    Clear filters
-                  </button>
+                right={
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-xs text-slate-400 tabular-nums">
+                      {filmCountLabel(filteredFilms.length)}
+                    </span>
+                    <button
+                      type="button"
+                      id="reset-rec-filters-btn"
+                      onClick={handleResetFilters}
+                      className="inline-flex min-h-11 items-center rounded-lg border border-slate-700 px-4 text-sm font-medium text-slate-200 transition-colors hover:border-slate-500 hover:text-slate-50 motion-reduce:transition-none"
+                    >
+                      Clear filters
+                    </button>
+                  </div>
                 }
               />
 
               {filteredFilms.length === 0 ? (
                 <div className="border-y border-slate-800 py-16 text-center">
-                  <p className="font-display text-2xl font-semibold text-slate-50">
+                  <p className="font-display text-2xl font-black tracking-tight text-white">
                     Nothing here yet
                   </p>
                   <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-400">
@@ -251,16 +259,21 @@ export const FilmRecommendationsPage: React.FC = () => {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-5 md:grid-cols-4 lg:grid-cols-6 lg:gap-x-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                   {filteredFilms.map(film => (
-                    <WatchNextCard key={film.id} film={film} onOpen={openFilm} />
+                    <FilmDbCard
+                      key={film.id}
+                      film={film}
+                      sectionKey={FILTERED_RESULTS_SECTION_KEY}
+                      onOpen={openFilm}
+                    />
                   ))}
                 </div>
               )}
             </section>
           ) : recRows.length === 0 ? (
             <div className="border-y border-slate-800 py-16 text-center">
-              <p className="font-display text-2xl font-semibold text-slate-50">
+              <p className="font-display text-2xl font-black tracking-tight text-white">
                 Nothing here yet
               </p>
               <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-400">
@@ -270,16 +283,25 @@ export const FilmRecommendationsPage: React.FC = () => {
           ) : (
             <div className="space-y-14 sm:space-y-20">
               {recRows.map(row => (
-                <section key={row.key} id={`rec-section-${row.key}`} className="space-y-6">
-                  <WatchNextSectionHeader
+                <section key={row.key} id={`rec-section-${row.key}`}>
+                  <SectionHeader
                     title={row.title}
                     description={row.description}
-                    count={filmCountLabel(row.films.length)}
+                    right={
+                      <span className="text-xs text-slate-400 tabular-nums">
+                        {filmCountLabel(row.films.length)}
+                      </span>
+                    }
                   />
 
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-5 md:grid-cols-4 lg:grid-cols-6 lg:gap-x-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                     {row.films.map(film => (
-                      <WatchNextCard key={film.id} film={film} onOpen={openFilm} />
+                      <FilmDbCard
+                        key={film.id}
+                        film={film}
+                        sectionKey={row.key}
+                        onOpen={openFilm}
+                      />
                     ))}
                   </div>
                 </section>

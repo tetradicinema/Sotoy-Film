@@ -65,7 +65,7 @@ export const WatchNextFeaturedPick: React.FC<WatchNextFeaturedPickProps> = ({
 
         <div className="min-w-0">
           <p className="text-sm font-medium text-accent">Tonight, watch this</p>
-          <h2 className="mt-2 font-display text-2xl font-semibold leading-tight tracking-[-0.04em] text-slate-50 sm:text-4xl">
+          <h2 className="mt-2 font-display text-2xl font-black leading-tight tracking-tight text-white sm:text-4xl">
             {film.title || 'Untitled'}
           </h2>
 
