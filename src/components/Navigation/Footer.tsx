@@ -112,7 +112,7 @@ export const Footer: React.FC = () => {
                   onClick={() => navigateTo('film-recommendations')}
                   className="hover:text-white transition-colors"
                 >
-                  Rekomendasi Film Mood
+                  Watch Next
                 </button>
               </li>
               <li>

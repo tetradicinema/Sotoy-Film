@@ -651,9 +651,9 @@ export const STATIC_ROUTE_METADATA_CONFIG: Record<
     type: 'website',
   },
   '/rekomendasi-film': {
-    title: 'Rekomendasi Film Sesuai Mood & Platform Streaming',
+    title: 'Watch Next: Rekomendasi Film Sesuai Mood & Platform Streaming',
     description:
-      'Temukan rekomendasi film berdasarkan suasana hati dan platform streaming favoritmu, dari tontonan santai sampai film yang bikin mikir.',
+      'Temukan rekomendasi film sesuai mood dan platform streaming favoritmu, dari tontonan santai sampai film yang bikin mikir.',
     keywords: [
       'rekomendasi film',
       'film sesuai mood',
@@ -665,9 +665,17 @@ export const STATIC_ROUTE_METADATA_CONFIG: Record<
     type: 'website',
   },
   '/film-recommendations': {
-    title: 'Rekomendasi Film & Serial Pilihan Kurator',
+    title: 'Watch Next: Rekomendasi Film Sesuai Mood & Platform Streaming',
     description:
-      'Daftar rekomendasi film dan serial pilihan kurator dengan rating Skor Sotoy tertinggi dan review mendalam.',
+      'Temukan rekomendasi film sesuai mood dan platform streaming favoritmu, dari tontonan santai sampai film yang bikin mikir.',
+    keywords: [
+      'rekomendasi film',
+      'film sesuai mood',
+      'film platform streaming',
+      'film bagus',
+      'film rating tinggi',
+      'series wajib tonton',
+    ],
     type: 'website',
   },
   '/komunitas': {

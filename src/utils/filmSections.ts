@@ -359,7 +359,7 @@ export function resolveFilmDbSection(
   }
 
   const isRecSection = key.startsWith('rec_');
-  const limit = config?.limit && config.limit > 0 ? config.limit : isRecSection ? 10 : 12;
+  const limit = config?.limit && config.limit > 0 ? config.limit : 12;
 
   // Manual mode: exact itemIds order, skipping missing IDs, capped by limit
   if (config?.sourceType === 'manual') {

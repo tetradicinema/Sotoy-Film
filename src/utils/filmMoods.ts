@@ -7,9 +7,10 @@ import {
 } from './filmSections';
 
 /**
- * Plain mood data for the /rekomendasi-film page. Genres use canonical names
- * (see src/utils/filmGenres) so "Sci-Fi", "sci fi" and "Science Fiction" all
- * resolve to the same mood. Tags are matched case-insensitively.
+ * Plain mood data for the /rekomendasi-film page. Labels are written for the
+ * Watch Next interface while ids stay stable. Genres use canonical names (see
+ * src/utils/filmGenres) so "Sci-Fi", "sci fi" and "Science Fiction" all resolve
+ * to the same mood. Tags are matched case-insensitively.
  */
 export interface FilmMood {
   id: string;
@@ -21,37 +22,37 @@ export interface FilmMood {
 export const FILM_MOODS: FilmMood[] = [
   {
     id: 'santai',
-    label: 'Santai',
+    label: 'Chill',
     genres: ['Comedy', 'Family', 'Animation'],
     tags: ['ringan', 'hangat'],
   },
   {
     id: 'menegangkan',
-    label: 'Menegangkan',
+    label: 'Edge of Seat',
     genres: ['Thriller', 'Horror', 'Mystery'],
     tags: ['mencekam', 'horor'],
   },
   {
     id: 'bikin-mikir',
-    label: 'Bikin Mikir',
-    genres: ['Science Fiction', 'Mystery', 'Drama'],
+    label: 'Mind-Bending',
+    genres: ['Science Fiction', 'Mystery'],
     tags: ['mind-bending', 'filosofis'],
   },
   {
     id: 'romantis',
-    label: 'Romantis',
-    genres: ['Romance', 'Drama'],
+    label: 'Hopeless Romantic',
+    genres: ['Romance'],
     tags: ['baper', 'cinta'],
   },
   {
     id: 'seru',
-    label: 'Seru',
+    label: 'Adrenaline',
     genres: ['Action', 'Adventure'],
     tags: ['aksi', 'petualangan'],
   },
   {
     id: 'haru',
-    label: 'Haru',
+    label: 'Tearjerker',
     genres: ['Drama'],
     tags: ['mengharukan', 'sedih'],
   },

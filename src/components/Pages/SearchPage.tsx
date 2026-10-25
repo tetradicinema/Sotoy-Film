@@ -486,7 +486,7 @@ export const SearchPage: React.FC = () => {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                   { name: 'Film Database', desc: 'Arsip rating & ulasan', view: 'film-database', icon: Film, color: 'text-[#FF2E7E]' },
-                  { name: 'Rekomendasi Film', desc: 'Pilihan kurasi redaksi', view: 'film-recommendations', icon: Sparkles, color: 'text-[#FF2E7E]' },
+                  { name: 'Watch Next', desc: 'Pilihan kurasi redaksi', view: 'film-recommendations', icon: Sparkles, color: 'text-[#FF2E7E]' },
                   { name: 'Buzz Komunitas', desc: 'Thread & obrolan pop-culture', view: 'community-feed', icon: MessageSquare, color: 'text-[#FF2E7E]' },
                   { name: 'Daftar Kritikus', desc: 'Gabung dewan penilai', view: 'critic-submission', icon: Star, color: 'text-amber-400' },
                 ].map(item => {

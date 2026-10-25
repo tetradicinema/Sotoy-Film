@@ -457,7 +457,7 @@ export const Navbar: React.FC = () => {
                       }`}
                     >
                       <Sparkles className="w-4 h-4 text-slate-400" />
-                      <span>Rekomendasi</span>
+                      <span>Watch Next</span>
                     </button>
 
                     <button

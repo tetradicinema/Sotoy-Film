@@ -78,13 +78,33 @@ const runTests = () => {
   const romantis = getFilmMoodById('romantis');
 
   assert(!!bikinMikir && !!santai && !!romantis, 'the six moods are exported with stable ids');
+  assertEquals(
+    FILM_MOODS.map(mood => mood.label),
+    ['Chill', 'Edge of Seat', 'Mind-Bending', 'Hopeless Romantic', 'Adrenaline', 'Tearjerker'],
+    'the mood chips use the Watch Next English labels'
+  );
+  assert(
+    !bikinMikir?.genres.includes('Drama') && !romantis?.genres.includes('Drama'),
+    'Mind-Bending and Hopeless Romantic no longer include Drama'
+  );
+  {
+    const dramaOnly = createFilm({ id: 'drama-only', genres: ['Drama'] });
+    assert(
+      !filmMatchesMood(dramaOnly, bikinMikir) && !filmMatchesMood(dramaOnly, romantis),
+      'a Drama-only film does not match Mind-Bending or Hopeless Romantic'
+    );
+    assert(
+      filmMatchesMood(dramaOnly, getFilmMoodById('haru')),
+      'Drama still matches the Tearjerker mood'
+    );
+  }
 
   // 1. Sci-Fi alias matches Bikin Mikir
   {
     const film = createFilm({ id: 'sci-fi-alias', genres: ['Sci-Fi'] });
     assert(
       filmMatchesMood(film, bikinMikir),
-      'a Sci-Fi film matches the Bikin Mikir mood via canonical genre resolution'
+      'a Sci-Fi film matches the Mind-Bending mood via canonical genre resolution'
     );
   }
 
@@ -93,7 +113,7 @@ const runTests = () => {
     const film = createFilm({ id: 'science-fiction', genres: ['Science Fiction'] });
     assert(
       filmMatchesMood(film, bikinMikir),
-      'a Science Fiction film matches the Bikin Mikir mood'
+      'a Science Fiction film matches the Mind-Bending mood'
     );
   }
 
@@ -334,6 +354,26 @@ const runTests = () => {
       metas.every(meta => meta?.area === 'recommendations' && meta?.targetType === 'films'),
       'rec_* meta entries use area recommendations and targetType films'
     );
+    assertEquals(
+      metas.map(meta => meta?.defaultTitle),
+      [
+        'Press Play Tonight',
+        'Date Night, Sorted',
+        'Hidden in Plain Sight',
+        'Under 100 Minutes',
+      ],
+      'rec_* default titles use the Watch Next editorial copy'
+    );
+    assertEquals(
+      metas.map(meta => meta?.defaultDescription),
+      [
+        'The safest bets right now, ranked by what the community actually rates.',
+        'Easy to love, even easier to talk about on the way home.',
+        'Great films that never got their moment.',
+        'Short, sharp, and done before midnight.',
+      ],
+      'rec_* default descriptions use the Watch Next editorial copy'
+    );
   }
 
   // 19. Manual mode keeps saved order and skips missing ids
@@ -397,20 +437,27 @@ const runTests = () => {
     );
   }
 
-  // 23. Default limit is 10 and an explicit limit is respected
+  // 23. Default limit is 12 and an explicit limit is respected
   {
     const films = Array.from({ length: 14 }, (_, index) =>
       createFilm({
         id: `limit-${index}`,
-        skorSotoy: 8,
-        totalVotes: 10,
+        genres: ['Romance'],
+        skorSotoy: 8.5,
+        totalVotes: 5,
         duration: '95 min',
       })
     );
     assertEquals(
       resolveFilmDbSection('rec_tonight', films).length,
-      10,
-      'rec_* sections default to a limit of 10'
+      12,
+      'rec_* sections default to a limit of 12'
+    );
+    assert(
+      DEFAULT_REC_SECTION_ORDER.every(
+        key => resolveFilmDbSection(key, films).length === 12
+      ),
+      'all four rec_* defaults return up to 12 films'
     );
     assertEquals(
       resolveFilmDbSection('rec_short_runtime', films, { limit: 3 } as SectionConfig).length,
