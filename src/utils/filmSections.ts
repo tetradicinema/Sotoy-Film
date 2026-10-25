@@ -4,6 +4,9 @@ import {
   resolveFilmDbSectionOrder,
   resolveConfigFilms,
 } from './homepageConfigHelper';
+import { filmMatchesGenre, resolveFilmSectionGenre } from './filmGenres';
+import { normalizeFilmType } from './filmType';
+import { DEFAULT_POSTER } from '../data/mockData';
 
 /**
  * Normalizes streaming platform names to canonical forms.
@@ -150,9 +153,10 @@ function resolveCuratedFilms(
     return resolveConfigFilms(films, config, defaultFilms).slice(0, limit);
   }
 
+  const effectiveGenre = resolveFilmSectionGenre(config);
   const hasFilters = Boolean(
     config?.category?.trim() ||
-      config?.subCategory?.trim() ||
+      effectiveGenre ||
       config?.tag?.trim() ||
       config?.sortBy?.trim()
   );
@@ -414,7 +418,9 @@ export function resolveFilmDbSection(
       // Auto mode starts empty so the section stays hidden until the admin
       // either picks films manually or sets at least one filter.
       const hasFilter = Boolean(
-        config?.category?.trim() || config?.subCategory?.trim() || config?.tag?.trim()
+        config?.category?.trim() ||
+          resolveFilmSectionGenre(config) ||
+          config?.tag?.trim()
       );
       filtered = hasFilter ? [...films] : [];
       break;
@@ -483,20 +489,17 @@ export function resolveFilmDbSection(
     });
   }
 
-  if (config?.subCategory && config.subCategory.trim()) {
-    const sub = config.subCategory.trim().toLowerCase();
-    filtered = filtered.filter(f =>
-      f.genres?.some(g => g.trim().toLowerCase() === sub) ||
-      f.tags?.some(tag => tag.trim().toLowerCase() === sub) ||
-      (f.type || '').toLowerCase() === sub
-    );
+  const effectiveGenre = resolveFilmSectionGenre(config);
+  if (effectiveGenre) {
+    filtered = filtered.filter(f => filmMatchesGenre(f, effectiveGenre));
   }
 
   if (config?.tag && config.tag.trim()) {
-    const t = config.tag.trim().toLowerCase();
-    filtered = filtered.filter(f =>
-      f.genres?.some(g => g.trim().toLowerCase() === t) ||
-      f.tags?.some(tag => tag.trim().toLowerCase() === t)
+    const t = config.tag.trim();
+    filtered = filtered.filter(
+      f =>
+        filmMatchesGenre(f, t) ||
+        f.tags?.some(tag => tag.trim().toLowerCase() === t.toLowerCase())
     );
   }
 
@@ -713,3 +716,102 @@ export function buildFilmDbSections(
 
   return sections;
 }
+
+// ---------------------------------------------------------------------------
+// Manual film picker helpers (used by the admin section editor)
+// ---------------------------------------------------------------------------
+
+export type FilmPickerTypeLabel = 'Movie' | 'Series' | 'Animation';
+
+export interface FilmPickerRow {
+  id: string;
+  title: string;
+  year: number;
+  typeLabel: FilmPickerTypeLabel;
+  /** Poster URL, already falling back to DEFAULT_POSTER when empty. */
+  poster: string;
+}
+
+export type FilmPickerSelectionEntry =
+  | { id: string; found: true; row: FilmPickerRow }
+  | { id: string; found: false; row: null };
+
+/**
+ * Maps a film type to the small label shown in the manual picker.
+ */
+export function getFilmPickerTypeLabel(
+  film: Pick<FilmItem, 'type'> | null | undefined
+): FilmPickerTypeLabel {
+  const format = normalizeFilmType(film?.type);
+  if (format === 'series') return 'Series';
+  if (format === 'animation') return 'Animation';
+  return 'Movie';
+}
+
+/**
+ * Builds the display data for one manual picker row (poster, title, year, type).
+ */
+export function getFilmPickerRow(film: FilmItem): FilmPickerRow {
+  const rawPoster = typeof film.poster === 'string' ? film.poster.trim() : '';
+
+  return {
+    id: film.id,
+    title: film.title || '',
+    year: film.year || 0,
+    typeLabel: getFilmPickerTypeLabel(film),
+    poster: rawPoster || DEFAULT_POSTER,
+  };
+}
+
+/**
+ * Searches films for the manual picker by title, original title and year.
+ * Every whitespace-separated token must match the combined haystack, so
+ * "dune 2024" finds "Dune: Part Two" (2024) while a bare "2024" lists all
+ * films from that year. The result is capped at `limit` (default 8).
+ */
+export function searchFilmPickerItems(
+  films: FilmItem[],
+  query: string,
+  limit = 8
+): FilmItem[] {
+  const normalizedQuery = (query || '').trim().toLowerCase();
+  if (!normalizedQuery) return [];
+
+  const max = Number.isFinite(limit) ? Math.max(0, Math.floor(limit)) : 8;
+  if (max === 0) return [];
+
+  const tokens = normalizedQuery.split(/\s+/).filter(Boolean);
+  const results: FilmItem[] = [];
+
+  for (const film of films) {
+    const haystack = [film.title, film.originalTitle, film.year ? String(film.year) : '']
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    if (!tokens.every(token => haystack.includes(token))) continue;
+
+    results.push(film);
+    if (results.length >= max) break;
+  }
+
+  return results;
+}
+
+/**
+ * Resolves saved manual item ids into picker rows, preserving their saved
+ * order and flagging ids that no longer exist in the catalogue.
+ */
+export function buildFilmPickerSelection(
+  films: FilmItem[],
+  itemIds: string[] | null | undefined
+): FilmPickerSelectionEntry[] {
+  const filmMap = new Map(films.map(film => [film.id, film]));
+
+  return (Array.isArray(itemIds) ? itemIds : []).map(id => {
+    const film = filmMap.get(id);
+    if (!film) return { id, found: false as const, row: null };
+    return { id, found: true as const, row: getFilmPickerRow(film) };
+  });
+}
+

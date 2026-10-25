@@ -1,6 +1,7 @@
 import { FilmItem, Article, SectionConfig, HomepageSectionKey, MainCategory, HomeBlockKey, HomeSidebarWidgetKey } from '../types';
 import { normalizeArticleCategory } from './articleCategory';
 import { normalizeFilmType } from './filmType';
+import { filmMatchesGenre, resolveFilmSectionGenre } from './filmGenres';
 import { isAnimationFilm } from './filmSections';
 
 export interface SectionMeta {
@@ -710,19 +711,16 @@ export function resolveConfigFilms(
       return normalizeFilmType(f.type) === cat;
     });
   }
-  if (config.subCategory && config.subCategory.trim()) {
-    const sub = config.subCategory.trim().toLowerCase();
-    filtered = filtered.filter(f => 
-      f.genres?.some((g: string) => g.trim().toLowerCase() === sub) ||
-      f.tags?.some((tag: string) => tag.trim().toLowerCase() === sub) ||
-      f.type?.toLowerCase() === sub
-    );
+  const effectiveGenre = resolveFilmSectionGenre(config);
+  if (effectiveGenre) {
+    filtered = filtered.filter(f => filmMatchesGenre(f, effectiveGenre));
   }
   if (config.tag && config.tag.trim()) {
-    const t = config.tag.trim().toLowerCase();
-    filtered = filtered.filter(f => 
-      f.genres?.some((g: string) => g.trim().toLowerCase() === t) ||
-      f.tags?.some((tag: string) => tag.trim().toLowerCase() === t)
+    const t = config.tag.trim();
+    filtered = filtered.filter(
+      f =>
+        filmMatchesGenre(f, t) ||
+        f.tags?.some((tag: string) => tag.trim().toLowerCase() === t.toLowerCase())
     );
   }
 

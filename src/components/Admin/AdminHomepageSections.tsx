@@ -60,7 +60,19 @@ import {
   resolveSectionOrder,
   resolveFilmDbSectionOrder,
 } from '../../utils/homepageConfigHelper';
-import { getStreamingPlatforms } from '../../utils/filmSections';
+import {
+  buildFilmPickerSelection,
+  getFilmPickerRow,
+  getHeroToWatch,
+  getStreamingPlatforms,
+  resolveFilmDbSection,
+  resolveHomeFilmIndonesia,
+  resolveHomeFilmRecs,
+  resolveHomeStreaming,
+  searchFilmPickerItems,
+} from '../../utils/filmSections';
+import { collectGenreOptions, normalizeGenreName, resolveFilmSectionGenre } from '../../utils/filmGenres';
+import { DEFAULT_POSTER } from '../../data/mockData';
 import { normalizeArticleCategory } from '../../utils/articleCategory';
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -1048,17 +1060,15 @@ export const AdminHomepageSections: React.FC = () => {
   // Search candidates for manual mode
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
-    const query = searchQuery.trim().toLowerCase();
 
     if (currentMeta.targetType === 'films') {
-      return films
-        .filter(f => f.title.toLowerCase().includes(query) || f.originalTitle?.toLowerCase().includes(query))
-        .slice(0, 8);
-    } else {
-      return publishedArticles
-        .filter(a => a.title.toLowerCase().includes(query) || a.tags?.some(t => t.toLowerCase().includes(query)))
-        .slice(0, 8);
+      return searchFilmPickerItems(films, searchQuery, 8);
     }
+
+    const query = searchQuery.trim().toLowerCase();
+    return publishedArticles
+      .filter(a => a.title.toLowerCase().includes(query) || a.tags?.some(t => t.toLowerCase().includes(query)))
+      .slice(0, 8);
   }, [searchQuery, currentMeta.targetType, films, publishedArticles]);
 
   // Resolved manual items for display
@@ -1072,6 +1082,17 @@ export const AdminHomepageSections: React.FC = () => {
       return itemIds.map(id => artMap.get(id)).filter(Boolean) as typeof publishedArticles;
     }
   }, [currentConfig.itemIds, currentMeta.targetType, films, publishedArticles]);
+
+  // Film manual picker rows, including ids that no longer match a film
+  const filmPickerSelection = useMemo(() => {
+    if (currentMeta.targetType !== 'films') return [];
+    return buildFilmPickerSelection(films, currentConfig.itemIds || []);
+  }, [currentConfig.itemIds, currentMeta.targetType, films]);
+
+  const hasSelectedItems =
+    currentMeta.targetType === 'films'
+      ? filmPickerSelection.length > 0
+      : selectedItemsData.length > 0;
 
   const handleAddItem = (id: string) => {
     const currentList = currentConfig.itemIds || [];
@@ -1103,6 +1124,46 @@ export const AdminHomepageSections: React.FC = () => {
     }
     return Object.entries(SUBCATEGORY_LABELS).map(([val, label]) => ({ val, label }));
   }, [currentConfig.category]);
+
+  // Genre options for film sections (canonical names + currently saved genre)
+  const filmGenreOptions = useMemo(() => {
+    const options = collectGenreOptions(films);
+    const selected = resolveFilmSectionGenre(currentConfig);
+    if (selected) {
+      const selectedKey = normalizeGenreName(selected).toLowerCase();
+      const exists = options.some(
+        option => normalizeGenreName(option.value).toLowerCase() === selectedKey
+      );
+      if (!exists) {
+        options.push({ value: selected, label: selected, count: 0 });
+      }
+    }
+    return options;
+  }, [films, currentConfig.genre, currentConfig.subCategory]);
+
+  // Effective genre, including a legacy subCategory that equals a genre name
+  const selectedGenreValue = useMemo(
+    () => resolveFilmSectionGenre(currentConfig),
+    [currentConfig.genre, currentConfig.subCategory]
+  );
+
+  // Live match count, resolved exactly like the public section
+  const matchingFilmCount = useMemo(() => {
+    if (currentMeta.targetType !== 'films') return 0;
+
+    switch (activeSectionKey) {
+      case 'home_film_recs':
+        return resolveHomeFilmRecs(films, currentConfig).length;
+      case 'hero_to_watch':
+        return getHeroToWatch(films, currentConfig).length;
+      case 'home_streaming':
+        return resolveHomeStreaming(films, currentConfig).length;
+      case 'home_film_indonesia':
+        return resolveHomeFilmIndonesia(films, currentConfig).length;
+      default:
+        return resolveFilmDbSection(activeSectionKey, films, currentConfig).length;
+    }
+  }, [activeSectionKey, currentConfig, currentMeta.targetType, films]);
 
   return (
     <div className="space-y-6">
@@ -1664,25 +1725,52 @@ export const AdminHomepageSections: React.FC = () => {
                   </select>
                 </div>
 
-                {/* Sub-Category Dropdown */}
-                <div className="space-y-1.5">
-                  <label className="block text-[11px] font-semibold text-slate-400">
-                    Sub-Kategori Konten (Opsional)
-                  </label>
-                  <select
-                    id="select-subcategory-auto"
-                    value={currentConfig.subCategory || ''}
-                    onChange={(e) => updateCurrentDraft({ subCategory: e.target.value || '' })}
-                    className="w-full px-3 py-2 rounded-xl bg-[#171717] border border-white/[0.1] text-white text-xs outline-none focus:border-[#FF2E7E] transition-colors"
-                  >
-                    <option value="">Semua sub-kategori</option>
-                    {availableSubCategories.map(({ val, label }) => (
-                      <option key={val} value={val}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {/* Genre (films) or Sub-Category (articles) Dropdown */}
+                {currentMeta.targetType === 'films' ? (
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-semibold text-slate-400">
+                      Genre (Opsional)
+                    </label>
+                    <select
+                      id="select-genre-auto"
+                      value={selectedGenreValue}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        updateCurrentDraft({
+                          genre: value || undefined,
+                          subCategory: '',
+                        });
+                      }}
+                      className="w-full px-3 py-2 rounded-xl bg-[#171717] border border-white/[0.1] text-white text-xs outline-none focus:border-[#FF2E7E] transition-colors"
+                    >
+                      <option value="">Semua genre</option>
+                      {filmGenreOptions.map(({ value, label, count }) => (
+                        <option key={value} value={value}>
+                          {label} ({count})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-semibold text-slate-400">
+                      Sub-Kategori Konten (Opsional)
+                    </label>
+                    <select
+                      id="select-subcategory-auto"
+                      value={currentConfig.subCategory || ''}
+                      onChange={(e) => updateCurrentDraft({ subCategory: e.target.value || '' })}
+                      className="w-full px-3 py-2 rounded-xl bg-[#171717] border border-white/[0.1] text-white text-xs outline-none focus:border-[#FF2E7E] transition-colors"
+                    >
+                      <option value="">Semua sub-kategori</option>
+                      {availableSubCategories.map(({ val, label }) => (
+                        <option key={val} value={val}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {/* Platform select (only for streaming sections, fed by getStreamingPlatforms) */}
                 {(activeSectionKey === 'fd_streaming' || activeSectionKey === 'home_streaming') && (
@@ -1797,7 +1885,7 @@ export const AdminHomepageSections: React.FC = () => {
                     type="text"
                     value={currentConfig.tag || ''}
                     onChange={(e) => updateCurrentDraft({ tag: e.target.value })}
-                    placeholder="Contoh: review, rekomendasi, 2024"
+                    placeholder={currentMeta.targetType === 'films' ? 'Contoh: Film Indonesia, A24, Oscar' : 'Contoh: review, rekomendasi, 2024'}
                     className="w-full px-3 py-2 rounded-xl bg-[#171717] border border-white/[0.1] text-white text-xs outline-none focus:border-[#FF2E7E] placeholder:text-slate-600 transition-colors"
                   />
                 </div>
@@ -1850,6 +1938,12 @@ export const AdminHomepageSections: React.FC = () => {
                   />
                 </div>
               </div>
+
+              {currentMeta.targetType === 'films' && (
+                <p id="film-match-count" className="text-[11px] text-slate-400">
+                  <span className="font-bold text-white">{matchingFilmCount}</span> film cocok
+                </p>
+              )}
             </div>
           )}
 
@@ -1903,53 +1997,184 @@ export const AdminHomepageSections: React.FC = () => {
                 {/* Dropdown Suggestions */}
                 {searchResults.length > 0 && (
                   <div className="bg-[#171717] border border-white/10 rounded-2xl p-2 space-y-1 shadow-2xl max-h-56 overflow-y-auto">
-                    {searchResults.map((item: any) => {
-                      const isAdded = (currentConfig.itemIds || []).includes(item.id);
-                      return (
-                        <div
-                          key={item.id}
-                          className="flex items-center justify-between p-2 rounded-xl hover:bg-white/[0.06] transition-colors text-xs"
-                        >
-                          <div className="min-w-0 flex-1 pr-3">
-                            <div className="font-semibold text-white truncate">{item.title}</div>
-                            <div className="text-[10px] text-slate-400 truncate">
-                              ID: {item.id} {item.category ? `· ${item.category}` : ''}
+                    {currentMeta.targetType === 'films'
+                      ? searchResults.map((film: any) => {
+                          const row = getFilmPickerRow(film);
+                          const isAdded = (currentConfig.itemIds || []).includes(row.id);
+                          return (
+                            <div
+                              key={row.id}
+                              title={row.id}
+                              className="flex items-center justify-between gap-2 p-2 rounded-xl hover:bg-white/[0.06] transition-colors text-xs"
+                            >
+                              <img
+                                src={row.poster}
+                                alt={row.title}
+                                loading="lazy"
+                                onError={(e) => {
+                                  if (e.currentTarget.src !== DEFAULT_POSTER) {
+                                    e.currentTarget.src = DEFAULT_POSTER;
+                                  }
+                                }}
+                                className="w-9 h-[54px] rounded-md object-cover shrink-0 bg-white/5"
+                              />
+                              <div className="min-w-0 flex-1 pr-2">
+                                <div className="font-semibold text-white truncate">{row.title}</div>
+                                <div className="text-[10px] text-slate-400 truncate">
+                                  {row.year || '—'} · {row.typeLabel}
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                disabled={isAdded}
+                                onClick={() => handleAddItem(row.id)}
+                                className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 shrink-0 cursor-pointer ${
+                                  isAdded
+                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                                    : 'bg-[#FF2E7E] hover:bg-[#FF2E7E]/90 text-white shadow-sm'
+                                }`}
+                              >
+                                {isAdded ? (
+                                  <>
+                                    <Check className="w-3 h-3" />
+                                    <span>Terpilih</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Plus className="w-3 h-3" />
+                                    <span>Tambah</span>
+                                  </>
+                                )}
+                              </button>
                             </div>
-                          </div>
-                          <button
-                            type="button"
-                            disabled={isAdded}
-                            onClick={() => handleAddItem(item.id)}
-                            className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ${
-                              isAdded
-                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                                : 'bg-[#FF2E7E] hover:bg-[#FF2E7E]/90 text-white shadow-sm'
-                            }`}
-                          >
-                            {isAdded ? (
-                              <>
-                                <Check className="w-3 h-3" />
-                                <span>Terpilih</span>
-                              </>
-                            ) : (
-                              <>
-                                <Plus className="w-3 h-3" />
-                                <span>Tambah</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      );
-                    })}
+                          );
+                        })
+                      : searchResults.map((item: any) => {
+                          const isAdded = (currentConfig.itemIds || []).includes(item.id);
+                          return (
+                            <div
+                              key={item.id}
+                              className="flex items-center justify-between p-2 rounded-xl hover:bg-white/[0.06] transition-colors text-xs"
+                            >
+                              <div className="min-w-0 flex-1 pr-3">
+                                <div className="font-semibold text-white truncate">{item.title}</div>
+                                <div className="text-[10px] text-slate-400 truncate">
+                                  ID: {item.id} {item.category ? `· ${item.category}` : ''}
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                disabled={isAdded}
+                                onClick={() => handleAddItem(item.id)}
+                                className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                                  isAdded
+                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                                    : 'bg-[#FF2E7E] hover:bg-[#FF2E7E]/90 text-white shadow-sm'
+                                }`}
+                              >
+                                {isAdded ? (
+                                  <>
+                                    <Check className="w-3 h-3" />
+                                    <span>Terpilih</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Plus className="w-3 h-3" />
+                                    <span>Tambah</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          );
+                        })}
                   </div>
                 )}
               </div>
 
               {/* Selected List with Reordering */}
               <div className="space-y-2 pt-2">
-                {selectedItemsData.length === 0 ? (
+                {!hasSelectedItems ? (
                   <div className="text-center py-6 border border-dashed border-white/10 rounded-2xl text-slate-500 text-xs">
                     Belum ada item manual yang dipilih. Gunakan pencarian di atas untuk menambahkan.
+                  </div>
+                ) : currentMeta.targetType === 'films' ? (
+                  <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                    {filmPickerSelection.map((entry, idx) => (
+                      <div
+                        key={`${entry.id}-${idx}`}
+                        title={entry.id}
+                        className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-[#171717] border border-white/[0.06] hover:border-white/20 transition-all text-xs"
+                      >
+                        <span className="w-5 font-mono text-[11px] font-bold text-slate-500 shrink-0">
+                          #{idx + 1}
+                        </span>
+
+                        {entry.found ? (
+                          <>
+                            <img
+                              src={entry.row.poster}
+                              alt={entry.row.title}
+                              loading="lazy"
+                              onError={(e) => {
+                                if (e.currentTarget.src !== DEFAULT_POSTER) {
+                                  e.currentTarget.src = DEFAULT_POSTER;
+                                }
+                              }}
+                              className="w-9 h-[54px] rounded-md object-cover shrink-0 bg-white/5"
+                            />
+                            <div className="min-w-0 flex-1 px-2">
+                              <div className="font-semibold text-white truncate">{entry.row.title}</div>
+                              <div className="text-[10px] text-slate-400 truncate">
+                                {entry.row.year || '—'} · {entry.row.typeLabel}
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-9 h-[54px] rounded-md bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                              <Film className="w-3.5 h-3.5 text-slate-600" />
+                            </div>
+                            <div className="min-w-0 flex-1 px-2">
+                              <div className="font-semibold text-slate-500 truncate">
+                                Film tidak ditemukan
+                              </div>
+                              <div className="text-[10px] text-slate-600 truncate font-mono">
+                                {entry.id}
+                              </div>
+                            </div>
+                          </>
+                        )}
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            disabled={idx === 0}
+                            onClick={() => handleMoveItem(idx, 'up')}
+                            className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-20 transition-colors"
+                            title="Geser item ke atas"
+                          >
+                            <ChevronUp className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={idx === filmPickerSelection.length - 1}
+                            onClick={() => handleMoveItem(idx, 'down')}
+                            className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 disabled:opacity-20 transition-colors"
+                            title="Geser item ke bawah"
+                          >
+                            <ChevronDown className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveItem(entry.id)}
+                            className="p-1 rounded-md text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors ml-1"
+                            title="Hapus dari daftar manual"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">

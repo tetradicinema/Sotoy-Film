@@ -561,6 +561,8 @@ export interface SectionConfig {
   // configurations, and are treated as 'animation'.
   category?: MainCategory | 'movie' | 'series' | 'anime' | 'animasi' | 'animation';
   subCategory?: SubCategory | string;
+  // Film sections use a canonical genre filter (see src/utils/filmGenres).
+  genre?: string;
   tag?: string;
   sortBy?: 'newest' | 'rating' | 'views' | 'votes' | 'release_soonest';
   limit?: number;
