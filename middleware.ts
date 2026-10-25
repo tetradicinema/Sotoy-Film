@@ -7,7 +7,7 @@ import {
   buildCollectionTitle,
   buildCollectionDescription,
 } from './src/lib/edge/firestoreRest.js';
-import { injectMetaTags, FALLBACK_HTML_TEMPLATE } from './src/lib/edge/metaInjection.js';
+import { injectMetaTags, injectRootContent, buildArticleBodyHtml, buildFilmBodyHtml, FALLBACK_HTML_TEMPLATE } from './src/lib/edge/metaInjection.js';
 
 // Re-export for unit tests and external consumers
 export { isBotUserAgent };
@@ -153,7 +153,7 @@ export default async function middleware(request: Request): Promise<Response> {
         headers: {
           'content-type': 'text/html; charset=utf-8',
           'x-robots-tag': 'noindex, follow',
-          'cache-control': 'public, s-maxage=900, stale-while-revalidate=3600',
+          'cache-control': 'public, s-maxage=60, stale-while-revalidate=300',
         },
       });
     }
@@ -279,8 +279,8 @@ export default async function middleware(request: Request): Promise<Response> {
       mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
     };
 
-    // 5. Inject meta tags and return pre-rendered HTML response
-    const modifiedHtml = injectMetaTags(baseHtml, {
+    // 5. Inject meta tags and a server-rendered body block, then return HTML
+    const metaHtml = injectMetaTags(baseHtml, {
       title,
       description,
       image,
@@ -297,12 +297,16 @@ export default async function middleware(request: Request): Promise<Response> {
       schemaJson,
     });
 
+    const bodyHtml =
+      collection === 'films' ? buildFilmBodyHtml(data) : buildArticleBodyHtml(data);
+    const modifiedHtml = injectRootContent(metaHtml, bodyHtml);
+
     return new Response(modifiedHtml, {
       status: 200,
       headers: {
         'content-type': 'text/html; charset=utf-8',
         'x-robots-tag': 'all',
-        'cache-control': 'public, s-maxage=900, stale-while-revalidate=3600',
+        'cache-control': 'public, s-maxage=60, stale-while-revalidate=300',
       },
     });
   } catch (err) {

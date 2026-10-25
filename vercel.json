@@ -4,6 +4,17 @@
       "includeFiles": "data/sitemap-snapshot.xml"
     }
   },
+  "headers": [
+    {
+      "source": "/search",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    }
+  ],
   "redirects": [
     { "source": "/kategori/anime", "destination": "/kategori/animation", "permanent": true },
     { "source": "/kategori/anime/:path*", "destination": "/kategori/animation/:path*", "permanent": true },

@@ -13,6 +13,7 @@
  */
 
 import middleware, { isBotUserAgent } from '../middleware.js';
+import { STATIC_ROUTE_METADATA_CONFIG } from '../src/utils/seoMetadata.js';
 
 // Setup Mock Fetch for Standalone, Deterministic Test Execution (Bypasses Google API Free Quota Limitations)
 const originalFetch = globalThis.fetch;
@@ -37,7 +38,26 @@ globalThis.fetch = async (url: string | URL | Request, init?: RequestInit): Prom
         synopsis: { stringValue: 'A high school chemistry teacher diagnosed with inoperable lung cancer turns to manufacturing and selling methamphetamine.' },
         poster: { stringValue: '/breaking-bad-poster.png' },
         backdrop: { stringValue: '/breaking-bad-backdrop.png' },
-        director: { stringValue: 'Vince Gilligan' }
+        director: { stringValue: 'Vince Gilligan' },
+        duration: { stringValue: '49m' },
+        skorSotoy: { doubleValue: 9.2 },
+        totalVotes: { integerValue: '1250' },
+        genres: {
+          arrayValue: {
+            values: [
+              { stringValue: 'Drama' },
+              { stringValue: 'Crime' }
+            ]
+          }
+        },
+        cast: {
+          arrayValue: {
+            values: [
+              { stringValue: 'Bryan Cranston' },
+              { stringValue: 'Aaron Paul' }
+            ]
+          }
+        }
       }
     }), {
       status: 200,
@@ -83,7 +103,49 @@ globalThis.fetch = async (url: string | URL | Request, init?: RequestInit): Prom
         title: { stringValue: 'Published Article Title' },
         status: { stringValue: 'published' },
         slug: { stringValue: 'published-article' },
-        excerpt: { stringValue: 'This is a published article excerpt.' }
+        excerpt: { stringValue: 'This is a published article excerpt.' },
+        publishedAt: { stringValue: '2026-10-20T09:30:00.000Z' },
+        content: { stringValue: 'Dune is a sweeping epic. <script>alert("xss")</script> The spice must flow & the sandworm rises.' },
+        author: {
+          mapValue: {
+            fields: {
+              name: { stringValue: 'Raka Pratama' },
+              email: { stringValue: 'private-author@example.com' }
+            }
+          }
+        }
+      }
+    }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' }
+    });
+  }
+
+  if (urlStr.includes('/documents/articles/tiptap-article')) {
+    return new Response(JSON.stringify({
+      name: 'projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents/articles/tiptap-article',
+      fields: {
+        title: { stringValue: 'Tiptap Article Title' },
+        status: { stringValue: 'published' },
+        slug: { stringValue: 'tiptap-article' },
+        excerpt: { stringValue: 'A Tiptap formatted excerpt.' },
+        contentFormat: { stringValue: 'tiptap' },
+        contentJson: {
+          stringValue: JSON.stringify({
+            type: 'doc',
+            content: [
+              {
+                type: 'paragraph',
+                content: [{ type: 'text', text: 'First Tiptap paragraph about cinema.' }]
+              },
+              {
+                type: 'heading',
+                attrs: { level: 2 },
+                content: [{ type: 'text', text: 'Second Tiptap heading' }]
+              }
+            ]
+          })
+        }
       }
     }), {
       status: 200,
@@ -423,6 +485,145 @@ const TEST_CASES: TestCase[] = [
   },
 ];
 
+/**
+ * Extracts the contents of the #root element from the returned HTML.
+ */
+function getRootContent(html: string): string {
+  const match = /<div\b[^>]*\bid=["']root["'][^>]*>([\s\S]*?)<\/div>/i.exec(html);
+  return match ? match[1] : '';
+}
+
+async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }> {
+  console.log('\n--- Crawler body content assertions ---\n');
+
+  let passed = 0;
+  let failed = 0;
+
+  const check = (name: string, ok: boolean) => {
+    if (ok) {
+      passed++;
+      console.log(`✅ ${name}`);
+    } else {
+      failed++;
+      console.error(`❌ ${name}`);
+    }
+  };
+
+  const botRequest = (path: string) =>
+    new Request(`https://www.sotoyfilm.my.id${path}`, {
+      method: 'GET',
+      headers: {
+        'user-agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+      },
+    });
+
+  check(
+    "'/search' route metadata has noindex true",
+    STATIC_ROUTE_METADATA_CONFIG['/search']?.noindex === true
+  );
+
+  // Film body content for crawlers
+  {
+    const response = await middleware(botRequest('/film/breaking-bad'));
+    const html = await response.text();
+    const root = getRootContent(html);
+
+    check('bot film response injects <article> inside #root', root.includes('<article>'));
+    check(
+      'bot film body contains the h1 title and year',
+      root.includes('<h1>Breaking Bad (2008)</h1>')
+    );
+    check('bot film body contains synopsis text', root.includes('chemistry teacher'));
+    check(
+      'bot film body contains director, cast, genres and duration',
+      ['Vince Gilligan', 'Bryan Cranston', 'Drama', '49m'].every(value =>
+        root.includes(value)
+      )
+    );
+    check(
+      'bot film body contains Skor Sotoy and vote count',
+      root.includes('Skor Sotoy 9.2/10') && root.includes('1250 votes')
+    );
+    check(
+      'bot film response uses the short HTML cache',
+      (response.headers.get('cache-control') || '').includes('s-maxage=60')
+    );
+  }
+
+  // Article body content for crawlers
+  {
+    const response = await middleware(botRequest('/artikel/published-article'));
+    const html = await response.text();
+    const root = getRootContent(html);
+
+    check('bot article response injects <article> inside #root', root.includes('<article>'));
+    check(
+      'bot article body contains the h1 title',
+      root.includes('<h1>Published Article Title</h1>')
+    );
+    check('bot article body contains the author name', root.includes('Raka Pratama'));
+    check(
+      'bot article body does not leak the author email',
+      !root.includes('private-author@example.com')
+    );
+    check('bot article body contains the publish date', root.includes('2026-10-20'));
+    check(
+      'bot article body contains the excerpt and article text',
+      root.includes('This is a published article excerpt.') && root.includes('sweeping epic')
+    );
+    check(
+      'bot article body escapes special characters like <script>',
+      root.includes('&lt;script&gt;') && !root.includes('<script>')
+    );
+    check(
+      'bot article response uses the short HTML cache',
+      (response.headers.get('cache-control') || '').includes('s-maxage=60')
+    );
+  }
+
+  // Tiptap JSON content is flattened to plain paragraphs
+  {
+    const response = await middleware(botRequest('/artikel/tiptap-article'));
+    const root = getRootContent(await response.text());
+
+    check(
+      'bot article body extracts Tiptap text nodes as paragraphs',
+      root.includes('<p>First Tiptap paragraph about cinema.</p>') &&
+        root.includes('<p>Second Tiptap heading</p>')
+    );
+  }
+
+  // Human visitors are untouched
+  {
+    const response = await middleware(
+      new Request('https://www.sotoyfilm.my.id/film/breaking-bad', {
+        method: 'GET',
+        headers: {
+          'user-agent':
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+        },
+      })
+    );
+
+    check(
+      'normal browser UA still passes through untouched',
+      response.headers.get('x-middleware-next') === '1' && (await response.text()) === ''
+    );
+  }
+
+  // Unpublished articles fall through
+  {
+    const response = await middleware(botRequest('/artikel/draft-article'));
+
+    check(
+      'unpublished article still falls through',
+      response.headers.get('x-middleware-next') === '1' && (await response.text()) === ''
+    );
+  }
+
+  return { passed, failed };
+}
+
 async function runTests() {
   console.log('\n============================================================');
   console.log('🧪 Sotoy Film - Edge Middleware Bot Simulation Test Suite');
@@ -520,8 +721,12 @@ async function runTests() {
     }
   }
 
+  const crawlerResults = await runCrawlerBodyTests();
+  passedCount += crawlerResults.passed;
+  failedCount += crawlerResults.failed;
+
   console.log('\n============================================================');
-  console.log(`📊 Summary: ${passedCount} Passed, ${failedCount} Failed out of ${TEST_CASES.length} tests`);
+  console.log(`📊 Summary: ${passedCount} Passed, ${failedCount} Failed`);
   console.log('============================================================\n');
 
   if (failedCount > 0) {

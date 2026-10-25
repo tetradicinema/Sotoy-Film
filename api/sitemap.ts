@@ -12,6 +12,10 @@ import { slugify } from '../src/utils/slugify.js';
 
 const BASE_URL = 'https://www.sotoyfilm.my.id';
 
+// Static pages are not regenerated on a schedule; keep a single stable lastmod
+// so crawlers do not see a fake "changed today" signal on every request.
+const STATIC_LASTMOD = '2026-10-25';
+
 interface SitemapItem {
   link: string;
   title: string;
@@ -69,24 +73,24 @@ function formatDateToYMD(val: any, fallbackDate: string): string {
   return fallbackDate;
 }
 
-function getStaticItems(today: string): SitemapItem[] {
+function getStaticItems(): SitemapItem[] {
   return [
-    { link: `${BASE_URL}/`, title: 'Sotoy Film - Beranda', metaDescription: '', type: 'Halaman', lastmod: today, changefreq: 'daily', priority: '1.0' },
-    { link: `${BASE_URL}/film-database`, title: 'Film Database', metaDescription: '', type: 'Halaman', lastmod: today, changefreq: 'daily', priority: '0.9' },
-    { link: `${BASE_URL}/rekomendasi-film`, title: 'Rekomendasi Film', metaDescription: '', type: 'Halaman', lastmod: today, changefreq: 'weekly', priority: '0.8' },
-    { link: `${BASE_URL}/komunitas`, title: 'Komunitas', metaDescription: '', type: 'Halaman', lastmod: today, changefreq: 'daily', priority: '0.8' },
-    { link: `${BASE_URL}/panduan-leaderboard`, title: 'Panduan Leaderboard', metaDescription: '', type: 'Halaman', lastmod: today, changefreq: 'monthly', priority: '0.6' },
-    { link: `${BASE_URL}/tentang-kami`, title: 'Tentang Kami', metaDescription: '', type: 'Halaman', lastmod: today, changefreq: 'monthly', priority: '0.5' },
-    { link: `${BASE_URL}/kebijakan-privasi`, title: 'Kebijakan Privasi', metaDescription: '', type: 'Halaman', lastmod: today, changefreq: 'monthly', priority: '0.5' },
-    { link: `${BASE_URL}/syarat-ketentuan`, title: 'Syarat & Ketentuan', metaDescription: '', type: 'Halaman', lastmod: today, changefreq: 'monthly', priority: '0.5' },
-    { link: `${BASE_URL}/kontak-bisnis`, title: 'Kontak Bisnis', metaDescription: '', type: 'Halaman', lastmod: today, changefreq: 'monthly', priority: '0.5' },
-    { link: `${BASE_URL}/gabung-kritikus`, title: 'Gabung Kritikus', metaDescription: '', type: 'Halaman', lastmod: today, changefreq: 'monthly', priority: '0.5' },
-    { link: `${BASE_URL}/kriteria-kritikus`, title: 'Kriteria Kritikus', metaDescription: '', type: 'Halaman', lastmod: today, changefreq: 'monthly', priority: '0.5' },
-    { link: `${BASE_URL}/kategori/movies`, title: 'Kategori Movies', metaDescription: '', type: 'Kategori', lastmod: today, changefreq: 'weekly', priority: '0.7' },
-    { link: `${BASE_URL}/kategori/series`, title: 'Kategori Series', metaDescription: '', type: 'Kategori', lastmod: today, changefreq: 'weekly', priority: '0.7' },
-    { link: `${BASE_URL}/kategori/animation`, title: 'Kategori Animation', metaDescription: '', type: 'Kategori', lastmod: today, changefreq: 'weekly', priority: '0.7' },
-    { link: `${BASE_URL}/kategori/cinema-gear`, title: 'Kategori Cinema Gear', metaDescription: '', type: 'Kategori', lastmod: today, changefreq: 'weekly', priority: '0.7' },
-    { link: `${BASE_URL}/kategori/film-studies`, title: 'Kategori Film Studies', metaDescription: '', type: 'Kategori', lastmod: today, changefreq: 'weekly', priority: '0.7' },
+    { link: `${BASE_URL}/`, title: 'Sotoy Film - Beranda', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'daily', priority: '1.0' },
+    { link: `${BASE_URL}/film-database`, title: 'Film Database', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'daily', priority: '0.9' },
+    { link: `${BASE_URL}/rekomendasi-film`, title: 'Rekomendasi Film', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'weekly', priority: '0.8' },
+    { link: `${BASE_URL}/komunitas`, title: 'Komunitas', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'daily', priority: '0.8' },
+    { link: `${BASE_URL}/panduan-leaderboard`, title: 'Panduan Leaderboard', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.6' },
+    { link: `${BASE_URL}/tentang-kami`, title: 'Tentang Kami', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.5' },
+    { link: `${BASE_URL}/kebijakan-privasi`, title: 'Kebijakan Privasi', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.5' },
+    { link: `${BASE_URL}/syarat-ketentuan`, title: 'Syarat & Ketentuan', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.5' },
+    { link: `${BASE_URL}/kontak-bisnis`, title: 'Kontak Bisnis', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.5' },
+    { link: `${BASE_URL}/gabung-kritikus`, title: 'Gabung Kritikus', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.5' },
+    { link: `${BASE_URL}/kriteria-kritikus`, title: 'Kriteria Kritikus', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.5' },
+    { link: `${BASE_URL}/kategori/movies`, title: 'Kategori Movies', metaDescription: '', type: 'Kategori', lastmod: STATIC_LASTMOD, changefreq: 'weekly', priority: '0.7' },
+    { link: `${BASE_URL}/kategori/series`, title: 'Kategori Series', metaDescription: '', type: 'Kategori', lastmod: STATIC_LASTMOD, changefreq: 'weekly', priority: '0.7' },
+    { link: `${BASE_URL}/kategori/animation`, title: 'Kategori Animation', metaDescription: '', type: 'Kategori', lastmod: STATIC_LASTMOD, changefreq: 'weekly', priority: '0.7' },
+    { link: `${BASE_URL}/kategori/cinema-gear`, title: 'Kategori Cinema Gear', metaDescription: '', type: 'Kategori', lastmod: STATIC_LASTMOD, changefreq: 'weekly', priority: '0.7' },
+    { link: `${BASE_URL}/kategori/film-studies`, title: 'Kategori Film Studies', metaDescription: '', type: 'Kategori', lastmod: STATIC_LASTMOD, changefreq: 'weekly', priority: '0.7' },
   ];
 }
 
@@ -202,7 +206,7 @@ async function fetchAllCollectionDocs(collectionId: 'articles' | 'films'): Promi
 }
 
 async function generateLiveSitemapItems(today: string): Promise<SitemapItem[]> {
-  const staticItems = getStaticItems(today);
+  const staticItems = getStaticItems();
   const items: SitemapItem[] = [...staticItems];
 
   // Fetch articles
@@ -290,12 +294,12 @@ export async function handleSitemapRequest(req: any, res: any) {
 
     if (isCsv) {
       // Empty-safe fallback built from static pages only
-      const fallbackCsv = buildCsv(getStaticItems(today));
+      const fallbackCsv = buildCsv(getStaticItems());
       return sendResponse(res, 200, 'text/csv; charset=utf-8', fallbackCsv);
     } else {
       // Serve snapshot XML if available, otherwise static fallback XML
       const snapshotXml = getSnapshotXml();
-      const fallbackXml = snapshotXml || buildXml(getStaticItems(today));
+      const fallbackXml = snapshotXml || buildXml(getStaticItems());
       return sendResponse(res, 200, 'application/xml; charset=utf-8', fallbackXml);
     }
   }

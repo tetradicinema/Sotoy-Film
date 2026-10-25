@@ -771,6 +771,7 @@ export const STATIC_ROUTE_METADATA_CONFIG: Record<
       'Temukan film, review, artikel editorial, dan postingan komunitas dengan cepat di Sotoy Film.',
     keywords: ['cari film', 'search film', 'temukan ulasan'],
     type: 'website',
+    noindex: true,
   },
   '/tentang-kami': {
     title: 'Tentang Sotoy Film - Media Pop Culture & Sinema',
