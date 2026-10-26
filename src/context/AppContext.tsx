@@ -41,6 +41,7 @@ import { TERMS_VERSION } from '../utils/onboardingHelpers';
 import { normalizeFilmType } from '../utils/filmType';
 import { normalizeArticleCategory, normalizeInterestLabel, normalizeInterestProfile } from '../utils/articleCategory';
 import { getCollectionItemKey, reorderByKeys } from '../utils/collectionHelpers';
+import { useRestDataFallback } from '../hooks/useRestDataFallback';
 import {
   DEFAULT_FALLBACK_AUTHOR,
   INITIAL_BUZZ,
@@ -1268,6 +1269,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     refreshFilms({ isInitialMount: true });
     refreshArticles();
   }, [refreshFilms, refreshArticles]);
+
+  useRestDataFallback({ filmsCount: films.length, articlesCount: articles.length, setFilms, setArticles, setIsLoadingFilms, setIsLoadingArticles });
 
   // Fetch logged-in user ratings for quick access
   useEffect(() => {
