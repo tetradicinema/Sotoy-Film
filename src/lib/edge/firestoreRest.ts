@@ -5,6 +5,7 @@
  */
 
 import { slugify } from '../../utils/slugify.js';
+import type { SeoListsPayload } from '../../utils/seoPrefetch.js';
 import firebaseConfig from '../../../firebase-applet-config.json' with { type: 'json' };
 
 const envApiKey = typeof process !== 'undefined' && process.env ? process.env.VITE_FIREBASE_API_KEY : undefined;
@@ -195,6 +196,23 @@ export const LIST_ARTICLE_FIELD_PATHS = [
 const SEO_LIST_CACHE_TTL_MS = 60 * 1000; // 60 seconds
 const SEO_LIST_PAGE_SIZE = 300;
 const SEO_LIST_ARTICLE_LIMIT = 50;
+const SEO_LIST_FILM_MAX_PAGES = 3;
+
+/**
+ * True when the bot-only #seo-lists payload already hydrated the matching list.
+ * Refresh routines must then keep the loading flag false: flipping it back to
+ * true would replace already-rendered cards with skeletons while Googlebot's
+ * getDocs call never resolves. Human visitors have no payload, so this stays
+ * false for them and their behaviour is unchanged.
+ */
+export function shouldSkipLoadingFlag(
+  lists: SeoListsPayload | null,
+  collection: 'articles' | 'films'
+): boolean {
+  if (!lists) return false;
+  const docs = lists[collection];
+  return Array.isArray(docs) && docs.length > 0;
+}
 
 interface CachedSeoList {
   docs: any[];
@@ -223,12 +241,14 @@ function getListArticleTime(data: Record<string, any>): number {
 }
 
 /**
- * Fetches one list page (up to 300 docs) with a field mask limited to the
- * fields used by list cards. Articles are filtered to published items, sorted
- * newest first and capped at 50. Returns null on any failure so the caller can
- * distinguish "fetch failed" from "collection is empty".
+ * Fetches list-card documents with a field mask limited to the fields used by
+ * list cards. Films follow nextPageToken for up to 3 pages (the catalog is
+ * already close to one 300-document page); articles stay on one page, filtered
+ * to published items, sorted newest first and capped at 50.
  *
- * Successful responses are cached in memory for 60 seconds.
+ * A failed first page returns null so callers can distinguish "fetch failed"
+ * from "collection is empty". A later page failure returns the documents
+ * already collected. Successful responses are cached in memory for 60 seconds.
  */
 export async function fetchListCollectionDocuments(
   collection: 'films' | 'articles'
@@ -240,36 +260,70 @@ export async function fetchListCollectionDocuments(
 
   const fieldPaths =
     collection === 'films' ? LIST_FILM_FIELD_PATHS : LIST_ARTICLE_FIELD_PATHS;
+  const maxPages = collection === 'films' ? SEO_LIST_FILM_MAX_PAGES : 1;
 
   try {
     const maskParams = fieldPaths
       .map(fieldPath => `mask.fieldPaths=${encodeURIComponent(fieldPath)}`)
       .join('&');
-    const endpoint = `${FIRESTORE_DOCUMENTS_URL}/${collection}?pageSize=${SEO_LIST_PAGE_SIZE}&key=${FIRESTORE_API_KEY}&${maskParams}`;
+    const baseEndpoint = `${FIRESTORE_DOCUMENTS_URL}/${collection}?pageSize=${SEO_LIST_PAGE_SIZE}&key=${FIRESTORE_API_KEY}&${maskParams}`;
 
-    const res = await fetchWithTimeout(
-      endpoint,
-      { headers: { Accept: 'application/json' } },
-      2500
-    );
-    if (!res.ok) return null;
+    const collected: any[] = [];
+    let pageToken: string | undefined;
+    let firstPageSucceeded = false;
 
-    const payload = await res.json();
-    if (!Array.isArray(payload?.documents)) return null;
+    for (let page = 0; page < maxPages; page++) {
+      const endpoint = pageToken
+        ? `${baseEndpoint}&pageToken=${encodeURIComponent(pageToken)}`
+        : baseEndpoint;
 
-    let docs = payload.documents
-      .map((raw: any) => {
-        const parsed = parseFirestoreFields(raw);
-        if (!parsed.id && typeof raw?.name === 'string') {
-          const docId = raw.name.split('/').pop();
-          if (docId) parsed.id = docId;
-        }
-        return parsed;
-      })
-      .filter(
-        (doc: Record<string, any>) => doc && typeof doc === 'object' && Object.keys(doc).length > 0
+      let res: Response;
+      try {
+        res = await fetchWithTimeout(
+          endpoint,
+          { headers: { Accept: 'application/json' } },
+          2500
+        );
+      } catch {
+        break;
+      }
+      if (!res.ok) break;
+
+      let payload: any;
+      try {
+        payload = await res.json();
+      } catch {
+        break;
+      }
+      if (!Array.isArray(payload?.documents)) break;
+
+      firstPageSucceeded = true;
+      collected.push(
+        ...payload.documents
+          .map((raw: any) => {
+            const parsed = parseFirestoreFields(raw);
+            if (!parsed.id && typeof raw?.name === 'string') {
+              const docId = raw.name.split('/').pop();
+              if (docId) parsed.id = docId;
+            }
+            return parsed;
+          })
+          .filter(
+            (doc: Record<string, any>) =>
+              doc && typeof doc === 'object' && Object.keys(doc).length > 0
+          )
       );
 
+      pageToken =
+        typeof payload.nextPageToken === 'string' && payload.nextPageToken
+          ? payload.nextPageToken
+          : undefined;
+      if (!pageToken) break;
+    }
+
+    if (!firstPageSucceeded) return null;
+
+    let docs = collected;
     if (collection === 'articles') {
       docs = docs
         .filter((doc: Record<string, any>) => isArticlePublished(doc))
@@ -279,7 +333,7 @@ export async function fetchListCollectionDocuments(
         )
         .slice(0, SEO_LIST_ARTICLE_LIMIT);
     } else {
-      docs = docs.slice(0, SEO_LIST_PAGE_SIZE);
+      docs = docs.slice(0, SEO_LIST_PAGE_SIZE * SEO_LIST_FILM_MAX_PAGES);
     }
 
     seoListCache[collection] = { docs, timestamp: Date.now() };

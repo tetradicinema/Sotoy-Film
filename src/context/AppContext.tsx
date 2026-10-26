@@ -45,6 +45,7 @@ import { useRestDataFallback } from '../hooks/useRestDataFallback';
 import { readSeoLists } from '../utils/seoPrefetch';
 import type { SeoListsPayload } from '../utils/seoPrefetch';
 import { normalizeRestArticle, normalizeRestFilm } from '../utils/firestoreRestClient';
+import { shouldSkipLoadingFlag } from '../lib/edge/firestoreRest';
 import {
   DEFAULT_FALLBACK_AUTHOR,
   INITIAL_BUZZ,
@@ -1101,7 +1102,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const fetchPromise = (async () => {
       try {
-        setIsLoadingFilms(true);
+        if (!shouldSkipLoadingFlag(getInitialSeoLists(), 'films')) {
+          setIsLoadingFilms(true);
+        }
 
         // Page through entire films collection with orderBy(documentId()) + limit(500)
         const filmMap = new Map<string, FilmItem>();
@@ -1169,7 +1172,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Optimized fetch for articles with limit(50), ordered by publishedAtTimestamp desc
   const refreshArticles = useCallback(async () => {
     try {
-      setIsLoadingArticles(true);
+      if (!shouldSkipLoadingFlag(getInitialSeoLists(), 'articles')) {
+        setIsLoadingArticles(true);
+      }
       let snapshot;
       try {
         snapshot = await getDocs(query(collection(db, 'articles'), orderBy('publishedAtTimestamp', 'desc'), limit(50)));

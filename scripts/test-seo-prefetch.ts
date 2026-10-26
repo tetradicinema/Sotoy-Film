@@ -18,6 +18,11 @@ import {
   readSeoLists,
   readSeoPrefetch,
 } from '../src/utils/seoPrefetch.js';
+import {
+  clearSeoListsCache,
+  fetchListCollectionDocuments,
+  shouldSkipLoadingFlag,
+} from '../src/lib/edge/firestoreRest.js';
 import { handleSitemapRequest } from '../api/sitemap.js';
 
 interface Check {
@@ -144,6 +149,38 @@ async function main(): Promise<void> {
   check(
     'empty arrays are still a valid #seo-lists payload',
     readSeoLists(makeDoc(JSON.stringify({ films: [], articles: [] }))) !== null
+  );
+
+  // --- shouldSkipLoadingFlag ----------------------------------------------
+  check(
+    'shouldSkipLoadingFlag is false for null lists',
+    shouldSkipLoadingFlag(null, 'articles') === false &&
+      shouldSkipLoadingFlag(null, 'films') === false
+  );
+  check(
+    'shouldSkipLoadingFlag is false for empty lists',
+    shouldSkipLoadingFlag({ films: [], articles: [] }, 'articles') === false &&
+      shouldSkipLoadingFlag({ films: [], articles: [] }, 'films') === false
+  );
+
+  const articleOnlyLists = { films: [], articles: [{ id: 'article-1' }] };
+  check(
+    'shouldSkipLoadingFlag is true for a non-empty articles list',
+    shouldSkipLoadingFlag(articleOnlyLists, 'articles') === true
+  );
+  check(
+    'shouldSkipLoadingFlag does not skip films when only articles are present',
+    shouldSkipLoadingFlag(articleOnlyLists, 'films') === false
+  );
+
+  const filmOnlyLists = { films: [{ id: 'film-1' }], articles: [] };
+  check(
+    'shouldSkipLoadingFlag is true for a non-empty films list',
+    shouldSkipLoadingFlag(filmOnlyLists, 'films') === true
+  );
+  check(
+    'shouldSkipLoadingFlag does not skip articles when only films are present',
+    shouldSkipLoadingFlag(filmOnlyLists, 'articles') === false
   );
 
   // --- serializer / injector (edge) ---------------------------------------
@@ -430,6 +467,7 @@ async function main(): Promise<void> {
     JSON.parse(similar).data.text === '<>&\u2028\u2029'
   );
 
+  await runListPageChecks();
   await runSitemapChecks();
 
   const failed = checks.filter(item => !item.ok).length;
@@ -439,6 +477,144 @@ async function main(): Promise<void> {
 
   if (failed > 0) {
     process.exit(1);
+  }
+}
+
+async function runListPageChecks(): Promise<void> {
+  console.log('\n--- List pagination assertions ---\n');
+
+  const realFetch = globalThis.fetch;
+
+  const filmDocResponse = (id: string, nextPageToken?: string) =>
+    new Response(
+      JSON.stringify({
+        documents: [
+          {
+            name: `projects/test/databases/test/documents/films/${id}`,
+            fields: {
+              id: { stringValue: id },
+              slug: { stringValue: id },
+              title: { stringValue: `Film ${id}` },
+            },
+          },
+        ],
+        ...(nextPageToken ? { nextPageToken } : {}),
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } }
+    );
+
+  try {
+    // Films follow nextPageToken and stop after three pages.
+    {
+      clearSeoListsCache();
+      const urls: string[] = [];
+      globalThis.fetch = (async (url: string | URL | Request) => {
+        const urlStr = url.toString();
+        urls.push(urlStr);
+
+        if (!urlStr.includes('/documents/films?')) {
+          return new Response(JSON.stringify({ documents: [] }), { status: 200 });
+        }
+        if (!urlStr.includes('pageToken=')) return filmDocResponse('film-1', 'token-2');
+        if (urlStr.includes('pageToken=token-2')) return filmDocResponse('film-2', 'token-3');
+        // The third page still advertises another page; we must stop here.
+        return filmDocResponse('film-3', 'token-4');
+      }) as typeof fetch;
+
+      const films = await fetchListCollectionDocuments('films');
+
+      check(
+        'films follows nextPageToken up to 3 pages and stops',
+        films?.length === 3 &&
+          urls.length === 3 &&
+          films[0].id === 'film-1' &&
+          films[1].id === 'film-2' &&
+          films[2].id === 'film-3'
+      );
+      check(
+        'film pagination sends sequential pageToken requests',
+        urls[1]?.includes('pageToken=token-2') === true &&
+          urls[2]?.includes('pageToken=token-3') === true
+      );
+      check(
+        'film pagination keeps the list field mask and page size',
+        urls.every(
+          url =>
+            url.includes('pageSize=300') &&
+            url.includes('mask.fieldPaths=id') &&
+            url.includes('mask.fieldPaths=title') &&
+            !url.includes('mask.fieldPaths=content')
+        )
+      );
+    }
+
+    // A failure on page 2 returns the first page instead of throwing/losing it.
+    {
+      clearSeoListsCache();
+      let calls = 0;
+      globalThis.fetch = (async () => {
+        calls++;
+        if (calls === 1) return filmDocResponse('film-1', 'token-2');
+        return new Response(JSON.stringify({ error: { code: 503 } }), { status: 503 });
+      }) as typeof fetch;
+
+      const films = await fetchListCollectionDocuments('films');
+
+      check(
+        'a failed second film page keeps the collected documents',
+        films?.length === 1 && films[0].id === 'film-1' && calls === 2
+      );
+    }
+
+    // Articles stay on a single page even when a token is present.
+    {
+      clearSeoListsCache();
+      let calls = 0;
+      globalThis.fetch = (async () => {
+        calls++;
+        return new Response(
+          JSON.stringify({
+            documents: [
+              {
+                name: 'projects/test/databases/test/documents/articles/article-1',
+                fields: {
+                  id: { stringValue: 'article-1' },
+                  slug: { stringValue: 'article-1' },
+                  title: { stringValue: 'Article 1' },
+                  status: { stringValue: 'published' },
+                },
+              },
+            ],
+            nextPageToken: 'more-articles',
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        );
+      }) as typeof fetch;
+
+      const articles = await fetchListCollectionDocuments('articles');
+
+      check(
+        'articles stay on one page even when a nextPageToken is present',
+        calls === 1 && articles?.length === 1 && articles[0].id === 'article-1'
+      );
+    }
+
+    // A failed first page still reports failure as null.
+    {
+      clearSeoListsCache();
+      globalThis.fetch = (async () =>
+        new Response(JSON.stringify({ error: { code: 503 } }), {
+          status: 503,
+        })) as typeof fetch;
+
+      check(
+        'a failed first film page returns null',
+        (await fetchListCollectionDocuments('films')) === null
+      );
+    }
+  } finally {
+    clearSeoListsCache();
+    globalThis.fetch = realFetch;
   }
 }
 
