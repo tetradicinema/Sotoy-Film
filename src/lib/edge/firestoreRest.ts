@@ -214,6 +214,23 @@ export function shouldSkipLoadingFlag(
   return Array.isArray(docs) && docs.length > 0;
 }
 
+/**
+ * True only when the bot-only #seo-lists payload hydrated `kind` and the
+ * Firestore SDK returned no documents for it. Google's renderer can resolve
+ * the SDK query with an empty snapshot even though the crawler HTML already
+ * carries the list; applying that empty result would wipe the hydrated cards.
+ * Normal visitors have no payload, so this stays false for them.
+ */
+export function shouldKeepSeoList(
+  lists: SeoListsPayload | null,
+  kind: 'films' | 'articles',
+  fetchedCount: number
+): boolean {
+  if (!lists) return false;
+  const docs = lists[kind];
+  return Array.isArray(docs) && docs.length > 0 && fetchedCount === 0;
+}
+
 interface CachedSeoList {
   docs: any[];
   timestamp: number;

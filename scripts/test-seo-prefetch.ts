@@ -21,6 +21,7 @@ import {
 import {
   clearSeoListsCache,
   fetchListCollectionDocuments,
+  shouldKeepSeoList,
   shouldSkipLoadingFlag,
 } from '../src/lib/edge/firestoreRest.js';
 import { handleSitemapRequest } from '../api/sitemap.js';
@@ -181,6 +182,37 @@ async function main(): Promise<void> {
   check(
     'shouldSkipLoadingFlag does not skip articles when only films are present',
     shouldSkipLoadingFlag(filmOnlyLists, 'articles') === false
+  );
+
+  // --- shouldKeepSeoList ---------------------------------------------------
+  const bothLists = { films: [{ id: 'film-1' }], articles: [{ id: 'article-1' }] };
+
+  check(
+    'shouldKeepSeoList is false for null lists',
+    shouldKeepSeoList(null, 'films', 0) === false &&
+      shouldKeepSeoList(null, 'articles', 0) === false
+  );
+  check(
+    'shouldKeepSeoList keeps hydrated lists when the fetched count is zero',
+    shouldKeepSeoList(bothLists, 'films', 0) === true &&
+      shouldKeepSeoList(bothLists, 'articles', 0) === true
+  );
+  check(
+    'shouldKeepSeoList is false when Firestore returned documents',
+    shouldKeepSeoList(bothLists, 'films', 300) === false &&
+      shouldKeepSeoList(bothLists, 'articles', 1) === false
+  );
+  check(
+    'shouldKeepSeoList is false when that kind has an empty hydrated list',
+    shouldKeepSeoList(articleOnlyLists, 'films', 0) === false &&
+      shouldKeepSeoList(filmOnlyLists, 'articles', 0) === false
+  );
+  check(
+    'shouldKeepSeoList evaluates films and articles independently',
+    shouldKeepSeoList(articleOnlyLists, 'articles', 0) === true &&
+      shouldKeepSeoList(filmOnlyLists, 'films', 0) === true &&
+      shouldKeepSeoList(articleOnlyLists, 'films', 0) === false &&
+      shouldKeepSeoList(filmOnlyLists, 'articles', 0) === false
   );
 
   // --- serializer / injector (edge) ---------------------------------------

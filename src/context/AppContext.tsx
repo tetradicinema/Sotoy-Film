@@ -45,7 +45,7 @@ import { useRestDataFallback } from '../hooks/useRestDataFallback';
 import { readSeoLists } from '../utils/seoPrefetch';
 import type { SeoListsPayload } from '../utils/seoPrefetch';
 import { normalizeRestArticle, normalizeRestFilm } from '../utils/firestoreRestClient';
-import { shouldSkipLoadingFlag } from '../lib/edge/firestoreRest';
+import { shouldKeepSeoList, shouldSkipLoadingFlag } from '../lib/edge/firestoreRest';
 import {
   DEFAULT_FALLBACK_AUTHOR,
   INITIAL_BUZZ,
@@ -1143,6 +1143,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
 
         const sortedFilms = Array.from(filmMap.values()).sort((a, b) => (a.trendingRank || 99) - (b.trendingRank || 99));
+        if (shouldKeepSeoList(getInitialSeoLists(), 'films', sortedFilms.length)) {
+          console.warn('[AppContext] Empty films snapshot ignored: #seo-lists already hydrated the list.');
+          setIsLoadingFilms(false);
+          return;
+        }
         setFilms(sortedFilms);
         lastFilmsFetchTsRef.current = Date.now();
 
@@ -1210,6 +1215,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return 0;
       };
       const fetchedArticles = Array.from(articleMap.values());
+      if (shouldKeepSeoList(getInitialSeoLists(), 'articles', fetchedArticles.length)) {
+        console.warn('[AppContext] Empty articles snapshot ignored: #seo-lists already hydrated the list.');
+        setIsLoadingArticles(false);
+        return;
+      }
       setArticles(fetchedArticles.sort((a, b) => getArticleTime(b) - getArticleTime(a)));
       setIsLoadingArticles(false);
     } catch (err: any) {
