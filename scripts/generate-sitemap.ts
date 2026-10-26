@@ -263,8 +263,9 @@ async function run() {
 
   fs.writeFileSync(sitemapDest, xml, 'utf-8');
   fs.writeFileSync(publicSitemapDest, xml, 'utf-8');
+  fs.writeFileSync(path.join(publicDir, 'sitemap_index.xml'), xml, 'utf-8');
 
-  console.log(`[Sitemap Builder] Successfully wrote ${totalUrls} URLs (${articlesCount} articles, ${filmsCount} films) to ${sitemapDest} and ${publicSitemapDest}`);
+  console.log(`[Sitemap Builder] Successfully wrote ${totalUrls} URLs (${articlesCount} articles, ${filmsCount} films) to ${sitemapDest}, ${publicSitemapDest}, and public/sitemap_index.xml`);
 
 }
 

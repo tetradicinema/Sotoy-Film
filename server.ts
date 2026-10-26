@@ -39,7 +39,7 @@ async function startServer() {
   });
 
   // Explicit XML Sitemap & CSV routes with correct MIME types
-  app.get("/sitemap.xml", (req, res) => {
+  app.get(["/sitemap.xml", "/sitemap_index.xml"], (req, res) => {
     return handleSitemapRequest(req, res);
   });
 

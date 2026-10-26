@@ -37,8 +37,9 @@
   ],
   "rewrites": [
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },
+    { "source": "/sitemap_index.xml", "destination": "/api/sitemap" },
     { "source": "/sitemap.csv", "destination": "/api/sitemap?format=csv" },
     { "source": "/robots.txt", "destination": "/robots.txt" },
-    { "source": "/((?!api/|sitemap\\.xml|sitemap\\.csv|robots\\.txt|llms\\.txt|.*\\..*).*)", "destination": "/index.html" }
+    { "source": "/((?!api/|sitemap\\.xml|sitemap_index\\.xml|sitemap\\.csv|robots\\.txt|llms\\.txt|.*\\..*).*)", "destination": "/index.html" }
   ]
 }

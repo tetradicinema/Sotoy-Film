@@ -23,6 +23,7 @@ Allow: /gabung-kritikus
 Allow: /kriteria-kritikus
 Allow: /critic-criteria
 Allow: /sitemap.xml
+Allow: /sitemap_index.xml
 Allow: /sitemap.csv
 
 # Disallow administrative and private views
