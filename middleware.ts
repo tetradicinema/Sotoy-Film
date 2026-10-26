@@ -2,6 +2,9 @@ import { next } from '@vercel/edge';
 import { isBotUserAgent } from './src/lib/edge/botDetection.js';
 import {
   fetchEntityData,
+  fetchFullEntityDoc,
+  getEntityDocumentId,
+  isArticlePublished,
   fetchWithTimeout,
   fetchCollectionPreview,
   buildCollectionTitle,
@@ -174,9 +177,29 @@ export default async function middleware(request: Request): Promise<Response> {
     }
 
     // 2. Fetch the entity data from Firestore REST API (with 3-way slug matching)
-    const data = await fetchEntityData(collection, slug);
+    let data = await fetchEntityData(collection, slug);
     if (!data) {
       // Fall through to normal SPA rather than returning an error
+      return safeNext();
+    }
+
+    // 2b. The entity lookup only requests meta fields, so enrich it with the
+    // full document. Crawler body content and the client prefetch payload need
+    // content, contentJson, author, publishedAt, genres, cast, scores, etc.
+    // If this extra read fails, keep the meta-fields-only data unchanged.
+    const requestedDocId =
+      typeof data.id === 'string' && data.id.trim() ? data.id.trim() : '';
+    const docId = requestedDocId || getEntityDocumentId(data);
+    if (docId) {
+      const fullDoc = await fetchFullEntityDoc(collection, docId);
+      if (fullDoc) {
+        data = { ...data, ...fullDoc };
+      }
+    }
+
+    // Publication status is re-checked on the merged document: the full read
+    // must never expose a draft, trashed, or not-yet-due scheduled article.
+    if (collection === 'articles' && !isArticlePublished(data)) {
       return safeNext();
     }
 

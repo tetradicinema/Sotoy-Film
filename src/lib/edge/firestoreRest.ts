@@ -247,6 +247,37 @@ const UNPUBLISHED_NEGATIVE_TTL_MS = 60 * 1000; // 60 seconds
 const negativeCache = new Map<string, number>();
 
 /**
+ * Internal non-enumerable property used to remember which Firestore document
+ * produced a parsed entity. It is deliberately non-enumerable so it never
+ * leaks into prefetch payloads, JSON serialisation, or `{ ...data }` merges.
+ */
+const DOC_ID_PROPERTY = '__docId';
+
+function attachDocumentId(
+  parsed: Record<string, any>,
+  docId: string | undefined
+): Record<string, any> {
+  if (docId) {
+    Object.defineProperty(parsed, DOC_ID_PROPERTY, {
+      value: docId,
+      enumerable: false,
+      configurable: true,
+    });
+  }
+  return parsed;
+}
+
+/**
+ * Returns the Firestore document id that produced an entity from fetchEntityData().
+ * Empty when the id could not be determined.
+ */
+export function getEntityDocumentId(data: Record<string, any> | null | undefined): string {
+  if (!data || typeof data !== 'object') return '';
+  const docId = (data as Record<string, any>)[DOC_ID_PROPERTY];
+  return typeof docId === 'string' ? docId.trim() : '';
+}
+
+/**
  * Fetches content from Firestore REST API by direct ID or by searching collection with slug matching:
  * 1. Negative cache check (0 reads if known missing slug)
  * 2. Direct document GET if slug is the document ID (fast path: 1 read)
@@ -286,7 +317,9 @@ export async function fetchEntityData(
           return null;
         }
         negativeCache.delete(cacheKey);
-        return parsed;
+        const docId =
+          typeof doc?.name === 'string' ? doc.name.split('/').pop() : undefined;
+        return attachDocumentId(parsed, docId || slug);
       }
     }
   } catch {
@@ -332,7 +365,11 @@ export async function fetchEntityData(
               return null;
             }
             negativeCache.delete(cacheKey);
-            return parsed;
+            const docId =
+              typeof matchedDoc.name === 'string'
+                ? matchedDoc.name.split('/').pop()
+                : undefined;
+            return attachDocumentId(parsed, docId || slug);
           }
         }
       }
@@ -357,7 +394,7 @@ export async function fetchEntityData(
 
       if (isMatch) {
         negativeCache.delete(cacheKey);
-        return parsed;
+        return attachDocumentId(parsed, docId || slug);
       }
     }
   } catch (err) {
@@ -367,6 +404,34 @@ export async function fetchEntityData(
   // 5. Store in negative cache so repeated crawls of unknown URLs do not trigger scans
   negativeCache.set(cacheKey, now + NEGATIVE_CACHE_TTL_MS);
   return null;
+}
+
+/**
+ * Fetches a complete Firestore document (no field mask) for crawler body
+ * rendering and the prefetch payload. Returns null on any failure so callers
+ * can keep the meta-fields-only data.
+ */
+export async function fetchFullEntityDoc(
+  collection: 'films' | 'articles',
+  docId: string
+): Promise<Record<string, any> | null> {
+  const safeDocId = typeof docId === 'string' ? docId.trim() : '';
+  if (!safeDocId) return null;
+
+  try {
+    const res = await fetchWithTimeout(
+      `${FIRESTORE_DOCUMENTS_URL}/${collection}/${encodeURIComponent(safeDocId)}?key=${FIRESTORE_API_KEY}`,
+      { headers: { Accept: 'application/json' } },
+      2000
+    );
+    if (!res.ok) return null;
+
+    const parsed = parseFirestoreFields(await res.json());
+    if (!parsed || Object.keys(parsed).length === 0) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
 }
 
 /* -------------------------------------------------------------------------- */

@@ -17,6 +17,8 @@ import { STATIC_ROUTE_METADATA_CONFIG } from '../src/utils/seoMetadata.js';
 
 // Setup Mock Fetch for Standalone, Deterministic Test Execution (Bypasses Google API Free Quota Limitations)
 const originalFetch = globalThis.fetch;
+/** Counts per-document GETs so the first read can return meta fields only. */
+const docFetchCounts: Record<string, number> = {};
 globalThis.fetch = async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
   const urlStr = url.toString();
 
@@ -186,6 +188,81 @@ globalThis.fetch = async (url: string | URL | Request, init?: RequestInit): Prom
     });
   }
 
+  if (urlStr.includes('/documents/articles/meta-only-article')) {
+    docFetchCounts['meta-only-article'] = (docFetchCounts['meta-only-article'] || 0) + 1;
+    const docName =
+      'projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents/articles/meta-only-article';
+
+    // First read mimics fetchEntityData(): meta fields only.
+    if (docFetchCounts['meta-only-article'] === 1) {
+      return new Response(JSON.stringify({
+        name: docName,
+        fields: {
+          id: { stringValue: 'meta-only-article' },
+          title: { stringValue: 'Meta Only Article Title' },
+          status: { stringValue: 'published' },
+          slug: { stringValue: 'meta-only-article' },
+          excerpt: { stringValue: 'Meta-only lookup excerpt.' }
+        }
+      }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' }
+      });
+    }
+
+    // Second read mimics fetchFullEntityDoc(): full document, no field mask.
+    return new Response(JSON.stringify({
+      name: docName,
+      fields: {
+        id: { stringValue: 'meta-only-article' },
+        title: { stringValue: 'Meta Only Article Title' },
+        status: { stringValue: 'published' },
+        slug: { stringValue: 'meta-only-article' },
+        excerpt: { stringValue: 'Meta-only lookup excerpt.' },
+        publishedAt: { stringValue: '2026-10-22T08:00:00.000Z' },
+        content: { stringValue: 'Meta-only lookup body text about a slow-burn western.' },
+        contentFormat: { stringValue: 'markdown' },
+        author: {
+          mapValue: {
+            fields: {
+              name: { stringValue: 'Nadia Prameswari' },
+              email: { stringValue: 'private-full-author@example.com' }
+            }
+          }
+        }
+      }
+    }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' }
+    });
+  }
+
+  if (urlStr.includes('/documents/articles/full-doc-fail-article')) {
+    docFetchCounts['full-doc-fail-article'] = (docFetchCounts['full-doc-fail-article'] || 0) + 1;
+
+    // Meta lookup succeeds; the follow-up full-document read fails.
+    if (docFetchCounts['full-doc-fail-article'] === 1) {
+      return new Response(JSON.stringify({
+        name: 'projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents/articles/full-doc-fail-article',
+        fields: {
+          id: { stringValue: 'full-doc-fail-article' },
+          title: { stringValue: 'Full Doc Fail Article' },
+          status: { stringValue: 'published' },
+          slug: { stringValue: 'full-doc-fail-article' },
+          excerpt: { stringValue: 'Metadata-only excerpt survives.' }
+        }
+      }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' }
+      });
+    }
+
+    return new Response(JSON.stringify({ error: { code: 503, message: 'Unavailable' } }), {
+      status: 503,
+      headers: { 'content-type': 'application/json' }
+    });
+  }
+
   // 3. Mock general fallback collection requests (Strategic fallback list)
   if (urlStr.includes('/documents/films')) {
     return new Response(JSON.stringify({
@@ -259,6 +336,27 @@ const TEST_CASES: TestCase[] = [
       'og:url',
       'summary_large_image',
     ],
+  },
+  {
+    name: 'Google-InspectionTool on Film route (Search Console live test)',
+    userAgent: 'Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 (compatible; Google-InspectionTool/1.0)',
+    path: '/film/boyhood',
+    expectedBranch: 'BOT',
+    expectedMetaPatterns: ['<title>Boyhood', 'og:title', 'og:image', 'rel="canonical"'],
+  },
+  {
+    name: 'GoogleOther crawler on Film route',
+    userAgent: 'Mozilla/5.0 (compatible; GoogleOther)',
+    path: '/film/boyhood',
+    expectedBranch: 'BOT',
+    expectedMetaPatterns: ['<title>Boyhood', 'og:title', 'og:url'],
+  },
+  {
+    name: 'Storebot-Google on Film route',
+    userAgent: 'Storebot-Google/1.0',
+    path: '/film/boyhood',
+    expectedBranch: 'BOT',
+    expectedMetaPatterns: ['<title>Boyhood', 'og:title', 'og:image'],
   },
 
   // --- BOTS: Social Media & Messaging Previewers ---
@@ -421,6 +519,18 @@ const TEST_CASES: TestCase[] = [
     name: 'Android Chrome (Mobile Human)',
     userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36',
     path: '/film/breaking-bad',
+    expectedBranch: 'HUMAN',
+  },
+  {
+    name: 'Windows Chrome on Film route (Desktop Human)',
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+    path: '/film/boyhood',
+    expectedBranch: 'HUMAN',
+  },
+  {
+    name: 'iPhone Safari on Film route (Mobile Human)',
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+    path: '/film/boyhood',
     expectedBranch: 'HUMAN',
   },
 
@@ -592,6 +702,71 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
       'bot article body extracts Tiptap text nodes as paragraphs',
       root.includes('<p>First Tiptap paragraph about cinema.</p>') &&
         root.includes('<p>Second Tiptap heading</p>')
+    );
+  }
+
+  // Meta-only lookup is enriched with the full article document
+  {
+    const response = await middleware(botRequest('/artikel/meta-only-article'));
+    const html = await response.text();
+    const root = getRootContent(html);
+
+    check(
+      'meta-only lookup still renders a bot response',
+      response.status === 200 && response.headers.get('x-middleware-next') !== '1'
+    );
+    check(
+      'full-document content reaches the crawler body',
+      root.includes('Meta-only lookup body text about a slow-burn western.')
+    );
+    check(
+      'full-document author reaches the crawler body',
+      root.includes('Nadia Prameswari')
+    );
+    check(
+      'full-document author email is not rendered in the body',
+      !root.includes('private-full-author@example.com')
+    );
+
+    const prefetch = /<script id="seo-prefetch" type="application\/json">([\s\S]*?)<\/script>/.exec(
+      html
+    )?.[1] || '';
+    let parsed: any = null;
+    try {
+      parsed = prefetch ? JSON.parse(prefetch) : null;
+    } catch {
+      parsed = null;
+    }
+
+    check(
+      'prefetch payload includes full-document content',
+      typeof parsed?.data?.content === 'string' &&
+        parsed.data.content.includes('slow-burn western')
+    );
+    check(
+      'prefetch payload includes the full-document author name',
+      parsed?.data?.author?.name === 'Nadia Prameswari'
+    );
+    check(
+      'prefetch payload drops the full-document author email',
+      prefetch.length > 0 && !prefetch.includes('private-full-author@example.com')
+    );
+  }
+
+  // Full-document fetch failure keeps the meta-only crawler block
+  {
+    const response = await middleware(botRequest('/artikel/full-doc-fail-article'));
+    const html = await response.text();
+    const root = getRootContent(html);
+
+    check(
+      'failed full-document fetch still renders a bot response',
+      response.status === 200 && response.headers.get('x-middleware-next') !== '1'
+    );
+    check(
+      'failed full-document fetch keeps the meta-only crawler block',
+      root.includes('<h1>Full Doc Fail Article</h1>') &&
+        root.includes('Metadata-only excerpt survives.')
     );
   }
 
