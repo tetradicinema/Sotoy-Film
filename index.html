@@ -2,6 +2,64 @@
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // In AI Studio iFrame, HMR is disabled. Handle and ignore WebSocket connection errors from @vite/client.
+      (function() {
+        if (typeof window !== 'undefined') {
+          var NativeWS = window.WebSocket;
+          if (NativeWS) {
+            window.WebSocket = function(url, protocols) {
+              if (
+                protocols === 'vite-hmr' ||
+                protocols === 'vite-ping' ||
+                (typeof url === 'string' && (url.includes('vite-hmr') || url.includes('token=')))
+              ) {
+                var target = new EventTarget();
+                target.OPEN = 1;
+                target.CLOSED = 3;
+                target.CLOSING = 2;
+                target.CONNECTING = 0;
+                target.readyState = 1;
+                target.protocol = protocols || '';
+                target.url = url;
+                target.send = function() {};
+                target.close = function() { target.readyState = 3; };
+                setTimeout(function() {
+                  target.dispatchEvent(new Event('open'));
+                }, 0);
+                return target;
+              }
+              return new NativeWS(url, protocols);
+            };
+            window.WebSocket.prototype = NativeWS.prototype;
+            window.WebSocket.OPEN = NativeWS.OPEN;
+            window.WebSocket.CLOSED = NativeWS.CLOSED;
+            window.WebSocket.CLOSING = NativeWS.CLOSING;
+            window.WebSocket.CONNECTING = NativeWS.CONNECTING;
+          }
+
+          var isWsError = function(err) {
+            if (!err) return false;
+            var str = (typeof err === 'string' ? err : (err.message || '') + ' ' + (err.stack || ''));
+            return str.includes('WebSocket') || str.includes('@vite/client') || str.includes('vite:ws');
+          };
+
+          window.addEventListener('unhandledrejection', function(e) {
+            if (isWsError(e.reason)) {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+            }
+          }, true);
+
+          window.addEventListener('error', function(e) {
+            if (isWsError(e.error) || isWsError(e.message) || (e.filename && e.filename.includes('@vite/client'))) {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+            }
+          }, true);
+        }
+      })();
+    </script>
     <link rel="icon" type="image/png" href="/favicon-flat.png" />
     <link rel="apple-touch-icon" href="/stacked%20logo-sotoyfilm.PNG" />
     <meta name="apple-mobile-web-app-title" content="Sotoy Film" />

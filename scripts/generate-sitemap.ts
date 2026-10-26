@@ -31,24 +31,23 @@ function escapeXml(unsafe: string): string {
     .replace(/'/g, '&apos;');
 }
 
-function formatDateToYMD(val: any, fallbackDate?: string): string {
-  const defaultToday = fallbackDate || new Date().toISOString().split('T')[0];
+function formatDateToYMD(val: any, fallbackDate: string = ''): string {
   if (!val) {
-    return defaultToday;
+    return fallbackDate;
   }
   if (typeof val === 'string') {
     if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
       // Validate year is not ancient (e.g. >= 2020 for website lastmod)
       const year = parseInt(val.slice(0, 4), 10);
       if (year >= 2020) return val;
-      return defaultToday;
+      return fallbackDate;
     }
     const parsed = new Date(val);
     if (!isNaN(parsed.getTime())) {
       const formatted = parsed.toISOString().split('T')[0];
       const year = parsed.getFullYear();
       if (year >= 2020) return formatted;
-      return defaultToday;
+      return fallbackDate;
     }
   }
   if (val && typeof val.toDate === 'function') {
@@ -57,7 +56,7 @@ function formatDateToYMD(val: any, fallbackDate?: string): string {
       const formatted = parsed.toISOString().split('T')[0];
       const year = parsed.getFullYear();
       if (year >= 2020) return formatted;
-      return defaultToday;
+      return fallbackDate;
     } catch {
       // ignore
     }
@@ -67,37 +66,40 @@ function formatDateToYMD(val: any, fallbackDate?: string): string {
     const formatted = parsed.toISOString().split('T')[0];
     const year = parsed.getFullYear();
     if (year >= 2020) return formatted;
-    return defaultToday;
+    return fallbackDate;
   }
-  return defaultToday;
+  return fallbackDate;
 }
 
 interface SitemapEntry {
   loc: string;
-  lastmod: string;
+  lastmod?: string;
   changefreq: 'always' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'never';
   priority: string;
 }
 
+// Static pages are not regenerated on a schedule; keep a single stable lastmod
+// so crawlers do not see a fake "changed today" signal on every request.
+const STATIC_LASTMOD = '2026-10-25';
+
 async function run() {
   console.log('[Sitemap Builder] Starting build-time static sitemap generation...');
   const baseUrl = 'https://www.sotoyfilm.my.id';
-  const today = new Date().toISOString().split('T')[0];
   const nowMs = Date.now();
 
   // 1. Static Core Routes
   const entries: SitemapEntry[] = [
-    { loc: `${baseUrl}/`, lastmod: today, changefreq: 'daily', priority: '1.0' },
-    { loc: `${baseUrl}/film-database`, lastmod: today, changefreq: 'daily', priority: '0.9' },
-    { loc: `${baseUrl}/rekomendasi-film`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-    { loc: `${baseUrl}/komunitas`, lastmod: today, changefreq: 'daily', priority: '0.8' },
-    { loc: `${baseUrl}/panduan-leaderboard`, lastmod: today, changefreq: 'monthly', priority: '0.6' },
-    { loc: `${baseUrl}/tentang-kami`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
-    { loc: `${baseUrl}/kebijakan-privasi`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
-    { loc: `${baseUrl}/syarat-ketentuan`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
-    { loc: `${baseUrl}/kontak-bisnis`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
-    { loc: `${baseUrl}/gabung-kritikus`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
-    { loc: `${baseUrl}/kriteria-kritikus`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
+    { loc: `${baseUrl}/`, lastmod: STATIC_LASTMOD, changefreq: 'daily', priority: '1.0' },
+    { loc: `${baseUrl}/film-database`, lastmod: STATIC_LASTMOD, changefreq: 'daily', priority: '0.9' },
+    { loc: `${baseUrl}/rekomendasi-film`, lastmod: STATIC_LASTMOD, changefreq: 'weekly', priority: '0.8' },
+    { loc: `${baseUrl}/komunitas`, lastmod: STATIC_LASTMOD, changefreq: 'daily', priority: '0.8' },
+    { loc: `${baseUrl}/panduan-leaderboard`, lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.6' },
+    { loc: `${baseUrl}/tentang-kami`, lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.5' },
+    { loc: `${baseUrl}/kebijakan-privasi`, lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.5' },
+    { loc: `${baseUrl}/syarat-ketentuan`, lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.5' },
+    { loc: `${baseUrl}/kontak-bisnis`, lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.5' },
+    { loc: `${baseUrl}/gabung-kritikus`, lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.5' },
+    { loc: `${baseUrl}/kriteria-kritikus`, lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.5' },
   ];
 
   // Category exploration hubs
@@ -105,7 +107,7 @@ async function run() {
   for (const cat of categories) {
     entries.push({
       loc: `${baseUrl}/kategori/${cat}`,
-      lastmod: today,
+      lastmod: STATIC_LASTMOD,
       changefreq: 'weekly',
       priority: '0.7',
     });
@@ -151,13 +153,16 @@ async function run() {
         if (!slug || seenArticleSlugs.has(slug)) return;
 
         seenArticleSlugs.add(slug);
-        const lastmod = formatDateToYMD(article.updatedAt || article.publishedAt, today);
-        entries.push({
+        const lastmod = formatDateToYMD(article.updatedAt || article.publishedAt || article.createdAt, '');
+        const entry: SitemapEntry = {
           loc: `${baseUrl}/artikel/${encodeURIComponent(slug)}`,
-          lastmod,
           changefreq: 'weekly',
           priority: '0.8',
-        });
+        };
+        if (lastmod) {
+          entry.lastmod = lastmod;
+        }
+        entries.push(entry);
         articlesCount++;
       });
     }
@@ -178,13 +183,16 @@ async function run() {
         if (!slug || seenFilmSlugs.has(slug)) return;
 
         seenFilmSlugs.add(slug);
-        const lastmod = formatDateToYMD(film.updatedAt || film.createdAt, today);
-        entries.push({
+        const lastmod = formatDateToYMD(film.updatedAt || film.createdAt, '');
+        const entry: SitemapEntry = {
           loc: `${baseUrl}/film/${encodeURIComponent(slug)}`,
-          lastmod,
           changefreq: 'monthly',
           priority: '0.9',
-        });
+        };
+        if (lastmod) {
+          entry.lastmod = lastmod;
+        }
+        entries.push(entry);
         filmsCount++;
       });
     }
@@ -219,20 +227,28 @@ async function run() {
   for (const item of entries) {
     xml += '  <url>\n';
     xml += `    <loc>${escapeXml(item.loc)}</loc>\n`;
-    xml += `    <lastmod>${escapeXml(item.lastmod)}</lastmod>\n`;
+    if (item.lastmod) {
+      xml += `    <lastmod>${escapeXml(item.lastmod)}</lastmod>\n`;
+    }
     xml += `    <changefreq>${escapeXml(item.changefreq)}</changefreq>\n`;
     xml += `    <priority>${escapeXml(item.priority)}</priority>\n`;
     xml += '  </url>\n';
   }
   xml += '</urlset>\n';
 
-  // 6. Write to data/sitemap-snapshot.xml
+  // 6. Write to data/sitemap-snapshot.xml and public/sitemap.xml
   const dataDir = path.join(rootDir, 'data');
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
 
+  const publicDir = path.join(rootDir, 'public');
+  if (!fs.existsSync(publicDir)) {
+    fs.mkdirSync(publicDir, { recursive: true });
+  }
+
   const sitemapDest = path.join(dataDir, 'sitemap-snapshot.xml');
+  const publicSitemapDest = path.join(publicDir, 'sitemap.xml');
   const totalUrls = entries.length;
 
   if (isOfflineFallback && fs.existsSync(sitemapDest)) {
@@ -246,8 +262,9 @@ async function run() {
   }
 
   fs.writeFileSync(sitemapDest, xml, 'utf-8');
+  fs.writeFileSync(publicSitemapDest, xml, 'utf-8');
 
-  console.log(`[Sitemap Builder] Successfully wrote ${totalUrls} URLs (${articlesCount} articles, ${filmsCount} films) to ${sitemapDest}`);
+  console.log(`[Sitemap Builder] Successfully wrote ${totalUrls} URLs (${articlesCount} articles, ${filmsCount} films) to ${sitemapDest} and ${publicSitemapDest}`);
 
 }
 

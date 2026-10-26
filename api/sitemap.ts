@@ -156,6 +156,7 @@ function buildXml(items: SitemapItem[]): string {
 
 function getSnapshotXml(): string | null {
   const candidatePaths = [
+    path.join(process.cwd(), 'public', 'sitemap.xml'),
     path.join(process.cwd(), 'data', 'sitemap-snapshot.xml'),
     path.join(process.cwd(), 'sitemap-snapshot.xml'),
   ];

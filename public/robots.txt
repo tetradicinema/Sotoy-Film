@@ -22,6 +22,8 @@ Allow: /business-inquiries
 Allow: /gabung-kritikus
 Allow: /kriteria-kritikus
 Allow: /critic-criteria
+Allow: /sitemap.xml
+Allow: /sitemap.csv
 
 # Disallow administrative and private views
 Disallow: /admin

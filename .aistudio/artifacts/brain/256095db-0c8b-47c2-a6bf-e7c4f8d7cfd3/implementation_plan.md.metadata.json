@@ -1,0 +1,6 @@
+{
+  "summary":  "Implementation plan to resolve the Google Search Console \"Couldn't fetch / Sitemap could not be read\" error by addressing domain property 308 redirect behavior, adding URL-prefix property alignment, optimizing sitemap edge delivery via static public sync, and clarifying robots.txt rules.",
+  "updatedAt":  "2026-10-26T14:45:22.196773102Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}

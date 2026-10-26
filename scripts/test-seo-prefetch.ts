@@ -1008,6 +1008,27 @@ async function runSitemapChecks(): Promise<void> {
         'https://www.sotoyfilm.my.id/artikel/article-dated,Dated Article,,Artikel,2026-10-21,0.8'
       )
     );
+
+    // Verify snapshot fallback on Firestore failure
+    const fallbackRun = makeRes();
+    const realWarn = console.warn;
+    console.warn = () => {};
+    try {
+      globalThis.fetch = (async () => {
+        return new Response(JSON.stringify({ error: { code: 500 } }), { status: 500 });
+      }) as typeof fetch;
+      await handleSitemapRequest({ url: '/api/sitemap', query: {} }, fallbackRun.res);
+      const fallbackXml = fallbackRun.state.body;
+      check(
+        'sitemap fallback serves snapshot XML with stable static lastmod on Firestore failure',
+        fallbackRun.state.status === 200 &&
+          (fallbackRun.state.headers['content-type'] || '').includes('application/xml') &&
+          fallbackXml.includes('<urlset') &&
+          findUrlBlock(fallbackXml, 'https://www.sotoyfilm.my.id/').includes('<lastmod>2026-10-25</lastmod>')
+      );
+    } finally {
+      console.warn = realWarn;
+    }
   } finally {
     globalThis.fetch = realFetch;
   }

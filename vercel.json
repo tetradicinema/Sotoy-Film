@@ -1,7 +1,7 @@
 {
   "functions": {
     "api/sitemap.ts": {
-      "includeFiles": "data/sitemap-snapshot.xml"
+      "includeFiles": "{data/sitemap-snapshot.xml,public/sitemap.xml}"
     }
   },
   "headers": [
