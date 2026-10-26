@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { LinkifiedText } from '../Common/LinkifiedText';
 import { useParams } from 'react-router-dom';
 import {
@@ -40,6 +40,7 @@ import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelati
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
 import { RoleBadge } from '../Common/RoleBadge';
 import { FilmItem, CastMember, CrewMember, UserRating } from '../../types';
+import { fetchFilmBySlugRest, mapFilmData, readSeoPrefetch } from '../../utils/seoPrefetch';
 import { RateFilmModal } from '../Modals/RateFilmModal';
 import { AddToCollectionModal } from '../Modals/AddToCollectionModal';
 import { CollectionPickerPopover } from '../Common/CollectionPickerPopover';
@@ -117,9 +118,27 @@ export const FilmDetailPage: React.FC = () => {
   const [collectionModalOpen, setCollectionModalOpen] = useState(false);
 
   const { slug } = useParams<{ slug?: string }>();
-  const film: FilmItem | undefined = (slug ? films.find(f => (f.slug && f.slug === slug) || slugify(f.title) === slug || f.id === slug) : undefined)
+  const contextFilm: FilmItem | undefined = (slug ? films.find(f => (f.slug && f.slug === slug) || slugify(f.title) === slug || f.id === slug) : undefined)
     || films.find(f => f.id === selectedFilmId)
     || undefined;
+
+  // Bot-prerendered payload: renders synchronously without any network stream.
+  const prefetchedFilm = useMemo(() => {
+    if (contextFilm || !slug) return null;
+    const data = readSeoPrefetch('film', slug);
+    return data ? mapFilmData(data, slug) : null;
+  }, [contextFilm, slug]);
+
+  const [restFilm, setRestFilm] = useState<FilmItem | null>(null);
+  const [restAttemptedSlug, setRestAttemptedSlug] = useState<string | null>(null);
+  const [isRestFetching, setIsRestFetching] = useState(false);
+  const restAttemptedSlugRef = useRef<string | null>(null);
+  const restRequestIdRef = useRef(0);
+
+  const restFilmForSlug = restFilm && (restFilm.slug === slug || restFilm.id === slug)
+    ? restFilm
+    : null;
+  const film: FilmItem | undefined = contextFilm || prefetchedFilm || restFilmForSlug || undefined;
 
   // TMDB live cast & crew sync
   const [liveCredits, setLiveCredits] = useState<{ cast: CastMember[]; crew: CrewMember[] }>({
@@ -211,8 +230,44 @@ export const FilmDetailPage: React.FC = () => {
     }
   }, [reviewIdsKey, currentUser?.id, syncLikedReviews]);
 
-  // Show the skeleton only while films are still loading and nothing has matched yet
-  if (isLoadingFilms && !film) {
+  // One REST lookup only after context loading finished and prefetch missed.
+  // `restAttemptedSlug` is intentionally not a dependency: setting it must not
+  // abort the request that is already in flight.
+  useEffect(() => {
+    if (!slug || contextFilm || prefetchedFilm || isLoadingFilms) return;
+    if (restAttemptedSlugRef.current === slug) return;
+
+    restAttemptedSlugRef.current = slug;
+    const requestId = restRequestIdRef.current + 1;
+    restRequestIdRef.current = requestId;
+    setRestAttemptedSlug(slug);
+    setIsRestFetching(true);
+
+    fetchFilmBySlugRest(slug)
+      .then(data => {
+        if (restRequestIdRef.current !== requestId) return;
+        setRestFilm(data ? mapFilmData(data, slug) : null);
+      })
+      .catch(() => {
+        if (restRequestIdRef.current !== requestId) return;
+        setRestFilm(null);
+      })
+      .finally(() => {
+        if (restRequestIdRef.current !== requestId) return;
+        setIsRestFetching(false);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, contextFilm, prefetchedFilm, isLoadingFilms]);
+
+  const shouldFetchRest =
+    !contextFilm &&
+    !prefetchedFilm &&
+    !restFilmForSlug &&
+    !!slug &&
+    restAttemptedSlug !== slug;
+
+  // Show the skeleton while context/prefetch/REST resolution is still pending.
+  if (!film && (isLoadingFilms || isRestFetching || shouldFetchRest)) {
     return <FilmDetailSkeleton />;
   }
 

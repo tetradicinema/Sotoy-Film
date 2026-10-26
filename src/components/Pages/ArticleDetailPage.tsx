@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { LinkifiedText } from '../Common/LinkifiedText';
 import { LegacyMarkdownContent } from '../Common/LegacyMarkdownContent';
 import { useParams } from 'react-router-dom';
@@ -30,8 +30,9 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { FilmItem } from '../../types';
+import { Article, FilmItem } from '../../types';
 import { isArticleUnpublished } from '../../utils/articleHelpers';
+import { fetchArticleBySlugRest, mapArticleData, readSeoPrefetch } from '../../utils/seoPrefetch';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
 import { SEOHead } from '../SEO/SEOHead';
 import { createArticleSchemaFromArticle, generateBreadcrumbSchema } from '../../utils/schemaHelpers';
@@ -82,10 +83,28 @@ export const ArticleDetailPage: React.FC = () => {
     || (selectedArticleId ? articles.find(a => a.id === selectedArticleId) : null)
     || (!slug && !selectedArticleId ? articles[0] : undefined);
 
-  const unpublished = rawArticle ? isArticleUnpublished(rawArticle) : false;
-  const isOwner = currentUser?.id && (rawArticle?.author?.id === currentUser.id || rawArticle?.authorId === currentUser.id);
+  // Bot-prerendered payload: renders synchronously without any network stream.
+  const prefetchedArticle = useMemo(() => {
+    if (rawArticle || !slug) return null;
+    const data = readSeoPrefetch('article', slug);
+    return data ? mapArticleData(data, slug) : null;
+  }, [rawArticle, slug]);
+
+  const [restArticle, setRestArticle] = useState<Article | null>(null);
+  const [restAttemptedSlug, setRestAttemptedSlug] = useState<string | null>(null);
+  const [isRestFetching, setIsRestFetching] = useState(false);
+  const restAttemptedSlugRef = useRef<string | null>(null);
+  const restRequestIdRef = useRef(0);
+
+  const restArticleForSlug = restArticle && (restArticle.slug === slug || restArticle.id === slug)
+    ? restArticle
+    : null;
+  const resolvedArticle = rawArticle || prefetchedArticle || restArticleForSlug;
+
+  const unpublished = resolvedArticle ? isArticleUnpublished(resolvedArticle) : false;
+  const isOwner = currentUser?.id && (resolvedArticle?.author?.id === currentUser.id || resolvedArticle?.authorId === currentUser.id);
   const isAuthorized = isOwner || isAdmin || isWriter;
-  const article = (rawArticle && (!unpublished || isAuthorized)) ? rawArticle : null;
+  const article = (resolvedArticle && (!unpublished || isAuthorized)) ? resolvedArticle : null;
   const author = useDynamicArticleAuthor(article?.authorId || article?.author?.id, article?.author);
   const [commentText, setCommentText] = useState('');
   const [rateModalOpen, setRateModalOpen] = useState(false);
@@ -166,7 +185,43 @@ export const ArticleDetailPage: React.FC = () => {
   const [activeDiscussedFilmIndex, setActiveDiscussedFilmIndex] = useState(0);
   const discussedFilm = discussedFilms[activeDiscussedFilmIndex] || discussedFilms[0] || null;
 
-  if (isLoadingArticles && !article) {
+  // One REST lookup only after context loading finished and prefetch missed.
+  // `restAttemptedSlug` is intentionally not a dependency: setting it must not
+  // abort the request that is already in flight.
+  useEffect(() => {
+    if (!slug || rawArticle || prefetchedArticle || isLoadingArticles) return;
+    if (restAttemptedSlugRef.current === slug) return;
+
+    restAttemptedSlugRef.current = slug;
+    const requestId = restRequestIdRef.current + 1;
+    restRequestIdRef.current = requestId;
+    setRestAttemptedSlug(slug);
+    setIsRestFetching(true);
+
+    fetchArticleBySlugRest(slug)
+      .then(data => {
+        if (restRequestIdRef.current !== requestId) return;
+        setRestArticle(data ? mapArticleData(data, slug) : null);
+      })
+      .catch(() => {
+        if (restRequestIdRef.current !== requestId) return;
+        setRestArticle(null);
+      })
+      .finally(() => {
+        if (restRequestIdRef.current !== requestId) return;
+        setIsRestFetching(false);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, rawArticle, prefetchedArticle, isLoadingArticles]);
+
+  const shouldFetchRest =
+    !rawArticle &&
+    !prefetchedArticle &&
+    !restArticleForSlug &&
+    !!slug &&
+    restAttemptedSlug !== slug;
+
+  if (!article && (isLoadingArticles || isRestFetching || shouldFetchRest)) {
     return <ArticleDetailSkeleton />;
   }
 

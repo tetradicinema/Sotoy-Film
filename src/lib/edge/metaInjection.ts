@@ -430,6 +430,366 @@ export function injectRootContent(html: string, bodyHtml: string): string {
   return `${html.slice(0, insertAt)}${bodyHtml}${html.slice(insertAt)}`;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Client hydration prefetch payload                                          */
+/* -------------------------------------------------------------------------- */
+
+export type PrefetchKind = 'article' | 'film';
+
+/** Hard cap for the serialized prefetch payload (about 200 KB). */
+export const PREFETCH_MAX_LENGTH = 200 * 1024;
+
+const ARTICLE_PREFETCH_STRING_FIELDS = [
+  'id',
+  'title',
+  'slug',
+  'excerpt',
+  'content',
+  'contentFormat',
+  'contentJson',
+  'coverImage',
+  'coverImageAlt',
+  'category',
+  'subCategory',
+  'authorId',
+  'publishedAt',
+  'publishedAtTimestamp',
+  'readTime',
+  'seoTitle',
+  'metaDescription',
+  'ogImage',
+  'seoKeywords',
+  'relatedFilmId',
+  'status',
+  'scheduledAt',
+  'updatedAt',
+];
+
+const ARTICLE_PREFETCH_NUMBER_FIELDS = [
+  'coverImageWidth',
+  'coverImageHeight',
+  'views',
+  'likes',
+  'commentsCount',
+  'skorSotoy',
+];
+
+const FILM_PREFETCH_STRING_FIELDS = [
+  'id',
+  'slug',
+  'title',
+  'originalTitle',
+  'type',
+  'releaseDate',
+  'idReleaseDate',
+  'poster',
+  'backdrop',
+  'synopsis',
+  'director',
+  'writer',
+  'studio',
+  'duration',
+  'trailerUrl',
+  'trailerTitle',
+  'curatorNote',
+  'createdAt',
+];
+
+const FILM_PREFETCH_NUMBER_FIELDS = [
+  'tmdbId',
+  'year',
+  'skorSotoy',
+  'totalVotes',
+  'criticsSkorSotoy',
+  'scoreScale',
+];
+
+function isPlainObject(value: unknown): value is Record<string, any> {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function firstString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+function firstNumber(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+}
+
+function stringList(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.filter((item): item is string => typeof item === 'string');
+}
+
+/**
+ * Keeps only public author fields. Email, tokens, and internal admin fields
+ * are intentionally dropped, so they can never reach the HTML.
+ */
+function sanitizeAuthor(value: unknown): Record<string, any> | undefined {
+  if (typeof value === 'string') {
+    const name = firstString(value);
+    return name ? { name } : undefined;
+  }
+  if (!isPlainObject(value)) return undefined;
+
+  const author: Record<string, any> = {};
+  for (const key of ['id', 'name', 'displayName', 'avatar', 'avatarURL', 'role']) {
+    const field = firstString(value[key]);
+    if (field) author[key] = field;
+  }
+  return Object.keys(author).length > 0 ? author : undefined;
+}
+
+function sanitizeCastDetails(value: unknown): Record<string, any>[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const list = value
+    .filter(isPlainObject)
+    .map(member => ({
+      name: firstString(member.name) || '',
+      character: firstString(member.character) || '',
+      photo: firstString(member.photo) || '',
+    }))
+    .filter(member => member.name);
+  return list;
+}
+
+function sanitizeCrewDetails(value: unknown): Record<string, any>[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const list = value
+    .filter(isPlainObject)
+    .map(member => {
+      const crew: Record<string, any> = {
+        name: firstString(member.name) || '',
+        job: firstString(member.job) || '',
+        photo: firstString(member.photo) || '',
+      };
+      const department = firstString(member.department);
+      if (department) crew.department = department;
+      return crew;
+    })
+    .filter(member => member.name);
+  return list;
+}
+
+function sanitizeWhereToWatch(value: unknown): Record<string, any>[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const allowedTypes = new Set(['stream', 'cinema', 'rent']);
+  const list: Record<string, any>[] = [];
+
+  for (const entry of value) {
+    if (!isPlainObject(entry)) continue;
+    const platform = firstString(entry.platform);
+    if (!platform) continue;
+    const rawType = firstString(entry.type) || 'stream';
+    const item: Record<string, any> = {
+      platform,
+      type: allowedTypes.has(rawType) ? rawType : 'stream',
+      badgeColor: firstString(entry.badgeColor) || '#FF2E7E',
+    };
+    if (entry.source === 'tmdb') item.source = 'tmdb';
+    list.push(item);
+  }
+
+  return list;
+}
+
+/**
+ * Builds the article payload with an explicit allowlist: article comments,
+ * emails, tokens, versions, analytics, and admin internals never survive.
+ */
+function sanitizeArticlePrefetchData(data: Record<string, any>): Record<string, any> {
+  const safe: Record<string, any> = {};
+
+  for (const key of ARTICLE_PREFETCH_STRING_FIELDS) {
+    const value = firstString(data[key]);
+    if (value !== undefined) safe[key] = value;
+  }
+  for (const key of ARTICLE_PREFETCH_NUMBER_FIELDS) {
+    const value = firstNumber(data[key]);
+    if (value !== undefined) safe[key] = value;
+  }
+
+  const tags = stringList(data.tags);
+  if (tags) safe.tags = tags;
+  const relatedFilmIds = stringList(data.relatedFilmIds);
+  if (relatedFilmIds) safe.relatedFilmIds = relatedFilmIds;
+  const author = sanitizeAuthor(data.author);
+  if (author) safe.author = author;
+
+  return safe;
+}
+
+/**
+ * Builds the film payload with an explicit allowlist. No user reviews,
+ * emails, tokens, or private/admin fields are included.
+ */
+function sanitizeFilmPrefetchData(data: Record<string, any>): Record<string, any> {
+  const safe: Record<string, any> = {};
+
+  for (const key of FILM_PREFETCH_STRING_FIELDS) {
+    const value = firstString(data[key]);
+    if (value !== undefined) safe[key] = value;
+  }
+  for (const key of FILM_PREFETCH_NUMBER_FIELDS) {
+    const value = firstNumber(data[key]);
+    if (value !== undefined) safe[key] = value;
+  }
+
+  const cast = stringList(data.cast);
+  if (cast) safe.cast = cast;
+  const genres = stringList(data.genres);
+  if (genres) safe.genres = genres;
+  const tags = stringList(data.tags);
+  if (tags) safe.tags = tags;
+  const originCountry = stringList(data.originCountry);
+  if (originCountry) safe.originCountry = originCountry;
+  const stills = stringList(data.stills);
+  if (stills) safe.stills = stills;
+  const relatedArticleIds = stringList(data.relatedArticleIds);
+  if (relatedArticleIds) safe.relatedArticleIds = relatedArticleIds;
+
+  const castDetails = sanitizeCastDetails(data.castDetails);
+  if (castDetails) safe.castDetails = castDetails;
+  const crewDetails = sanitizeCrewDetails(data.crewDetails);
+  if (crewDetails) safe.crewDetails = crewDetails;
+  const whereToWatch = sanitizeWhereToWatch(data.whereToWatch);
+  if (whereToWatch) safe.whereToWatch = whereToWatch;
+
+  return safe;
+}
+
+/**
+ * Serializes a prefetch payload so it cannot break out of its script tag.
+ * `<`, `>`, `&`, U+2028, and U+2029 are escaped as JSON unicode sequences.
+ */
+export function serializePrefetchPayload(payload: unknown): string {
+  return JSON.stringify(payload)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
+
+function buildPrefetchJson(kind: PrefetchKind, slug: string, data: Record<string, any>): string {
+  return serializePrefetchPayload({ kind, slug, data });
+}
+
+/**
+ * Enforces the ~200 KB cap. Article bodies are trimmed first; Tiptap JSON is
+ * kept intact only when it fits, otherwise plain text is used as a fallback.
+ */
+function fitPrefetchData(
+  kind: PrefetchKind,
+  slug: string,
+  data: Record<string, any>
+): { data: Record<string, any>; json: string } {
+  let json = buildPrefetchJson(kind, slug, data);
+  if (json.length <= PREFETCH_MAX_LENGTH) {
+    return { data, json };
+  }
+
+  const trimmed: Record<string, any> = { ...data };
+
+  if (kind === 'article') {
+    const isTiptap =
+      trimmed.contentFormat === 'tiptap' &&
+      typeof trimmed.contentJson === 'string' &&
+      trimmed.contentJson.length > 0;
+    const contentJson = isTiptap ? String(trimmed.contentJson) : '';
+    const content = typeof trimmed.content === 'string' ? trimmed.content : '';
+
+    delete trimmed.contentJson;
+    delete trimmed.content;
+
+    const baseLength = buildPrefetchJson(kind, slug, trimmed).length;
+    let budget = PREFETCH_MAX_LENGTH - baseLength - 128;
+
+    if (budget > 0 && isTiptap && contentJson.length <= budget) {
+      trimmed.contentJson = contentJson;
+      budget -= contentJson.length;
+      if (budget > 0 && content) {
+        trimmed.content = content.slice(0, budget);
+      }
+    } else if (budget > 0 && content) {
+      if (isTiptap) trimmed.contentFormat = 'markdown';
+      trimmed.content = content.slice(0, budget);
+    } else if (budget > 0 && isTiptap) {
+      const plain = extractArticleParagraphs({ contentJson }).join('\n\n');
+      trimmed.contentFormat = 'markdown';
+      trimmed.content = plain.slice(0, budget);
+    } else if (isTiptap) {
+      trimmed.contentFormat = 'markdown';
+    }
+  } else {
+    const synopsis = typeof trimmed.synopsis === 'string' ? trimmed.synopsis : '';
+    delete trimmed.synopsis;
+
+    const baseLength = buildPrefetchJson(kind, slug, trimmed).length;
+    const budget = PREFETCH_MAX_LENGTH - baseLength - 64;
+    if (budget > 0 && synopsis) {
+      trimmed.synopsis = synopsis.slice(0, budget);
+    }
+  }
+
+  json = buildPrefetchJson(kind, slug, trimmed);
+
+  // Last-resort guard: keep a small, valid payload instead of exceeding the cap.
+  if (json.length > PREFETCH_MAX_LENGTH) {
+    const minimal: Record<string, any> = {};
+    for (const key of ['id', 'slug', 'title', 'excerpt', 'poster', 'coverImage']) {
+      const value = firstString(data[key]);
+      if (value !== undefined) minimal[key] = value.slice(0, 500);
+    }
+    const year = firstNumber(data.year);
+    if (year !== undefined) minimal.year = year;
+    const type = firstString(data.type);
+    if (type !== undefined) minimal.type = type;
+    return { data: minimal, json: buildPrefetchJson(kind, slug, minimal) };
+  }
+
+  return { data: trimmed, json };
+}
+
+/**
+ * Embeds the entity data used by the client detail pages as a JSON script tag
+ * just before `</head>` (or `</body>` as a fallback). This lets React render
+ * the real article/film even when Firestore Listen streams are unavailable
+ * in a crawler renderer.
+ */
+export function injectPrefetchData(
+  html: string,
+  kind: PrefetchKind,
+  data: Record<string, any>
+): string {
+  if (!html || !data || typeof data !== 'object') return html;
+
+  try {
+    const safeData =
+      kind === 'article'
+        ? sanitizeArticlePrefetchData(data)
+        : sanitizeFilmPrefetchData(data);
+    const slug = firstString(data.slug) || firstString(data.id) || '';
+    const { json } = fitPrefetchData(kind, slug, safeData);
+    const script = `<script id="seo-prefetch" type="application/json">${json}</script>`;
+
+    if (/<\/head>/i.test(html)) {
+      return html.replace(/<\/head>/i, `${script}</head>`);
+    }
+    if (/<\/body>/i.test(html)) {
+      return html.replace(/<\/body>/i, `${script}</body>`);
+    }
+    return `${html}${script}`;
+  } catch {
+    return html;
+  }
+}
+
 /**
  * Minimal static HTML fallback if fetching index.html from origin times out.
  */

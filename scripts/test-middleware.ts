@@ -57,7 +57,9 @@ globalThis.fetch = async (url: string | URL | Request, init?: RequestInit): Prom
               { stringValue: 'Aaron Paul' }
             ]
           }
-        }
+        },
+        email: { stringValue: 'private-film@example.com' },
+        adminNotes: { stringValue: 'Internal film note' }
       }
     }), {
       status: 200,
@@ -604,10 +606,78 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
         },
       })
     );
+    const humanBody = await response.text();
 
     check(
       'normal browser UA still passes through untouched',
-      response.headers.get('x-middleware-next') === '1' && (await response.text()) === ''
+      response.headers.get('x-middleware-next') === '1' && humanBody === ''
+    );
+    check(
+      'normal browser response does not include the seo-prefetch script',
+      !humanBody.includes('seo-prefetch')
+    );
+  }
+
+  // Embedded prefetch payload for JS-rendering crawlers
+  {
+    const filmResponse = await middleware(botRequest('/film/breaking-bad'));
+    const filmHtml = await filmResponse.text();
+    check(
+      'bot film response embeds <script id="seo-prefetch">',
+      filmHtml.includes('<script id="seo-prefetch" type="application/json">')
+    );
+    const filmPrefetch = /<script id="seo-prefetch" type="application\/json">([\s\S]*?)<\/script>/.exec(
+      filmHtml
+    )?.[1];
+    let filmParsed: any = null;
+    try {
+      filmParsed = filmPrefetch ? JSON.parse(filmPrefetch) : null;
+    } catch {
+      filmParsed = null;
+    }
+    check(
+      'bot film prefetch payload is valid, kind=film and matches the URL slug',
+      filmParsed?.kind === 'film' &&
+        filmParsed?.slug === 'breaking-bad' &&
+        filmParsed?.data?.title === 'Breaking Bad'
+    );
+    check(
+      'bot film prefetch payload does not contain emails or admin fields',
+      !!filmPrefetch &&
+        !filmPrefetch.includes('private-film@example.com') &&
+        !filmPrefetch.includes('Internal film note')
+    );
+
+    const articleResponse = await middleware(botRequest('/artikel/published-article'));
+    const articleHtml = await articleResponse.text();
+    check(
+      'bot article response embeds <script id="seo-prefetch">',
+      articleHtml.includes('<script id="seo-prefetch" type="application/json">')
+    );
+    const articlePrefetch = /<script id="seo-prefetch" type="application\/json">([\s\S]*?)<\/script>/.exec(
+      articleHtml
+    )?.[1] || '';
+    let articleParsed: any = null;
+    try {
+      articleParsed = articlePrefetch ? JSON.parse(articlePrefetch) : null;
+    } catch {
+      articleParsed = null;
+    }
+    check(
+      'bot article prefetch payload is valid, kind=article and matches the URL slug',
+      articleParsed?.kind === 'article' &&
+        articleParsed?.slug === 'published-article' &&
+        articleParsed?.data?.title === 'Published Article Title'
+    );
+    check(
+      'bot article prefetch payload does not contain the author email',
+      articlePrefetch.length > 0 && !articlePrefetch.includes('private-author@example.com')
+    );
+    check(
+      'bot prefetch payload escapes <script> content',
+      articlePrefetch.length > 0 &&
+        !articlePrefetch.includes('</script>') &&
+        !articlePrefetch.includes('<script>')
     );
   }
 

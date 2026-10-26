@@ -7,7 +7,7 @@ import {
   buildCollectionTitle,
   buildCollectionDescription,
 } from './src/lib/edge/firestoreRest.js';
-import { injectMetaTags, injectRootContent, buildArticleBodyHtml, buildFilmBodyHtml, FALLBACK_HTML_TEMPLATE } from './src/lib/edge/metaInjection.js';
+import { injectMetaTags, injectRootContent, injectPrefetchData, buildArticleBodyHtml, buildFilmBodyHtml, FALLBACK_HTML_TEMPLATE } from './src/lib/edge/metaInjection.js';
 
 // Re-export for unit tests and external consumers
 export { isBotUserAgent };
@@ -299,7 +299,15 @@ export default async function middleware(request: Request): Promise<Response> {
 
     const bodyHtml =
       collection === 'films' ? buildFilmBodyHtml(data) : buildArticleBodyHtml(data);
-    const modifiedHtml = injectRootContent(metaHtml, bodyHtml);
+    const withRootContent = injectRootContent(metaHtml, bodyHtml);
+    // Keep the crawler-visible block above, and also embed the same entity as
+    // JSON so JS-rendering crawlers can mount the real detail page even when
+    // Firestore Listen streams fail. The payload slug always matches the URL.
+    const modifiedHtml = injectPrefetchData(
+      withRootContent,
+      collection === 'films' ? 'film' : 'article',
+      { ...data, slug }
+    );
 
     return new Response(modifiedHtml, {
       status: 200,
