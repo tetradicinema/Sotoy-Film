@@ -9,15 +9,44 @@ import {
   fetchCollectionPreview,
   buildCollectionTitle,
   buildCollectionDescription,
+  fetchListCollectionDocuments,
 } from './src/lib/edge/firestoreRest.js';
-import { injectMetaTags, injectRootContent, injectPrefetchData, buildArticleBodyHtml, buildFilmBodyHtml, FALLBACK_HTML_TEMPLATE } from './src/lib/edge/metaInjection.js';
+import { injectMetaTags, injectRootContent, injectPrefetchData, injectSeoLists, buildArticleBodyHtml, buildFilmBodyHtml, FALLBACK_HTML_TEMPLATE } from './src/lib/edge/metaInjection.js';
+import { buildRouteMetadata, STATIC_ROUTE_METADATA_CONFIG } from './src/utils/seoMetadata.js';
 
 // Re-export for unit tests and external consumers
 export { isBotUserAgent };
 
 export const config = {
   runtime: 'nodejs',
+  // NOTE: Vercel Routing Middleware's `config.matcher` only accepts strings
+  // (path patterns); it does not support `has` header conditions. The
+  // non-bot `safeNext()` below therefore runs before any expensive work.
   matcher: [
+    '/',
+    '/film-database',
+    '/rekomendasi-film',
+    '/film-recommendations',
+    '/komunitas',
+    '/community-feed',
+    '/tulis-artikel',
+    '/write-article',
+    '/gabung-kritikus',
+    '/critic-submission',
+    '/kriteria-kritikus',
+    '/critic-criteria',
+    '/search',
+    '/tentang-kami',
+    '/about-us',
+    '/kebijakan-privasi',
+    '/privacy-policy',
+    '/syarat-ketentuan',
+    '/terms-conditions',
+    '/kontak-bisnis',
+    '/business-inquiries',
+    '/panduan-leaderboard',
+    '/settings',
+    '/onboarding',
     '/film/:path*',
     '/artikel/:path*',
     '/koleksi/:path*',
@@ -27,6 +56,138 @@ export const config = {
 };
 
 const LEGACY_CATEGORY_PATH = /^\/(?:kategori|category)\/(?:anime|animasi)(?=\/|$)/i;
+
+/** Category routes whose metadata comes from seoMetadata.ts. */
+const KNOWN_CATEGORY_NAMES = new Set([
+  'movies',
+  'series',
+  'animation',
+  'cinema-gear',
+  'film-studies',
+]);
+
+/** Routes that receive the bot-only #seo-lists payload. */
+const LIST_ROUTE_PATHS = new Set([
+  '/',
+  '/film-database',
+  '/rekomendasi-film',
+  '/film-recommendations',
+  '/komunitas',
+  '/community-feed',
+]);
+
+/** Every exact static route known to the central metadata config. */
+const STATIC_ROUTE_PATHS = new Set(Object.keys(STATIC_ROUTE_METADATA_CONFIG));
+
+interface StaticRouteInfo {
+  isStatic: boolean;
+  isList: boolean;
+  cleanPath: string;
+}
+
+/**
+ * Resolves static/list/category routes. Unknown category names are not
+ * handled here, so they fall through to the normal SPA response unchanged.
+ */
+function resolveStaticRoute(pathname: string): StaticRouteInfo {
+  const cleanPath = pathname.replace(/\/+$/, '') || '/';
+
+  const categoryMatch = /^\/(?:kategori|category)\/([^/]+)(?:\/[^/]+)?$/i.exec(cleanPath);
+  if (categoryMatch) {
+    const category = categoryMatch[1].toLowerCase();
+    if (!KNOWN_CATEGORY_NAMES.has(category)) {
+      return { isStatic: false, isList: false, cleanPath };
+    }
+    return { isStatic: true, isList: true, cleanPath };
+  }
+
+  if (!STATIC_ROUTE_PATHS.has(cleanPath)) {
+    return { isStatic: false, isList: false, cleanPath };
+  }
+
+  return {
+    isStatic: true,
+    isList: LIST_ROUTE_PATHS.has(cleanPath),
+    cleanPath,
+  };
+}
+
+/** Fetches the SPA shell from origin, falling back to the local template. */
+async function fetchBaseHtml(request: Request): Promise<string> {
+  try {
+    const indexUrl = new URL('/index.html', request.url);
+    const htmlRes = await fetchWithTimeout(
+      indexUrl.toString(),
+      { headers: { 'x-middleware-subrequest': '1' } },
+      2000
+    );
+    if (htmlRes.ok) {
+      return await htmlRes.text();
+    }
+  } catch {
+    // Fall back to the local template if the sub-request times out.
+  }
+  return '';
+}
+
+/**
+ * Serves bots the real page metadata for static/list/category routes, plus the
+ * list-card payload used to hydrate AppContext before the SDK connects.
+ */
+async function buildStaticRouteResponse(
+  request: Request,
+  cleanPath: string,
+  isListRoute: boolean
+): Promise<Response> {
+  const metadata = buildRouteMetadata(cleanPath);
+
+  let html = await fetchBaseHtml(request);
+  if (!html) {
+    html = FALLBACK_HTML_TEMPLATE;
+  }
+
+  const metaHtml = injectMetaTags(html, {
+    title: metadata.title,
+    description: metadata.description,
+    image: metadata.primaryImage,
+    url: metadata.canonicalUrl || metadata.url,
+    type: metadata.type || 'website',
+    imageAlt: metadata.imageAlt,
+    locale: 'id_ID',
+    keywords: metadata.keywords,
+    robots: metadata.noindex ? 'noindex, follow' : undefined,
+  });
+
+  let finalHtml = metaHtml;
+
+  if (isListRoute) {
+    const [filmResult, articleResult] = await Promise.allSettled([
+      fetchListCollectionDocuments('films'),
+      fetchListCollectionDocuments('articles'),
+    ]);
+
+    const films = filmResult.status === 'fulfilled' ? filmResult.value : null;
+    const articles = articleResult.status === 'fulfilled' ? articleResult.value : null;
+
+    // One failed fetch still injects the other; both failing leaves the page
+    // without a list payload instead of failing the request.
+    if (films !== null || articles !== null) {
+      finalHtml = injectSeoLists(finalHtml, {
+        films: films || [],
+        articles: articles || [],
+      });
+    }
+  }
+
+  return new Response(finalHtml, {
+    status: 200,
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      'x-robots-tag': metadata.noindex ? 'noindex, follow' : 'all',
+      'cache-control': 'public, s-maxage=60, stale-while-revalidate=300',
+    },
+  });
+}
 
 /**
  * Safely invokes Vercel next() with fallback to raw x-middleware-next header
@@ -159,6 +320,14 @@ export default async function middleware(request: Request): Promise<Response> {
           'cache-control': 'public, s-maxage=60, stale-while-revalidate=300',
         },
       });
+    }
+
+    // 3. Static, list and category routes. The raw HTML gets the same title,
+    // description, canonical, OpenGraph and Twitter tags that SEOHead renders
+    // client-side, and list pages additionally receive #seo-lists.
+    const staticRoute = resolveStaticRoute(pathname);
+    if (staticRoute.isStatic) {
+      return buildStaticRouteResponse(request, staticRoute.cleanPath, staticRoute.isList);
     }
 
     let collection: 'films' | 'articles' | null = null;

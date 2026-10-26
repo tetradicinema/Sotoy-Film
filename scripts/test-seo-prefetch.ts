@@ -9,13 +9,16 @@ import {
   FALLBACK_HTML_TEMPLATE,
   PREFETCH_MAX_LENGTH,
   injectPrefetchData,
+  injectSeoLists,
   serializePrefetchPayload,
 } from '../src/lib/edge/metaInjection.js';
 import {
   mapArticleData,
   mapFilmData,
+  readSeoLists,
   readSeoPrefetch,
 } from '../src/utils/seoPrefetch.js';
+import { handleSitemapRequest } from '../api/sitemap.js';
 
 interface Check {
   name: string;
@@ -45,7 +48,16 @@ function extractPrefetchJson(html: string): string | null {
   return match ? match[1] : null;
 }
 
-function main(): void {
+function extractListsJson(html: string): string | null {
+  const match = /<script id="seo-lists" type="application\/json">([\s\S]*?)<\/script>/.exec(html);
+  return match ? match[1] : null;
+}
+
+function countMatches(html: string, pattern: RegExp): number {
+  return (html.match(pattern) || []).length;
+}
+
+async function main(): Promise<void> {
   console.log('\n============================================================');
   console.log('🧪 Sotoy Film - SEO Prefetch Payload Test Suite');
   console.log('============================================================\n');
@@ -102,6 +114,36 @@ function main(): void {
   check(
     'encoded payload slug is compared decoded',
     readSeoPrefetch('article', 'dune part two', makeDoc(encodedSlug)) !== null
+  );
+
+  // --- readSeoLists (client) ----------------------------------------------
+  check('no document => readSeoLists null', readSeoLists(null) === null);
+  check('missing #seo-lists => null', readSeoLists(makeDoc(null)) === null);
+  check('invalid JSON => readSeoLists null', readSeoLists(makeDoc('{not-json')) === null);
+  check('non-object payload => readSeoLists null', readSeoLists(makeDoc('[]')) === null);
+  check(
+    'payload without arrays => readSeoLists null',
+    readSeoLists(makeDoc(JSON.stringify({ films: 'nope' }))) === null
+  );
+
+  const listsData = readSeoLists(
+    makeDoc(
+      JSON.stringify({
+        films: [{ id: 'film-1' }, null, 'skip'],
+        articles: [{ id: 'article-1' }, [], 42],
+      })
+    )
+  );
+  check(
+    'valid #seo-lists returns filtered films and articles',
+    listsData?.films.length === 1 &&
+      listsData.films[0].id === 'film-1' &&
+      listsData.articles.length === 1 &&
+      listsData.articles[0].id === 'article-1'
+  );
+  check(
+    'empty arrays are still a valid #seo-lists payload',
+    readSeoLists(makeDoc(JSON.stringify({ films: [], articles: [] }))) !== null
   );
 
   // --- serializer / injector (edge) ---------------------------------------
@@ -188,6 +230,110 @@ function main(): void {
     const readBack = readSeoPrefetch('article', 'dune', makeDoc(serialized));
     check('injected payload is readable by readSeoPrefetch', readBack?.title === 'Dune: Part Two');
   }
+
+  // --- #seo-lists injector (edge) -----------------------------------------
+  const listFilmData = {
+    id: 'film-1',
+    slug: 'dune-part-two',
+    title: 'Dune: Part Two',
+    year: 2024,
+    type: 'movie',
+    poster: '/poster.png',
+    backdrop: '/backdrop.png',
+    director: 'Denis Villeneuve',
+    genres: ['Sci-Fi', 'Adventure'],
+    skorSotoy: 9.1,
+    totalVotes: 1200,
+    trendingRank: 1,
+    email: 'private-list-film@example.com',
+    adminNotes: 'secret admin note',
+    content: 'SECRET FILM BODY',
+    comments: [{ text: 'SECRET FILM COMMENT' }],
+    token: 'secret-token',
+  };
+  const listArticleData = {
+    id: 'article-1',
+    slug: 'dune-review',
+    title: 'Dune Review',
+    status: 'published',
+    excerpt: 'A sweeping epic.',
+    coverImage: '/cover.jpg',
+    category: 'movies',
+    tags: ['Dune'],
+    likes: 10,
+    commentsCount: 3,
+    author: { name: 'Raka Pratama', avatar: '/raka.jpg', email: 'private-list-author@example.com' },
+    authorId: 'author-1',
+    content: 'SECRET ARTICLE BODY',
+    contentJson: '{"type":"doc","content":[]}',
+    comments: [{ text: 'SECRET ARTICLE COMMENT' }],
+    email: 'private-list@example.com',
+    adminNotes: 'secret admin note',
+    token: 'secret-token',
+  };
+
+  const listsHtml = injectSeoLists(FALLBACK_HTML_TEMPLATE, {
+    films: [listFilmData],
+    articles: [listArticleData],
+  });
+  check(
+    '#seo-lists injector embeds the script tag',
+    listsHtml.includes('<script id="seo-lists" type="application/json">')
+  );
+
+  const listsJson = extractListsJson(listsHtml);
+  let listsParsed: any = null;
+  try {
+    listsParsed = listsJson ? JSON.parse(listsJson) : null;
+  } catch {
+    listsParsed = null;
+  }
+  check('#seo-lists payload round-trips through JSON.parse', listsParsed !== null);
+  check(
+    '#seo-lists keeps public film and article fields',
+    listsParsed?.films?.[0]?.title === 'Dune: Part Two' &&
+      listsParsed?.films?.[0]?.genres?.length === 2 &&
+      listsParsed?.articles?.[0]?.title === 'Dune Review' &&
+      listsParsed?.articles?.[0]?.commentsCount === 3 &&
+      listsParsed?.articles?.[0]?.author?.name === 'Raka Pratama'
+  );
+  check(
+    '#seo-lists strips article bodies, JSON content, comments, emails, admin fields and tokens',
+    !!listsJson &&
+      !listsJson.includes('SECRET ARTICLE BODY') &&
+      !listsJson.includes('SECRET ARTICLE COMMENT') &&
+      !listsJson.includes('SECRET FILM BODY') &&
+      !listsJson.includes('SECRET FILM COMMENT') &&
+      !listsJson.includes('private-list-author@example.com') &&
+      !listsJson.includes('private-list-film@example.com') &&
+      !listsJson.includes('private-list@example.com') &&
+      !listsJson.includes('secret admin note') &&
+      !listsJson.includes('secret-token') &&
+      !/"content"\s*:/.test(listsJson) &&
+      !/"contentJson"\s*:/.test(listsJson) &&
+      !/"comments"\s*:/.test(listsJson)
+  );
+  check(
+    '#seo-lists payload is readable by readSeoLists',
+    readSeoLists(makeDoc(listsJson || ''))?.articles?.[0]?.slug === 'dune-review'
+  );
+
+  const replacedListsHtml = injectSeoLists(listsHtml, {
+    films: [{ id: 'film-2', slug: 'arrival', title: 'Arrival' }],
+    articles: [],
+  });
+  check(
+    '#seo-lists injector replaces an existing payload instead of duplicating it',
+    countMatches(replacedListsHtml, /<script\s+id=["']seo-lists["']/gi) === 1 &&
+      !!extractListsJson(replacedListsHtml)?.includes('Arrival') &&
+      !extractListsJson(replacedListsHtml)?.includes('Dune Review')
+  );
+
+  const emptyListsHtml = injectSeoLists(FALLBACK_HTML_TEMPLATE, { films: [], articles: [] });
+  check(
+    '#seo-lists injector skips empty payloads',
+    !emptyListsHtml.includes('id="seo-lists"')
+  );
 
   const filmData = {
     id: 'film-1',
@@ -284,6 +430,8 @@ function main(): void {
     JSON.parse(similar).data.text === '<>&\u2028\u2029'
   );
 
+  await runSitemapChecks();
+
   const failed = checks.filter(item => !item.ok).length;
   console.log('\n============================================================');
   console.log(`📊 Summary: ${checks.length - failed} Passed, ${failed} Failed`);
@@ -294,4 +442,227 @@ function main(): void {
   }
 }
 
-main();
+async function runSitemapChecks(): Promise<void> {
+  console.log('\n--- Sitemap payload assertions ---\n');
+
+  const capturedQueries: any[] = [];
+  const realFetch = globalThis.fetch;
+
+  const typedDoc = (collection: string, id: string, fields: Record<string, any>) => ({
+    document: {
+      name: `projects/test/databases/test/documents/${collection}/${id}`,
+      fields,
+    },
+  });
+
+  const queryResults: Record<string, any[]> = {
+    articles: [
+      typedDoc('articles', 'article-no-date', {
+        slug: { stringValue: 'article-no-date' },
+        title: { stringValue: 'No Date Article' },
+        status: { stringValue: 'published' },
+        excerpt: { stringValue: 'No dates on this one.' },
+      }),
+      typedDoc('articles', 'article-dated', {
+        slug: { stringValue: 'article-dated' },
+        title: { stringValue: 'Dated Article' },
+        status: { stringValue: 'published' },
+        updatedAt: { stringValue: '2026-10-21T08:00:00.000Z' },
+      }),
+      typedDoc('articles', 'draft-article', {
+        slug: { stringValue: 'draft-article' },
+        title: { stringValue: 'Draft Article' },
+        status: { stringValue: 'draft' },
+      }),
+    ],
+    films: [
+      typedDoc('films', 'film-no-date', {
+        slug: { stringValue: 'film-no-date' },
+        title: { stringValue: 'No Date Film' },
+      }),
+      typedDoc('films', 'film-dated', {
+        slug: { stringValue: 'film-dated' },
+        title: { stringValue: 'Dated Film' },
+        updatedAt: { stringValue: '2026-10-22T08:00:00.000Z' },
+      }),
+    ],
+  };
+
+  globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+    const urlStr = url.toString();
+    if (!urlStr.includes(':runQuery')) {
+      return new Response(JSON.stringify({}), { status: 200 });
+    }
+
+    const body = init?.body ? JSON.parse(String(init.body)) : {};
+    capturedQueries.push(body);
+    const collectionId = body?.structuredQuery?.from?.[0]?.collectionId;
+
+    return new Response(JSON.stringify(queryResults[collectionId] || []), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  }) as typeof fetch;
+
+  const makeRes = () => {
+    const state = { status: 0, body: '', headers: {} as Record<string, string> };
+    const res: any = {
+      setHeader: (name: string, value: string) => {
+        state.headers[name.toLowerCase()] = value;
+      },
+      status: (code: number) => {
+        state.status = code;
+        return res;
+      },
+      send: (payload: string) => {
+        state.body = payload;
+        return res;
+      },
+      writeHead: (code: number) => {
+        state.status = code;
+        return res;
+      },
+      end: (payload: string) => {
+        state.body = payload;
+        return res;
+      },
+    };
+    return { res, state };
+  };
+
+  const findUrlBlock = (xml: string, loc: string): string => {
+    const block = xml
+      .split('<url>')
+      .slice(1)
+      .find(part => part.includes(`<loc>${loc}</loc>`));
+    return block ? `<url>${block}` : '';
+  };
+
+  try {
+    const xmlRun = makeRes();
+    await handleSitemapRequest({ url: '/api/sitemap', query: {} }, xmlRun.res);
+    const xml = xmlRun.state.body;
+
+    check(
+      'sitemap responds 200 with XML',
+      xmlRun.state.status === 200 &&
+        (xmlRun.state.headers['content-type'] || '').includes('application/xml')
+    );
+    check(
+      'sitemap uses the long cache header',
+      xmlRun.state.headers['cache-control'] ===
+        'public, s-maxage=3600, stale-while-revalidate=86400'
+    );
+    check('sitemap fetches articles and films in one pass', capturedQueries.length === 2);
+
+    const expectedFields = [
+      'id',
+      'slug',
+      'title',
+      'status',
+      'scheduledAt',
+      'updatedAt',
+      'publishedAt',
+      'createdAt',
+      'excerpt',
+    ];
+    const selectedFieldSets = capturedQueries.map(query =>
+      (query?.structuredQuery?.select?.fields || []).map((field: any) => field.fieldPath)
+    );
+
+    check(
+      'sitemap selects only the URL/date fields',
+      selectedFieldSets.length > 0 &&
+        selectedFieldSets.every(
+          (fields: string[]) =>
+            fields.length === expectedFields.length &&
+            expectedFields.every(field => fields.includes(field))
+        )
+    );
+    check(
+      'sitemap select omits content, comments, author, email and token fields',
+      selectedFieldSets.every((fields: string[]) =>
+        fields.every(
+          field =>
+            ![
+              'content',
+              'contentJson',
+              'comments',
+              'author',
+              'email',
+              'token',
+              'adminNotes',
+            ].includes(field)
+        )
+      )
+    );
+
+    const articleNoDate = findUrlBlock(
+      xml,
+      'https://www.sotoyfilm.my.id/artikel/article-no-date'
+    );
+    const filmNoDate = findUrlBlock(xml, 'https://www.sotoyfilm.my.id/film/film-no-date');
+
+    check(
+      'article without dates omits <lastmod>',
+      articleNoDate.length > 0 && !articleNoDate.includes('<lastmod>')
+    );
+    check(
+      'film without dates omits <lastmod>',
+      filmNoDate.length > 0 && !filmNoDate.includes('<lastmod>')
+    );
+
+    const today = new Date().toISOString().split('T')[0];
+    check(
+      "sitemap never stamps today's date on undated entries",
+      !articleNoDate.includes(today) && !filmNoDate.includes(today)
+    );
+
+    check(
+      'article with updatedAt keeps the real date',
+      findUrlBlock(xml, 'https://www.sotoyfilm.my.id/artikel/article-dated').includes(
+        '<lastmod>2026-10-21</lastmod>'
+      )
+    );
+    check(
+      'film with updatedAt keeps the real date',
+      findUrlBlock(xml, 'https://www.sotoyfilm.my.id/film/film-dated').includes(
+        '<lastmod>2026-10-22</lastmod>'
+      )
+    );
+    check('draft articles stay out of the sitemap', !xml.includes('/artikel/draft-article'));
+    check(
+      'static pages keep their stable lastmod',
+      findUrlBlock(xml, 'https://www.sotoyfilm.my.id/').includes(
+        '<lastmod>2026-10-25</lastmod>'
+      )
+    );
+
+    const csvRun = makeRes();
+    await handleSitemapRequest(
+      { url: '/api/sitemap?format=csv', query: { format: 'csv' } },
+      csvRun.res
+    );
+    const csv = csvRun.state.body;
+
+    check(
+      'sitemap CSV leaves lastmod empty when absent',
+      csv.includes(
+        'https://www.sotoyfilm.my.id/artikel/article-no-date,No Date Article,No dates on this one.,Artikel,,0.8'
+      )
+    );
+    check(
+      'sitemap CSV keeps real dates',
+      csv.includes(
+        'https://www.sotoyfilm.my.id/artikel/article-dated,Dated Article,,Artikel,2026-10-21,0.8'
+      )
+    );
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+}
+
+main().catch(error => {
+  console.error('❌ SEO prefetch test suite failed unexpectedly:', error);
+  process.exit(1);
+});

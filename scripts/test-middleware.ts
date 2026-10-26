@@ -14,13 +14,30 @@
 
 import middleware, { isBotUserAgent } from '../middleware.js';
 import { STATIC_ROUTE_METADATA_CONFIG } from '../src/utils/seoMetadata.js';
+import { clearSeoListsCache } from '../src/lib/edge/firestoreRest.js';
 
 // Setup Mock Fetch for Standalone, Deterministic Test Execution (Bypasses Google API Free Quota Limitations)
 const originalFetch = globalThis.fetch;
 /** Counts per-document GETs so the first read can return meta fields only. */
 const docFetchCounts: Record<string, number> = {};
-globalThis.fetch = async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
+/** Lets tests force a list REST failure for one or both collections. */
+const listFetchFailure = { films: false, articles: false };
+const mockFetch = async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
   const urlStr = url.toString();
+
+  // 0. Simulated list REST failures (collection queries only, not doc GETs)
+  if (listFetchFailure.films && /\/documents\/films\?/.test(urlStr)) {
+    return new Response(JSON.stringify({ error: { code: 503, message: 'Unavailable' } }), {
+      status: 503,
+      headers: { 'content-type': 'application/json' },
+    });
+  }
+  if (listFetchFailure.articles && /\/documents\/articles\?/.test(urlStr)) {
+    return new Response(JSON.stringify({ error: { code: 503, message: 'Unavailable' } }), {
+      status: 503,
+      headers: { 'content-type': 'application/json' },
+    });
+  }
 
   // 1. Mock index.html subrequest
   if (urlStr.includes('/index.html')) {
@@ -270,19 +287,117 @@ globalThis.fetch = async (url: string | URL | Request, init?: RequestInit): Prom
         {
           name: 'projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents/films/breaking-bad',
           fields: {
+            id: { stringValue: 'breaking-bad' },
             title: { stringValue: 'Breaking Bad' },
             year: { integerValue: '2008' },
             slug: { stringValue: 'breaking-bad' },
-            synopsis: { stringValue: 'Chemistry teacher turned meth lord.' }
+            type: { stringValue: 'series' },
+            poster: { stringValue: '/breaking-bad-poster.png' },
+            director: { stringValue: 'Vince Gilligan' },
+            genres: {
+              arrayValue: {
+                values: [{ stringValue: 'Drama' }, { stringValue: 'Crime' }]
+              }
+            },
+            skorSotoy: { doubleValue: 9.2 },
+            totalVotes: { integerValue: '1250' },
+            trendingRank: { integerValue: '1' },
+            synopsis: { stringValue: 'Chemistry teacher turned meth lord.' },
+            email: { stringValue: 'private-film@example.com' },
+            adminNotes: { stringValue: 'Internal film note' }
           }
         },
         {
           name: 'projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents/films/boyhood',
           fields: {
+            id: { stringValue: 'boyhood' },
             title: { stringValue: 'Boyhood' },
             year: { integerValue: '2014' },
             slug: { stringValue: 'boyhood' },
+            type: { stringValue: 'movie' },
+            poster: { stringValue: '/boyhood-poster.png' },
+            director: { stringValue: 'Richard Linklater' },
+            genres: {
+              arrayValue: { values: [{ stringValue: 'Drama' }] }
+            },
+            skorSotoy: { doubleValue: 8.6 },
+            totalVotes: { integerValue: '420' },
+            trendingRank: { integerValue: '2' },
             synopsis: { stringValue: 'Growing up over 12 years.' }
+          }
+        }
+      ]
+    }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' }
+    });
+  }
+
+  // 3b. Mock the list payload collection for articles
+  if (urlStr.includes('/documents/articles?pageSize=')) {
+    return new Response(JSON.stringify({
+      documents: [
+        {
+          name: 'projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents/articles/published-article',
+          fields: {
+            id: { stringValue: 'published-article' },
+            title: { stringValue: 'Published Article Title' },
+            status: { stringValue: 'published' },
+            slug: { stringValue: 'published-article' },
+            excerpt: { stringValue: 'This is a published article excerpt.' },
+            coverImage: { stringValue: '/published-cover.jpg' },
+            category: { stringValue: 'movies' },
+            subCategory: { stringValue: 'reviews' },
+            authorId: { stringValue: 'author-1' },
+            publishedAt: { stringValue: '2026-10-20T09:30:00.000Z' },
+            publishedAtTimestamp: { stringValue: '2026-10-20T09:30:00.000Z' },
+            readTime: { stringValue: '5 menit' },
+            views: { integerValue: '120' },
+            likes: { integerValue: '34' },
+            commentsCount: { integerValue: '7' },
+            tags: {
+              arrayValue: { values: [{ stringValue: 'Dune' }] }
+            },
+            author: {
+              mapValue: {
+                fields: {
+                  id: { stringValue: 'author-1' },
+                  name: { stringValue: 'Raka Pratama' },
+                  avatar: { stringValue: '/raka.jpg' },
+                  email: { stringValue: 'private-author@example.com' }
+                }
+              }
+            },
+            content: { stringValue: 'SECRET ARTICLE BODY' },
+            contentJson: { stringValue: '{"type":"doc","content":[]}' },
+            comments: {
+              arrayValue: {
+                values: [
+                  { mapValue: { fields: { text: { stringValue: 'SECRET COMMENT' } } } }
+                ]
+              }
+            },
+            email: { stringValue: 'private-article@example.com' }
+          }
+        },
+        {
+          name: 'projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents/articles/draft-article',
+          fields: {
+            id: { stringValue: 'draft-article' },
+            title: { stringValue: 'Draft Article Title' },
+            status: { stringValue: 'draft' },
+            slug: { stringValue: 'draft-article' },
+            excerpt: { stringValue: 'Draft excerpt' }
+          }
+        },
+        {
+          name: 'projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents/articles/scheduled-future-article',
+          fields: {
+            id: { stringValue: 'scheduled-future-article' },
+            title: { stringValue: 'Scheduled Future Article Title' },
+            status: { stringValue: 'scheduled' },
+            scheduledAt: { stringValue: '2099-01-01T00:00:00Z' },
+            slug: { stringValue: 'scheduled-future-article' }
           }
         }
       ]
@@ -298,6 +413,8 @@ globalThis.fetch = async (url: string | URL | Request, init?: RequestInit): Prom
     headers: { 'content-type': 'application/json' }
   });
 };
+
+globalThis.fetch = mockFetch;
 
 interface TestCase {
   name: string;
@@ -536,10 +653,11 @@ const TEST_CASES: TestCase[] = [
 
   // --- ROUTE & EDGE CASES ---
   {
-    name: 'Bot on non-matching path (/komunitas)',
+    name: 'Bot on community list route (/komunitas)',
     userAgent: 'Googlebot/2.1 (+http://www.google.com/bot.html)',
     path: '/komunitas',
-    expectedBranch: 'HUMAN', // Next() pass-through because route does not match /film/ or /artikel/
+    expectedBranch: 'BOT',
+    expectedMetaPatterns: ['rel="canonical"', 'seo-lists'],
   },
   {
     name: 'Bot on non-existent film slug (Graceful fallback test)',
@@ -576,10 +694,11 @@ const TEST_CASES: TestCase[] = [
 
   // --- CATEGORY TAXONOMY REDIRECTS ---
   {
-    name: 'Googlebot on canonical Animation category (pass-through)',
+    name: 'Googlebot on canonical Animation category (meta injected)',
     userAgent: 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
     path: '/kategori/animation',
-    expectedBranch: 'HUMAN',
+    expectedBranch: 'BOT',
+    expectedMetaPatterns: ['rel="canonical"', 'seo-lists'],
   },
   {
     name: 'Googlebot on legacy /kategori/anime (301 redirect)',
@@ -603,6 +722,59 @@ const TEST_CASES: TestCase[] = [
 function getRootContent(html: string): string {
   const match = /<div\b[^>]*\bid=["']root["'][^>]*>([\s\S]*?)<\/div>/i.exec(html);
   return match ? match[1] : '';
+}
+
+function getMetaContent(html: string, name: string): string {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = new RegExp(
+    `<meta\\s+name=["']${escaped}["'][^>]*content=["']([^"']*)["']`,
+    'i'
+  ).exec(html);
+  return match ? match[1] : '';
+}
+
+function getOgContent(html: string, property: string): string {
+  const escaped = property.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = new RegExp(
+    `<meta\\s+property=["']${escaped}["'][^>]*content=["']([^"']*)["']`,
+    'i'
+  ).exec(html);
+  return match ? match[1] : '';
+}
+
+function getCanonicalHref(html: string): string {
+  const match = /<link\s+rel=["']canonical["'][^>]*href=["']([^"']*)["']/i.exec(html);
+  return match ? match[1] : '';
+}
+
+function countMatches(html: string, pattern: RegExp): number {
+  return (html.match(pattern) || []).length;
+}
+
+function extractSeoLists(html: string): { films: any[]; articles: any[] } | null {
+  const raw = /<script id="seo-lists" type="application\/json">([\s\S]*?)<\/script>/.exec(html)?.[1];
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function expectSingleSeoTagSet(label: string, html: string, check: (name: string, ok: boolean) => void): void {
+  const counts = {
+    description: countMatches(html, /<meta\s+name=["']description["']/gi),
+    canonical: countMatches(html, /<link\s+rel=["']canonical["']/gi),
+    ogTitle: countMatches(html, /<meta\s+property=["']og:title["']/gi),
+    ogDescription: countMatches(html, /<meta\s+property=["']og:description["']/gi),
+    ogUrl: countMatches(html, /<meta\s+property=["']og:url["']/gi),
+    twitterTitle: countMatches(html, /<meta\s+name=["']twitter:title["']/gi),
+    twitterDescription: countMatches(html, /<meta\s+name=["']twitter:description["']/gi),
+  };
+  check(
+    `${label} has exactly one description/canonical/OG/Twitter tag`,
+    Object.values(counts).every(count => count === 1)
+  );
 }
 
 async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }> {
@@ -863,6 +1035,194 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
     check(
       'unpublished article still falls through',
       response.headers.get('x-middleware-next') === '1' && (await response.text()) === ''
+    );
+  }
+
+  // Static list routes expose exactly one tag set and one canonical URL
+  {
+    const canonicals: string[] = [];
+
+    for (const path of ['/', '/film-database']) {
+      const response = await middleware(botRequest(path));
+      const html = await response.text();
+      const expectedCanonical =
+        path === '/' ? 'https://www.sotoyfilm.my.id' : `https://www.sotoyfilm.my.id${path}`;
+      const canonical = getCanonicalHref(html);
+
+      expectSingleSeoTagSet(path, html, check);
+      check(`${path} canonical points at the clean route`, canonical === expectedCanonical);
+      check(
+        `${path} uses the short HTML cache`,
+        response.headers.get('cache-control') ===
+          'public, s-maxage=60, stale-while-revalidate=300'
+      );
+      canonicals.push(canonical);
+    }
+
+    check(
+      '/ and /film-database have distinct canonicals',
+      canonicals.length === 2 && canonicals[0] !== canonicals[1]
+    );
+  }
+
+  // Every known category has a distinct description and canonical URL
+  {
+    const categoryNames = ['movies', 'series', 'animation', 'cinema-gear', 'film-studies'];
+    const descriptions = new Set<string>();
+    const canonicals = new Set<string>();
+
+    for (const category of categoryNames) {
+      const path = `/kategori/${category}`;
+      const response = await middleware(botRequest(path));
+      const html = await response.text();
+      const description = getMetaContent(html, 'description');
+      const canonical = getCanonicalHref(html);
+
+      expectSingleSeoTagSet(path, html, check);
+      check(`${path} has a non-empty description`, description.length > 0);
+      check(
+        `${path} canonical matches the category URL`,
+        canonical === `https://www.sotoyfilm.my.id${path}`
+      );
+
+      descriptions.add(description);
+      canonicals.add(canonical);
+    }
+
+    check(
+      'category descriptions are all distinct',
+      descriptions.size === categoryNames.length
+    );
+    check('category canonicals are all distinct', canonicals.size === categoryNames.length);
+  }
+
+  // Bot list payload on list routes
+  {
+    clearSeoListsCache();
+
+    for (const path of ['/', '/film-database', '/kategori/movies']) {
+      const response = await middleware(botRequest(path));
+      const html = await response.text();
+      const lists = extractSeoLists(html);
+      const raw =
+        /<script id="seo-lists" type="application\/json">([\s\S]*?)<\/script>/.exec(html)?.[1] ||
+        '';
+
+      check(`${path} embeds a valid #seo-lists payload`, lists !== null);
+      if (!lists) continue;
+
+      check(`${path} list payload contains films`, lists.films.length > 0);
+      check(
+        `${path} list payload contains the published article`,
+        lists.articles.some(article => article.id === 'published-article')
+      );
+      check(
+        `${path} list payload excludes draft and future-scheduled articles`,
+        lists.articles.every(
+          article =>
+            article.id !== 'draft-article' &&
+            article.id !== 'scheduled-future-article' &&
+            article.status !== 'draft'
+        )
+      );
+      check(
+        `${path} #seo-lists has no content/contentJson fields`,
+        !/"content"\s*:/.test(raw) && !/"contentJson"\s*:/.test(raw)
+      );
+      check(`${path} #seo-lists has no comments array`, !/"comments"\s*:/.test(raw));
+      check(`${path} #seo-lists has no private emails`, !/private-[^"]+@example\.com/.test(raw));
+      check(
+        `${path} #seo-lists has no admin or token fields`,
+        !/"adminNotes"\s*:/.test(raw) && !/"token"\s*:/.test(raw)
+      );
+      check(
+        `${path} #seo-lists keeps public list fields`,
+        lists.films.some(film => film.title === 'Breaking Bad' && film.year === 2008) &&
+          lists.articles.some(article => article.title === 'Published Article Title')
+      );
+    }
+  }
+
+  // One failed list fetch still injects the other; both failing inject nothing
+  {
+    clearSeoListsCache();
+    listFetchFailure.films = true;
+    const filmsFailedHtml = await (await middleware(botRequest('/'))).text();
+    listFetchFailure.films = false;
+    const filmsFailedLists = extractSeoLists(filmsFailedHtml);
+
+    check(
+      'failed film list still injects the article list',
+      !!filmsFailedLists &&
+        filmsFailedLists.films.length === 0 &&
+        filmsFailedLists.articles.some(article => article.id === 'published-article')
+    );
+
+    clearSeoListsCache();
+    listFetchFailure.articles = true;
+    const articlesFailedHtml = await (await middleware(botRequest('/film-database'))).text();
+    listFetchFailure.articles = false;
+    const articlesFailedLists = extractSeoLists(articlesFailedHtml);
+
+    check(
+      'failed article list still injects the film list',
+      !!articlesFailedLists &&
+        articlesFailedLists.articles.length === 0 &&
+        articlesFailedLists.films.length > 0
+    );
+
+    clearSeoListsCache();
+    listFetchFailure.films = true;
+    listFetchFailure.articles = true;
+    const bothFailedResponse = await middleware(botRequest('/kategori/movies'));
+    const bothFailedHtml = await bothFailedResponse.text();
+    listFetchFailure.films = false;
+    listFetchFailure.articles = false;
+
+    check(
+      'both list fetches failing leaves the page without #seo-lists',
+      !bothFailedHtml.includes('id="seo-lists"')
+    );
+    check(
+      'both list fetches failing still returns metadata HTML',
+      bothFailedResponse.status === 200 && bothFailedHtml.includes('rel="canonical"')
+    );
+
+    clearSeoListsCache();
+  }
+
+  // Human browsers never receive the bot list payload
+  {
+    const response = await middleware(
+      new Request('https://www.sotoyfilm.my.id/', {
+        method: 'GET',
+        headers: {
+          'user-agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+        },
+      })
+    );
+    const body = await response.text();
+
+    check(
+      'Chrome UA on a list route passes through untouched',
+      response.headers.get('x-middleware-next') === '1' && body === ''
+    );
+    check('Chrome UA does not receive #seo-lists', !body.includes('seo-lists'));
+  }
+
+  // Detail routes keep their existing prefetch behavior only
+  {
+    const filmHtml = await (await middleware(botRequest('/film/breaking-bad'))).text();
+    const articleHtml = await (await middleware(botRequest('/artikel/published-article'))).text();
+
+    check(
+      'film detail keeps #seo-prefetch and never gets #seo-lists',
+      filmHtml.includes('id="seo-prefetch"') && !filmHtml.includes('id="seo-lists"')
+    );
+    check(
+      'article detail keeps #seo-prefetch and never gets #seo-lists',
+      articleHtml.includes('id="seo-prefetch"') && !articleHtml.includes('id="seo-lists"')
     );
   }
 

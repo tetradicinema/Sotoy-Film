@@ -42,6 +42,9 @@ import { normalizeFilmType } from '../utils/filmType';
 import { normalizeArticleCategory, normalizeInterestLabel, normalizeInterestProfile } from '../utils/articleCategory';
 import { getCollectionItemKey, reorderByKeys } from '../utils/collectionHelpers';
 import { useRestDataFallback } from '../hooks/useRestDataFallback';
+import { readSeoLists } from '../utils/seoPrefetch';
+import type { SeoListsPayload } from '../utils/seoPrefetch';
+import { normalizeRestArticle, normalizeRestFilm } from '../utils/firestoreRestClient';
 import {
   DEFAULT_FALLBACK_AUTHOR,
   INITIAL_BUZZ,
@@ -541,6 +544,29 @@ const FILMS_CACHE_KEY = 'sotoy_cached_films';
 const FILMS_CACHE_TS_KEY = 'sotoy_cached_films_ts';
 const FILMS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
+// The bot-only #seo-lists payload is parsed once per page load and reused by
+// the initial articles/films state so hydration costs a single JSON.parse.
+let initialSeoListsCache: SeoListsPayload | null | undefined;
+
+const getInitialSeoLists = (): SeoListsPayload | null => {
+  if (initialSeoListsCache === undefined) {
+    initialSeoListsCache = readSeoLists();
+  }
+  return initialSeoListsCache;
+};
+
+/** Normalizes list-payload films exactly like refreshFilms(). */
+const buildInitialListFilms = (docs: Record<string, any>[]): FilmItem[] => {
+  const filmMap = new Map<string, FilmItem>();
+  for (const doc of docs) {
+    const film = normalizeRestFilm(doc);
+    if (film) filmMap.set(film.id, film);
+  }
+  return Array.from(filmMap.values()).sort(
+    (a, b) => (a.trendingRank || 99) - (b.trendingRank || 99)
+  );
+};
+
 const hydrateCachedFilms = (): { films: FilmItem[]; ts: number } | null => {
   try {
     const raw = localStorage.getItem(FILMS_CACHE_KEY);
@@ -685,16 +711,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [savedArticles, setSavedArticles] = useState<string[]>([]);
   const [collections, setCollections] = useState<UserCollection[]>([]);
-  const [articles, setArticles] = useState<Article[]>([]);
+  const [articles, setArticles] = useState<Article[]>(() => {
+    const lists = getInitialSeoLists();
+    return lists ? normalizeRestArticle(lists.articles) : [];
+  });
   // Hydrate films from localStorage cache on load so repeat visits within 10 minutes cost 0 reads
   const initialCachedFilms = useMemo(() => hydrateCachedFilms(), []);
-  const [films, setFilms] = useState<FilmItem[]>(() => initialCachedFilms?.films || []);
+  const [films, setFilms] = useState<FilmItem[]>(() => {
+    if (initialCachedFilms?.films?.length) return initialCachedFilms.films;
+    const lists = getInitialSeoLists();
+    return lists ? buildInitialListFilms(lists.films) : [];
+  });
   const lastFilmsFetchTsRef = useRef<number>(initialCachedFilms?.ts || 0);
   const inFlightFilmsFetchRef = useRef<Promise<void> | null>(null);
 
   const [rawBuzzList, setRawBuzzList] = useState<BuzzPost[]>([]);
-  const [isLoadingArticles, setIsLoadingArticles] = useState<boolean>(true);
-  const [isLoadingFilms, setIsLoadingFilms] = useState<boolean>(() => !initialCachedFilms);
+  const [isLoadingArticles, setIsLoadingArticles] = useState<boolean>(() => {
+    const lists = getInitialSeoLists();
+    return !(lists && lists.articles.length > 0);
+  });
+  const [isLoadingFilms, setIsLoadingFilms] = useState<boolean>(() => {
+    if (initialCachedFilms) return false;
+    const lists = getInitialSeoLists();
+    return !(lists && lists.films.length > 0);
+  });
   const [isLoadingBuzz, setIsLoadingBuzz] = useState<boolean>(true);
   const [ratings, setRatings] = useState<UserRating[]>(INITIAL_RATINGS);
   const [criticSubmissions, setCriticSubmissions] = useState<CriticSubmission[]>([]);

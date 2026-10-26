@@ -35,6 +35,11 @@ export interface SeoPrefetchEnvelope<T = Record<string, any>> {
   data: T;
 }
 
+export interface SeoListsPayload {
+  films: Record<string, any>[];
+  articles: Record<string, any>[];
+}
+
 const REST_TIMEOUT_MS = 8000;
 const USER_ROLES = new Set<UserRole>([
   'warga_sotoy',
@@ -118,6 +123,43 @@ export function readSeoPrefetch(
     if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
 
     return data as Record<string, any>;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Reads the bot-only `<script id="seo-lists">` payload emitted for list pages.
+ * Returns null when the script is missing or malformed. Never throws.
+ */
+export function readSeoLists(
+  doc: Document | null = typeof document !== 'undefined' ? document : null
+): SeoListsPayload | null {
+  try {
+    if (!doc) return null;
+
+    const script = doc.querySelector('#seo-lists');
+    const raw = script?.textContent;
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as Partial<SeoListsPayload>;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    if (!Array.isArray(parsed.films) && !Array.isArray(parsed.articles)) return null;
+
+    const films = Array.isArray(parsed.films)
+      ? parsed.films.filter(
+          (item): item is Record<string, any> =>
+            !!item && typeof item === 'object' && !Array.isArray(item)
+        )
+      : [];
+    const articles = Array.isArray(parsed.articles)
+      ? parsed.articles.filter(
+          (item): item is Record<string, any> =>
+            !!item && typeof item === 'object' && !Array.isArray(item)
+        )
+      : [];
+
+    return { films, articles };
   } catch {
     return null;
   }

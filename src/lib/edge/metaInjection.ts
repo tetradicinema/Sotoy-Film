@@ -790,6 +790,176 @@ export function injectPrefetchData(
   }
 }
 
+/* -------------------------------------------------------------------------- */
+/* List-page payload (bot-only #seo-lists script)                             */
+/* -------------------------------------------------------------------------- */
+
+export interface SeoListsPayload {
+  films: Record<string, any>[];
+  articles: Record<string, any>[];
+}
+
+const SEO_LIST_FILM_STRING_FIELDS = [
+  'id',
+  'slug',
+  'title',
+  'originalTitle',
+  'type',
+  'poster',
+  'backdrop',
+  'director',
+  'duration',
+  'releaseDate',
+  'idReleaseDate',
+  'createdAt',
+  'updatedAt',
+  'status',
+];
+
+const SEO_LIST_FILM_NUMBER_FIELDS = [
+  'year',
+  'skorSotoy',
+  'criticsSkorSotoy',
+  'totalVotes',
+  'scoreScale',
+  'trendingRank',
+];
+
+const SEO_LIST_FILM_STRING_ARRAY_FIELDS = [
+  'genres',
+  'cast',
+  'tags',
+  'originCountry',
+];
+
+const SEO_LIST_ARTICLE_STRING_FIELDS = [
+  'id',
+  'slug',
+  'title',
+  'excerpt',
+  'coverImage',
+  'coverImageAlt',
+  'category',
+  'subCategory',
+  'authorId',
+  'publishedAt',
+  'publishedAtTimestamp',
+  'readTime',
+  'status',
+  'scheduledAt',
+  'updatedAt',
+  'seoTitle',
+  'metaDescription',
+  'ogImage',
+];
+
+const SEO_LIST_ARTICLE_NUMBER_FIELDS = [
+  'views',
+  'likes',
+  'commentsCount',
+  'skorSotoy',
+  'coverImageWidth',
+  'coverImageHeight',
+];
+
+const SEO_LIST_ARTICLE_STRING_ARRAY_FIELDS = ['tags', 'relatedFilmIds'];
+
+/**
+ * Builds a list-card-safe film record. Only allowlisted public fields survive,
+ * so an unfiltered REST response can never leak content, comments, emails or
+ * admin internals into the HTML.
+ */
+function sanitizeSeoListFilm(data: Record<string, any>): Record<string, any> {
+  const safe: Record<string, any> = {};
+
+  for (const key of SEO_LIST_FILM_STRING_FIELDS) {
+    const value = firstString(data[key]);
+    if (value !== undefined) safe[key] = value;
+  }
+  for (const key of SEO_LIST_FILM_NUMBER_FIELDS) {
+    const value = firstNumber(data[key]);
+    if (value !== undefined) safe[key] = value;
+  }
+  for (const key of SEO_LIST_FILM_STRING_ARRAY_FIELDS) {
+    const value = stringList(data[key]);
+    if (value) safe[key] = value;
+  }
+
+  if (typeof data.featuredRecommendation === 'boolean') {
+    safe.featuredRecommendation = data.featuredRecommendation;
+  }
+
+  const whereToWatch = sanitizeWhereToWatch(data.whereToWatch);
+  if (whereToWatch) safe.whereToWatch = whereToWatch;
+
+  return safe;
+}
+
+/**
+ * Builds a list-card-safe article record with the same allowlist approach.
+ */
+function sanitizeSeoListArticle(data: Record<string, any>): Record<string, any> {
+  const safe: Record<string, any> = {};
+
+  for (const key of SEO_LIST_ARTICLE_STRING_FIELDS) {
+    const value = firstString(data[key]);
+    if (value !== undefined) safe[key] = value;
+  }
+  for (const key of SEO_LIST_ARTICLE_NUMBER_FIELDS) {
+    const value = firstNumber(data[key]);
+    if (value !== undefined) safe[key] = value;
+  }
+  for (const key of SEO_LIST_ARTICLE_STRING_ARRAY_FIELDS) {
+    const value = stringList(data[key]);
+    if (value) safe[key] = value;
+  }
+
+  const author = sanitizeAuthor(data.author);
+  if (author) safe.author = author;
+
+  return safe;
+}
+
+/**
+ * Embeds the bot-only list payload used by AppContext to hydrate films and
+ * articles before the Firestore SDK finishes. Injected once, just before
+ * `</head>`. Existing payloads are replaced to avoid duplicates.
+ */
+export function injectSeoLists(
+  html: string,
+  lists: { films?: unknown; articles?: unknown }
+): string {
+  if (!html) return html;
+
+  try {
+    const films = Array.isArray(lists?.films)
+      ? lists.films.filter(isPlainObject).map(sanitizeSeoListFilm)
+      : [];
+    const articles = Array.isArray(lists?.articles)
+      ? lists.articles.filter(isPlainObject).map(sanitizeSeoListArticle)
+      : [];
+
+    if (films.length === 0 && articles.length === 0) return html;
+
+    const json = serializePrefetchPayload({ films, articles });
+    const script = `<script id="seo-lists" type="application/json">${json}</script>`;
+    const withoutExisting = html.replace(
+      /<script\s+id=["']seo-lists["'][^>]*>[\s\S]*?<\/script>/gi,
+      ''
+    );
+
+    if (/<\/head>/i.test(withoutExisting)) {
+      return withoutExisting.replace(/<\/head>/i, `${script}</head>`);
+    }
+    if (/<\/body>/i.test(withoutExisting)) {
+      return withoutExisting.replace(/<\/body>/i, `${script}</body>`);
+    }
+    return `${withoutExisting}${script}`;
+  } catch {
+    return html;
+  }
+}
+
 /**
  * Minimal static HTML fallback if fetching index.html from origin times out.
  */

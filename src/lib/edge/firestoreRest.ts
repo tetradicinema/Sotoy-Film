@@ -127,6 +127,168 @@ export function isArticlePublished(data: Record<string, any>): boolean {
   return true;
 }
 
+/* -------------------------------------------------------------------------- */
+/* List-page payloads (bot-only seo-lists script)                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Fields needed by list cards on the homepage, film database, recommendations,
+ * community feed and category pages. Content, comments, emails and tokens are
+ * intentionally absent so they can never reach the injected JSON.
+ */
+export const LIST_FILM_FIELD_PATHS = [
+  'id',
+  'slug',
+  'title',
+  'originalTitle',
+  'type',
+  'year',
+  'poster',
+  'backdrop',
+  'director',
+  'duration',
+  'releaseDate',
+  'idReleaseDate',
+  'genres',
+  'cast',
+  'tags',
+  'originCountry',
+  'whereToWatch',
+  'skorSotoy',
+  'criticsSkorSotoy',
+  'totalVotes',
+  'scoreScale',
+  'trendingRank',
+  'featuredRecommendation',
+  'createdAt',
+  'updatedAt',
+  'status',
+];
+
+export const LIST_ARTICLE_FIELD_PATHS = [
+  'id',
+  'slug',
+  'title',
+  'excerpt',
+  'coverImage',
+  'coverImageAlt',
+  'category',
+  'subCategory',
+  'authorId',
+  'author',
+  'publishedAt',
+  'publishedAtTimestamp',
+  'readTime',
+  'views',
+  'likes',
+  'commentsCount',
+  'skorSotoy',
+  'tags',
+  'status',
+  'scheduledAt',
+  'updatedAt',
+  'seoTitle',
+  'metaDescription',
+  'ogImage',
+];
+
+const SEO_LIST_CACHE_TTL_MS = 60 * 1000; // 60 seconds
+const SEO_LIST_PAGE_SIZE = 300;
+const SEO_LIST_ARTICLE_LIMIT = 50;
+
+interface CachedSeoList {
+  docs: any[];
+  timestamp: number;
+}
+
+const seoListCache: Record<'films' | 'articles', CachedSeoList | null> = {
+  films: null,
+  articles: null,
+};
+
+/** Test/maintenance helper: clears the short-lived list payload cache. */
+export function clearSeoListsCache(): void {
+  seoListCache.films = null;
+  seoListCache.articles = null;
+}
+
+function getListArticleTime(data: Record<string, any>): number {
+  for (const field of ['publishedAtTimestamp', 'scheduledAt', 'publishedAt', 'updatedAt', 'createdAt']) {
+    const raw = data[field];
+    if (typeof raw !== 'string' || !raw.trim()) continue;
+    const parsed = new Date(raw).getTime();
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+  return 0;
+}
+
+/**
+ * Fetches one list page (up to 300 docs) with a field mask limited to the
+ * fields used by list cards. Articles are filtered to published items, sorted
+ * newest first and capped at 50. Returns null on any failure so the caller can
+ * distinguish "fetch failed" from "collection is empty".
+ *
+ * Successful responses are cached in memory for 60 seconds.
+ */
+export async function fetchListCollectionDocuments(
+  collection: 'films' | 'articles'
+): Promise<any[] | null> {
+  const cached = seoListCache[collection];
+  if (cached && Date.now() - cached.timestamp < SEO_LIST_CACHE_TTL_MS) {
+    return cached.docs;
+  }
+
+  const fieldPaths =
+    collection === 'films' ? LIST_FILM_FIELD_PATHS : LIST_ARTICLE_FIELD_PATHS;
+
+  try {
+    const maskParams = fieldPaths
+      .map(fieldPath => `mask.fieldPaths=${encodeURIComponent(fieldPath)}`)
+      .join('&');
+    const endpoint = `${FIRESTORE_DOCUMENTS_URL}/${collection}?pageSize=${SEO_LIST_PAGE_SIZE}&key=${FIRESTORE_API_KEY}&${maskParams}`;
+
+    const res = await fetchWithTimeout(
+      endpoint,
+      { headers: { Accept: 'application/json' } },
+      2500
+    );
+    if (!res.ok) return null;
+
+    const payload = await res.json();
+    if (!Array.isArray(payload?.documents)) return null;
+
+    let docs = payload.documents
+      .map((raw: any) => {
+        const parsed = parseFirestoreFields(raw);
+        if (!parsed.id && typeof raw?.name === 'string') {
+          const docId = raw.name.split('/').pop();
+          if (docId) parsed.id = docId;
+        }
+        return parsed;
+      })
+      .filter(
+        (doc: Record<string, any>) => doc && typeof doc === 'object' && Object.keys(doc).length > 0
+      );
+
+    if (collection === 'articles') {
+      docs = docs
+        .filter((doc: Record<string, any>) => isArticlePublished(doc))
+        .sort(
+          (a: Record<string, any>, b: Record<string, any>) =>
+            getListArticleTime(b) - getListArticleTime(a)
+        )
+        .slice(0, SEO_LIST_ARTICLE_LIMIT);
+    } else {
+      docs = docs.slice(0, SEO_LIST_PAGE_SIZE);
+    }
+
+    seoListCache[collection] = { docs, timestamp: Date.now() };
+    return docs;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Fetches all documents in a collection via Firestore REST API, requesting only fields needed for meta tags.
  * Supports both paginated GET /documents/{collection} and POST /documents:runQuery fallback.

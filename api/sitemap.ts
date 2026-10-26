@@ -16,6 +16,22 @@ const BASE_URL = 'https://www.sotoyfilm.my.id';
 // so crawlers do not see a fake "changed today" signal on every request.
 const STATIC_LASTMOD = '2026-10-25';
 
+/**
+ * Only fields required to build sitemap URLs and dates. Article bodies,
+ * comments, author emails and admin fields are never requested.
+ */
+const SITEMAP_SELECT_FIELDS = [
+  'id',
+  'slug',
+  'title',
+  'status',
+  'scheduledAt',
+  'updatedAt',
+  'publishedAt',
+  'createdAt',
+  'excerpt',
+];
+
 interface SitemapItem {
   link: string;
   title: string;
@@ -127,7 +143,9 @@ function buildXml(items: SitemapItem[]): string {
   for (const item of items) {
     xml += '  <url>\n';
     xml += `    <loc>${escapeXml(item.link)}</loc>\n`;
-    xml += `    <lastmod>${escapeXml(item.lastmod)}</lastmod>\n`;
+    if (item.lastmod) {
+      xml += `    <lastmod>${escapeXml(item.lastmod)}</lastmod>\n`;
+    }
     xml += `    <changefreq>${escapeXml(item.changefreq)}</changefreq>\n`;
     xml += `    <priority>${escapeXml(item.priority)}</priority>\n`;
     xml += '  </url>\n';
@@ -170,6 +188,9 @@ async function fetchAllCollectionDocs(collectionId: 'articles' | 'films'): Promi
       body: JSON.stringify({
         structuredQuery: {
           from: [{ collectionId }],
+          select: {
+            fields: SITEMAP_SELECT_FIELDS.map(fieldPath => ({ fieldPath })),
+          },
           offset,
           limit: pageSize,
         },
@@ -205,12 +226,18 @@ async function fetchAllCollectionDocs(collectionId: 'articles' | 'films'): Promi
   return allDocs;
 }
 
-async function generateLiveSitemapItems(today: string): Promise<SitemapItem[]> {
+async function generateLiveSitemapItems(): Promise<SitemapItem[]> {
   const staticItems = getStaticItems();
   const items: SitemapItem[] = [...staticItems];
 
-  // Fetch articles
-  const rawArticles = await fetchAllCollectionDocs('articles');
+  // Fetch both collections in parallel: the sitemap only needs one round-trip
+  // worth of latency per collection instead of two sequential waits.
+  const [rawArticles, rawFilms] = await Promise.all([
+    fetchAllCollectionDocs('articles'),
+    fetchAllCollectionDocs('films'),
+  ]);
+
+  // Articles
   const seenArticleSlugs = new Set<string>();
 
   for (const art of rawArticles) {
@@ -220,7 +247,9 @@ async function generateLiveSitemapItems(today: string): Promise<SitemapItem[]> {
     if (!slug || seenArticleSlugs.has(slug)) continue;
     seenArticleSlugs.add(slug);
 
-    const lastmod = formatDateToYMD(art.updatedAt || art.publishedAt || art.createdAt, today);
+    // Never fall back to "today": omit <lastmod> when the document has no
+    // valid updatedAt/publishedAt/createdAt value.
+    const lastmod = formatDateToYMD(art.updatedAt || art.publishedAt || art.createdAt, '');
     items.push({
       link: `${BASE_URL}/artikel/${encodeURIComponent(slug)}`,
       title: art.title || 'Artikel',
@@ -232,8 +261,7 @@ async function generateLiveSitemapItems(today: string): Promise<SitemapItem[]> {
     });
   }
 
-  // Fetch films
-  const rawFilms = await fetchAllCollectionDocs('films');
+  // Films
   const seenFilmSlugs = new Set<string>();
 
   for (const film of rawFilms) {
@@ -241,7 +269,7 @@ async function generateLiveSitemapItems(today: string): Promise<SitemapItem[]> {
     if (!slug || seenFilmSlugs.has(slug)) continue;
     seenFilmSlugs.add(slug);
 
-    const lastmod = formatDateToYMD(film.updatedAt || film.createdAt, today);
+    const lastmod = formatDateToYMD(film.updatedAt || film.createdAt, '');
     items.push({
       link: `${BASE_URL}/film/${encodeURIComponent(slug)}`,
       title: film.title || 'Film',
@@ -258,7 +286,7 @@ async function generateLiveSitemapItems(today: string): Promise<SitemapItem[]> {
 
 function sendResponse(res: any, status: number, contentType: string, body: string) {
   res.setHeader('Content-Type', contentType);
-  res.setHeader('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=3600');
+  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
   if (typeof res.status === 'function') {
     return res.status(status).send(body);
   } else {
@@ -271,8 +299,6 @@ function sendResponse(res: any, status: number, contentType: string, body: strin
  * Shared sitemap request handler for Express and Vercel Serverless
  */
 export async function handleSitemapRequest(req: any, res: any) {
-  const today = new Date().toISOString().split('T')[0];
-
   const rawUrl = req.url || '/';
   const isCsv =
     req.query?.format === 'csv' ||
@@ -281,7 +307,7 @@ export async function handleSitemapRequest(req: any, res: any) {
     rawUrl.includes('/sitemap.csv');
 
   try {
-    const items = await generateLiveSitemapItems(today);
+    const items = await generateLiveSitemapItems();
     if (isCsv) {
       const csv = buildCsv(items);
       return sendResponse(res, 200, 'text/csv; charset=utf-8', csv);
