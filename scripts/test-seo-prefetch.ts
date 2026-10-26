@@ -480,137 +480,280 @@ async function main(): Promise<void> {
   }
 }
 
+interface CapturedListRequest {
+  url: string;
+  method: string;
+  body: any;
+}
+
 async function runListPageChecks(): Promise<void> {
   console.log('\n--- List pagination assertions ---\n');
 
   const realFetch = globalThis.fetch;
 
-  const filmDocResponse = (id: string, nextPageToken?: string) =>
-    new Response(
-      JSON.stringify({
-        documents: [
-          {
-            name: `projects/test/databases/test/documents/films/${id}`,
-            fields: {
-              id: { stringValue: id },
-              slug: { stringValue: id },
-              title: { stringValue: `Film ${id}` },
-            },
+  const jsonResults = (results: any[]) =>
+    new Response(JSON.stringify(results), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+
+  const filmResultPage = (prefix: string, count: number) => {
+    const results: any[] = [];
+    for (let i = 1; i <= count; i++) {
+      const id = `${prefix}-${i}`;
+      results.push({
+        document: {
+          name: `projects/test/databases/test/documents/films/${id}`,
+          fields: {
+            id: { stringValue: id },
+            slug: { stringValue: id },
+            title: { stringValue: `Film ${id}` },
           },
-        ],
-        ...(nextPageToken ? { nextPageToken } : {}),
-      }),
-      { status: 200, headers: { 'content-type': 'application/json' } }
-    );
+        },
+      });
+    }
+    // runQuery always ends with a read-time-only entry; it must be ignored.
+    results.push({ readTime: '2026-10-26T00:00:00.000Z' });
+    return results;
+  };
+
+  const installRunQueryMock = (
+    handler: (request: CapturedListRequest) => Response
+  ): CapturedListRequest[] => {
+    const requests: CapturedListRequest[] = [];
+    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(String(init.body)) : null;
+      const request: CapturedListRequest = {
+        url: url.toString(),
+        method: init?.method || 'GET',
+        body,
+      };
+      requests.push(request);
+      return handler(request);
+    }) as typeof fetch;
+    return requests;
+  };
+
+  const selectedFieldPaths = (body: any): string[] =>
+    (body?.structuredQuery?.select?.fields || []).map((field: any) => field.fieldPath);
+
+  const forbiddenFields = ['content', 'contentJson', 'comments'];
+
+  const isRunQueryRequest = (request: CapturedListRequest): boolean =>
+    request.method === 'POST' && request.url.includes(':runQuery');
 
   try {
-    // Films follow nextPageToken and stop after three pages.
+    // Films page with offsets 0/300/600 and stop after three full pages.
     {
       clearSeoListsCache();
-      const urls: string[] = [];
-      globalThis.fetch = (async (url: string | URL | Request) => {
-        const urlStr = url.toString();
-        urls.push(urlStr);
-
-        if (!urlStr.includes('/documents/films?')) {
-          return new Response(JSON.stringify({ documents: [] }), { status: 200 });
-        }
-        if (!urlStr.includes('pageToken=')) return filmDocResponse('film-1', 'token-2');
-        if (urlStr.includes('pageToken=token-2')) return filmDocResponse('film-2', 'token-3');
-        // The third page still advertises another page; we must stop here.
-        return filmDocResponse('film-3', 'token-4');
-      }) as typeof fetch;
+      const requests = installRunQueryMock(request => {
+        const offset = request.body?.structuredQuery?.offset ?? 0;
+        if (offset === 0) return jsonResults(filmResultPage('p1', 300));
+        if (offset === 300) return jsonResults(filmResultPage('p2', 300));
+        return jsonResults(filmResultPage('p3', 300));
+      });
 
       const films = await fetchListCollectionDocuments('films');
 
       check(
-        'films follows nextPageToken up to 3 pages and stops',
-        films?.length === 3 &&
-          urls.length === 3 &&
-          films[0].id === 'film-1' &&
-          films[1].id === 'film-2' &&
-          films[2].id === 'film-3'
+        'films use POST runQuery with offsets 0/300/600 and stop after 3 pages',
+        films?.length === 900 &&
+          requests.length === 3 &&
+          requests.every(isRunQueryRequest) &&
+          requests[0].body?.structuredQuery?.offset === 0 &&
+          requests[1].body?.structuredQuery?.offset === 300 &&
+          requests[2].body?.structuredQuery?.offset === 600 &&
+          requests.every(
+            request => request.body?.structuredQuery?.limit === 300
+          ) &&
+          films[0].id === 'p1-1' &&
+          films[299].id === 'p1-300' &&
+          films[300].id === 'p2-1' &&
+          films[899].id === 'p3-300'
       );
       check(
-        'film pagination sends sequential pageToken requests',
-        urls[1]?.includes('pageToken=token-2') === true &&
-          urls[2]?.includes('pageToken=token-3') === true
+        'film runQuery ignores the readTime-only result entry',
+        films?.every((film: any) => typeof film.id === 'string') === true
       );
       check(
-        'film pagination keeps the list field mask and page size',
-        urls.every(
-          url =>
-            url.includes('pageSize=300') &&
-            url.includes('mask.fieldPaths=id') &&
-            url.includes('mask.fieldPaths=title') &&
-            !url.includes('mask.fieldPaths=content')
-        )
+        'film runQuery selects list fields and never content, contentJson or comments',
+        requests.every(request => {
+          const fields = selectedFieldPaths(request.body);
+          return (
+            requests[0].body?.structuredQuery?.from?.[0]?.collectionId === 'films' &&
+            fields.includes('id') &&
+            fields.includes('title') &&
+            fields.includes('poster') &&
+            fields.includes('genres') &&
+            forbiddenFields.every(field => !fields.includes(field)) &&
+            forbiddenFields.every(
+              field => !JSON.stringify(request.body).includes(`"${field}"`)
+            )
+          );
+        })
+      );
+    }
+
+    // A short page means there is nothing left to page through.
+    {
+      clearSeoListsCache();
+      const requests = installRunQueryMock(request => {
+        const offset = request.body?.structuredQuery?.offset ?? 0;
+        return jsonResults(
+          offset === 0 ? filmResultPage('short-a', 300) : filmResultPage('short-b', 10)
+        );
+      });
+
+      const films = await fetchListCollectionDocuments('films');
+
+      check(
+        'films stop early when a page returns fewer than 300 documents',
+        requests.length === 2 &&
+          requests[1].body?.structuredQuery?.offset === 300 &&
+          films?.length === 310 &&
+          films[309].id === 'short-b-10'
       );
     }
 
     // A failure on page 2 returns the first page instead of throwing/losing it.
     {
       clearSeoListsCache();
-      let calls = 0;
-      globalThis.fetch = (async () => {
-        calls++;
-        if (calls === 1) return filmDocResponse('film-1', 'token-2');
-        return new Response(JSON.stringify({ error: { code: 503 } }), { status: 503 });
-      }) as typeof fetch;
+      const realWarn = console.warn;
+      const warnings: string[] = [];
+      console.warn = (...args: any[]) => {
+        warnings.push(args.map(String).join(' '));
+      };
+      try {
+        const requests = installRunQueryMock(request => {
+          const offset = request.body?.structuredQuery?.offset ?? 0;
+          if (offset === 0) return jsonResults(filmResultPage('kept', 300));
+          return new Response(JSON.stringify({ error: { code: 503 } }), { status: 503 });
+        });
 
-      const films = await fetchListCollectionDocuments('films');
+        const films = await fetchListCollectionDocuments('films');
 
-      check(
-        'a failed second film page keeps the collected documents',
-        films?.length === 1 && films[0].id === 'film-1' && calls === 2
-      );
+        check(
+          'a failed second film request keeps the collected documents',
+          films?.length === 300 &&
+            films[0].id === 'kept-1' &&
+            films[299].id === 'kept-300' &&
+            requests.length === 2
+        );
+        check(
+          'a failed film request warns with the collection name and status only',
+          warnings.length === 1 &&
+            warnings[0].includes('films') &&
+            warnings[0].includes('503') &&
+            !warnings[0].includes('key=') &&
+            !warnings[0].includes('http')
+        );
+      } finally {
+        console.warn = realWarn;
+      }
     }
 
-    // Articles stay on a single page even when a token is present.
+    // Articles use exactly one request, filter drafts, sort newest first and
+    // fill a missing id from the document name.
     {
       clearSeoListsCache();
-      let calls = 0;
-      globalThis.fetch = (async () => {
-        calls++;
-        return new Response(
-          JSON.stringify({
-            documents: [
-              {
-                name: 'projects/test/databases/test/documents/articles/article-1',
-                fields: {
-                  id: { stringValue: 'article-1' },
-                  slug: { stringValue: 'article-1' },
-                  title: { stringValue: 'Article 1' },
-                  status: { stringValue: 'published' },
-                },
+      const requests = installRunQueryMock(() =>
+        jsonResults([
+          {
+            document: {
+              name: 'projects/test/databases/test/documents/articles/article-old',
+              fields: {
+                slug: { stringValue: 'article-old' },
+                title: { stringValue: 'Article Old' },
+                status: { stringValue: 'published' },
+                publishedAt: { stringValue: '2026-10-01T00:00:00.000Z' },
               },
-            ],
-            nextPageToken: 'more-articles',
-          }),
-          { status: 200, headers: { 'content-type': 'application/json' } }
-        );
-      }) as typeof fetch;
+            },
+          },
+          {
+            document: {
+              name: 'projects/test/databases/test/documents/articles/article-new',
+              fields: {
+                id: { stringValue: 'article-new' },
+                slug: { stringValue: 'article-new' },
+                title: { stringValue: 'Article New' },
+                status: { stringValue: 'published' },
+                publishedAt: { stringValue: '2026-10-20T00:00:00.000Z' },
+              },
+            },
+          },
+          {
+            document: {
+              name: 'projects/test/databases/test/documents/articles/article-draft',
+              fields: {
+                id: { stringValue: 'article-draft' },
+                slug: { stringValue: 'article-draft' },
+                title: { stringValue: 'Article Draft' },
+                status: { stringValue: 'draft' },
+                publishedAt: { stringValue: '2026-10-25T00:00:00.000Z' },
+              },
+            },
+          },
+          { readTime: '2026-10-26T00:00:00.000Z' },
+        ])
+      );
 
       const articles = await fetchListCollectionDocuments('articles');
 
       check(
-        'articles stay on one page even when a nextPageToken is present',
-        calls === 1 && articles?.length === 1 && articles[0].id === 'article-1'
+        'articles use a single POST runQuery request',
+        requests.length === 1 &&
+          isRunQueryRequest(requests[0]) &&
+          requests[0].body?.structuredQuery?.offset === 0 &&
+          requests[0].body?.structuredQuery?.limit === 300
+      );
+      check(
+        'articles drop drafts, sort newest first and fill id from the document name',
+        articles?.length === 2 &&
+          articles[0].id === 'article-new' &&
+          articles[1].id === 'article-old' &&
+          !articles.some((article: any) => article.status === 'draft')
+      );
+      check(
+        'article runQuery selects list fields and never content, contentJson or comments',
+        requests.every(request => {
+          const fields = selectedFieldPaths(request.body);
+          return (
+            request.body?.structuredQuery?.from?.[0]?.collectionId === 'articles' &&
+            fields.includes('id') &&
+            fields.includes('title') &&
+            fields.includes('excerpt') &&
+            fields.includes('commentsCount') &&
+            forbiddenFields.every(field => !fields.includes(field)) &&
+            forbiddenFields.every(
+              field => !JSON.stringify(request.body).includes(`"${field}"`)
+            )
+          );
+        })
       );
     }
 
     // A failed first page still reports failure as null.
     {
       clearSeoListsCache();
-      globalThis.fetch = (async () =>
-        new Response(JSON.stringify({ error: { code: 503 } }), {
-          status: 503,
-        })) as typeof fetch;
+      const realWarn = console.warn;
+      console.warn = () => {};
+      try {
+        const requests = installRunQueryMock(
+          () =>
+            new Response(JSON.stringify({ error: { code: 403 } }), {
+              status: 403,
+            })
+        );
 
-      check(
-        'a failed first film page returns null',
-        (await fetchListCollectionDocuments('films')) === null
-      );
+        const films = await fetchListCollectionDocuments('films');
+
+        check(
+          'a failed first film request returns null',
+          films === null && requests.length === 1
+        );
+      } finally {
+        console.warn = realWarn;
+      }
     }
   } finally {
     clearSeoListsCache();

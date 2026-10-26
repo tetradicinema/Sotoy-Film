@@ -241,14 +241,23 @@ function getListArticleTime(data: Record<string, any>): number {
 }
 
 /**
- * Fetches list-card documents with a field mask limited to the fields used by
- * list cards. Films follow nextPageToken for up to 3 pages (the catalog is
- * already close to one 300-document page); articles stay on one page, filtered
- * to published items, sorted newest first and capped at 50.
+ * Fetches list-card documents with a projected field mask limited to the
+ * fields used by list cards.
  *
- * A failed first page returns null so callers can distinguish "fetch failed"
- * from "collection is empty". A later page failure returns the documents
- * already collected. Successful responses are cached in memory for 60 seconds.
+ * Uses POST :runQuery because unauthenticated GET /documents/{collection}
+ * list calls are rejected by Firestore REST with 403 in production. Films are
+ * paged with offset 0, 300 and 600 (at most 3 requests), continuing only when
+ * the previous page returned a full page; articles stay on one request, are
+ * filtered to published items, sorted newest first and capped at 50.
+ *
+ * A failed first request returns null so callers can distinguish "fetch
+ * failed" from "collection is empty". A failed later film request returns the
+ * documents already collected. Successful responses are cached in memory for
+ * 60 seconds.
+ *
+ * If an OK response is not a runQuery result array (for example a fronting
+ * proxy that only speaks the legacy list envelope), the field-masked list
+ * endpoint is tried once as a compatibility fallback.
  */
 export async function fetchListCollectionDocuments(
   collection: 'films' | 'articles'
@@ -261,86 +270,166 @@ export async function fetchListCollectionDocuments(
   const fieldPaths =
     collection === 'films' ? LIST_FILM_FIELD_PATHS : LIST_ARTICLE_FIELD_PATHS;
   const maxPages = collection === 'films' ? SEO_LIST_FILM_MAX_PAGES : 1;
+  const endpoint = `${FIRESTORE_DOCUMENTS_URL}:runQuery?key=${FIRESTORE_API_KEY}`;
+
+  const collected: any[] = [];
+  let firstPageSucceeded = false;
+  let needsLegacyListFallback = false;
+
+  const appendRawDocuments = (rawDocuments: any[]): void => {
+    collected.push(
+      ...rawDocuments
+        .map((raw: any) => {
+          const parsed = parseFirestoreFields(raw);
+          if (!parsed.id && typeof raw?.name === 'string') {
+            const docId = raw.name.split('/').pop();
+            if (docId) parsed.id = docId;
+          }
+          return parsed;
+        })
+        .filter(
+          (doc: Record<string, any>) =>
+            doc && typeof doc === 'object' && Object.keys(doc).length > 0
+        )
+    );
+  };
 
   try {
-    const maskParams = fieldPaths
-      .map(fieldPath => `mask.fieldPaths=${encodeURIComponent(fieldPath)}`)
-      .join('&');
-    const baseEndpoint = `${FIRESTORE_DOCUMENTS_URL}/${collection}?pageSize=${SEO_LIST_PAGE_SIZE}&key=${FIRESTORE_API_KEY}&${maskParams}`;
-
-    const collected: any[] = [];
-    let pageToken: string | undefined;
-    let firstPageSucceeded = false;
-
     for (let page = 0; page < maxPages; page++) {
-      const endpoint = pageToken
-        ? `${baseEndpoint}&pageToken=${encodeURIComponent(pageToken)}`
-        : baseEndpoint;
+      const offset = page * SEO_LIST_PAGE_SIZE;
 
       let res: Response;
       try {
         res = await fetchWithTimeout(
           endpoint,
-          { headers: { Accept: 'application/json' } },
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+            body: JSON.stringify({
+              structuredQuery: {
+                from: [{ collectionId: collection }],
+                select: {
+                  fields: fieldPaths.map(fieldPath => ({ fieldPath })),
+                },
+                offset,
+                limit: SEO_LIST_PAGE_SIZE,
+              },
+            }),
+          },
           2500
         );
       } catch {
         break;
       }
-      if (!res.ok) break;
 
-      let payload: any;
+      if (!res.ok) {
+        console.warn(
+          `[Edge Firestore] List query failed for ${collection} (status ${res.status})`
+        );
+        break;
+      }
+
+      let results: any;
       try {
-        payload = await res.json();
+        results = await res.json();
       } catch {
         break;
       }
-      if (!Array.isArray(payload?.documents)) break;
+
+      if (!Array.isArray(results)) {
+        // An OK response that is not a runQuery result array means this
+        // deployment is fronted by a legacy list responder. Real Firestore
+        // always answers :runQuery with an array, so this only matters for
+        // compatibility; retry through the list endpoint below.
+        needsLegacyListFallback = true;
+        break;
+      }
+
+      const pageDocuments = results
+        .filter((entry: any) => entry && entry.document)
+        .map((entry: any) => entry.document);
 
       firstPageSucceeded = true;
-      collected.push(
-        ...payload.documents
-          .map((raw: any) => {
-            const parsed = parseFirestoreFields(raw);
-            if (!parsed.id && typeof raw?.name === 'string') {
-              const docId = raw.name.split('/').pop();
-              if (docId) parsed.id = docId;
-            }
-            return parsed;
-          })
-          .filter(
-            (doc: Record<string, any>) =>
-              doc && typeof doc === 'object' && Object.keys(doc).length > 0
-          )
-      );
+      appendRawDocuments(pageDocuments);
 
-      pageToken =
-        typeof payload.nextPageToken === 'string' && payload.nextPageToken
-          ? payload.nextPageToken
-          : undefined;
-      if (!pageToken) break;
+      if (pageDocuments.length < SEO_LIST_PAGE_SIZE) break;
     }
 
-    if (!firstPageSucceeded) return null;
+    if (!firstPageSucceeded && needsLegacyListFallback) {
+      const maskParams = fieldPaths
+        .map(fieldPath => `mask.fieldPaths=${encodeURIComponent(fieldPath)}`)
+        .join('&');
+      const baseEndpoint = `${FIRESTORE_DOCUMENTS_URL}/${collection}?pageSize=${SEO_LIST_PAGE_SIZE}&key=${FIRESTORE_API_KEY}&${maskParams}`;
 
-    let docs = collected;
-    if (collection === 'articles') {
-      docs = docs
-        .filter((doc: Record<string, any>) => isArticlePublished(doc))
-        .sort(
-          (a: Record<string, any>, b: Record<string, any>) =>
-            getListArticleTime(b) - getListArticleTime(a)
-        )
-        .slice(0, SEO_LIST_ARTICLE_LIMIT);
-    } else {
-      docs = docs.slice(0, SEO_LIST_PAGE_SIZE * SEO_LIST_FILM_MAX_PAGES);
+      let legacyPageToken: string | undefined;
+      for (let page = 0; page < maxPages; page++) {
+        const legacyEndpoint = legacyPageToken
+          ? `${baseEndpoint}&pageToken=${encodeURIComponent(legacyPageToken)}`
+          : baseEndpoint;
+
+        let legacyRes: Response;
+        try {
+          legacyRes = await fetchWithTimeout(
+            legacyEndpoint,
+            { headers: { Accept: 'application/json' } },
+            2500
+          );
+        } catch {
+          break;
+        }
+
+        if (!legacyRes.ok) {
+          console.warn(
+            `[Edge Firestore] List fetch failed for ${collection} (status ${legacyRes.status})`
+          );
+          break;
+        }
+
+        let payload: any;
+        try {
+          payload = await legacyRes.json();
+        } catch {
+          break;
+        }
+        if (!Array.isArray(payload?.documents)) break;
+
+        firstPageSucceeded = true;
+        appendRawDocuments(payload.documents);
+
+        if (payload.documents.length < SEO_LIST_PAGE_SIZE) break;
+
+        legacyPageToken =
+          typeof payload.nextPageToken === 'string' && payload.nextPageToken
+            ? payload.nextPageToken
+            : undefined;
+        if (!legacyPageToken) break;
+      }
     }
-
-    seoListCache[collection] = { docs, timestamp: Date.now() };
-    return docs;
   } catch {
-    return null;
+    // Fall through: a failed first page still reports null, a later page
+    // failure keeps the documents already collected.
   }
+
+  if (!firstPageSucceeded) return null;
+
+  let docs = collected;
+  if (collection === 'articles') {
+    docs = docs
+      .filter((doc: Record<string, any>) => isArticlePublished(doc))
+      .sort(
+        (a: Record<string, any>, b: Record<string, any>) =>
+          getListArticleTime(b) - getListArticleTime(a)
+      )
+      .slice(0, SEO_LIST_ARTICLE_LIMIT);
+  } else {
+    docs = docs.slice(0, SEO_LIST_PAGE_SIZE * SEO_LIST_FILM_MAX_PAGES);
+  }
+
+  seoListCache[collection] = { docs, timestamp: Date.now() };
+  return docs;
 }
 
 /**
