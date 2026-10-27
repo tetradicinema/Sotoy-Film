@@ -162,7 +162,7 @@ const compactNumber = (n: number): string => {
   return String(n);
 };
 
-export async function renderBuzzStoryCanvas(input: BuzzCardInput, deps: BuzzCardDeps): Promise<any> {
+export async function renderBuzzStoryCanvas(input: BuzzCardInput, deps: BuzzCardDeps, format: 'story' | 'feed' = 'story'): Promise<any> {
   if (typeof document !== 'undefined' && (document as any).fonts?.load) {
     try {
       await Promise.all([
@@ -177,7 +177,7 @@ export async function renderBuzzStoryCanvas(input: BuzzCardInput, deps: BuzzCard
   }
 
   const W = BUZZ_CARD_W;
-  const H = BUZZ_CARD_H;
+  const H = format === 'feed' ? 1350 : BUZZ_CARD_H;
   const canvas: any = deps.createCanvas
     ? deps.createCanvas(W, H)
     : (() => {

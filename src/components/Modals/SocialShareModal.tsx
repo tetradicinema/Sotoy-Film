@@ -682,6 +682,7 @@ interface FilmRatingStoryCardProps {
   posterUrlForExport?: string;
   reviewerAvatarUrlForExport?: string;
   logoUrlForExport?: string;
+  format?: 'story' | 'feed';
 }
 
 export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
@@ -693,7 +694,9 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
   posterUrlForExport,
   reviewerAvatarUrlForExport,
   logoUrlForExport,
+  format = 'story',
 }) => {
+  const cardHeight = format === 'feed' ? 1350 : 1920;
   const effectivePoster = posterUrlForExport !== undefined ? posterUrlForExport : posterUrl;
   const effectiveAvatar =
     reviewerAvatarUrlForExport !== undefined
@@ -719,8 +722,8 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
 
   return (
     <div
-      className="relative w-[1080px] h-[1920px] bg-[#0A0A0A] overflow-hidden text-center select-none"
-      style={{ width: '1080px', height: '1920px' }}
+      className="relative w-[1080px] bg-[#0A0A0A] overflow-hidden text-center select-none"
+      style={{ width: '1080px', height: `${cardHeight}px` }}
     >
       {effectivePoster && (
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -909,6 +912,7 @@ interface CollectionSharePreviewProps {
   data: ShareData;
   variant?: 'quick' | 'story';
   items?: CollectionStoryItem[];
+  format?: 'story' | 'feed';
 }
 
 const CollectionShareCollage: React.FC<{
@@ -955,6 +959,7 @@ interface CollectionStoryCardProps {
   items?: CollectionStoryItem[];
   imageUrlsForExport?: Array<string | null | undefined>;
   logoUrlForExport?: string;
+  format?: 'story' | 'feed';
 }
 
 export const CollectionStoryCard: React.FC<CollectionStoryCardProps> = ({
@@ -962,7 +967,9 @@ export const CollectionStoryCard: React.FC<CollectionStoryCardProps> = ({
   items,
   imageUrlsForExport,
   logoUrlForExport,
+  format = 'story',
 }) => {
+  const storyHeight = format === 'feed' ? 1350 : COLLECTION_STORY_HEIGHT;
   const storyItems = React.useMemo(
     () => (items !== undefined ? items : buildCollectionStoryItems(data)),
     [data, items]
@@ -1052,7 +1059,7 @@ export const CollectionStoryCard: React.FC<CollectionStoryCardProps> = ({
       className="relative overflow-hidden select-none text-left"
       style={{
         width: `${COLLECTION_STORY_WIDTH}px`,
-        height: `${COLLECTION_STORY_HEIGHT}px`,
+        height: `${storyHeight}px`,
         background: '#FFD000',
         fontFamily: "'Geist', 'Plus Jakarta Sans', sans-serif",
       }}
@@ -1420,6 +1427,7 @@ const CollectionSharePreview: React.FC<CollectionSharePreviewProps> = ({
   data,
   variant = 'quick',
   items,
+  format = 'story',
 }) => {
   const images = data.collectionPreviewImages || data.previewImages || [];
   const storyItems = React.useMemo(
@@ -1435,18 +1443,19 @@ const CollectionSharePreview: React.FC<CollectionSharePreviewProps> = ({
     data.collectionOwnerName || data.ownerName || data.authorName || 'Pengguna Sotoy';
 
   if (variant === 'story') {
+    const isFeed = format === 'feed';
     return (
-      <div className="relative mx-auto w-[240px] h-[426.67px] overflow-hidden shadow-2xl rounded-2xl bg-[#FFD000] select-none">
+      <div className={`relative mx-auto w-[240px] ${isFeed ? 'h-[300px]' : 'h-[426.67px]'} overflow-hidden shadow-2xl rounded-2xl bg-[#FFD000] select-none`}>
         <div
           style={{
             width: '1080px',
-            height: '1920px',
-            transform: 'scale(0.222222)',
+            height: isFeed ? '1350px' : '1920px',
+            transform: `scale(${240 / 1080})`,
             transformOrigin: 'top left',
             pointerEvents: 'none',
           }}
         >
-          <CollectionStoryCard data={data} items={storyItems} />
+          <CollectionStoryCard data={data} items={storyItems} format={format} />
         </div>
       </div>
     );
@@ -1498,6 +1507,7 @@ interface CollectionStoryExportPayload {
   items: CollectionStoryItem[];
   imageUrls: Array<string | null>;
   logoUrl: string;
+  format: 'story' | 'feed';
 }
 
 export const SocialShareModal: React.FC<SocialShareModalProps> = ({
@@ -1551,6 +1561,8 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
   const isOpen = propIsOpen !== undefined ? propIsOpen : shareModalData !== null;
   const onClose = propOnClose || closeShareModal;
   const data = propData !== undefined ? propData : shareModalData;
+
+  const [igFormat, setIgFormat] = React.useState<'story' | 'feed'>('story');
 
   const isCollection = data?.type === 'collection';
   const isPrivateCollection = isCollection && data?.collectionIsPublic === false;
@@ -1993,7 +2005,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           onPhotoLoadFailed: () => {
             showToast('Foto gagal dimuat di story, coba lagi');
           },
-        });
+        }, igFormat);
         if (!cancelled) {
           buzzCanvasRef.current = canvas;
           const dataUrl = canvas.toDataURL('image/png');
@@ -2016,7 +2028,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
   }, [isOpen, data, activeTab]);
 
   // Generate high-resolution Instagram Card PNG using Canvas / DOM Capture
-  const handleDownloadInstagramVisual = async (format: 'story' = 'story') => {
+  const handleDownloadInstagramVisual = async (format: 'story' | 'feed' = 'story') => {
     if (!data) return;
     const trackInstagramStory = () =>
       recordShareEvent('instagram_story', analyticsShareData, currentShareUid);
@@ -2049,6 +2061,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           items: storyItems,
           imageUrls,
           logoUrl,
+          format,
         });
 
         if (!blob) {
@@ -2144,7 +2157,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
             onPhotoLoadFailed: () => {
               showToast('Foto gagal dimuat di story, coba lagi');
             },
-          });
+          }, format);
           buzzCanvasRef.current = canvas;
         }
 
@@ -2587,13 +2600,13 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
       }
 
       // 3. Film Rating Story (9:16) - Direct high-resolution Canvas 2D rendering
-      if (isFilmRating && format === 'story') {
+      if (isFilmRating && (format === 'story' || format === 'feed')) {
         if (typeof document !== 'undefined' && document.fonts?.ready) {
           await document.fonts.ready;
         }
 
         const width = 1080;
-        const height = 1920;
+        const height = format === 'story' ? 1920 : 1350;
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
@@ -2972,7 +2985,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
       }
 
       const width = 1080;
-      const height = format === 'story' ? 1920 : 1080;
+      const height = format === 'story' ? 1920 : (format === 'feed' ? 1350 : 1080);
 
       const canvas = document.createElement('canvas');
       canvas.width = width;
@@ -3736,19 +3749,46 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         {/* ========================================================================= */}
         {activeTab === 'ig_story' && (
           <div className="space-y-4 animate-in fade-in duration-150">
+            {/* Format Selector: IG Stories (9:16) vs IG Feed (4:5) */}
+            <div className="flex items-center gap-2 bg-[#121422] p-1.5 rounded-xl border border-white/[0.08]">
+              <button
+                type="button"
+                onClick={() => setIgFormat('story')}
+                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  igFormat === 'story'
+                    ? 'bg-[#FF2E7E] text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <span>IG Stories (9:16)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIgFormat('feed')}
+                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  igFormat === 'feed'
+                    ? 'bg-[#FF2E7E] text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <span>IG Feed (4:5)</span>
+              </button>
+            </div>
+
             {/* Visual Story Card Preview */}
             {isCollection ? (
               <CollectionSharePreview
                 data={data}
                 variant="story"
                 items={collectionStoryItems}
+                format={igFormat}
               />
             ) : isFilmRating ? (
-              <div className="relative mx-auto w-[270px] h-[480px] overflow-hidden shadow-2xl rounded-2xl bg-[#0A0A0A] select-none">
+              <div className={`relative mx-auto w-[270px] ${igFormat === 'feed' ? 'h-[337.5px]' : 'h-[480px]'} overflow-hidden shadow-2xl rounded-2xl bg-[#0A0A0A] select-none`}>
                 <div
                   style={{
                     width: '1080px',
-                    height: '1920px',
+                    height: igFormat === 'feed' ? '1350px' : '1920px',
                     transform: 'scale(0.25)',
                     transformOrigin: 'top left',
                     pointerEvents: 'none',
@@ -3760,11 +3800,12 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                     hasScore={hasScore}
                     posterUrl={posterUrl}
                     reviewerAvatarUrl={data.reviewerAvatar || data.authorAvatar}
+                    format={igFormat}
                   />
                 </div>
               </div>
             ) : isBuzz ? (
-              <div className="relative mx-auto w-[270px] aspect-[9/16] rounded-2xl overflow-hidden shadow-2xl bg-neutral-900 flex items-center justify-center border border-white/10 select-none">
+              <div className={`relative mx-auto w-[270px] ${igFormat === 'feed' ? 'aspect-[4/5]' : 'aspect-[9/16]'} rounded-2xl overflow-hidden shadow-2xl bg-neutral-900 flex items-center justify-center border border-white/10 select-none`}>
                 {isRenderingBuzzStory || !buzzStoryDataUrl ? (
                   <div className="flex flex-col items-center justify-center gap-2.5 p-6 text-center">
                     <Sparkles className="w-7 h-7 text-[#FF2E7E] animate-spin" />
@@ -3779,7 +3820,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                 )}
               </div>
             ) : isArticle ? (
-              <div className="relative mx-auto w-[240px] aspect-[9/16] rounded-2xl overflow-hidden bg-[#0A0A0A] shadow-2xl flex flex-col justify-between text-left select-none">
+              <div className={`relative mx-auto w-[240px] ${igFormat === 'feed' ? 'aspect-[4/5]' : 'aspect-[9/16]'} rounded-2xl overflow-hidden bg-[#0A0A0A] shadow-2xl flex flex-col justify-between text-left select-none`}>
                 {/* 1. Full-bleed Article Cover in top ~60% */}
                 <div className="absolute top-0 left-0 right-0 h-[60%] overflow-hidden pointer-events-none">
                   {data.image || data.imageUrl ? (
@@ -3862,7 +3903,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
               </div>
             ) : (
               <div
-                className="relative mx-auto w-[240px] aspect-[9/16] rounded-2xl overflow-hidden bg-gradient-to-b from-[#15162b] via-[#10111e] to-[#090a10] border border-[#FF2E7E]/40 shadow-2xl p-4 flex flex-col justify-between text-left"
+                className={`relative mx-auto w-[240px] ${igFormat === 'feed' ? 'aspect-[4/5]' : 'aspect-[9/16]'} rounded-2xl overflow-hidden bg-gradient-to-b from-[#15162b] via-[#10111e] to-[#090a10] border border-[#FF2E7E]/40 shadow-2xl p-4 flex flex-col justify-between text-left`}
               >
                 {/* Top watermark */}
                 <div className="relative z-10 flex items-center justify-between border-b border-white/10 pb-2">
@@ -3902,7 +3943,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
             <div className="space-y-2 pt-1">
               <button
                 id="download-ig-story-card-btn"
-                onClick={() => handleDownloadInstagramVisual('story')}
+                onClick={() => handleDownloadInstagramVisual(igFormat)}
                 disabled={isGeneratingImage}
                 className="w-full py-3 bg-[#FF2E7E] hover:brightness-110 active:scale-98 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-sm flex flex-col items-center justify-center gap-0.5 transition-all"
               >
@@ -3912,8 +3953,10 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                     {isGeneratingImage
                       ? 'Membuat Gambar...'
                       : isFileShareSupported
-                      ? 'Bagikan ke Instagram Story'
-                      : 'Unduh Gambar Story (PNG 9:16)'}
+                      ? 'Bagikan ke Instagram'
+                      : igFormat === 'story'
+                      ? 'Unduh Gambar Story (PNG 9:16)'
+                      : 'Unduh Gambar Feed (PNG 4:5)'}
                   </span>
                 </div>
                 {isFileShareSupported && !isGeneratingImage && (
@@ -3949,20 +3992,21 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
             left: '-20000px',
             top: 0,
             width: '1080px',
-            height: '1920px',
+            height: `${collectionExportPayload.format === 'feed' ? 1350 : 1920}px`,
             zIndex: -1,
             pointerEvents: 'none',
           }}
         >
           <div
             ref={collectionExportNodeRef}
-            style={{ width: '1080px', height: '1920px' }}
+            style={{ width: '1080px', height: `${collectionExportPayload.format === 'feed' ? 1350 : 1920}px` }}
           >
             <CollectionStoryCard
               data={collectionExportPayload.data}
               items={collectionExportPayload.items}
               imageUrlsForExport={collectionExportPayload.imageUrls}
               logoUrlForExport={collectionExportPayload.logoUrl}
+              format={collectionExportPayload.format}
             />
           </div>
         </div>
