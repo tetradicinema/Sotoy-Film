@@ -1,7 +1,7 @@
 {
   "functions": {
     "api/sitemap.ts": {
-      "includeFiles": "{data/sitemap-snapshot.xml,public/sitemap.xml}"
+      "includeFiles": "data/sitemap-snapshot.xml"
     }
   },
   "headers": [
@@ -24,7 +24,7 @@
       ]
     },
     {
-      "source": "/(sitemap\\.xml|sitemap_index\\.xml)",
+      "source": "/(sitemap\\.xml)",
       "headers": [
         {
           "key": "Content-Type",
@@ -67,9 +67,8 @@
   ],
   "rewrites": [
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },
-    { "source": "/sitemap_index.xml", "destination": "/api/sitemap" },
     { "source": "/sitemap.csv", "destination": "/api/sitemap?format=csv" },
     { "source": "/robots.txt", "destination": "/robots.txt" },
-    { "source": "/((?!api/|sitemap\\.xml|sitemap_index\\.xml|sitemap\\.csv|robots\\.txt|llms\\.txt|.*\\..*).*)", "destination": "/index.html" }
+    { "source": "/((?!api/|sitemap\\.xml|sitemap\\.csv|robots\\.txt|llms\\.txt|.*\\..*).*)", "destination": "/index.html" }
   ]
 }

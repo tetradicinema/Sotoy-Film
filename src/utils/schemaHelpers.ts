@@ -344,9 +344,12 @@ export function generateArticleSchema(input: ArticleSchemaInput) {
       url: DEFAULT_BASE_URL,
       logo: {
         '@type': 'ImageObject',
-        url: resolveAbsoluteUrl(input.publisherLogo || '/stacked logo-sotoyfilm.PNG'),
-        width: 512,
-        height: 512,
+        url: resolveAbsoluteUrl(
+          input.publisherLogo ||
+            'https://www.sotoyfilm.my.id/v2_sotoyfilm%20stacked%20logo_white%20bg.PNG'
+        ),
+        width: 1254,
+        height: 1254,
       },
     },
   };
@@ -409,9 +412,9 @@ export function generateOrganizationSchema(siteUrl = DEFAULT_BASE_URL) {
     url: cleanUrl,
     logo: {
       '@type': 'ImageObject',
-      url: `${cleanUrl}/stacked%20logo-sotoyfilm.PNG`,
-      width: 512,
-      height: 512,
+      url: `${cleanUrl}/v2_sotoyfilm%20stacked%20logo_white%20bg.PNG`,
+      width: 1254,
+      height: 1254,
     },
     sameAs: [
       'https://twitter.com/sotoyfilm',

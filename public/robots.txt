@@ -23,7 +23,6 @@ Allow: /gabung-kritikus
 Allow: /kriteria-kritikus
 Allow: /critic-criteria
 Allow: /sitemap.xml
-Allow: /sitemap_index.xml
 Allow: /sitemap.csv
 
 # Disallow administrative and private views
@@ -44,4 +43,3 @@ Disallow: /onboarding/*
 Disallow: /api/*
 
 Sitemap: https://www.sotoyfilm.my.id/sitemap.xml
-Sitemap: https://www.sotoyfilm.my.id/sitemap_index.xml

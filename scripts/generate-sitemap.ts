@@ -238,19 +238,13 @@ async function run() {
   }
   xml += '</urlset>\n';
 
-  // 6. Write to data/sitemap-snapshot.xml and public/sitemap.xml
+  // 6. Write only the snapshot served by the API fallback
   const dataDir = path.join(rootDir, 'data');
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
 
-  const publicDir = path.join(rootDir, 'public');
-  if (!fs.existsSync(publicDir)) {
-    fs.mkdirSync(publicDir, { recursive: true });
-  }
-
   const sitemapDest = path.join(dataDir, 'sitemap-snapshot.xml');
-  const publicSitemapDest = path.join(publicDir, 'sitemap.xml');
   const totalUrls = entries.length;
 
   if (isOfflineFallback && fs.existsSync(sitemapDest)) {
@@ -263,22 +257,9 @@ async function run() {
     }
   }
 
-  const today = new Date().toISOString().split('T')[0];
-  const indexXml = `<?xml version="1.0" encoding="UTF-8"?>
-<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/siteindex.xsd">
-  <sitemap>
-    <loc>https://www.sotoyfilm.my.id/sitemap.xml</loc>
-    <lastmod>${today}</lastmod>
-  </sitemap>
-</sitemapindex>\n`;
-
   fs.writeFileSync(sitemapDest, xml, 'utf-8');
-  fs.writeFileSync(publicSitemapDest, xml, 'utf-8');
-  fs.writeFileSync(path.join(publicDir, 'sitemap_index.xml'), indexXml, 'utf-8');
 
-  console.log(`[Sitemap Builder] Successfully wrote ${totalUrls} URLs (${articlesCount} articles, ${filmsCount} films) to ${sitemapDest}, ${publicSitemapDest}, and public/sitemap_index.xml`);
+  console.log(`[Sitemap Builder] Successfully wrote ${totalUrls} URLs (${articlesCount} articles, ${filmsCount} films) to ${sitemapDest}`);
 
 }
 
