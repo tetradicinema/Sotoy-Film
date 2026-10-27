@@ -371,18 +371,6 @@ export const HeroSection: React.FC = () => {
                 </button>
 
                 <button
-                  id="hero-tab-filmstudies"
-                  onClick={() => setActiveTab('film-studies')}
-                  className={`flex-1 min-w-[85px] py-1.5 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center shrink-0 cursor-pointer active:scale-95 ${
-                    activeTab === 'film-studies'
-                      ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 font-bold'
-                      : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
-                  }`}
-                >
-                  <span className="truncate">{filmStudiesTitle}</span>
-                </button>
-
-                <button
                   id="hero-tab-trending"
                   onClick={() => setActiveTab('recent')}
                   className={`flex-1 min-w-[85px] py-1.5 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center shrink-0 cursor-pointer active:scale-95 ${
@@ -392,6 +380,18 @@ export const HeroSection: React.FC = () => {
                   }`}
                 >
                   <span className="truncate">{recentTitle}</span>
+                </button>
+
+                <button
+                  id="hero-tab-filmstudies"
+                  onClick={() => setActiveTab('film-studies')}
+                  className={`flex-1 min-w-[85px] py-1.5 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center shrink-0 cursor-pointer active:scale-95 ${
+                    activeTab === 'film-studies'
+                      ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 font-bold'
+                      : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <span className="truncate">{filmStudiesTitle}</span>
                 </button>
               </div>
 
@@ -466,72 +466,7 @@ export const HeroSection: React.FC = () => {
                 </div>
               )}
 
-              {/* Tab Content 2: FILM STUDIES (ARTICLES) */}
-              {activeTab === 'film-studies' && (
-                <div className="flex-1 flex flex-col justify-between min-h-0">
-                  <div className="divide-y divide-white/[0.06] flex-1 flex flex-col justify-start">
-                    {filmStudiesArticles.length === 0 ? (
-                      <div className="py-12 text-center text-xs text-slate-500">
-                        Belum ada artikel Film Studies.
-                      </div>
-                    ) : (
-                      filmStudiesArticles.map((art, index) => (
-                        <div
-                          key={art.id}
-                          id={`filmstudies-article-item-${art.id}`}
-                          onClick={() => navigateTo('article-detail', { articleId: art.id })}
-                          className="group flex items-center gap-3 py-2 px-1.5 rounded-xl hover:bg-white/[0.04] transition-colors cursor-pointer"
-                        >
-                          {/* Tabular Index Number */}
-                          <span className={`w-4 font-mono tabular-nums text-xs font-bold text-center shrink-0 ${
-                            index === 0 ? 'text-[#FF2E7E]' : 'text-slate-500'
-                          }`}>
-                            {String(index + 1).padStart(2, '0')}
-                          </span>
-
-                          {/* Poster/Cover */}
-                          <img
-                            src={art.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=200&q=80'}
-                            alt={art.title}
-                            className="w-12 h-12 object-cover rounded-xl shrink-0 border border-white/10 group-hover:scale-105 transition-transform duration-300"
-                          />
-
-                          {/* Metadata */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 mb-0.5 text-[10px]">
-                              <span className="text-[#FF2E7E] font-bold uppercase tracking-wider truncate">
-                                {art.category}
-                              </span>
-                              <span className="text-slate-600">·</span>
-                              <span className="text-slate-400 truncate">{art.publishedAt}</span>
-                            </div>
-                            <h4 className="text-white font-semibold text-xs leading-snug line-clamp-2 group-hover:text-[#FF2E7E] transition-colors">
-                              {art.title}
-                            </h4>
-                            <div className="mt-0.5 flex items-center gap-1 text-[10px] text-slate-400">
-                              <Clock className="w-2.5 h-2.5 text-slate-500" />
-                              <span>{art.readTime}</span>
-                            </div>
-                          </div>
-
-                          <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-white transition-transform group-hover:translate-x-0.5 shrink-0" />
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  <button
-                    id="see-all-filmstudies-btn"
-                    onClick={() => navigateTo('category', { category: 'film-studies' })}
-                    className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 hover:bg-white/[0.04] text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer mt-3 shrink-0"
-                  >
-                    <span>Jelajahi Film Studies</span>
-                    <ArrowRight className="w-3.5 h-3.5 text-[#FF2E7E]" />
-                  </button>
-                </div>
-              )}
-
-              {/* Tab Content 3: RECENT ARTICLES */}
+              {/* Tab Content 2: RECENT ARTICLES */}
               {activeTab === 'recent' && (
                 <div className="flex-1 flex flex-col justify-between min-h-0">
                   <div className="divide-y divide-white/[0.06] flex-1 flex flex-col justify-start">
@@ -591,6 +526,71 @@ export const HeroSection: React.FC = () => {
                     className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 hover:bg-white/[0.04] text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer mt-3 shrink-0"
                   >
                     <span>Jelajahi Semua Artikel Terbaru</span>
+                    <ArrowRight className="w-3.5 h-3.5 text-[#FF2E7E]" />
+                  </button>
+                </div>
+              )}
+
+              {/* Tab Content 3: FILM STUDIES (ARTICLES) */}
+              {activeTab === 'film-studies' && (
+                <div className="flex-1 flex flex-col justify-between min-h-0">
+                  <div className="divide-y divide-white/[0.06] flex-1 flex flex-col justify-start">
+                    {filmStudiesArticles.length === 0 ? (
+                      <div className="py-12 text-center text-xs text-slate-500">
+                        Belum ada artikel Film Studies.
+                      </div>
+                    ) : (
+                      filmStudiesArticles.map((art, index) => (
+                        <div
+                          key={art.id}
+                          id={`filmstudies-article-item-${art.id}`}
+                          onClick={() => navigateTo('article-detail', { articleId: art.id })}
+                          className="group flex items-center gap-3 py-2 px-1.5 rounded-xl hover:bg-white/[0.04] transition-colors cursor-pointer"
+                        >
+                          {/* Tabular Index Number */}
+                          <span className={`w-4 font-mono tabular-nums text-xs font-bold text-center shrink-0 ${
+                            index === 0 ? 'text-[#FF2E7E]' : 'text-slate-500'
+                          }`}>
+                            {String(index + 1).padStart(2, '0')}
+                          </span>
+
+                          {/* Poster/Cover */}
+                          <img
+                            src={art.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=200&q=80'}
+                            alt={art.title}
+                            className="w-12 h-12 object-cover rounded-xl shrink-0 border border-white/10 group-hover:scale-105 transition-transform duration-300"
+                          />
+
+                          {/* Metadata */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 mb-0.5 text-[10px]">
+                              <span className="text-[#FF2E7E] font-bold uppercase tracking-wider truncate">
+                                {art.category}
+                              </span>
+                              <span className="text-slate-600">·</span>
+                              <span className="text-slate-400 truncate">{art.publishedAt}</span>
+                            </div>
+                            <h4 className="text-white font-semibold text-xs leading-snug line-clamp-2 group-hover:text-[#FF2E7E] transition-colors">
+                              {art.title}
+                            </h4>
+                            <div className="mt-0.5 flex items-center gap-1 text-[10px] text-slate-400">
+                              <Clock className="w-2.5 h-2.5 text-slate-500" />
+                              <span>{art.readTime}</span>
+                            </div>
+                          </div>
+
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-white transition-transform group-hover:translate-x-0.5 shrink-0" />
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <button
+                    id="see-all-filmstudies-btn"
+                    onClick={() => navigateTo('category', { category: 'film-studies' })}
+                    className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 hover:bg-white/[0.04] text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer mt-3 shrink-0"
+                  >
+                    <span>Jelajahi Film Studies</span>
                     <ArrowRight className="w-3.5 h-3.5 text-[#FF2E7E]" />
                   </button>
                 </div>
