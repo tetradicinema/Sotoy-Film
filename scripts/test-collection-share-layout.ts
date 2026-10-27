@@ -190,7 +190,7 @@ assert(
   'layout constants: the yellow panel starts after the 6px wall separator'
 );
 assert(
-  COLLECTION_LOGO_PATH === '/sotoy-logo-full.png' &&
+  COLLECTION_LOGO_PATH === '/v2_sotoyfilm full logo transparent.PNG' &&
     COLLECTION_LOGO_LEFT === 60 &&
     COLLECTION_LOGO_TOP === 90 &&
     COLLECTION_LOGO_WIDTH === 400,

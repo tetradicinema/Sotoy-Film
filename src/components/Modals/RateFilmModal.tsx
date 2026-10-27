@@ -60,6 +60,7 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
       filmPoster: film.poster,
       filmBackdrop: film.backdrop,
       filmGenres: film.genres,
+      filmDirector: film.director,
       rating: score,
       reviewerName: currentUser.name,
       reviewerAvatar: currentUser.avatar,

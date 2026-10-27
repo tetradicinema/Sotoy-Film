@@ -211,6 +211,14 @@ export const BuzzDetailPage: React.FC = () => {
       taggedFilmYear: postFilm?.year,
       taggedFilmScore: (postFilm as any)?.score || (postFilm as any)?.skorSotoy || undefined,
       taggedFilmGenres: (postFilm as any)?.genres || undefined,
+      taggedArticleTitle: postArticle?.title,
+      taggedArticleCover: (postArticle as any)?.coverImage,
+      taggedArticleCategory: (postArticle as any)?.category,
+      taggedArticleAuthor:
+        (postArticle as any)?.authorName || (postArticle as any)?.author?.name,
+      taggedCollectionName: buzz.sharedCollection?.name,
+      taggedCollectionItemCount: buzz.sharedCollection?.itemCount,
+      taggedCollectionPreviewImages: buzz.sharedCollection?.previewImages,
     });
   };
 

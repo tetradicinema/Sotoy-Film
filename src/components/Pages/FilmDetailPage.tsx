@@ -374,6 +374,7 @@ export const FilmDetailPage: React.FC = () => {
       filmPoster: film.poster,
       filmBackdrop: film.backdrop,
       filmGenres: film.genres,
+      filmDirector: film.director,
       rating: film.skorSotoy,
       criticReviewCount: audienceCounts.critic,
       communityReviewCount: hasRoleBasedCounts
@@ -1192,6 +1193,7 @@ export const FilmDetailPage: React.FC = () => {
                               filmPoster: film.poster,
                               filmBackdrop: film.backdrop,
                               filmGenres: film.genres,
+                              filmDirector: film.director,
                               rating: rev.score,
                               reviewerName: rev.userName,
                               reviewerAvatar: rev.userAvatar,

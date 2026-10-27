@@ -242,6 +242,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                       <button
                         onClick={() => {
                           const postFilm = post.taggedFilm ? films.find(f => f.id === post.taggedFilm?.id) || post.taggedFilm : null;
+                          const postArticle = post.taggedArticle ? articles.find(a => a.id === post.taggedArticle?.id) || post.taggedArticle : null;
                           const authorHandle = (resolvedAuthor.handle || post.author.handle).startsWith('@')
                             ? (resolvedAuthor.handle || post.author.handle)
                             : `@${resolvedAuthor.handle || post.author.handle}`;
@@ -265,6 +266,14 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                             taggedFilmYear: postFilm?.year,
                             taggedFilmScore: (postFilm as any)?.score || (postFilm as any)?.skorSotoy,
                             taggedFilmGenres: (postFilm as any)?.genres,
+                            taggedArticleTitle: postArticle?.title,
+                            taggedArticleCover: (postArticle as any)?.coverImage,
+                            taggedArticleCategory: (postArticle as any)?.category,
+                            taggedArticleAuthor:
+                              (postArticle as any)?.authorName || (postArticle as any)?.author?.name,
+                            taggedCollectionName: post.sharedCollection?.name,
+                            taggedCollectionItemCount: post.sharedCollection?.itemCount,
+                            taggedCollectionPreviewImages: post.sharedCollection?.previewImages,
                           });
                         }}
                         className="flex items-center gap-1 hover:text-white transition-colors"

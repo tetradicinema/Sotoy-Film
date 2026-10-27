@@ -605,6 +605,14 @@ export const CommunityFeedPage: React.FC = () => {
       taggedFilmYear: postFilm?.year,
       taggedFilmScore: (postFilm as any)?.score || (postFilm as any)?.skorSotoy || undefined,
       taggedFilmGenres: (postFilm as any)?.genres || undefined,
+      taggedArticleTitle: postArticle?.title,
+      taggedArticleCover: (postArticle as any)?.coverImage,
+      taggedArticleCategory: (postArticle as any)?.category,
+      taggedArticleAuthor:
+        (postArticle as any)?.authorName || (postArticle as any)?.author?.name,
+      taggedCollectionName: post.sharedCollection?.name,
+      taggedCollectionItemCount: post.sharedCollection?.itemCount,
+      taggedCollectionPreviewImages: post.sharedCollection?.previewImages,
     });
   };
 

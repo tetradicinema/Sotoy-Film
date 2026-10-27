@@ -1352,13 +1352,46 @@ export const UserPage: React.FC = () => {
                           </button>
 
                           <button
-                            onClick={() =>
+                            onClick={() => {
+                              const buzzFilm = buzz.taggedFilm
+                                ? films.find(f => f.id === buzz.taggedFilm?.id) || buzz.taggedFilm
+                                : null;
+                              const buzzArticle = buzz.taggedArticle
+                                ? articles.find(a => a.id === buzz.taggedArticle?.id) || buzz.taggedArticle
+                                : null;
                               openShareModal({
-                                title: `Buzz oleh ${authorName}`,
+                                title: `Buzz Diskusi: ${authorName}`,
                                 text: buzz.content,
+                                tags: buzz.tags,
                                 url: window.location.href,
-                              })
-                            }
+                                type: 'buzz',
+                                image: authorAvatar,
+                                imageUrl: authorAvatar,
+                                authorAvatar,
+                                authorName,
+                                authorHandle: resolvedBuzzAuthor?.handle || buzz.author.handle,
+                                authorRole: resolvedBuzzAuthor?.role || buzz.author.role,
+                                likes: buzz.likes,
+                                replies:
+                                  (buzz.replies && buzz.replies.length > 0
+                                    ? buzz.replies.length
+                                    : buzz.repliesCount) || 0,
+                                buzzImage: buzz.image,
+                                taggedFilmPoster: (buzzFilm as any)?.posterUrl || (buzzFilm as any)?.poster,
+                                taggedFilmTitle: buzzFilm?.title,
+                                taggedFilmYear: buzzFilm?.year,
+                                taggedFilmScore: (buzzFilm as any)?.score || (buzzFilm as any)?.skorSotoy,
+                                taggedFilmGenres: (buzzFilm as any)?.genres,
+                                taggedArticleTitle: buzzArticle?.title,
+                                taggedArticleCover: (buzzArticle as any)?.coverImage,
+                                taggedArticleCategory: (buzzArticle as any)?.category,
+                                taggedArticleAuthor:
+                                  (buzzArticle as any)?.authorName || (buzzArticle as any)?.author?.name,
+                                taggedCollectionName: buzz.sharedCollection?.name,
+                                taggedCollectionItemCount: buzz.sharedCollection?.itemCount,
+                                taggedCollectionPreviewImages: buzz.sharedCollection?.previewImages,
+                              });
+                            }}
                             className="flex items-center gap-1.5 text-neutral-400 hover:text-neutral-200 transition-opacity hover:opacity-80 active:scale-95 cursor-pointer text-xs shrink-0 py-1"
                             title="Bagikan Buzz ini ke Media Sosial"
                           >
@@ -1709,13 +1742,46 @@ export const UserPage: React.FC = () => {
                           </button>
 
                           <button
-                            onClick={() =>
+                            onClick={() => {
+                              const buzzFilm = buzz.taggedFilm
+                                ? films.find(f => f.id === buzz.taggedFilm?.id) || buzz.taggedFilm
+                                : null;
+                              const buzzArticle = buzz.taggedArticle
+                                ? articles.find(a => a.id === buzz.taggedArticle?.id) || buzz.taggedArticle
+                                : null;
                               openShareModal({
-                                title: `Buzz oleh ${authorName}`,
+                                title: `Buzz Diskusi: ${authorName}`,
                                 text: buzz.content,
+                                tags: buzz.tags,
                                 url: window.location.href,
-                              })
-                            }
+                                type: 'buzz',
+                                image: authorAvatar,
+                                imageUrl: authorAvatar,
+                                authorAvatar,
+                                authorName,
+                                authorHandle: resolvedAuthor?.handle || buzz.author.handle,
+                                authorRole: resolvedAuthor?.role || buzz.author.role,
+                                likes: buzz.likes,
+                                replies:
+                                  (buzz.replies && buzz.replies.length > 0
+                                    ? buzz.replies.length
+                                    : buzz.repliesCount) || 0,
+                                buzzImage: buzz.image,
+                                taggedFilmPoster: (buzzFilm as any)?.posterUrl || (buzzFilm as any)?.poster,
+                                taggedFilmTitle: buzzFilm?.title,
+                                taggedFilmYear: buzzFilm?.year,
+                                taggedFilmScore: (buzzFilm as any)?.score || (buzzFilm as any)?.skorSotoy,
+                                taggedFilmGenres: (buzzFilm as any)?.genres,
+                                taggedArticleTitle: buzzArticle?.title,
+                                taggedArticleCover: (buzzArticle as any)?.coverImage,
+                                taggedArticleCategory: (buzzArticle as any)?.category,
+                                taggedArticleAuthor:
+                                  (buzzArticle as any)?.authorName || (buzzArticle as any)?.author?.name,
+                                taggedCollectionName: buzz.sharedCollection?.name,
+                                taggedCollectionItemCount: buzz.sharedCollection?.itemCount,
+                                taggedCollectionPreviewImages: buzz.sharedCollection?.previewImages,
+                              });
+                            }}
                             className="flex items-center gap-1.5 text-neutral-400 hover:text-neutral-200 transition-opacity hover:opacity-80 active:scale-95 cursor-pointer text-xs shrink-0 py-1"
                             title="Bagikan Buzz ini ke Media Sosial"
                           >
@@ -2957,6 +3023,7 @@ export const UserPage: React.FC = () => {
                                 filmPoster: targetFilm?.poster,
                                 filmBackdrop: targetFilm?.backdrop,
                                 filmGenres: targetFilm?.genres,
+                                filmDirector: targetFilm?.director,
                                 rating: rev.score,
                                 reviewerName: targetUser.name,
                                 reviewerAvatar: targetUser.avatar,

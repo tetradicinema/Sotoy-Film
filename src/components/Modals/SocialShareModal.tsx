@@ -18,9 +18,17 @@ import { toBlob as captureDomToBlob } from 'html-to-image';
 import { useApp } from '../../context/AppContext';
 import {
   renderBuzzStoryCanvas,
+  buildFilmShareLayout,
+  getFilmShareLayoutMetrics,
+  getFilmRatingMetrics,
   BuzzCardInput,
   BuzzCardFilm,
+  type BuzzCardArticle,
+  type BuzzCardCollection,
   normalizeHandle,
+  type FilmShareTextLayout,
+  type ShareFormat,
+  type TextMeasure,
 } from '../../utils/buzzStoryCard';
 import {
   buildCollectionStoryItems,
@@ -47,13 +55,7 @@ import {
   type CollectionStoryItem,
   type CollectionStoryPanelLayout,
 } from '../../utils/collectionShareLayout';
-import {
-  fitFontSize,
-  formatReviewCountsLine,
-  getShareLayoutBudget,
-  wrapShareText,
-  type ShareLayoutBlock,
-} from '../../utils/shareCardText';
+import { formatReviewCountsLine } from '../../utils/shareCardText';
 import {
   mapShareLinkName,
   recordShareEvent,
@@ -105,6 +107,7 @@ export interface ShareData {
   filmPoster?: string;
   filmBackdrop?: string;
   filmGenres?: string[];
+  filmDirector?: string;
   reviewerName?: string;
   reviewerAvatar?: string;
   reviewerRole?: string;
@@ -119,6 +122,15 @@ export interface ShareData {
   taggedFilmYear?: number | string;
   taggedFilmScore?: number;
   taggedFilmGenres?: string[];
+  // Specific for buzz tagged article
+  taggedArticleTitle?: string;
+  taggedArticleCover?: string;
+  taggedArticleCategory?: string;
+  taggedArticleAuthor?: string;
+  // Specific for buzz shared watchlist/collection
+  taggedCollectionName?: string;
+  taggedCollectionItemCount?: number;
+  taggedCollectionPreviewImages?: string[];
 }
 
 export const formatRoleLabel = (role?: string): string => {
@@ -348,46 +360,466 @@ export const getArticleStoryByline = (data: ShareData): string => {
   return parts.join(' • ');
 };
 
+/**
+ * Rounded-rectangle path shared by every canvas renderer in this module.
+ */
+function drawRoundRectPath(
+  c: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
+) {
+  c.beginPath();
+  if (typeof c.roundRect === 'function') {
+    c.roundRect(x, y, w, h, r);
+  } else {
+    c.moveTo(x + r, y);
+    c.lineTo(x + w - r, y);
+    c.quadraticCurveTo(x + w, y, x + w, y + r);
+    c.lineTo(x + w, y + h - r);
+    c.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    c.lineTo(x + r, y + h);
+    c.quadraticCurveTo(x, y + h, x, y + h - r);
+    c.lineTo(x, y + r);
+    c.quadraticCurveTo(x, y, x + r, y);
+  }
+  c.closePath();
+}
+
+/**
+ * Builds the single BuzzCardInput used by both the live preview and the
+ * downloaded PNG. Keeping this in one place guarantees the two never diverge.
+ */
+export const buildBuzzCardInput = (data: ShareData): BuzzCardInput => {
+  const authorHandle = normalizeHandle(
+    data.authorHandle ||
+      (data.meta?.startsWith('@') ? data.meta.split(' ')[0] : undefined)
+  );
+  const roleLabel = data.roleLabel || formatRoleLabel(data.authorRole);
+
+  const film: BuzzCardFilm | null =
+    data.taggedFilmTitle || data.filmTitle
+      ? {
+          title: data.taggedFilmTitle || data.filmTitle || '',
+          year: data.taggedFilmYear || data.filmYear,
+          poster: data.taggedFilmPoster || data.filmPoster,
+          score: data.taggedFilmScore ?? data.rating ?? data.skorSotoy,
+          genres: data.taggedFilmGenres || data.filmGenres,
+        }
+      : null;
+
+  const article: BuzzCardArticle | null = data.taggedArticleTitle
+    ? {
+        title: data.taggedArticleTitle,
+        cover: data.taggedArticleCover,
+        category: data.taggedArticleCategory,
+        author: data.taggedArticleAuthor,
+      }
+    : null;
+
+  const collection: BuzzCardCollection | null = data.taggedCollectionName
+    ? {
+        name: data.taggedCollectionName,
+        itemCount: data.taggedCollectionItemCount,
+        previewImages: data.taggedCollectionPreviewImages,
+      }
+    : null;
+
+  return {
+    authorName:
+      data.authorName || data.title.replace('Buzz Diskusi: ', '').trim(),
+    authorHandle,
+    authorAvatar: data.authorAvatar || data.image,
+    roleLabel,
+    text: data.text || '',
+    image:
+      data.buzzImage ||
+      (data.type === 'buzz' && data.image && data.image !== data.authorAvatar
+        ? data.image
+        : undefined),
+    film,
+    article,
+    collection,
+    tags: data.tags,
+    likes: data.likes,
+    replies: data.replies,
+  };
+};
+
+// =============================================================================
+// ARTICLE SHARE CANVAS
+// One renderer for the 9:16 story and the 4:5 feed. The feed is the story
+// design scaled proportionally from the 1920px reference height, so the
+// approved 9:16 output stays pixel-identical while the feed never overflows.
+// =============================================================================
+
+export interface ArticleShareCanvasDeps {
+  loadImage: (
+    src: string
+  ) => Promise<CanvasImageSource & { width: number; height: number }>;
+  createCanvas?: (w: number, h: number) => any;
+}
+
+export const renderArticleShareCanvas = async (
+  data: ShareData,
+  format: 'story' | 'feed' = 'story',
+  deps: ArticleShareCanvasDeps
+): Promise<any> => {
+  if (typeof document !== 'undefined' && (document as any).fonts?.ready) {
+    try {
+      await (document as any).fonts.ready;
+    } catch {
+      /* fall back to system fonts */
+    }
+  }
+
+  const width = 1080;
+  const height = format === 'feed' ? 1350 : 1920;
+  const s = height / 1920;
+
+  const canvas: any = deps.createCanvas
+    ? deps.createCanvas(width, height)
+    : (() => {
+        const el = document.createElement('canvas');
+        el.width = width;
+        el.height = height;
+        return el;
+      })();
+  const ctx: CanvasRenderingContext2D = canvas.getContext('2d');
+
+  // Base solid background (#0A0A0A)
+  ctx.fillStyle = '#0A0A0A';
+  ctx.fillRect(0, 0, width, height);
+
+  // 1. Background + cover: full-bleed over the top 60% of the story canvas.
+  const coverUrl = data.image || data.imageUrl;
+  const coverH = Math.round(1150 * s);
+  let coverLoaded = false;
+
+  if (coverUrl) {
+    try {
+      const coverImg = await deps.loadImage(coverUrl);
+      coverLoaded = true;
+
+      const imgAspect = coverImg.width / coverImg.height;
+      const targetAspect = width / coverH;
+
+      let sx = 0;
+      let sy = 0;
+      let sWidth = coverImg.width;
+      let sHeight = coverImg.height;
+      if (imgAspect > targetAspect) {
+        sWidth = coverImg.height * targetAspect;
+        sx = (coverImg.width - sWidth) / 2;
+      } else {
+        sHeight = coverImg.width / targetAspect;
+        sy = (coverImg.height - sHeight) / 2;
+      }
+
+      ctx.drawImage(coverImg, sx, sy, sWidth, sHeight, 0, 0, width, coverH);
+    } catch (coverErr) {
+      console.warn(
+        '[SocialShareModal] Article cover load failed for canvas, using fallback gradient:',
+        coverErr
+      );
+    }
+  }
+
+  if (!coverLoaded) {
+    const fallbackGrad = ctx.createLinearGradient(0, 0, 0, coverH);
+    fallbackGrad.addColorStop(0, '#262626');
+    fallbackGrad.addColorStop(0.5, '#0A0A0A');
+    fallbackGrad.addColorStop(1, '#0A0A0A');
+    ctx.fillStyle = fallbackGrad;
+    ctx.fillRect(0, 0, width, coverH);
+
+    const glow = ctx.createRadialGradient(
+      width / 2,
+      450 * s,
+      40 * s,
+      width / 2,
+      450 * s,
+      500 * s
+    );
+    glow.addColorStop(0, 'rgba(255, 46, 126, 0.25)');
+    glow.addColorStop(1, 'rgba(14, 16, 19, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, width, coverH);
+  }
+
+  // 2. Single continuous scrim: no seam, opaque #0A0A0A by the cover bottom.
+  const scrim = ctx.createLinearGradient(0, 0, 0, height);
+  scrim.addColorStop(0, 'rgba(14, 16, 19, 0.90)');
+  scrim.addColorStop(0.1, 'rgba(14, 16, 19, 0.50)');
+  scrim.addColorStop(0.22, 'rgba(14, 16, 19, 0.25)');
+  scrim.addColorStop(0.35, 'rgba(14, 16, 19, 0.55)');
+  scrim.addColorStop(0.48, 'rgba(14, 16, 19, 0.85)');
+  scrim.addColorStop(0.58, '#0A0A0A');
+  scrim.addColorStop(1, '#0A0A0A');
+  ctx.fillStyle = scrim;
+  ctx.fillRect(0, 0, width, height);
+
+  // 3. Top row: logo (left) + category pill (right), scaled with the canvas.
+  const topPad = 110 * s;
+  const sidePad = 60 * s;
+  const logoTargetW = 380 * s;
+  let logoTargetH = 95 * s;
+
+  try {
+    const logoImg = await deps.loadImage(
+      '/v2_sotoyfilm full logo transparent.PNG'
+    );
+    logoTargetH = logoImg.height * (logoTargetW / logoImg.width);
+    ctx.drawImage(logoImg, sidePad, topPad, logoTargetW, logoTargetH);
+  } catch (logoErr) {
+    console.warn(
+      '[SocialShareModal] Could not load /v2_sotoyfilm full logo transparent.PNG for canvas:',
+      logoErr
+    );
+    ctx.fillStyle = '#FF2E7E';
+    ctx.font = `900 ${48 * s}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.fillText('SOTOY FILM', sidePad, topPad + 58 * s);
+    logoTargetH = 80 * s;
+  }
+
+  const categoryText = (data.category || 'ARTIKEL').toUpperCase();
+  const maxPillW = width - sidePad * 2 - logoTargetW - 40 * s;
+  const pillPadX = 26 * s;
+  let pillFontSize = 28 * s;
+  let pillText = categoryText;
+  let catTextW = 0;
+
+  ctx.save();
+  while (pillFontSize >= 16 * s) {
+    ctx.font = `900 ${pillFontSize}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
+    catTextW = ctx.measureText(pillText).width;
+    if (catTextW + pillPadX * 2 <= maxPillW) break;
+    pillFontSize -= 2 * s;
+  }
+
+  if (catTextW + pillPadX * 2 > maxPillW) {
+    ctx.font = `900 ${16 * s}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
+    let truncated = pillText;
+    while (
+      truncated.length > 0 &&
+      ctx.measureText(`${cleanTrailingPunctuation(truncated)}...`).width +
+        pillPadX * 2 >
+        maxPillW
+    ) {
+      truncated = truncated.slice(0, -1);
+    }
+    pillText = `${cleanTrailingPunctuation(truncated)}...`;
+    catTextW = ctx.measureText(pillText).width;
+  }
+  ctx.restore();
+
+  const pillH = 60 * s;
+  const pillW = catTextW + pillPadX * 2;
+  const pillX = width - sidePad - pillW;
+  const logoCenterY = topPad + logoTargetH / 2;
+  const pillY = logoCenterY - pillH / 2;
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(14, 16, 19, 0.90)';
+  ctx.strokeStyle = 'rgba(255, 46, 126, 0.45)';
+  ctx.lineWidth = 2.5 * s;
+  drawRoundRectPath(ctx, pillX, pillY, pillW, pillH, pillH / 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = '#FF2E7E';
+  ctx.font = `900 ${pillFontSize}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(pillText, pillX + pillW / 2, pillY + pillH / 2);
+  ctx.restore();
+
+  // 4. Text block, bottom-anchored on the gradient.
+  const maxTextW = width - sidePad * 2;
+
+  const getWrappedLines = (
+    text: string,
+    maxWidth: number,
+    font: string,
+    maxLines: number = 4
+  ): string[] => {
+    if (!text) return [];
+    ctx.save();
+    ctx.font = font;
+    const words = text.split(/\s+/).filter(Boolean);
+    const lines: string[] = [];
+    let currentLine = '';
+
+    for (let i = 0; i < words.length; i++) {
+      const testLine = currentLine ? `${currentLine} ${words[i]}` : words[i];
+      const metrics = ctx.measureText(testLine);
+      if (metrics.width > maxWidth && currentLine) {
+        lines.push(currentLine);
+        currentLine = words[i];
+        if (lines.length === maxLines - 1) {
+          const remainingWords = words.slice(i).join(' ');
+          let lastLine = remainingWords;
+          while (
+            ctx.measureText(`${cleanTrailingPunctuation(lastLine)}...`).width >
+              maxWidth &&
+            lastLine.includes(' ')
+          ) {
+            lastLine = lastLine.substring(0, lastLine.lastIndexOf(' '));
+          }
+          lines.push(`${cleanTrailingPunctuation(lastLine)}...`);
+          currentLine = '';
+          break;
+        }
+      } else {
+        currentLine = testLine;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+    ctx.restore();
+    return lines.slice(0, maxLines);
+  };
+
+  const titleFont = `900 ${80 * s}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
+  const titleLineH = 92 * s;
+  const titleLines = getWrappedLines(data.title || '', maxTextW, titleFont, 4);
+  const titleHeight = titleLines.length * titleLineH;
+
+  const excerptFont = `${34 * s}px 'Plus Jakarta Sans', sans-serif`;
+  const excerptLineH = 46 * s;
+  const excerptLines = data.text
+    ? getWrappedLines(data.text, maxTextW, excerptFont, 3)
+    : [];
+  const excerptGap = excerptLines.length > 0 ? 24 * s : 0;
+  const excerptHeight = excerptLines.length * excerptLineH;
+
+  const bylineStr = getArticleStoryByline(data);
+
+  let authorAvatarImg: HTMLImageElement | null = null;
+  if (data.authorAvatar) {
+    try {
+      authorAvatarImg = (await deps.loadImage(
+        data.authorAvatar
+      )) as HTMLImageElement;
+    } catch {
+      /* graceful fallback */
+    }
+  }
+
+  const hasByline = Boolean(bylineStr || authorAvatarImg);
+  const bylineGap = hasByline ? 24 * s : 0;
+  const bylineHeight = hasByline ? 48 * s : 0;
+
+  const totalContentH =
+    titleHeight + excerptGap + excerptHeight + bylineGap + bylineHeight;
+  const targetBottom = 1720 * s;
+  let yCursor = Math.max(920 * s, targetBottom - totalContentH);
+
+  ctx.textBaseline = 'top';
+
+  ctx.font = titleFont;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.textAlign = 'left';
+  for (const line of titleLines) {
+    ctx.fillText(line, sidePad, yCursor);
+    yCursor += titleLineH;
+  }
+
+  if (excerptLines.length > 0) {
+    yCursor += excerptGap;
+    ctx.font = excerptFont;
+    ctx.fillStyle = '#D4D4D4';
+    ctx.textAlign = 'left';
+    for (const line of excerptLines) {
+      ctx.fillText(line, sidePad, yCursor);
+      yCursor += excerptLineH;
+    }
+  }
+
+  if (hasByline) {
+    yCursor += bylineGap;
+    let bylineX = sidePad;
+    const avatarSize = 44 * s;
+
+    if (authorAvatarImg) {
+      const avatarCenterY = yCursor + avatarSize / 2;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(
+        bylineX + avatarSize / 2,
+        avatarCenterY,
+        avatarSize / 2,
+        0,
+        Math.PI * 2
+      );
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(authorAvatarImg, bylineX, yCursor, avatarSize, avatarSize);
+      ctx.restore();
+
+      ctx.save();
+      ctx.strokeStyle = '#FF2E7E';
+      ctx.lineWidth = 2.5 * s;
+      ctx.beginPath();
+      ctx.arc(
+        bylineX + avatarSize / 2,
+        avatarCenterY,
+        avatarSize / 2,
+        0,
+        Math.PI * 2
+      );
+      ctx.stroke();
+      ctx.restore();
+
+      bylineX += avatarSize + 16 * s;
+    }
+
+    if (bylineStr) {
+      ctx.fillStyle = '#E5E5E5';
+      ctx.font = `bold ${24 * s}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
+      ctx.textAlign = 'left';
+      const textOffsetY = authorAvatarImg
+        ? yCursor + (avatarSize - 24 * s) / 2
+        : yCursor + 10 * s;
+      ctx.fillText(bylineStr, bylineX, textOffsetY);
+    }
+  }
+
+  // 5. Footer: thin divider + pink accent + cyan domain.
+  const footerDividerY = height - 135 * s;
+  const footerTextY = height - 90 * s;
+
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+  ctx.lineWidth = 1.5 * s;
+  ctx.beginPath();
+  ctx.moveTo(sidePad, footerDividerY);
+  ctx.lineTo(width - sidePad, footerDividerY);
+  ctx.stroke();
+
+  ctx.fillStyle = '#FF2E7E';
+  ctx.font = `bold ${22 * s}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText('★ Baca selengkapnya di Sotoy Film', sidePad, footerTextY);
+
+  ctx.fillStyle = '#00F0FF';
+  ctx.font = `bold ${22 * s}px 'Geist Mono', monospace`;
+  ctx.textAlign = 'right';
+  ctx.fillText('sotoyfilm.my.id', width - sidePad, footerTextY);
+
+  return canvas;
+};
+
 // =============================================================================
 // SINGLE SOURCE OF TRUTH: Film Rating Instagram Story Card (1080x1920)
 // The preview and the canvas renderer share the same text layout decisions so
 // the exported PNG keeps the exact proportions and line breaks of the modal.
 // =============================================================================
-type TextMeasure = (font: string, text: string) => number;
-
-const FILM_STORY_TOP = 1010;
-const FILM_STORY_BOTTOM = 1755;
-const FILM_TITLE_BASE = 60;
-const FILM_TITLE_MIN = 32;
-const FILM_REVIEW_BASE = 26;
-const FILM_REVIEW_MIN = 18;
-const FILM_TITLE_META_GAP = 8;
-const FILM_META_RATING_GAP = 22;
-const FILM_RATING_AUDIENCE_GAP = 18;
-const FILM_AUDIENCE_HEADLINE_GAP = 16;
-const FILM_HEADLINE_REVIEW_GAP = 18;
-
-// The rating pill is an exact 4x copy of the FilmDbCard pill:
-// gap-1, px-2, py-1, border, rounded-md, text-lg, text-[10px], and w-3.5.
-const FILM_RATING_SCALE = 4;
-const FILM_RATING_STAR_SIZE = 14 * FILM_RATING_SCALE;
-const FILM_RATING_GAP = 4 * FILM_RATING_SCALE;
-const FILM_RATING_PAD_X = 8 * FILM_RATING_SCALE;
-const FILM_RATING_PAD_Y = 4 * FILM_RATING_SCALE;
-const FILM_RATING_BORDER = 1 * FILM_RATING_SCALE;
-const FILM_RATING_RADIUS = 6 * FILM_RATING_SCALE;
-const FILM_RATING_SCORE_FONT = 18 * FILM_RATING_SCALE;
-const FILM_RATING_DENOM_FONT = 10 * FILM_RATING_SCALE;
-const FILM_RATING_EMPTY_FONT = 10 * FILM_RATING_SCALE;
-const FILM_RATING_BOX_HEIGHT =
-  FILM_RATING_SCORE_FONT + FILM_RATING_PAD_Y * 2 + FILM_RATING_BORDER * 2;
+// The rating pill is now scaled per format by buildFilmShareLayout.
 // Lucide Star path used by FilmDbCard, so the canvas star matches the preview.
 const FILM_RATING_STAR_PATH =
   'M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z';
-const FILM_AUDIENCE_COUNTS_HEIGHT = 34;
-const FILM_AUDIENCE_REVIEWER_HEIGHT = 46;
-const FILM_HEADLINE_FONT = 26;
-const FILM_HEADLINE_LINE_HEIGHT = 34;
 
 const approximateTextMeasure: TextMeasure = (font, text) => {
   const size = Number.parseInt(font.match(/(\d+)px/)?.[1] || '20', 10);
@@ -442,237 +874,6 @@ const isAutoGeneratedShareText = (value: string): boolean => {
   );
 };
 
-interface FilmShareTextLayout {
-  titleLines: string[];
-  titleFontSize: number;
-  titleLineHeight: number;
-  metaText: string;
-  audienceKind: 'counts' | 'reviewer' | null;
-  audienceText: string;
-  audienceHeight: number;
-  headlineLines: string[];
-  reviewLines: string[];
-  reviewFontSize: number;
-  reviewLineHeight: number;
-  startY: number;
-}
-
-const buildFilmShareLayout = (
-  data: ShareData,
-  displayScore: number,
-  hasScore: boolean,
-  measure: TextMeasure
-): FilmShareTextLayout => {
-  const maxTextW = 960;
-  const title = (data.filmTitle || data.title || '').trim();
-  const titleFont = (size: number) =>
-    `900 ${size}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
-  const reviewFont = (size: number) =>
-    `italic ${size}px 'Plus Jakarta Sans', sans-serif`;
-
-  const measureAt =
-    (font: string) =>
-    (value: string): number =>
-      measure(font, value);
-
-  let titleFontSize = fitFontSize(
-    measure(titleFont(FILM_TITLE_BASE), title),
-    maxTextW * 2,
-    FILM_TITLE_BASE,
-    FILM_TITLE_MIN
-  );
-  let titleWrap = wrapShareText(
-    title,
-    maxTextW,
-    2,
-    measureAt(titleFont(titleFontSize))
-  );
-  while (titleWrap.truncated && titleFontSize > FILM_TITLE_MIN) {
-    titleFontSize -= 2;
-    titleWrap = wrapShareText(
-      title,
-      maxTextW,
-      2,
-      measureAt(titleFont(titleFontSize))
-    );
-  }
-  const titleLineHeight = Math.round(titleFontSize * 1.2);
-
-  const genresStr = (data.filmGenres || []).slice(0, 3).join(' • ');
-  const metaText = [data.filmYear, genresStr].filter(Boolean).join(' | ');
-
-  const countsLine = formatReviewCountsLine(
-    data.criticReviewCount ?? 0,
-    data.communityReviewCount ?? 0
-  );
-  const hasCountsPayload =
-    data.criticReviewCount !== undefined || data.communityReviewCount !== undefined;
-  const reviewerName = (data.reviewerName || data.authorName || '').trim();
-  const reviewerRole = (data.reviewerRole || '').trim();
-  const hasReviewer = Boolean(reviewerName || data.reviewerAvatar);
-
-  let audienceKind: FilmShareTextLayout['audienceKind'] = null;
-  let audienceText = '';
-  let audienceHeight = 0;
-
-  if (hasCountsPayload) {
-    if (countsLine) {
-      audienceKind = 'counts';
-      audienceText =
-        wrapShareText(
-          countsLine,
-          maxTextW,
-          1,
-          measureAt(`600 22px 'Geist', 'Plus Jakarta Sans', sans-serif`)
-        ).lines[0] || countsLine;
-      audienceHeight = FILM_AUDIENCE_COUNTS_HEIGHT;
-    }
-  } else if (hasReviewer) {
-    audienceKind = 'reviewer';
-    const reviewerLine = `Ulasan oleh ${reviewerName || 'Cinephile'}${
-      reviewerRole ? ` (${reviewerRole})` : ''
-    }`;
-    audienceText =
-      wrapShareText(
-        reviewerLine,
-        880,
-        1,
-        measureAt(`bold 22px 'Geist', 'Plus Jakarta Sans', sans-serif`)
-      ).lines[0] || reviewerLine;
-    audienceHeight = FILM_AUDIENCE_REVIEWER_HEIGHT;
-  }
-
-  const rawHeadline = (data.headline || '').trim();
-  const headline =
-    rawHeadline &&
-    !isAutoGeneratedShareHeadline(rawHeadline, data.filmTitle || data.title)
-      ? rawHeadline
-      : '';
-  const headlineWrap = headline
-    ? wrapShareText(
-        `“${headline}”`,
-        maxTextW,
-        2,
-        measureAt(`italic 900 ${FILM_HEADLINE_FONT}px 'Geist', 'Plus Jakarta Sans', sans-serif`)
-      )
-    : { lines: [], truncated: false };
-  const headlineHeight =
-    headlineWrap.lines.length * FILM_HEADLINE_LINE_HEIGHT;
-
-  const rawReview = (data.reviewText || data.text || '').trim();
-  const reviewText =
-    rawReview && !isAutoGeneratedShareText(rawReview) ? rawReview : '';
-
-  const titleHeight = titleWrap.lines.length * titleLineHeight;
-  const metaHeight = metaText ? 28 : 0;
-  const staticBlocks: ShareLayoutBlock[] = [
-    { height: titleHeight },
-    { height: metaHeight, gapBefore: metaText ? FILM_TITLE_META_GAP : 0 },
-    { height: FILM_RATING_BOX_HEIGHT, gapBefore: FILM_META_RATING_GAP },
-  ];
-  if (audienceKind) {
-    staticBlocks.push({
-      height: audienceHeight,
-      gapBefore: FILM_RATING_AUDIENCE_GAP,
-    });
-  }
-  if (headlineWrap.lines.length > 0) {
-    staticBlocks.push({
-      height: headlineHeight,
-      gapBefore: FILM_AUDIENCE_HEADLINE_GAP,
-    });
-  }
-
-  const staticHeight = staticBlocks.reduce(
-    (total, block, index) =>
-      total +
-      block.height +
-      (index > 0 && Number.isFinite(block.gapBefore) ? block.gapBefore || 0 : 0),
-    0
-  );
-  const availableHeight = FILM_STORY_BOTTOM - FILM_STORY_TOP;
-  const maxReviewHeight =
-    availableHeight - staticHeight - (reviewText ? FILM_HEADLINE_REVIEW_GAP : 0);
-
-  let reviewLines: string[] = [];
-  let reviewFontSize = FILM_REVIEW_BASE;
-  let reviewLineHeight = Math.round(FILM_REVIEW_BASE * 1.46);
-
-  if (reviewText && maxReviewHeight > 0) {
-    reviewFontSize = FILM_REVIEW_BASE;
-    reviewLineHeight = Math.round(reviewFontSize * 1.46);
-    let wrapped = wrapShareText(
-      `“${reviewText}”`,
-      maxTextW,
-      5,
-      measureAt(reviewFont(reviewFontSize))
-    );
-
-    while (
-      reviewFontSize > FILM_REVIEW_MIN &&
-      wrapped.lines.length * reviewLineHeight > maxReviewHeight
-    ) {
-      reviewFontSize -= 2;
-      reviewLineHeight = Math.round(reviewFontSize * 1.46);
-      wrapped = wrapShareText(
-        `“${reviewText}”`,
-        maxTextW,
-        5,
-        measureAt(reviewFont(reviewFontSize))
-      );
-    }
-
-    if (wrapped.lines.length * reviewLineHeight > maxReviewHeight) {
-      const fittingLines = Math.max(
-        1,
-        Math.min(5, Math.floor(maxReviewHeight / reviewLineHeight))
-      );
-      wrapped = wrapShareText(
-        `“${reviewText}”`,
-        maxTextW,
-        fittingLines,
-        measureAt(reviewFont(reviewFontSize))
-      );
-    }
-
-    if (wrapped.lines.length * reviewLineHeight <= maxReviewHeight) {
-      reviewLines = wrapped.lines;
-    } else {
-      reviewLines = [];
-    }
-  }
-
-  const blocks: ShareLayoutBlock[] = [...staticBlocks];
-  if (reviewLines.length > 0) {
-    blocks.push({
-      height: reviewLines.length * reviewLineHeight,
-      gapBefore: FILM_HEADLINE_REVIEW_GAP,
-    });
-  }
-
-  const budget = getShareLayoutBudget({
-    availableTop: FILM_STORY_TOP,
-    availableBottom: FILM_STORY_BOTTOM,
-    blocks,
-    bias: 0.55,
-  });
-
-  return {
-    titleLines: titleWrap.lines,
-    titleFontSize,
-    titleLineHeight,
-    metaText,
-    audienceKind,
-    audienceText,
-    audienceHeight,
-    headlineLines: headlineWrap.lines,
-    reviewLines,
-    reviewFontSize,
-    reviewLineHeight,
-    startY: budget.startY,
-  };
-};
-
 interface FilmRatingStoryCardProps {
   data: ShareData;
   displayScore: number;
@@ -716,8 +917,8 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
   }, []);
 
   const layout = React.useMemo(
-    () => buildFilmShareLayout(data, displayScore, hasScore, measure),
-    [data, displayScore, hasScore, measure, fontRevision]
+    () => buildFilmShareLayout(data, displayScore, hasScore, measure, format),
+    [data, displayScore, hasScore, measure, format, fontRevision]
   );
 
   return (
@@ -737,8 +938,9 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
 
       {/* Neutral black fade for the wordmark and badge over the top of the art. */}
       <div
-        className="absolute inset-x-0 top-0 h-[320px] pointer-events-none"
+        className="absolute inset-x-0 top-0 pointer-events-none"
         style={{
+          height: `${Math.round(320 * (format === 'feed' ? 1350 / 1920 : 1))}px`,
           background:
             'linear-gradient(to bottom, rgba(10, 10, 10, 0.85) 0%, rgba(10, 10, 10, 0) 100%)',
         }}
@@ -748,8 +950,11 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background:
-            'linear-gradient(to bottom, rgba(10, 10, 10, 0) 42%, rgba(10, 10, 10, 0.66) 58%, #0A0A0A 74%, #0A0A0A 100%)',
+          background: `linear-gradient(to bottom, rgba(10, 10, 10, 0) 0%, ${getFilmShareLayoutMetrics(
+            format
+          ).scrimStops
+            .map((stop) => `${stop.color} ${Math.round(stop.at * 100)}%`)
+            .join(', ')})`,
         }}
       />
 
@@ -759,18 +964,16 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
           alt="Sotoy Film"
           className="w-[380px] h-auto object-contain"
         />
-        <div className="px-7 py-3.5 rounded-full font-black text-[28px] tracking-wider text-[#FF2E7E] bg-[#0A0A0A] border-2 border-[#FF2E7E] whitespace-nowrap uppercase">
+        <div className="px-7 h-[60px] inline-flex items-center rounded-full font-black text-[28px] tracking-wider text-[#FF2E7E] bg-[#0A0A0A] border-2 border-[#FF2E7E] whitespace-nowrap uppercase">
           SKOR & ULASAN
         </div>
       </div>
 
-      <div
-        className="absolute inset-x-0 px-[60px] text-center"
-        style={{ top: `${layout.startY}px` }}
-      >
+      <div className="absolute inset-x-0 px-[60px] text-center">
         <h1
-          className="font-display font-black text-white"
+          className="absolute inset-x-0 font-display font-black text-white"
           style={{
+            top: `${layout.titleTop}px`,
             fontSize: `${layout.titleFontSize}px`,
             lineHeight: `${layout.titleLineHeight}px`,
           }}
@@ -780,27 +983,47 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
           ))}
         </h1>
 
+        {layout.hasDirector && (
+          <div
+            className="absolute inset-x-0 text-slate-200 font-bold truncate"
+            style={{
+              top: `${layout.directorTop}px`,
+              fontSize: `${layout.directorFontSize}px`,
+              lineHeight: `${layout.directorLineHeight}px`,
+            }}
+          >
+            {layout.directorText}
+          </div>
+        )}
+
         {layout.metaText && (
           <div
-            className="text-[20px] text-[#FF2E7E] font-bold tracking-wide"
-            style={{ marginTop: `${FILM_TITLE_META_GAP}px` }}
+            className="absolute inset-x-0 text-[#FF2E7E] font-extrabold tracking-wide truncate"
+            style={{
+              top: `${layout.metaTop}px`,
+              fontSize: `${layout.metaFontSize}px`,
+              lineHeight: `${layout.metaLineHeight}px`,
+            }}
           >
             {layout.metaText}
           </div>
         )}
 
-        <div style={{ marginTop: `${FILM_META_RATING_GAP}px` }}>
+        <div
+          className="absolute inset-x-0 flex justify-center"
+          style={{ top: `${layout.ratingTop}px` }}
+        >
           <div
             className={`inline-flex items-center justify-center border bg-[#0A0A0A] ${
               hasScore ? 'border-[#FFD000]' : 'border-slate-600'
             }`}
             style={{
-              height: `${FILM_RATING_BOX_HEIGHT}px`,
-              paddingInline: `${FILM_RATING_PAD_X}px`,
-              paddingBlock: `${FILM_RATING_PAD_Y}px`,
-              gap: `${FILM_RATING_GAP}px`,
-              borderWidth: `${FILM_RATING_BORDER}px`,
-              borderRadius: `${FILM_RATING_RADIUS}px`,
+              height: `${layout.rating.boxHeight}px`,
+              paddingInline: `${layout.rating.padX}px`,
+              paddingBlock: `${layout.rating.padY}px`,
+              gap: `${layout.rating.gap}px`,
+              borderWidth: `${layout.rating.border}px`,
+              borderRadius: `${layout.rating.radius}px`,
             }}
           >
             {hasScore ? (
@@ -808,19 +1031,19 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
                 <Star
                   className="shrink-0 text-[#FFD000] fill-current"
                   style={{
-                    width: `${FILM_RATING_STAR_SIZE}px`,
-                    height: `${FILM_RATING_STAR_SIZE}px`,
+                    width: `${layout.rating.starSize}px`,
+                    height: `${layout.rating.starSize}px`,
                   }}
                 />
                 <span
                   className="font-display font-black text-white leading-none tabular-nums"
-                  style={{ fontSize: `${FILM_RATING_SCORE_FONT}px` }}
+                  style={{ fontSize: `${layout.rating.scoreFont}px` }}
                 >
                   {displayScore.toFixed(1)}
                 </span>
                 <span
                   className="font-bold text-slate-400 leading-none"
-                  style={{ fontSize: `${FILM_RATING_DENOM_FONT}px` }}
+                  style={{ fontSize: `${layout.rating.denomFont}px` }}
                 >
                   /10
                 </span>
@@ -828,7 +1051,7 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
             ) : (
               <span
                 className="font-bold text-slate-400 leading-none"
-                style={{ fontSize: `${FILM_RATING_EMPTY_FONT}px` }}
+                style={{ fontSize: `${layout.rating.emptyFont}px` }}
               >
                 Belum ada skor
               </span>
@@ -836,73 +1059,56 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
           </div>
         </div>
 
-        {layout.audienceKind && (
+        {layout.hasReviewer && (
           <div
-            className="flex items-center justify-center"
+            className="absolute inset-x-0 flex items-center justify-center"
             style={{
-              marginTop: `${FILM_RATING_AUDIENCE_GAP}px`,
-              height: `${layout.audienceHeight}px`,
+              top: `${layout.reviewerTop}px`,
+              height: `${layout.reviewerLineHeight}px`,
             }}
           >
-            {layout.audienceKind === 'reviewer' && effectiveAvatar ? (
+            {effectiveAvatar ? (
               <div className="flex items-center justify-center gap-3 min-w-0 max-w-full">
                 <img
                   src={effectiveAvatar}
                   alt={data.reviewerName || 'Reviewer'}
                   className="w-[44px] h-[44px] rounded-full object-cover border-2 border-[#FF2E7E] shrink-0"
                 />
-                <span className="text-[22px] text-slate-200 font-bold truncate">
-                  {layout.audienceText}
+                <span
+                  className="text-slate-200 font-bold truncate"
+                  style={{ fontSize: `${layout.reviewerFontSize}px` }}
+                >
+                  {layout.reviewerText}
                 </span>
               </div>
             ) : (
-              <span className="text-[22px] text-slate-200 font-semibold truncate max-w-full">
-                {layout.audienceText}
+              <span
+                className="text-slate-200 font-semibold truncate max-w-full"
+                style={{ fontSize: `${layout.reviewerFontSize}px` }}
+              >
+                {layout.reviewerText}
               </span>
             )}
           </div>
         )}
-
-        {layout.headlineLines.length > 0 && (
-          <div
-            className="font-display font-bold italic text-white"
-            style={{
-              marginTop: `${FILM_AUDIENCE_HEADLINE_GAP}px`,
-              fontSize: `${FILM_HEADLINE_FONT}px`,
-              lineHeight: `${FILM_HEADLINE_LINE_HEIGHT}px`,
-            }}
-          >
-            {layout.headlineLines.map((line, index) => (
-              <div key={`film-headline-${index}`}>{line}</div>
-            ))}
-          </div>
-        )}
-
-        {layout.reviewLines.length > 0 && (
-          <div
-            className="italic text-slate-300"
-            style={{
-              marginTop: `${FILM_HEADLINE_REVIEW_GAP}px`,
-              fontSize: `${layout.reviewFontSize}px`,
-              lineHeight: `${layout.reviewLineHeight}px`,
-            }}
-          >
-            {layout.reviewLines.map((line, index) => (
-              <div key={`film-review-${index}`}>{line}</div>
-            ))}
-          </div>
-        )}
       </div>
 
-      <div className="absolute inset-x-0 bottom-0 px-[60px] pb-[90px]">
-        <div className="pt-4 border-t border-white/15 flex items-center justify-between">
-          <span className="text-[20px] font-bold text-[#FF2E7E]">
-            Ulas & Nilai Film di Sotoy Film
-          </span>
-          <span className="text-[20px] text-[#00F0FF] font-mono font-bold">
-            sotoyfilm.my.id
-          </span>
-        </div>
+      <div
+        className="absolute inset-x-0 px-[60px]"
+        style={{ top: `${layout.footerDividerY}px` }}
+      >
+        <div className="border-t border-white/15" />
+      </div>
+      <div
+        className="absolute inset-x-0 px-[60px] flex items-center justify-between"
+        style={{ top: `${layout.footerTextY}px` }}
+      >
+        <span className="text-[20px] leading-none font-bold text-[#FF2E7E]">
+          Ulas & Nilai Film di Sotoy Film
+        </span>
+        <span className="text-[20px] leading-none text-[#00F0FF] font-mono font-bold">
+          sotoyfilm.my.id
+        </span>
       </div>
     </div>
   );
@@ -1533,6 +1739,11 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
   const [buzzStoryDataUrl, setBuzzStoryDataUrl] = useState<string | null>(null);
   const [isRenderingBuzzStory, setIsRenderingBuzzStory] = useState(false);
   const buzzCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [articleStoryDataUrl, setArticleStoryDataUrl] = useState<string | null>(
+    null
+  );
+  const [isRenderingArticle, setIsRenderingArticle] = useState(false);
+  const articleCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isFileShareSupported, setIsFileShareSupported] = useState(false);
   const [collectionExportPayload, setCollectionExportPayload] =
     useState<CollectionStoryExportPayload | null>(null);
@@ -1885,32 +2096,6 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
     });
   };
 
-  // Helper for drawing rounded rectangles on canvas
-  const drawRoundRectPath = (
-    c: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    r: number
-  ) => {
-    c.beginPath();
-    if (typeof c.roundRect === 'function') {
-      c.roundRect(x, y, w, h, r);
-    } else {
-      c.moveTo(x + r, y);
-      c.lineTo(x + w - r, y);
-      c.quadraticCurveTo(x + w, y, x + w, y + r);
-      c.lineTo(x + w, y + h - r);
-      c.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-      c.lineTo(x + r, y + h);
-      c.quadraticCurveTo(x, y + h, x, y + h - r);
-      c.lineTo(x, y + r);
-      c.quadraticCurveTo(x, y, x + r, y);
-    }
-    c.closePath();
-  };
-
   // Draws the same filled + stroked Lucide Star used by the card preview.
   const drawFilmRatingStar = (
     c: CanvasRenderingContext2D,
@@ -1971,34 +2156,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
 
     const generateBuzzPreview = async () => {
       try {
-        const authorHandle = normalizeHandle(
-          data.authorHandle || (data.meta?.startsWith('@') ? data.meta.split(' ')[0] : undefined)
-        );
-        const roleLabel = data.roleLabel || formatRoleLabel(data.authorRole);
-
-        const filmObj: BuzzCardFilm | null =
-          data.taggedFilmTitle || data.filmTitle
-            ? {
-                title: data.taggedFilmTitle || data.filmTitle || '',
-                year: data.taggedFilmYear || data.filmYear,
-                poster: data.taggedFilmPoster || data.filmPoster,
-                score: data.taggedFilmScore ?? data.rating ?? data.skorSotoy,
-                genres: data.taggedFilmGenres || data.filmGenres,
-              }
-            : null;
-
-        const buzzInput: BuzzCardInput = {
-          authorName: data.authorName || data.title.replace('Buzz Diskusi: ', '').trim(),
-          authorHandle: authorHandle,
-          authorAvatar: data.authorAvatar || data.image,
-          roleLabel: roleLabel,
-          text: data.text || '',
-          image: data.buzzImage || (data.type === 'buzz' && data.image && data.image !== data.authorAvatar ? data.image : undefined),
-          film: filmObj,
-          tags: data.tags,
-          likes: data.likes,
-          replies: data.replies,
-        };
+        const buzzInput = buildBuzzCardInput(data);
 
         const canvas = await renderBuzzStoryCanvas(buzzInput, {
           loadImage: loadCanvasImage,
@@ -2025,7 +2183,44 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, data, activeTab]);
+  }, [isOpen, data, activeTab, igFormat]);
+
+  // On-screen preview generator for the Article story/feed canvas. The preview
+  // is an <img> of the exact canvas used for the download, so the two match.
+  useEffect(() => {
+    if (!isOpen || !data || data.type !== 'article') {
+      setArticleStoryDataUrl(null);
+      articleCanvasRef.current = null;
+      return;
+    }
+
+    let cancelled = false;
+    setIsRenderingArticle(true);
+
+    const generateArticlePreview = async () => {
+      try {
+        const canvas = await renderArticleShareCanvas(data, igFormat, {
+          loadImage: loadCanvasImage,
+        });
+        if (!cancelled) {
+          articleCanvasRef.current = canvas;
+          setArticleStoryDataUrl(canvas.toDataURL('image/png'));
+        }
+      } catch (err) {
+        console.error('[SocialShareModal] Failed to render article preview:', err);
+      } finally {
+        if (!cancelled) {
+          setIsRenderingArticle(false);
+        }
+      }
+    };
+
+    generateArticlePreview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, data, activeTab, igFormat]);
 
   // Generate high-resolution Instagram Card PNG using Canvas / DOM Capture
   const handleDownloadInstagramVisual = async (format: 'story' | 'feed' = 'story') => {
@@ -2119,45 +2314,21 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         return;
       }
 
-      // 1. Buzz Story (Threads-style 1080x1920) - Uses renderBuzzStoryCanvas directly
+      // 1. Buzz Story/Feed (Threads-style) - Uses renderBuzzStoryCanvas directly
       if (isBuzz) {
+        const expectedBuzzHeight = format === 'feed' ? 1350 : 1920;
         let canvas = buzzCanvasRef.current;
-        if (!canvas) {
-          const authorHandle = normalizeHandle(
-            data.authorHandle || (data.meta?.startsWith('@') ? data.meta.split(' ')[0] : undefined)
-          );
-          const roleLabel = data.roleLabel || formatRoleLabel(data.authorRole);
-
-          const filmObj: BuzzCardFilm | null =
-            data.taggedFilmTitle || data.filmTitle
-              ? {
-                  title: data.taggedFilmTitle || data.filmTitle || '',
-                  year: data.taggedFilmYear || data.filmYear,
-                  poster: data.taggedFilmPoster || data.filmPoster,
-                  score: data.taggedFilmScore ?? data.rating ?? data.skorSotoy,
-                  genres: data.taggedFilmGenres || data.filmGenres,
-                }
-              : null;
-
-          const buzzInput: BuzzCardInput = {
-            authorName: data.authorName || data.title.replace('Buzz Diskusi: ', '').trim(),
-            authorHandle: authorHandle,
-            authorAvatar: data.authorAvatar || data.image,
-            roleLabel: roleLabel,
-            text: data.text || '',
-            image: data.buzzImage || (data.type === 'buzz' && data.image && data.image !== data.authorAvatar ? data.image : undefined),
-            film: filmObj,
-            tags: data.tags,
-            likes: data.likes,
-            replies: data.replies,
-          };
-
-          canvas = await renderBuzzStoryCanvas(buzzInput, {
-            loadImage: loadCanvasImage,
-            onPhotoLoadFailed: () => {
-              showToast('Foto gagal dimuat di story, coba lagi');
+        if (!canvas || canvas.height !== expectedBuzzHeight) {
+          canvas = await renderBuzzStoryCanvas(
+            buildBuzzCardInput(data),
+            {
+              loadImage: loadCanvasImage,
+              onPhotoLoadFailed: () => {
+                showToast('Foto gagal dimuat di story, coba lagi');
+              },
             },
-          }, format);
+            format
+          );
           buzzCanvasRef.current = canvas;
         }
 
@@ -2174,7 +2345,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           throw new Error('Gagal mengonversi kanvas buzz menjadi gambar.');
         }
 
-        const fileName = `sotoyfilm-buzz-story-${Date.now()}.png`;
+        const fileName = `sotoyfilm-buzz-${format}-${Date.now()}.png`;
         const file = new File([blob], fileName, { type: 'image/png' });
 
         const isMobileDevice =
@@ -2226,330 +2397,30 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         return;
       }
 
-      // 2. Article Instagram Story (9:16) - Full-bleed, edge-to-edge cinematic Canvas 2D rendering
-      if (isArticle && format === 'story') {
-        if (typeof document !== 'undefined' && document.fonts?.ready) {
-          await document.fonts.ready;
+      // 2. Article Story/Feed (9:16 or 4:5) - shared canvas renderer
+      if (isArticle) {
+        const expectedArticleHeight = format === 'feed' ? 1350 : 1920;
+        let canvas = articleCanvasRef.current;
+        if (!canvas || canvas.height !== expectedArticleHeight) {
+          canvas = await renderArticleShareCanvas(data, format, {
+            loadImage: loadCanvasImage,
+          });
+          articleCanvasRef.current = canvas;
         }
 
-        const width = 1080;
-        const height = 1920;
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-
-        if (!ctx) {
-          showToast('Gagal menginisialisasi perender visual.');
-          setIsGeneratingImage(false);
-          return;
+        if (!canvas) {
+          throw new Error('Gagal merender kanvas artikel.');
         }
 
-        // Base solid background (#0A0A0A)
-        ctx.fillStyle = '#0A0A0A';
-        ctx.fillRect(0, 0, width, height);
-
-        // 1. Background + Cover: Draw article cover over roughly top 60% (1150px) using cover-fit
-        const coverUrl = data.image || data.imageUrl;
-        const coverH = 1150;
-        let coverLoaded = false;
-
-        if (coverUrl) {
-          try {
-            const coverImg = await loadCanvasImage(coverUrl);
-            coverLoaded = true;
-
-            const imgAspect = coverImg.width / coverImg.height;
-            const targetAspect = width / coverH; // 1080 / 1150
-
-            let sx = 0,
-              sy = 0,
-              sWidth = coverImg.width,
-              sHeight = coverImg.height;
-            if (imgAspect > targetAspect) {
-              sWidth = coverImg.height * targetAspect;
-              sx = (coverImg.width - sWidth) / 2;
-            } else {
-              sHeight = coverImg.width / targetAspect;
-              sy = (coverImg.height - sHeight) / 2;
-            }
-
-            ctx.drawImage(coverImg, sx, sy, sWidth, sHeight, 0, 0, width, coverH);
-          } catch (coverErr) {
-            console.warn('[SocialShareModal] Article cover load failed for canvas, using fallback gradient:', coverErr);
-          }
-        }
-
-        if (!coverLoaded) {
-          const fallbackGrad = ctx.createLinearGradient(0, 0, 0, coverH);
-          fallbackGrad.addColorStop(0, '#262626');
-          fallbackGrad.addColorStop(0.5, '#0A0A0A');
-          fallbackGrad.addColorStop(1, '#0A0A0A');
-          ctx.fillStyle = fallbackGrad;
-          ctx.fillRect(0, 0, width, coverH);
-
-          const glow = ctx.createRadialGradient(width / 2, 450, 40, width / 2, 450, 500);
-          glow.addColorStop(0, 'rgba(255, 46, 126, 0.25)');
-          glow.addColorStop(1, 'rgba(14, 16, 19, 0)');
-          ctx.fillStyle = glow;
-          ctx.fillRect(0, 0, width, coverH);
-        }
-
-        // 2. Single Continuous Gradient: No seam, reaches opaque #0A0A0A at bottom edge of cover (~58-60%)
-        const scrim = ctx.createLinearGradient(0, 0, 0, height);
-        scrim.addColorStop(0, 'rgba(14, 16, 19, 0.90)');
-        scrim.addColorStop(0.10, 'rgba(14, 16, 19, 0.50)');
-        scrim.addColorStop(0.22, 'rgba(14, 16, 19, 0.25)');
-        scrim.addColorStop(0.35, 'rgba(14, 16, 19, 0.55)');
-        scrim.addColorStop(0.48, 'rgba(14, 16, 19, 0.85)');
-        scrim.addColorStop(0.58, '#0A0A0A');
-        scrim.addColorStop(1, '#0A0A0A');
-        ctx.fillStyle = scrim;
-        ctx.fillRect(0, 0, width, height);
-
-        // 3. Top Row: Sotoy Film Logo (top-left) & Category Pill (top-right)
-        const topPad = 110;
-        const sidePad = 60;
-        const logoTargetW = 380;
-        let logoTargetH = 95;
-
-        // Draw Sotoy Film Logo (natural aspect ratio, 380px wide)
-        try {
-          const logoImg = await loadCanvasImage('/v2_sotoyfilm full logo transparent.PNG');
-          logoTargetH = logoImg.height * (logoTargetW / logoImg.width);
-          ctx.drawImage(logoImg, sidePad, topPad, logoTargetW, logoTargetH);
-        } catch (logoErr) {
-          console.warn('[SocialShareModal] Could not load /v2_sotoyfilm full logo transparent.PNG for canvas:', logoErr);
-          ctx.fillStyle = '#FF2E7E';
-          ctx.font = "900 48px 'Geist', 'Plus Jakarta Sans', sans-serif";
-          ctx.textAlign = 'left';
-          ctx.fillText('SOTOY FILM', sidePad, topPad + 58);
-          logoTargetH = 80;
-        }
-
-        // Draw Category Pill (Scaled ~1.25x: font 28px, height 60px, vertically centered with logo)
-        const categoryText = (data.category || 'ARTIKEL').toUpperCase();
-        const maxPillW = width - sidePad * 2 - logoTargetW - 40;
-        const pillPadX = 26;
-        let pillFontSize = 28;
-        let pillText = categoryText;
-        let catTextW = 0;
-
-        ctx.save();
-        while (pillFontSize >= 16) {
-          ctx.font = `900 ${pillFontSize}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
-          catTextW = ctx.measureText(pillText).width;
-          if (catTextW + pillPadX * 2 <= maxPillW) {
-            break;
-          }
-          pillFontSize -= 2;
-        }
-
-        if (catTextW + pillPadX * 2 > maxPillW) {
-          ctx.font = `900 16px 'Geist', 'Plus Jakarta Sans', sans-serif`;
-          let truncated = pillText;
-          while (
-            truncated.length > 0 &&
-            ctx.measureText(`${cleanTrailingPunctuation(truncated)}...`).width + pillPadX * 2 > maxPillW
-          ) {
-            truncated = truncated.slice(0, -1);
-          }
-          pillText = `${cleanTrailingPunctuation(truncated)}...`;
-          catTextW = ctx.measureText(pillText).width;
-        }
-        ctx.restore();
-
-        const pillH = 60;
-        const pillW = catTextW + pillPadX * 2;
-        const pillX = width - sidePad - pillW;
-        const logoCenterY = topPad + logoTargetH / 2;
-        const pillY = logoCenterY - pillH / 2;
-
-        ctx.save();
-        ctx.fillStyle = 'rgba(14, 16, 19, 0.90)';
-        ctx.strokeStyle = 'rgba(255, 46, 126, 0.45)';
-        ctx.lineWidth = 2.5;
-        drawRoundRectPath(ctx, pillX, pillY, pillW, pillH, pillH / 2);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = '#FF2E7E';
-        ctx.font = `900 ${pillFontSize}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(pillText, pillX + pillW / 2, pillY + pillH / 2);
-        ctx.restore();
-
-        // 4. Text Block (Sequential y-cursor on gradient, bottom-anchored)
-        const maxTextW = width - sidePad * 2; // 960px
-
-        const getWrappedLines = (
-          text: string,
-          maxWidth: number,
-          font: string,
-          maxLines: number = 4
-        ): string[] => {
-          if (!text) return [];
-          ctx.save();
-          ctx.font = font;
-          const words = text.split(/\s+/).filter(Boolean);
-          const lines: string[] = [];
-          let currentLine = '';
-
-          for (let i = 0; i < words.length; i++) {
-            const testLine = currentLine ? `${currentLine} ${words[i]}` : words[i];
-            const metrics = ctx.measureText(testLine);
-            if (metrics.width > maxWidth && currentLine) {
-              lines.push(currentLine);
-              currentLine = words[i];
-              if (lines.length === maxLines - 1) {
-                // Last line: append remainder with ellipsis if necessary, stripping trailing punctuation
-                const remainingWords = words.slice(i).join(' ');
-                let lastLine = remainingWords;
-                while (
-                  ctx.measureText(`${cleanTrailingPunctuation(lastLine)}...`).width > maxWidth &&
-                  lastLine.includes(' ')
-                ) {
-                  lastLine = lastLine.substring(0, lastLine.lastIndexOf(' '));
-                }
-                lines.push(`${cleanTrailingPunctuation(lastLine)}...`);
-                currentLine = '';
-                break;
-              }
-            } else {
-              currentLine = testLine;
-            }
-          }
-          if (currentLine) {
-            lines.push(currentLine);
-          }
-          ctx.restore();
-          return lines.slice(0, maxLines);
-        };
-
-        const titleFont = "900 80px 'Geist', 'Plus Jakarta Sans', sans-serif";
-        const titleLineH = 92; // ~1.15
-        const titleLines = getWrappedLines(data.title || '', maxTextW, titleFont, 4);
-        const titleHeight = titleLines.length * titleLineH;
-
-        const excerptFont = "34px 'Plus Jakarta Sans', sans-serif";
-        const excerptLineH = 46;
-        const excerptLines = data.text ? getWrappedLines(data.text, maxTextW, excerptFont, 3) : [];
-        const excerptGap = excerptLines.length > 0 ? 24 : 0;
-        const excerptHeight = excerptLines.length * excerptLineH;
-
-        // Byline data check (built from separate fields only, without duplicate author or raw meta dump)
-        const bylineStr = getArticleStoryByline(data);
-
-        let authorAvatarImg: HTMLImageElement | null = null;
-        if (data.authorAvatar) {
-          try {
-            authorAvatarImg = await loadCanvasImage(data.authorAvatar);
-          } catch {
-            // graceful fallback
-          }
-        }
-
-        const hasByline = Boolean(bylineStr || authorAvatarImg);
-        const bylineGap = hasByline ? 24 : 0;
-        const bylineHeight = hasByline ? 48 : 0;
-
-        const totalContentH = titleHeight + excerptGap + excerptHeight + bylineGap + bylineHeight;
-        const targetBottom = 1720;
-        let yCursor = Math.max(920, targetBottom - totalContentH);
-
-        ctx.textBaseline = 'top';
-
-        // Title
-        ctx.font = titleFont;
-        ctx.fillStyle = '#FFFFFF';
-        ctx.textAlign = 'left';
-        for (const line of titleLines) {
-          ctx.fillText(line, sidePad, yCursor);
-          yCursor += titleLineH;
-        }
-
-        // Excerpt
-        if (excerptLines.length > 0) {
-          yCursor += excerptGap;
-          ctx.font = excerptFont;
-          ctx.fillStyle = '#D4D4D4';
-          ctx.textAlign = 'left';
-          for (const line of excerptLines) {
-            ctx.fillText(line, sidePad, yCursor);
-            yCursor += excerptLineH;
-          }
-        }
-
-        // Byline
-        if (hasByline) {
-          yCursor += bylineGap;
-          let bylineX = sidePad;
-          const avatarSize = 44;
-
-          if (authorAvatarImg) {
-            const avatarCenterY = yCursor + avatarSize / 2;
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(bylineX + avatarSize / 2, avatarCenterY, avatarSize / 2, 0, Math.PI * 2);
-            ctx.closePath();
-            ctx.clip();
-            ctx.drawImage(authorAvatarImg, bylineX, yCursor, avatarSize, avatarSize);
-            ctx.restore();
-
-            ctx.save();
-            ctx.strokeStyle = '#FF2E7E';
-            ctx.lineWidth = 2.5;
-            ctx.beginPath();
-            ctx.arc(bylineX + avatarSize / 2, avatarCenterY, avatarSize / 2, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.restore();
-
-            bylineX += avatarSize + 16;
-          }
-
-          if (bylineStr) {
-            ctx.fillStyle = '#E5E5E5';
-            ctx.font = "bold 24px 'Geist', 'Plus Jakarta Sans', sans-serif";
-            ctx.textAlign = 'left';
-            const textOffsetY = authorAvatarImg ? yCursor + (avatarSize - 24) / 2 : yCursor + 10;
-            ctx.fillText(bylineStr, bylineX, textOffsetY);
-          }
-
-          yCursor += bylineHeight;
-        }
-
-        // 5. Single Footer (thin divider + left accent text + right cyan domain)
-        const footerDividerY = height - 135; // 1785px
-        const footerTextY = height - 90; // 1830px
-
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(sidePad, footerDividerY);
-        ctx.lineTo(width - sidePad, footerDividerY);
-        ctx.stroke();
-
-        ctx.fillStyle = '#FF2E7E';
-        ctx.font = "bold 22px 'Geist', 'Plus Jakarta Sans', sans-serif";
-        ctx.textAlign = 'left';
-        ctx.fillText('★ Baca selengkapnya di Sotoy Film', sidePad, footerTextY);
-
-        ctx.fillStyle = '#00F0FF';
-        ctx.font = "bold 22px 'Geist Mono', monospace";
-        ctx.textAlign = 'right';
-        ctx.fillText('sotoyfilm.my.id', width - sidePad, footerTextY);
-
-        // Export Canvas to PNG Blob
         const blob = await new Promise<Blob | null>((resolve) => {
-          canvas.toBlob((b) => resolve(b), 'image/png');
+          canvas.toBlob((b: Blob | null) => resolve(b), 'image/png');
         });
 
         if (!blob) {
           throw new Error('Gagal mengonversi kanvas artikel menjadi gambar.');
         }
 
-        const fileName = `sotoyfilm-article-story-${Date.now()}.png`;
+        const fileName = `sotoyfilm-article-${format}-${Date.now()}.png`;
         const file = new File([blob], fileName, { type: 'image/png' });
         const isMobileDevice =
           typeof navigator !== 'undefined' &&
@@ -2594,19 +2465,23 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
             URL.revokeObjectURL(blobUrl);
           }, 1000);
 
-          showInstagramStorySuccess('Gambar Story (.PNG) berhasil diunduh! Siap diunggah ke Instagram Stories.');
+          showInstagramStorySuccess(
+            format === 'story'
+              ? 'Gambar Story (.PNG) berhasil diunduh! Siap diunggah ke Instagram Stories.'
+              : 'Gambar Feed (.PNG) berhasil diunduh! Siap diunggah ke Instagram Feed.'
+          );
         }
         return;
       }
 
-      // 3. Film Rating Story (9:16) - Direct high-resolution Canvas 2D rendering
-      if (isFilmRating && (format === 'story' || format === 'feed')) {
+      // 3. Film Rating Story/Feed - direct canvas rendering from the shared layout
+      if (isFilmRating) {
         if (typeof document !== 'undefined' && document.fonts?.ready) {
           await document.fonts.ready;
         }
 
         const width = 1080;
-        const height = format === 'story' ? 1920 : 1350;
+        const height = format === 'feed' ? 1350 : 1920;
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
@@ -2618,33 +2493,43 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           return;
         }
 
+        const metrics = getFilmShareLayoutMetrics(format);
+        const sidePad = 60;
+
         // Base solid background (#0A0A0A)
         ctx.fillStyle = '#0A0A0A';
         ctx.fillRect(0, 0, width, height);
 
-        // 1. Full-Bleed Film Poster (Full 1080x1920 edge-to-edge cover-fit)
-        const posterUrl = data.filmPoster || data.image || data.imageUrl || data.filmBackdrop;
+        // 1. Full-bleed poster, anchored to the top of the key art.
+        const filmPosterUrl =
+          data.filmPoster || data.image || data.imageUrl || data.filmBackdrop;
         let posterLoaded = false;
-        if (posterUrl) {
+        if (filmPosterUrl) {
           try {
-            const posterImg = await loadCanvasImage(posterUrl);
+            const posterImg = await loadCanvasImage(filmPosterUrl);
             posterLoaded = true;
 
             const imgAspect = posterImg.width / posterImg.height;
-            const canvasAspect = width / height; // 1080 / 1920 = 0.5625
+            const canvasAspect = width / height;
 
-            let sx = 0, sy = 0, sWidth = posterImg.width, sHeight = posterImg.height;
+            let sx = 0;
+            let sy = 0;
+            let sWidth = posterImg.width;
+            let sHeight = posterImg.height;
             if (imgAspect > canvasAspect) {
               sWidth = posterImg.height * canvasAspect;
               sx = (posterImg.width - sWidth) / 2;
             } else {
               sHeight = posterImg.width / canvasAspect;
-              sy = 0; // Focus on top of key art
+              sy = 0;
             }
 
             ctx.drawImage(posterImg, sx, sy, sWidth, sHeight, 0, 0, width, height);
           } catch (posterErr) {
-            console.warn('[SocialShareModal] Poster load failed for canvas, using solid placeholder:', posterErr);
+            console.warn(
+              '[SocialShareModal] Poster load failed for canvas, using solid placeholder:',
+              posterErr
+            );
           }
         }
 
@@ -2653,34 +2538,38 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           ctx.fillRect(0, 0, width, height);
         }
 
-        // Neutral black fade keeps the wordmark and badge legible on the art.
-        const topScrim = ctx.createLinearGradient(0, 0, 0, 320);
+        // Top scrim keeps the wordmark and badge legible on the art.
+        const topScrimH = Math.round(320 * (height / 1920));
+        const topScrim = ctx.createLinearGradient(0, 0, 0, topScrimH);
         topScrim.addColorStop(0, 'rgba(10, 10, 10, 0.85)');
         topScrim.addColorStop(1, 'rgba(10, 10, 10, 0)');
         ctx.fillStyle = topScrim;
-        ctx.fillRect(0, 0, width, 320);
+        ctx.fillRect(0, 0, width, topScrimH);
 
-        // Neutral black fade blends the lower poster into the copy.
+        // Per-format scrim blends the poster into the copy below.
         const scrim = ctx.createLinearGradient(0, 0, 0, height);
-        scrim.addColorStop(0, 'rgba(10, 10, 10, 0)');
-        scrim.addColorStop(0.42, 'rgba(10, 10, 10, 0)');
-        scrim.addColorStop(0.58, 'rgba(10, 10, 10, 0.66)');
-        scrim.addColorStop(0.74, '#0A0A0A');
-        scrim.addColorStop(1, '#0A0A0A');
+        for (const stop of metrics.scrimStops) {
+          scrim.addColorStop(stop.at, stop.color);
+        }
         ctx.fillStyle = scrim;
         ctx.fillRect(0, 0, width, height);
 
+        // 2. Header: logo left, badge right.
         const topPad = 110;
-        const sidePad = 60;
         const logoTargetW = 380;
         let logoTargetH = 95;
 
         try {
-          const logoImg = await loadCanvasImage('/v2_sotoyfilm full logo transparent.PNG');
+          const logoImg = await loadCanvasImage(
+            '/v2_sotoyfilm full logo transparent.PNG'
+          );
           logoTargetH = logoImg.height * (logoTargetW / logoImg.width);
           ctx.drawImage(logoImg, sidePad, topPad, logoTargetW, logoTargetH);
         } catch (logoErr) {
-          console.warn('[SocialShareModal] Could not load /v2_sotoyfilm full logo transparent.PNG for canvas:', logoErr);
+          console.warn(
+            '[SocialShareModal] Could not load /v2_sotoyfilm full logo transparent.PNG for canvas:',
+            logoErr
+          );
           ctx.fillStyle = '#FF2E7E';
           ctx.font = "900 48px 'Geist', 'Plus Jakarta Sans', sans-serif";
           ctx.textAlign = 'left';
@@ -2693,8 +2582,9 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         ctx.font = badgeFont;
         const badgeTextW = ctx.measureText(badgeText).width;
         const badgeH = 60;
-        const badgePadX = 26;
-        const badgeW = badgeTextW + badgePadX * 2;
+        const badgePadX = 28;
+        const badgeBorder = 2;
+        const badgeW = badgeTextW + badgePadX * 2 + badgeBorder * 2;
         const badgeX = width - sidePad - badgeW;
         const logoCenterY = topPad + logoTargetH / 2;
         const badgeY = logoCenterY - badgeH / 2;
@@ -2702,7 +2592,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         ctx.save();
         ctx.fillStyle = '#0A0A0A';
         ctx.strokeStyle = '#FF2E7E';
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = badgeBorder;
         drawRoundRectPath(ctx, badgeX, badgeY, badgeW, badgeH, badgeH / 2);
         ctx.fill();
         ctx.stroke();
@@ -2713,214 +2603,218 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         ctx.fillText(badgeText, badgeX + badgeW / 2, badgeY + badgeH / 2);
         ctx.restore();
 
+        // 3. Copy block, bottom-anchored inside the per-format bounds.
         const measure: TextMeasure = (font, text) => {
           ctx.font = font;
           return ctx.measureText(text).width;
         };
-        const layout = buildFilmShareLayout(data, displayScore, hasScore, measure);
-        const rawAvatar = data.reviewerAvatar || data.authorAvatar;
+        const layout = buildFilmShareLayout(
+          data,
+          displayScore,
+          hasScore,
+          measure,
+          format
+        );
+        const rating = layout.rating;
+
         let avatarImg: HTMLImageElement | null = null;
-        if (layout.audienceKind === 'reviewer' && rawAvatar) {
-          try {
-            avatarImg = await loadCanvasImage(rawAvatar);
-          } catch {
-            // fallback to the text-only reviewer row
+        if (layout.hasReviewer) {
+          const rawAvatar = data.reviewerAvatar || data.authorAvatar;
+          if (rawAvatar) {
+            try {
+              avatarImg = await loadCanvasImage(rawAvatar);
+            } catch {
+              // fall back to the text-only reviewer row
+            }
           }
         }
 
-        let yCursor = layout.startY;
         ctx.textBaseline = 'top';
-
-        ctx.font = `900 ${layout.titleFontSize}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
-        ctx.fillStyle = '#FFFFFF';
         ctx.textAlign = 'center';
-        for (const line of layout.titleLines) {
-          ctx.fillText(line, width / 2, yCursor);
-          yCursor += layout.titleLineHeight;
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = `900 ${layout.titleFontSize}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
+        layout.titleLines.forEach((line, index) => {
+          ctx.fillText(line, width / 2, layout.titleTop + index * layout.titleLineHeight);
+        });
+
+        if (layout.hasDirector) {
+          ctx.fillStyle = '#E2E8F0';
+          ctx.font = `700 ${layout.directorFontSize}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
+          ctx.fillText(layout.directorText, width / 2, layout.directorTop);
         }
 
         if (layout.metaText) {
-          yCursor += FILM_TITLE_META_GAP;
-          ctx.font = "bold 20px 'Geist', 'Plus Jakarta Sans', sans-serif";
           ctx.fillStyle = '#FF2E7E';
-          ctx.textAlign = 'center';
-          ctx.fillText(layout.metaText, width / 2, yCursor);
-          yCursor += 28;
+          ctx.font = `800 ${layout.metaFontSize}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
+          ctx.fillText(layout.metaText, width / 2, layout.metaTop);
         }
 
-        yCursor += FILM_META_RATING_GAP;
+        // Rating pill, identical construction to the DOM preview.
         const scoreStr = displayScore.toFixed(1);
-        const scoreFont = `900 ${FILM_RATING_SCORE_FONT}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
-        const denomFont = `bold ${FILM_RATING_DENOM_FONT}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
-        const emptyScoreFont = `bold ${FILM_RATING_EMPTY_FONT}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
+        const scoreFont = `900 ${rating.scoreFont}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
+        const denomFont = `700 ${rating.denomFont}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
+        const emptyFont = `700 ${rating.emptyFont}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
+
         ctx.font = scoreFont;
         const scoreW = hasScore ? ctx.measureText(scoreStr).width : 0;
         ctx.font = denomFont;
         const denomW = hasScore ? ctx.measureText('/10').width : 0;
-        ctx.font = emptyScoreFont;
-        const emptyScoreW = hasScore
-          ? 0
-          : ctx.measureText('Belum ada skor').width;
+        ctx.font = emptyFont;
+        const emptyScoreW = hasScore ? 0 : ctx.measureText('Belum ada skor').width;
 
         const ratingContentW = hasScore
-          ? FILM_RATING_STAR_SIZE +
-            FILM_RATING_GAP +
-            scoreW +
-            FILM_RATING_GAP +
-            denomW
+          ? rating.starSize + rating.gap + scoreW + rating.gap + denomW
           : emptyScoreW;
         const ratingBoxW = Math.ceil(
-          ratingContentW +
-            FILM_RATING_PAD_X * 2 +
-            FILM_RATING_BORDER * 2
+          ratingContentW + rating.padX * 2 + rating.border * 2
         );
-        const ratingBoxH = FILM_RATING_BOX_HEIGHT;
         const ratingBoxX = (width - ratingBoxW) / 2;
-        const ratingBoxY = yCursor;
+        const ratingBoxY = layout.ratingTop;
 
         ctx.fillStyle = '#0A0A0A';
         ctx.strokeStyle = hasScore ? '#FFD000' : '#64748B';
-        ctx.lineWidth = FILM_RATING_BORDER;
+        ctx.lineWidth = rating.border;
         drawRoundRectPath(
           ctx,
           ratingBoxX,
           ratingBoxY,
           ratingBoxW,
-          ratingBoxH,
-          FILM_RATING_RADIUS
+          rating.boxHeight,
+          rating.radius
         );
         ctx.fill();
         ctx.stroke();
 
         ctx.textBaseline = 'middle';
-        const ratingContentX =
-          ratingBoxX + FILM_RATING_BORDER + FILM_RATING_PAD_X;
-        const ratingCenterY = ratingBoxY + ratingBoxH / 2;
+        const ratingCenterY = ratingBoxY + rating.boxHeight / 2;
         if (hasScore) {
+          let contentX = ratingBoxX + rating.border + rating.padX;
           ctx.fillStyle = '#FFD000';
           ctx.strokeStyle = '#FFD000';
           drawFilmRatingStar(
             ctx,
-            ratingContentX,
-            ratingCenterY - FILM_RATING_STAR_SIZE / 2,
-            FILM_RATING_STAR_SIZE
+            contentX,
+            ratingCenterY - rating.starSize / 2,
+            rating.starSize
           );
+          contentX += rating.starSize + rating.gap;
 
-          const scoreX =
-            ratingContentX + FILM_RATING_STAR_SIZE + FILM_RATING_GAP;
           ctx.fillStyle = '#FFFFFF';
           ctx.font = scoreFont;
           ctx.textAlign = 'left';
-          ctx.fillText(scoreStr, scoreX, ratingCenterY);
+          ctx.fillText(scoreStr, contentX, ratingCenterY);
+          contentX += scoreW + rating.gap;
 
           ctx.fillStyle = '#94A3B8';
           ctx.font = denomFont;
           ctx.textAlign = 'left';
-          ctx.fillText(
-            '/10',
-            scoreX + scoreW + FILM_RATING_GAP,
-            ratingCenterY
-          );
+          ctx.fillText('/10', contentX, ratingCenterY);
         } else {
           ctx.fillStyle = '#94A3B8';
-          ctx.font = emptyScoreFont;
+          ctx.font = emptyFont;
           ctx.textAlign = 'center';
           ctx.fillText('Belum ada skor', width / 2, ratingCenterY);
         }
-        yCursor += ratingBoxH;
         ctx.textBaseline = 'top';
 
-        if (layout.audienceKind) {
-          yCursor += FILM_RATING_AUDIENCE_GAP;
-          if (layout.audienceKind === 'reviewer') {
-            const reviewerText = layout.audienceText;
-            const reviewerFont = "bold 22px 'Geist', 'Plus Jakarta Sans', sans-serif";
+        if (layout.hasReviewer) {
+          const reviewerFont = `700 ${layout.reviewerFontSize}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
+          ctx.font = reviewerFont;
+          const textW = ctx.measureText(layout.reviewerText).width;
+          const avatarSize = 44;
+          const avatarGap = 12;
+          const rowW = avatarImg ? avatarSize + avatarGap + textW : textW;
+          const startX = (width - rowW) / 2;
+          const rowCenterY = layout.reviewerTop + layout.reviewerLineHeight / 2;
+
+          if (avatarImg) {
+            const avatarCenterY = rowCenterY;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(
+              startX + avatarSize / 2,
+              avatarCenterY,
+              avatarSize / 2,
+              0,
+              Math.PI * 2
+            );
+            ctx.closePath();
+            ctx.clip();
+            const iw = avatarImg.width || 1;
+            const ih = avatarImg.height || 1;
+            const coverScale = Math.max(avatarSize / iw, avatarSize / ih);
+            const sw = avatarSize / coverScale;
+            const sh = avatarSize / coverScale;
+            ctx.drawImage(
+              avatarImg,
+              (iw - sw) / 2,
+              (ih - sh) / 2,
+              sw,
+              sh,
+              startX,
+              rowCenterY - avatarSize / 2,
+              avatarSize,
+              avatarSize
+            );
+            ctx.restore();
+
+            ctx.save();
+            ctx.strokeStyle = '#FF2E7E';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(
+              startX + avatarSize / 2,
+              avatarCenterY,
+              avatarSize / 2,
+              0,
+              Math.PI * 2
+            );
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.fillStyle = '#E2E8F0';
             ctx.font = reviewerFont;
-            const textW = ctx.measureText(reviewerText).width;
-            if (avatarImg) {
-              const avatarSize = 44;
-              const gap = 12;
-              const rowW = avatarSize + gap + textW;
-              const startX = (width - rowW) / 2;
-              const centerY = yCursor + avatarSize / 2;
-
-              ctx.save();
-              ctx.beginPath();
-              ctx.arc(startX + avatarSize / 2, centerY, avatarSize / 2, 0, Math.PI * 2);
-              ctx.closePath();
-              ctx.clip();
-              ctx.drawImage(avatarImg, startX, yCursor, avatarSize, avatarSize);
-              ctx.restore();
-
-              ctx.save();
-              ctx.strokeStyle = '#FF2E7E';
-              ctx.lineWidth = 2.5;
-              ctx.beginPath();
-              ctx.arc(startX + avatarSize / 2, centerY, avatarSize / 2, 0, Math.PI * 2);
-              ctx.stroke();
-              ctx.restore();
-
-              ctx.fillStyle = '#E5E5E5';
-              ctx.font = reviewerFont;
-              ctx.textAlign = 'left';
-              ctx.textBaseline = 'middle';
-              ctx.fillText(reviewerText, startX + avatarSize + gap, centerY);
-              ctx.textBaseline = 'top';
-            } else {
-              ctx.fillStyle = '#E5E5E5';
-              ctx.font = reviewerFont;
-              ctx.textAlign = 'center';
-              ctx.fillText(reviewerText, width / 2, yCursor + 10);
-            }
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(
+              layout.reviewerText,
+              startX + avatarSize + avatarGap,
+              rowCenterY
+            );
+            ctx.textBaseline = 'top';
           } else {
-            ctx.fillStyle = '#E5E5E5';
-            ctx.font = "600 22px 'Geist', 'Plus Jakarta Sans', sans-serif";
+            ctx.fillStyle = '#E2E8F0';
+            ctx.font = reviewerFont;
             ctx.textAlign = 'center';
-            ctx.fillText(layout.audienceText, width / 2, yCursor + 4);
-          }
-          yCursor += layout.audienceHeight;
-        }
-
-        if (layout.headlineLines.length > 0) {
-          yCursor += FILM_AUDIENCE_HEADLINE_GAP;
-          ctx.font = `italic 900 ${FILM_HEADLINE_FONT}px 'Geist', 'Plus Jakarta Sans', sans-serif`;
-          ctx.fillStyle = '#FFFFFF';
-          ctx.textAlign = 'center';
-          for (const line of layout.headlineLines) {
-            ctx.fillText(line, width / 2, yCursor);
-            yCursor += FILM_HEADLINE_LINE_HEIGHT;
+            ctx.textBaseline = 'middle';
+            ctx.fillText(layout.reviewerText, width / 2, rowCenterY);
+            ctx.textBaseline = 'top';
           }
         }
 
-        if (layout.reviewLines.length > 0) {
-          yCursor += FILM_HEADLINE_REVIEW_GAP;
-          ctx.font = `italic ${layout.reviewFontSize}px 'Plus Jakarta Sans', sans-serif`;
-          ctx.fillStyle = '#D4D4D4';
-          ctx.textAlign = 'center';
-          for (const line of layout.reviewLines) {
-            ctx.fillText(line, width / 2, yCursor);
-            yCursor += layout.reviewLineHeight;
-          }
-        }
-
-        const footerY = height - 90;
-
+        // 4. Footer inside the per-format bounds.
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.moveTo(sidePad, footerY - 35);
-        ctx.lineTo(width - sidePad, footerY - 35);
+        ctx.moveTo(sidePad, layout.footerDividerY);
+        ctx.lineTo(width - sidePad, layout.footerDividerY);
         ctx.stroke();
 
         ctx.fillStyle = '#FF2E7E';
-        ctx.font = "bold 20px 'Geist', 'Plus Jakarta Sans', sans-serif";
+        ctx.font = "700 20px 'Geist', 'Plus Jakarta Sans', sans-serif";
         ctx.textAlign = 'left';
-        ctx.fillText('Ulas & Nilai Film di Sotoy Film', sidePad, footerY);
+        ctx.textBaseline = 'top';
+        ctx.fillText(
+          'Ulas & Nilai Film di Sotoy Film',
+          sidePad,
+          layout.footerTextY
+        );
 
         ctx.fillStyle = '#00F0FF';
-        ctx.font = "bold 20px 'Geist Mono', monospace";
+        ctx.font = "700 20px 'Geist Mono', monospace";
         ctx.textAlign = 'right';
-        ctx.fillText('sotoyfilm.my.id', width - sidePad, footerY);
+        ctx.fillText('sotoyfilm.my.id', width - sidePad, layout.footerTextY);
 
         // Export Canvas to PNG Blob
         const blob = await new Promise<Blob | null>((resolve) => {
@@ -2931,7 +2825,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
           throw new Error('Gagal mengonversi kanvas visual menjadi gambar.');
         }
 
-        const fileName = `sotoyfilm-rating-story-${Date.now()}.png`;
+        const fileName = `sotoyfilm-rating-${format}-${Date.now()}.png`;
 
         // Native share (mobile only) / download fallback
         const file = new File([blob], fileName, { type: 'image/png' });
@@ -2979,7 +2873,11 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
             URL.revokeObjectURL(blobUrl);
           }, 1000);
 
-          showInstagramStorySuccess('Gambar Story (.PNG) berhasil diunduh! Siap diunggah ke Instagram Stories.');
+          showInstagramStorySuccess(
+            format === 'story'
+              ? 'Gambar Story (.PNG) berhasil diunduh! Siap diunggah ke Instagram Stories.'
+              : 'Gambar Feed (.PNG) berhasil diunduh! Siap diunggah ke Instagram Feed.'
+          );
         }
         return;
       }
@@ -3820,86 +3718,19 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                 )}
               </div>
             ) : isArticle ? (
-              <div className={`relative mx-auto w-[240px] ${igFormat === 'feed' ? 'aspect-[4/5]' : 'aspect-[9/16]'} rounded-2xl overflow-hidden bg-[#0A0A0A] shadow-2xl flex flex-col justify-between text-left select-none`}>
-                {/* 1. Full-bleed Article Cover in top ~60% */}
-                <div className="absolute top-0 left-0 right-0 h-[60%] overflow-hidden pointer-events-none">
-                  {data.image || data.imageUrl ? (
-                    <img
-                      src={data.image || data.imageUrl}
-                      alt={data.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-b from-[#262626] via-[#0A0A0A] to-[#0A0A0A]" />
-                  )}
-                </div>
-
-                {/* 2. Single Continuous Gradient Overlay (Seamless to solid #0A0A0A at ~60%) */}
-                <div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    background:
-                      'linear-gradient(to bottom, rgba(14, 16, 19, 0.75) 0%, rgba(14, 16, 19, 0.35) 10%, rgba(14, 16, 19, 0.15) 22%, rgba(14, 16, 19, 0.35) 35%, rgba(14, 16, 19, 0.65) 45%, rgba(14, 16, 19, 0.90) 54%, #0A0A0A 60%, #0A0A0A 100%)',
-                  }}
-                />
-
-                {/* 3. Top Watermark: Logo & Category Pill */}
-                <div className="relative z-10 pt-[24px] px-[13px] flex items-center justify-between">
+              <div className={`relative mx-auto w-[270px] ${igFormat === 'feed' ? 'aspect-[4/5]' : 'aspect-[9/16]'} rounded-2xl overflow-hidden shadow-2xl bg-neutral-900 flex items-center justify-center border border-white/10 select-none`}>
+                {isRenderingArticle || !articleStoryDataUrl ? (
+                  <div className="flex flex-col items-center justify-center gap-2.5 p-6 text-center">
+                    <Sparkles className="w-7 h-7 text-[#FF2E7E] animate-spin" />
+                    <span className="text-xs text-slate-400 font-medium">Membuat Story Card...</span>
+                  </div>
+                ) : (
                   <img
-                    src="/v2_sotoyfilm full logo transparent.PNG"
-                    alt="Sotoy Film"
-                    className="w-[84px] h-auto object-contain drop-shadow"
+                    src={articleStoryDataUrl}
+                    alt="Article Story Preview"
+                    className="w-full h-full object-contain rounded-2xl"
                   />
-                  <div className="px-2.5 py-0.5 rounded-full font-black text-[7.5px] tracking-wider text-[#FF2E7E] bg-[#0A0A0A]/90 border border-[#FF2E7E]/40 backdrop-blur-md shadow whitespace-nowrap uppercase">
-                    {data.category || 'ARTIKEL'}
-                  </div>
-                </div>
-
-                {/* 4. Text Block (Left-aligned, sits on gradient) */}
-                <div className="relative z-10 px-[13px] flex-1 flex flex-col justify-end pb-3 space-y-1.5">
-                  <h1 className="font-display font-black text-[17px] text-white leading-[1.18] line-clamp-4 drop-shadow-sm">
-                    {data.title}
-                  </h1>
-
-                  {data.text && (
-                    <p className="text-[7.5px] text-slate-300 line-clamp-3 leading-[1.3]">
-                      {data.text}
-                    </p>
-                  )}
-
-                  {(() => {
-                    const bylineStr = getArticleStoryByline(data);
-                    if (!data.authorAvatar && !bylineStr) return null;
-                    return (
-                      <div className="flex items-center gap-1.5 pt-0.5">
-                        {data.authorAvatar ? (
-                          <img
-                            src={data.authorAvatar}
-                            alt={data.authorName || 'Penulis'}
-                            className="w-3.5 h-3.5 rounded-full object-cover border border-[#FF2E7E]"
-                          />
-                        ) : null}
-                        {bylineStr && (
-                          <span className="text-[7.5px] text-slate-300 font-bold truncate">
-                            {bylineStr}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {/* 5. Footer */}
-                <div className="relative z-10 px-[13px] pb-[20px]">
-                  <div className="pt-2 border-t border-white/15 flex items-center justify-between">
-                    <span className="text-[6.5px] font-bold text-[#FF2E7E] truncate">
-                      ★ Baca selengkapnya di Sotoy Film
-                    </span>
-                    <span className="text-[6.5px] text-[#00F0FF] font-mono font-bold shrink-0">
-                      sotoyfilm.my.id
-                    </span>
-                  </div>
-                </div>
+                )}
               </div>
             ) : (
               <div
