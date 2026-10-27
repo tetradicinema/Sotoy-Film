@@ -285,9 +285,24 @@ async function generateLiveSitemapItems(): Promise<SitemapItem[]> {
   return items;
 }
 
+function buildIndexXml(): string {
+  const today = new Date().toISOString().split('T')[0];
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <sitemap>
+    <loc>${BASE_URL}/sitemap.xml</loc>
+    <lastmod>${today}</lastmod>
+  </sitemap>
+</sitemapindex>\n`;
+}
+
 function sendResponse(res: any, status: number, contentType: string, body: string) {
   res.setHeader('Content-Type', contentType);
   res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+  res.setHeader('X-Robots-Tag', 'all');
+  if (typeof res.removeHeader === 'function') {
+    res.removeHeader('Content-Disposition');
+  }
   if (typeof res.status === 'function') {
     return res.status(status).send(body);
   } else {
@@ -301,11 +316,16 @@ function sendResponse(res: any, status: number, contentType: string, body: strin
  */
 export async function handleSitemapRequest(req: any, res: any) {
   const rawUrl = req.url || '/';
+  const isIndex = rawUrl.includes('sitemap_index.xml') || rawUrl.endsWith('sitemap_index.xml');
   const isCsv =
     req.query?.format === 'csv' ||
     rawUrl.includes('format=csv') ||
     rawUrl.endsWith('.csv') ||
     rawUrl.includes('/sitemap.csv');
+
+  if (isIndex) {
+    return sendResponse(res, 200, 'application/xml; charset=utf-8', buildIndexXml());
+  }
 
   try {
     const items = await generateLiveSitemapItems();

@@ -44,4 +44,4 @@ Disallow: /onboarding/*
 Disallow: /api/*
 
 Sitemap: https://www.sotoyfilm.my.id/sitemap.xml
-
+Sitemap: https://www.sotoyfilm.my.id/sitemap_index.xml

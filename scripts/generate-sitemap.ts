@@ -261,9 +261,18 @@ async function run() {
     }
   }
 
+  const today = new Date().toISOString().split('T')[0];
+  const indexXml = `<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <sitemap>
+    <loc>https://www.sotoyfilm.my.id/sitemap.xml</loc>
+    <lastmod>${today}</lastmod>
+  </sitemap>
+</sitemapindex>\n`;
+
   fs.writeFileSync(sitemapDest, xml, 'utf-8');
   fs.writeFileSync(publicSitemapDest, xml, 'utf-8');
-  fs.writeFileSync(path.join(publicDir, 'sitemap_index.xml'), xml, 'utf-8');
+  fs.writeFileSync(path.join(publicDir, 'sitemap_index.xml'), indexXml, 'utf-8');
 
   console.log(`[Sitemap Builder] Successfully wrote ${totalUrls} URLs (${articlesCount} articles, ${filmsCount} films) to ${sitemapDest}, ${publicSitemapDest}, and public/sitemap_index.xml`);
 
