@@ -8,6 +8,9 @@ import {
 } from '../src/utils/shareCardText';
 import {
   buildFilmShareLayout,
+  FILM_TEXT_GAP_RATIO,
+  FILM_TEXT_LINE_HEIGHT_RATIO,
+  FILM_TITLE_LINE_HEIGHT_RATIO,
   getBuzzCardLayout,
   getFilmShareLayoutMetrics,
   type BuzzCardInput,
@@ -302,16 +305,36 @@ const runTests = () => {
     measureShareText,
     'story'
   );
-  assertEquals(filmStoryCard.titleFontSize, 96, 'film story: 96px title');
+  assertEquals(filmStoryCard.titleFontSize, 88, 'film story: 88px title');
   assertEquals(filmStoryCard.titleLines.length, 1, 'film story: short title stays on one line');
-  assertEquals(filmStoryCard.directorFontSize, 34, 'film story: 34px director line');
-  assertEquals(filmStoryCard.metaFontSize, 38, 'film story: 38px meta line');
-  assertEquals(filmStoryCard.rating.scale, 6, 'film story: rating pill scale 6');
+  assertEquals(filmStoryCard.directorFontSize, 40, 'film story: 40px director line');
+  assertEquals(filmStoryCard.metaFontSize, 40, 'film story: 40px meta line');
+  assertEquals(
+    filmStoryCard.directorFontSize,
+    filmStoryCard.metaFontSize,
+    'film story: director and year | genres share one info size'
+  );
+  assertEquals(
+    filmStoryCard.directorLineHeight,
+    Math.round(40 * FILM_TEXT_LINE_HEIGHT_RATIO),
+    'film story: info group uses tight 1.2 leading'
+  );
+  assertEquals(filmStoryCard.rating.scale, 4.5, 'film story: rating pill scale 4.5');
+  assertEquals(
+    filmStoryCard.titleLineHeight,
+    Math.round(88 * FILM_TITLE_LINE_HEIGHT_RATIO),
+    'film story: title leading is 1.1'
+  );
   assertEquals(filmStoryCard.footerDividerY, 1795, 'film story: divider above footer');
   assertEquals(filmStoryCard.footerTextY, 1830, 'film story: footer baseline');
   assert(
     filmStoryCard.startY >= 960 && filmStoryCard.endY <= 1745,
     'film story: copy stays inside 960-1745'
+  );
+  assertEquals(
+    filmStoryCard.endY,
+    1745,
+    'film story: copy block stays bottom-anchored above the footer'
   );
   assert(
     filmStoryCard.titleBottom <= filmStoryCard.directorTop &&
@@ -320,6 +343,38 @@ const runTests = () => {
       filmStoryCard.ratingBottom <= filmStoryCard.reviewerTop &&
       filmStoryCard.reviewerBottom <= filmStoryCard.availableBottom,
     'film story: title, director, meta, rating, reviewer stack in order'
+  );
+  assertEquals(
+    filmStoryCard.directorTop - filmStoryCard.titleBottom,
+    20,
+    'film story: title -> director gap is 20'
+  );
+  assertEquals(
+    filmStoryCard.metaTop - filmStoryCard.directorBottom,
+    8,
+    'film story: director -> meta gap is 8'
+  );
+  assertEquals(
+    filmStoryCard.ratingTop - filmStoryCard.metaBottom,
+    34,
+    'film story: meta -> pill gap is 34'
+  );
+  assertEquals(
+    filmStoryCard.reviewerTop - filmStoryCard.ratingBottom,
+    22,
+    'film story: pill -> reviewer gap is 22'
+  );
+  assert(
+    filmStoryCard.directorTop - filmStoryCard.titleBottom <=
+      FILM_TEXT_GAP_RATIO * filmStoryCard.titleFontSize &&
+      filmStoryCard.metaTop - filmStoryCard.directorBottom <=
+        FILM_TEXT_GAP_RATIO * filmStoryCard.titleFontSize,
+    'film story: text gaps stay within 0.35x the title size'
+  );
+  assert(
+    filmStoryCard.rating.boxHeight <
+      filmStoryCard.titleFontSize * filmStoryCard.titleLineHeight * 2,
+    'film story: the rating pill is smaller than a two-line title block'
   );
   assert(
     filmStoryCard.directorText.startsWith('Director:') &&
@@ -340,75 +395,229 @@ const runTests = () => {
     measureShareText,
     'feed'
   );
-  assertEquals(filmFeedCard.titleFontSize, 84, 'film feed: 84px title');
-  assertEquals(filmFeedCard.directorFontSize, 30, 'film feed: 30px director line');
-  assertEquals(filmFeedCard.metaFontSize, 34, 'film feed: 34px meta line');
-  assertEquals(filmFeedCard.rating.scale, 5, 'film feed: rating pill scale 5');
+  assertEquals(filmFeedCard.titleFontSize, 76, 'film feed: 76px title');
+  assertEquals(filmFeedCard.directorFontSize, 36, 'film feed: 36px director line');
+  assertEquals(filmFeedCard.metaFontSize, 36, 'film feed: 36px meta line');
+  assertEquals(
+    filmFeedCard.directorFontSize,
+    filmFeedCard.metaFontSize,
+    'film feed: director and year | genres share one info size'
+  );
+  assertEquals(
+    filmFeedCard.directorLineHeight,
+    Math.round(36 * FILM_TEXT_LINE_HEIGHT_RATIO),
+    'film feed: info group uses tight 1.2 leading'
+  );
+  assertEquals(filmFeedCard.rating.scale, 4, 'film feed: rating pill scale 4');
+  assertEquals(
+    filmFeedCard.titleLineHeight,
+    Math.round(76 * FILM_TITLE_LINE_HEIGHT_RATIO),
+    'film feed: title leading is 1.1'
+  );
   assertEquals(filmFeedCard.footerDividerY, 1225, 'film feed: divider above footer');
   assertEquals(filmFeedCard.footerTextY, 1260, 'film feed: footer baseline');
   assert(
     filmFeedCard.startY >= 690 && filmFeedCard.endY <= 1180,
     'film feed: copy stays inside 690-1180'
   );
+  assertEquals(
+    filmFeedCard.endY,
+    1180,
+    'film feed: copy block stays bottom-anchored above the footer'
+  );
   assert(
-    filmFeedCard.footerTextY + 20 <= 1350,
-    'film feed: footer fits inside the 1350px canvas'
+    filmFeedCard.titleBottom <= filmFeedCard.directorTop &&
+      filmFeedCard.directorBottom <= filmFeedCard.metaTop &&
+      filmFeedCard.metaBottom <= filmFeedCard.ratingTop &&
+      filmFeedCard.ratingBottom <= filmFeedCard.reviewerTop &&
+      filmFeedCard.reviewerBottom <= filmFeedCard.availableBottom,
+    'film feed: title, director, meta, rating, reviewer stack in order'
+  );
+  assertEquals(
+    filmFeedCard.directorTop - filmFeedCard.titleBottom,
+    16,
+    'film feed: title -> director gap is 16'
+  );
+  assertEquals(
+    filmFeedCard.metaTop - filmFeedCard.directorBottom,
+    8,
+    'film feed: director -> meta gap is 8'
+  );
+  assertEquals(
+    filmFeedCard.ratingTop - filmFeedCard.metaBottom,
+    28,
+    'film feed: meta -> pill gap is 28'
+  );
+  assertEquals(
+    filmFeedCard.reviewerTop - filmFeedCard.ratingBottom,
+    20,
+    'film feed: pill -> reviewer gap is 20'
+  );
+  assert(
+    filmFeedCard.directorTop - filmFeedCard.titleBottom <=
+      FILM_TEXT_GAP_RATIO * filmFeedCard.titleFontSize &&
+      filmFeedCard.metaTop - filmFeedCard.directorBottom <=
+        FILM_TEXT_GAP_RATIO * filmFeedCard.titleFontSize,
+    'film feed: text gaps stay within 0.35x the title size'
+  );
+  assert(
+    filmFeedCard.rating.boxHeight <
+      filmFeedCard.titleFontSize * filmFeedCard.titleLineHeight * 2,
+    'film feed: the rating pill is smaller than a two-line title block'
+  );
+  assert(
+    filmFeedCard.reviewerBottom <= filmFeedCard.footerDividerY &&
+      filmFeedCard.footerTextY + 20 <= 1350,
+    'film feed: reviewer and footer stay inside the 1350px canvas'
   );
 
-  const filmLongTitle = buildFilmShareLayout(
-    {
-      ...filmBase,
-      filmTitle:
-        'Petualangan Sang Sutradara Dalam Dunia Sinema Yang Sangat Panjang Tanpa Henti',
-    },
-    8.7,
-    true,
-    measureShareText,
-    'story'
-  );
-  assert(
-    filmLongTitle.titleFontSize >= 52 && filmLongTitle.titleFontSize <= 96,
-    'film: long title shrinks but never below the 52px minimum'
-  );
-  assertEquals(filmLongTitle.titleLines.length, 2, 'film: long title caps at two lines');
-  assert(
-    filmLongTitle.titleLines[1].endsWith('...'),
-    'film: truncated title keeps an ellipsis'
-  );
-  assert(
-    filmLongTitle.startY >= 960 && filmLongTitle.endY <= 1745,
-    'film: long title still fits the story bounds'
-  );
+  (['story', 'feed'] as ShareFormat[]).forEach((format) => {
+    const layout = format === 'story' ? filmStoryCard : filmFeedCard;
+    const height = format === 'story' ? 1920 : 1350;
+    const divider = format === 'story' ? 1795 : 1225;
+    assert(
+      layout.startY >= 0 &&
+        layout.titleTop >= 0 &&
+        layout.directorTop >= layout.titleTop &&
+        layout.metaTop >= layout.directorTop &&
+        layout.ratingTop >= layout.metaTop &&
+        layout.reviewerTop >= layout.ratingTop &&
+        layout.endY <= height &&
+        layout.reviewerBottom < divider,
+      `film ${format}: every block lies inside the canvas and above the footer line`
+    );
+  });
 
-  const filmNoExtras = buildFilmShareLayout(
-    { filmTitle: 'Tenet', filmYear: 2020, filmGenres: ['Thriller'] },
-    7,
-    true,
-    measureShareText,
-    'story'
-  );
-  assertEquals(filmNoExtras.hasDirector, false, 'film: no director row without data');
-  assertEquals(filmNoExtras.hasReviewer, false, 'film: no reviewer row without data');
-  assert(
-    filmNoExtras.titleBottom <= filmNoExtras.metaTop &&
-      filmNoExtras.metaBottom <= filmNoExtras.ratingTop &&
-      filmNoExtras.ratingBottom === filmNoExtras.endY,
-    'film: rating is the last block when there is no reviewer'
-  );
-  assert(
-    filmNoExtras.endY <= 1745,
-    'film: rating stays above the footer without director/reviewer'
-  );
+  const filmLongTitleBase: FilmShareData = {
+    ...filmBase,
+    filmTitle:
+      'Petualangan Sang Sutradara Dalam Dunia Sinema Yang Sangat Panjang Tanpa Henti',
+  };
 
-  const filmEmpty = buildFilmShareLayout({}, 0, false, measureShareText, 'story');
-  assertEquals(filmEmpty.titleLines.length, 0, 'film: empty data has no title lines');
-  assertEquals(filmEmpty.hasDirector, false, 'film: empty data has no director');
-  assertEquals(filmEmpty.metaText, '', 'film: empty data has no meta');
-  assertEquals(filmEmpty.hasReviewer, false, 'film: empty data has no reviewer');
-  assert(
-    filmEmpty.fits && filmEmpty.ratingBottom === filmEmpty.endY,
-    'film: empty data still renders a contained rating pill'
-  );
+  (['story', 'feed'] as ShareFormat[]).forEach((format) => {
+    const bounds =
+      format === 'story'
+        ? { top: 960, bottom: 1745, divider: 1795, max: 88, min: 52 }
+        : { top: 690, bottom: 1180, divider: 1225, max: 76, min: 48 };
+    const longTitle = buildFilmShareLayout(
+      filmLongTitleBase,
+      8.7,
+      true,
+      measureShareText,
+      format
+    );
+    assert(
+      longTitle.titleFontSize >= bounds.min &&
+        longTitle.titleFontSize <= bounds.max,
+      `film ${format}: long title shrinks but never below the ${bounds.min}px minimum`
+    );
+    assertEquals(
+      longTitle.titleLines.length,
+      2,
+      `film ${format}: long title caps at two lines`
+    );
+    assert(
+      longTitle.titleLines[1].endsWith('...'),
+      `film ${format}: truncated title keeps an ellipsis`
+    );
+    assert(
+      longTitle.startY >= bounds.top &&
+        longTitle.endY <= bounds.bottom &&
+        longTitle.reviewerBottom <= bounds.divider &&
+        longTitle.fits,
+      `film ${format}: long title stays inside the canvas and above the footer`
+    );
+    assert(
+      longTitle.directorTop - longTitle.titleBottom <=
+        FILM_TEXT_GAP_RATIO * longTitle.titleFontSize + 0.01 &&
+        longTitle.metaTop - longTitle.directorBottom <=
+          FILM_TEXT_GAP_RATIO * longTitle.titleFontSize + 0.01,
+      `film ${format}: long title still respects the 0.35x gap rule`
+    );
+  });
+
+  (['story', 'feed'] as ShareFormat[]).forEach((format) => {
+    const bottom = format === 'story' ? 1745 : 1180;
+    const divider = format === 'story' ? 1795 : 1225;
+    const expectedGap = format === 'story' ? 20 : 16;
+
+    const noDirector = buildFilmShareLayout(
+      { filmTitle: 'Tenet', filmYear: 2020, filmGenres: ['Thriller'] },
+      7,
+      true,
+      measureShareText,
+      format
+    );
+    assertEquals(
+      noDirector.hasDirector,
+      false,
+      `film ${format}: no director row without data`
+    );
+    assertEquals(
+      noDirector.hasReviewer,
+      false,
+      `film ${format}: no reviewer row without data`
+    );
+    assertEquals(
+      noDirector.metaTop - noDirector.titleBottom,
+      expectedGap,
+      `film ${format}: title -> meta gap matches the info group without a director`
+    );
+    assert(
+      noDirector.metaTop - noDirector.titleBottom <=
+        FILM_TEXT_GAP_RATIO * noDirector.titleFontSize,
+      `film ${format}: title -> meta gap respects the 0.35x rule`
+    );
+    assert(
+      noDirector.titleBottom <= noDirector.metaTop &&
+        noDirector.metaBottom <= noDirector.ratingTop &&
+        noDirector.ratingBottom === noDirector.endY &&
+        noDirector.endY <= bottom &&
+        noDirector.endY <= divider,
+      `film ${format}: rating is the last block above the footer without a reviewer`
+    );
+
+    const noScore = buildFilmShareLayout(
+      { ...filmBase, filmTitle: 'Tenet' },
+      0,
+      false,
+      measureShareText,
+      format
+    );
+    assertEquals(
+      noScore.rating.scale,
+      format === 'story' ? 4.5 : 4,
+      `film ${format}: missing score keeps the rating pill size`
+    );
+    assert(
+      noScore.fits &&
+        noScore.endY <= bottom &&
+        noScore.reviewerBottom <= divider,
+      `film ${format}: missing score still fits above the footer`
+    );
+
+    const empty = buildFilmShareLayout({}, 0, false, measureShareText, format);
+    assertEquals(
+      empty.titleLines.length,
+      0,
+      `film ${format}: empty data has no title lines`
+    );
+    assertEquals(
+      empty.hasDirector,
+      false,
+      `film ${format}: empty data has no director`
+    );
+    assertEquals(empty.metaText, '', `film ${format}: empty data has no meta`);
+    assertEquals(
+      empty.hasReviewer,
+      false,
+      `film ${format}: empty data has no reviewer`
+    );
+    assert(
+      empty.fits && empty.ratingBottom === empty.endY && empty.endY <= bottom,
+      `film ${format}: empty data still renders a contained rating pill`
+    );
+  });
 
   // ---------------------------------------------------------------------------
   // Buzz card layout (story preserves legacy geometry, feed scales from it)

@@ -4,7 +4,10 @@ import {
   COLLECTION_COUNT_STICKER_WIDTH,
   COLLECTION_COUNT_TEXT_PADDING,
   COLLECTION_DESCRIPTION_LINE_HEIGHT,
+  COLLECTION_FEED_HEIGHT,
+  COLLECTION_FOOTER_HEIGHT,
   COLLECTION_FOOTER_TOP,
+  COLLECTION_LOGO_ASPECT,
   COLLECTION_LOGO_LEFT,
   COLLECTION_LOGO_PATH,
   COLLECTION_LOGO_TEXT_START_RATIO,
@@ -22,6 +25,7 @@ import {
   fitCollectionOwnerLine,
   fitCollectionTitle,
   getCollectionInitials,
+  getCollectionShareMetrics,
   getCollectionStoryPanelLayout,
   getWallLayout,
   wrapCollectionDescription,
@@ -411,6 +415,148 @@ assert(
     denseLayout.descriptionHeight ===
       COLLECTION_DESCRIPTION_LINE_HEIGHT * 2,
   'getCollectionStoryPanelLayout: dense copy reserves exactly two description lines'
+);
+
+// ---------------------------------------------------------------------------
+// Story vs feed formats (9:16 unchanged, 4:5 fits inside 1350)
+// ---------------------------------------------------------------------------
+const storyMetrics = getCollectionShareMetrics('story');
+const feedMetrics = getCollectionShareMetrics('feed');
+
+assert(
+  storyMetrics.height === 1920 &&
+    storyMetrics.wallHeight === COLLECTION_WALL_HEIGHT &&
+    storyMetrics.panelTop === COLLECTION_PANEL_TOP &&
+    storyMetrics.panelLeft === 60 &&
+    storyMetrics.panelWidth === COLLECTION_PANEL_WIDTH &&
+    storyMetrics.titleBase === COLLECTION_TITLE_BASE &&
+    storyMetrics.titleMin === COLLECTION_TITLE_MIN &&
+    storyMetrics.footerTop === COLLECTION_FOOTER_TOP &&
+    storyMetrics.footerHeight === COLLECTION_FOOTER_HEIGHT &&
+    storyMetrics.countStickerWidth === COLLECTION_COUNT_STICKER_WIDTH &&
+    storyMetrics.countStickerHeight === COLLECTION_COUNT_STICKER_HEIGHT &&
+    storyMetrics.ownerBase === 32 &&
+    storyMetrics.logoLeft === COLLECTION_LOGO_LEFT &&
+    storyMetrics.logoTop === COLLECTION_LOGO_TOP &&
+    storyMetrics.logoWidth === COLLECTION_LOGO_WIDTH,
+  'collection story metrics: still exactly the approved 9:16 constants'
+);
+
+assert(
+  feedMetrics.height === COLLECTION_FEED_HEIGHT &&
+    feedMetrics.height === 1350 &&
+    feedMetrics.width === 1080 &&
+    feedMetrics.wallHeight === 675 &&
+    Math.abs(feedMetrics.wallHeight / feedMetrics.height - 0.5) < 0.01,
+  'collection feed metrics: 1080x1350 with a poster wall at 50% of the canvas'
+);
+
+assert(
+  feedMetrics.panelTop ===
+    feedMetrics.wallHeight + feedMetrics.wallSeparator &&
+    feedMetrics.panelTop > feedMetrics.wallHeight,
+  'collection feed metrics: the yellow panel starts after the wall separator'
+);
+
+(['story', 'feed'] as const).forEach((format) => {
+  const metrics = getCollectionShareMetrics(format);
+  const wall = getWallLayout(
+    5,
+    metrics.width,
+    metrics.wallGutter,
+    metrics.wallHeight
+  );
+  const wallBottom = Math.max(...wall.map((tile) => tile.y + tile.height));
+  assert(
+    wall.every(
+      (tile) =>
+        tile.x >= -0.01 &&
+        tile.y >= -0.01 &&
+        tile.x + tile.width <= metrics.width + 0.01 &&
+        tile.y + tile.height <= metrics.wallHeight + 0.01
+    ) && close(wallBottom, metrics.wallHeight),
+    `collection ${format}: every poster tile lies inside the wall and the wall ends at the panel`
+  );
+  assert(
+    metrics.panelTop + metrics.panelTopPadding > metrics.wallHeight &&
+      metrics.footerTop - metrics.panelBottomPadding > metrics.panelTop &&
+      metrics.footerTop + metrics.footerHeight <= metrics.height,
+    `collection ${format}: panel and footer stay inside the ${metrics.height}px canvas`
+  );
+  assert(
+    metrics.logoTop + metrics.logoWidth / COLLECTION_LOGO_ASPECT <=
+      metrics.wallHeight &&
+      metrics.badgeTop +
+        metrics.badgeFontSize +
+        metrics.badgePadY * 2 +
+        metrics.badgeBorder * 2 <=
+        metrics.wallHeight,
+    `collection ${format}: logo and KOLEKSI badge sit over the poster wall`
+  );
+});
+
+const feedCases = [
+  { title: 'Horor Lokal', description: '', label: 'one-line title' },
+  {
+    title: LONG_TITLE,
+    description: DENSE_DESCRIPTION,
+    label: 'two-line title with description data',
+  },
+];
+
+feedCases.forEach(({ title, description, label }) => {
+  const layout = getCollectionStoryPanelLayout({
+    title,
+    description,
+    ownerName: LONG_OWNER,
+    itemCount: 27,
+    measure,
+    format: 'feed',
+  });
+  assert(
+    layout.fits &&
+      layout.titleLines.length <= 2 &&
+      layout.titleFontSize <= feedMetrics.titleBase &&
+      layout.titleFontSize >= feedMetrics.titleMin &&
+      layout.contentTop >=
+        feedMetrics.panelTop + feedMetrics.panelTopPadding - 0.01 &&
+      layout.contentBottom <=
+        feedMetrics.footerTop - feedMetrics.panelBottomPadding + 0.01,
+    `getCollectionStoryPanelLayout feed: ${label} fits between the panel top and the footer`
+  );
+  assert(
+    layout.titleTop >= feedMetrics.panelTop &&
+      layout.titleTop + layout.titleHeight <= layout.rowTop + 0.01 &&
+      layout.rowTop + layout.rowHeight <= feedMetrics.footerTop + 0.01 &&
+      layout.rowTop + layout.rowHeight <= feedMetrics.height,
+    `getCollectionStoryPanelLayout feed: ${label} keeps title and count row inside the canvas`
+  );
+  assert(
+    !layout.descriptionVisible &&
+      layout.descriptionHeight === 0 &&
+      layout.descriptionLines.length === 0,
+    `getCollectionStoryPanelLayout feed: ${label} keeps the copy to KOLEKSI + title + count row`
+  );
+});
+
+const storyExplicit = getCollectionStoryPanelLayout({
+  title: LONG_TITLE,
+  description: DENSE_DESCRIPTION,
+  ownerName: LONG_OWNER,
+  itemCount: 27,
+  measure,
+  format: 'story',
+});
+const storyImplicit = getCollectionStoryPanelLayout({
+  title: LONG_TITLE,
+  description: DENSE_DESCRIPTION,
+  ownerName: LONG_OWNER,
+  itemCount: 27,
+  measure,
+});
+assert(
+  JSON.stringify(storyExplicit) === JSON.stringify(storyImplicit),
+  'collection story: explicit format matches the legacy default output'
 );
 
 // ---------------------------------------------------------------------------

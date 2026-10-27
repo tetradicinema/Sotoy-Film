@@ -85,6 +85,20 @@ export const normalizeHandle = (h?: string): string => {
 export type ShareFormat = 'story' | 'feed';
 export type TextMeasure = (font: string, text: string) => number;
 
+/**
+ * The title is the hero of the film card: 1.1 leading keeps the next block
+ * visually attached instead of leaving a line-height gap above the director.
+ */
+export const FILM_TITLE_LINE_HEIGHT_RATIO = 1.1;
+/** Director/meta/reviewer leading: one tight info group. */
+export const FILM_TEXT_LINE_HEIGHT_RATIO = 1.2;
+/**
+ * Maximum visible gap between two adjacent text blocks, expressed as a
+ * fraction of the rendered title size. Gaps are clamped to this rule so a
+ * shrunken long title never looks disconnected from the info group.
+ */
+export const FILM_TEXT_GAP_RATIO = 0.35;
+
 export interface FilmShareData {
   title?: string;
   filmTitle?: string;
@@ -134,19 +148,19 @@ export const FILM_SHARE_FORMATS: Record<ShareFormat, FilmFormatMetrics> = {
     bottom: 1745,
     footerDividerY: 1795,
     footerTextY: 1830,
-    titleBase: 96,
+    titleBase: 88,
     titleMin: 52,
-    directorBase: 34,
-    directorMin: 24,
-    metaBase: 38,
-    metaMin: 26,
+    directorBase: 40,
+    directorMin: 28,
+    metaBase: 40,
+    metaMin: 28,
     reviewerBase: 24,
     reviewerMin: 18,
-    ratingScale: 6,
-    gapTitleDirector: 24,
-    gapTitleMeta: 14,
-    gapDirectorMeta: 10,
-    gapMetaRating: 30,
+    ratingScale: 4.5,
+    gapTitleDirector: 20,
+    gapTitleMeta: 20,
+    gapDirectorMeta: 8,
+    gapMetaRating: 34,
     gapRatingReviewer: 22,
     reviewerHeight: 46,
     maxTextW: 960,
@@ -164,20 +178,20 @@ export const FILM_SHARE_FORMATS: Record<ShareFormat, FilmFormatMetrics> = {
     bottom: 1180,
     footerDividerY: 1225,
     footerTextY: 1260,
-    titleBase: 84,
-    titleMin: 52,
-    directorBase: 30,
-    directorMin: 22,
-    metaBase: 34,
+    titleBase: 76,
+    titleMin: 48,
+    directorBase: 36,
+    directorMin: 24,
+    metaBase: 36,
     metaMin: 24,
     reviewerBase: 22,
     reviewerMin: 17,
-    ratingScale: 5,
-    gapTitleDirector: 20,
-    gapTitleMeta: 12,
+    ratingScale: 4,
+    gapTitleDirector: 16,
+    gapTitleMeta: 16,
     gapDirectorMeta: 8,
-    gapMetaRating: 26,
-    gapRatingReviewer: 18,
+    gapMetaRating: 28,
+    gapRatingReviewer: 20,
     reviewerHeight: 42,
     maxTextW: 960,
     scrimStops: [
@@ -301,7 +315,7 @@ export const buildFilmShareLayout = (
     return {
       text: wrapped.lines[0] || '',
       fontSize,
-      lineHeight: Math.round(fontSize * 1.3),
+      lineHeight: Math.round(fontSize * FILM_TEXT_LINE_HEIGHT_RATIO),
     };
   };
 
@@ -356,7 +370,14 @@ export const buildFilmShareLayout = (
     : { text: '', fontSize: metrics.reviewerBase, lineHeight: 0 };
 
   let titleLines = titleWrap.lines;
-  let titleLineHeight = Math.round(titleFontSize * 1.2);
+  let titleLineHeight = Math.round(
+    titleFontSize * FILM_TITLE_LINE_HEIGHT_RATIO
+  );
+
+  // Gaps are clamped to the rendered title size so a shrunken long title keeps
+  // the director/meta group visually attached (gap <= 0.35 x title size).
+  const textGap = (configured: number) =>
+    Math.min(configured, FILM_TEXT_GAP_RATIO * titleFontSize);
 
   const buildBlocks = (): ShareLayoutBlock[] => {
     const blocks: ShareLayoutBlock[] = [];
@@ -366,7 +387,7 @@ export const buildFilmShareLayout = (
     if (director.text) {
       blocks.push({
         height: director.lineHeight,
-        gapBefore: titleLines.length > 0 ? metrics.gapTitleDirector : 0,
+        gapBefore: titleLines.length > 0 ? textGap(metrics.gapTitleDirector) : 0,
       });
     }
     if (meta.text) {
@@ -375,8 +396,8 @@ export const buildFilmShareLayout = (
         gapBefore:
           titleLines.length > 0 || director.text
             ? director.text
-              ? metrics.gapDirectorMeta
-              : metrics.gapTitleMeta
+              ? textGap(metrics.gapDirectorMeta)
+              : textGap(metrics.gapTitleMeta)
             : 0,
       });
     }
@@ -405,7 +426,7 @@ export const buildFilmShareLayout = (
 
   while (!budget.fits && titleFontSize > metrics.titleMin) {
     titleFontSize -= 2;
-    titleLineHeight = Math.round(titleFontSize * 1.2);
+    titleLineHeight = Math.round(titleFontSize * FILM_TITLE_LINE_HEIGHT_RATIO);
     titleWrap = wrapShareText(title, maxTextW, 2, (value) =>
       measure(titleFont(titleFontSize), value)
     );
@@ -430,7 +451,7 @@ export const buildFilmShareLayout = (
   const directorBox = director.text
     ? place(
         director.lineHeight,
-        titleLines.length > 0 ? metrics.gapTitleDirector : 0
+        titleLines.length > 0 ? textGap(metrics.gapTitleDirector) : 0
       )
     : { top: cursor, bottom: cursor };
   const metaBox = meta.text
@@ -438,8 +459,8 @@ export const buildFilmShareLayout = (
         meta.lineHeight,
         titleLines.length > 0 || director.text
           ? director.text
-            ? metrics.gapDirectorMeta
-            : metrics.gapTitleMeta
+            ? textGap(metrics.gapDirectorMeta)
+            : textGap(metrics.gapTitleMeta)
           : 0
       )
     : { top: cursor, bottom: cursor };

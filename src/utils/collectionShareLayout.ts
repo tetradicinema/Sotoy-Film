@@ -131,6 +131,163 @@ export const COLLECTION_LOGO_HEIGHT = COLLECTION_LOGO_WIDTH / COLLECTION_LOGO_AS
  */
 export const COLLECTION_LOGO_TEXT_START_RATIO = 599 / 2206;
 
+/**
+ * Share formats for the collection card. The story keeps the approved 9:16
+ * geometry; the feed is the same design fitted to 1080x1350 with a poster wall
+ * that takes about half the canvas.
+ */
+export type CollectionShareFormat = 'story' | 'feed';
+export const COLLECTION_FEED_HEIGHT = 1350;
+
+export interface CollectionFormatMetrics {
+  format: CollectionShareFormat;
+  width: number;
+  height: number;
+  wallHeight: number;
+  wallGutter: number;
+  wallSeparator: number;
+  panelTop: number;
+  panelLeft: number;
+  panelWidth: number;
+  panelTopPadding: number;
+  panelBottomPadding: number;
+  titleBase: number;
+  titleMin: number;
+  titleLineHeightRatio: number;
+  titleMaxWidth: number;
+  descriptionFont: number;
+  descriptionLineHeight: number;
+  descriptionMaxLines: number;
+  descriptionGap: number;
+  countStickerWidth: number;
+  countStickerHeight: number;
+  countFontBase: number;
+  countFontMin: number;
+  countTextPadding: number;
+  ownerBase: number;
+  ownerMin: number;
+  ownerGap: number;
+  rowGap: number;
+  footerTop: number;
+  footerHeight: number;
+  footerInsetX: number;
+  footerFontSize: number;
+  logoLeft: number;
+  logoTop: number;
+  logoWidth: number;
+  badgeRight: number;
+  badgeTop: number;
+  badgeFontSize: number;
+  badgePadY: number;
+  badgePadX: number;
+  badgeBorder: number;
+  badgeRadius: number;
+  badgeShadow: number;
+}
+
+export const COLLECTION_SHARE_FORMATS: Record<
+  CollectionShareFormat,
+  CollectionFormatMetrics
+> = {
+  story: {
+    format: 'story',
+    width: COLLECTION_STORY_WIDTH,
+    height: COLLECTION_STORY_HEIGHT,
+    wallHeight: COLLECTION_WALL_HEIGHT,
+    wallGutter: COLLECTION_WALL_GUTTER,
+    wallSeparator: COLLECTION_WALL_SEPARATOR,
+    panelTop: COLLECTION_PANEL_TOP,
+    panelLeft: COLLECTION_PANEL_LEFT,
+    panelWidth: COLLECTION_PANEL_WIDTH,
+    panelTopPadding: COLLECTION_PANEL_TOP_PADDING,
+    panelBottomPadding: COLLECTION_PANEL_BOTTOM_PADDING,
+    titleBase: COLLECTION_TITLE_BASE,
+    titleMin: COLLECTION_TITLE_MIN,
+    titleLineHeightRatio: COLLECTION_TITLE_LINE_HEIGHT_RATIO,
+    titleMaxWidth: COLLECTION_TITLE_MAX_WIDTH,
+    descriptionFont: COLLECTION_DESCRIPTION_FONT,
+    descriptionLineHeight: COLLECTION_DESCRIPTION_LINE_HEIGHT,
+    descriptionMaxLines: COLLECTION_DESCRIPTION_MAX_LINES,
+    descriptionGap: COLLECTION_DESCRIPTION_GAP,
+    countStickerWidth: COLLECTION_COUNT_STICKER_WIDTH,
+    countStickerHeight: COLLECTION_COUNT_STICKER_HEIGHT,
+    countFontBase: COLLECTION_COUNT_FONT_BASE,
+    countFontMin: COLLECTION_COUNT_FONT_MIN,
+    countTextPadding: COLLECTION_COUNT_TEXT_PADDING,
+    ownerBase: COLLECTION_OWNER_BASE,
+    ownerMin: COLLECTION_OWNER_MIN,
+    ownerGap: COLLECTION_OWNER_GAP,
+    rowGap: COLLECTION_ROW_GAP,
+    footerTop: COLLECTION_FOOTER_TOP,
+    footerHeight: COLLECTION_FOOTER_HEIGHT,
+    footerInsetX: 50,
+    footerFontSize: 26,
+    logoLeft: COLLECTION_LOGO_LEFT,
+    logoTop: COLLECTION_LOGO_TOP,
+    logoWidth: COLLECTION_LOGO_WIDTH,
+    badgeRight: 46,
+    badgeTop: 48,
+    badgeFontSize: 40,
+    badgePadY: 14,
+    badgePadX: 34,
+    badgeBorder: 5,
+    badgeRadius: 20,
+    badgeShadow: 8,
+  },
+  feed: {
+    format: 'feed',
+    width: 1080,
+    height: COLLECTION_FEED_HEIGHT,
+    // Poster wall takes ~50% of the 1350px canvas.
+    wallHeight: 675,
+    wallGutter: COLLECTION_WALL_GUTTER,
+    wallSeparator: COLLECTION_WALL_SEPARATOR,
+    panelTop: 681,
+    panelLeft: 40,
+    panelWidth: 1000,
+    panelTopPadding: 20,
+    panelBottomPadding: 18,
+    titleBase: 92,
+    titleMin: 44,
+    titleLineHeightRatio: COLLECTION_TITLE_LINE_HEIGHT_RATIO,
+    titleMaxWidth: 1000,
+    descriptionFont: 28,
+    descriptionLineHeight: 34,
+    // The feed copy block is KOLEKSI + title + count row, so no description.
+    descriptionMaxLines: 0,
+    descriptionGap: 12,
+    countStickerWidth: 250,
+    countStickerHeight: 76,
+    countFontBase: 28,
+    countFontMin: 18,
+    countTextPadding: 40,
+    ownerBase: 26,
+    ownerMin: 16,
+    ownerGap: 20,
+    rowGap: 20,
+    footerTop: 1262,
+    footerHeight: 76,
+    footerInsetX: 40,
+    footerFontSize: 22,
+    logoLeft: 40,
+    logoTop: 44,
+    logoWidth: 260,
+    badgeRight: 30,
+    badgeTop: 26,
+    badgeFontSize: 26,
+    badgePadY: 10,
+    badgePadX: 22,
+    badgeBorder: 3,
+    badgeRadius: 14,
+    badgeShadow: 5,
+  },
+};
+
+export const getCollectionShareMetrics = (
+  format: CollectionShareFormat = 'story'
+): CollectionFormatMetrics =>
+  COLLECTION_SHARE_FORMATS[format] || COLLECTION_SHARE_FORMATS.story;
+
 const TITLE_FONT_FAMILY = "'Geist', 'Plus Jakarta Sans', sans-serif";
 const BODY_FONT_FAMILY = "'Plus Jakarta Sans', sans-serif";
 const FIVE_TILE_TOP_RATIO = 0.52;
@@ -361,23 +518,27 @@ export function getCollectionInitials(title: string, count = 3): string[] {
 export function fitCollectionTitle(
   title: string,
   measure: CollectionTextMeasure,
-  maxWidth: number = COLLECTION_TITLE_MAX_WIDTH
+  maxWidth?: number,
+  metrics: CollectionFormatMetrics = COLLECTION_SHARE_FORMATS.story
 ): CollectionTitleFit {
   const value = (title || 'Koleksi').trim() || 'Koleksi';
   const text = value.toUpperCase();
-  const safeWidth = positiveValue(maxWidth, COLLECTION_TITLE_MAX_WIDTH);
+  const safeWidth = positiveValue(
+    maxWidth === undefined ? metrics.titleMaxWidth : maxWidth,
+    metrics.titleMaxWidth
+  );
 
   let fontSize = fitFontSize(
-    measure(titleFont(COLLECTION_TITLE_BASE), text),
+    measure(titleFont(metrics.titleBase), text),
     safeWidth * 2,
-    COLLECTION_TITLE_BASE,
-    COLLECTION_TITLE_MIN
+    metrics.titleBase,
+    metrics.titleMin
   );
   let wrapped = wrapShareText(text, safeWidth, 2, (line) =>
     measure(titleFont(fontSize), line)
   );
 
-  while (wrapped.truncated && fontSize > COLLECTION_TITLE_MIN) {
+  while (wrapped.truncated && fontSize > metrics.titleMin) {
     fontSize -= 2;
     wrapped = wrapShareText(text, safeWidth, 2, (line) =>
       measure(titleFont(fontSize), line)
@@ -389,7 +550,7 @@ export function fitCollectionTitle(
     lines: wrapped.lines.length > 0 ? wrapped.lines : [text],
     fontSize,
     lineHeight:
-      Math.round(fontSize * COLLECTION_TITLE_LINE_HEIGHT_RATIO * 100) / 100,
+      Math.round(fontSize * metrics.titleLineHeightRatio * 100) / 100,
     truncated: wrapped.truncated,
   };
 }
@@ -397,30 +558,29 @@ export function fitCollectionTitle(
 export function fitCollectionOwnerLine(
   ownerName: string,
   measure: CollectionTextMeasure,
-  maxWidth: number = COLLECTION_PANEL_WIDTH -
-    COLLECTION_COUNT_STICKER_WIDTH -
-    COLLECTION_OWNER_GAP
+  maxWidth?: number,
+  metrics: CollectionFormatMetrics = COLLECTION_SHARE_FORMATS.story
 ): CollectionOwnerFit {
   const name = (ownerName || 'Pengguna Sotoy').trim() || 'Pengguna Sotoy';
   const label = `oleh ${name}`;
+  const defaultWidth =
+    metrics.panelWidth - metrics.countStickerWidth - metrics.ownerGap;
   const safeWidth = positiveValue(
-    maxWidth,
-    COLLECTION_PANEL_WIDTH -
-      COLLECTION_COUNT_STICKER_WIDTH -
-      COLLECTION_OWNER_GAP
+    maxWidth === undefined ? defaultWidth : maxWidth,
+    defaultWidth
   );
 
   let fontSize = fitFontSize(
-    measure(ownerFont(COLLECTION_OWNER_BASE), label),
+    measure(ownerFont(metrics.ownerBase), label),
     safeWidth,
-    COLLECTION_OWNER_BASE,
-    COLLECTION_OWNER_MIN
+    metrics.ownerBase,
+    metrics.ownerMin
   );
   let wrapped = wrapShareText(label, safeWidth, 1, (line) =>
     measure(ownerFont(fontSize), line)
   );
 
-  while (wrapped.truncated && fontSize > COLLECTION_OWNER_MIN) {
+  while (wrapped.truncated && fontSize > metrics.ownerMin) {
     fontSize -= 1;
     wrapped = wrapShareText(label, safeWidth, 1, (line) =>
       measure(ownerFont(fontSize), line)
@@ -436,15 +596,16 @@ export function fitCollectionOwnerLine(
 
 export function wrapCollectionDescription(
   description: string,
-  measure: CollectionTextMeasure
+  measure: CollectionTextMeasure,
+  metrics: CollectionFormatMetrics = COLLECTION_SHARE_FORMATS.story
 ): string[] {
   const value = (description || '').trim();
-  if (!value) return [];
+  if (!value || metrics.descriptionMaxLines <= 0) return [];
   return wrapShareText(
     value,
-    COLLECTION_PANEL_WIDTH,
-    COLLECTION_DESCRIPTION_MAX_LINES,
-    (line) => measure(bodyFont(COLLECTION_DESCRIPTION_FONT), line)
+    metrics.panelWidth,
+    metrics.descriptionMaxLines,
+    (line) => measure(bodyFont(metrics.descriptionFont), line)
   ).lines;
 }
 
@@ -460,30 +621,42 @@ export function getCollectionStoryPanelLayout(input: {
   ownerName: string;
   itemCount: number;
   measure: CollectionTextMeasure;
+  format?: CollectionShareFormat;
 }): CollectionStoryPanelLayout {
-  const title = fitCollectionTitle(input.title, input.measure);
+  const metrics = getCollectionShareMetrics(input.format);
+  const title = fitCollectionTitle(
+    input.title,
+    input.measure,
+    metrics.titleMaxWidth,
+    metrics
+  );
   const descriptionLines = wrapCollectionDescription(
     input.description,
-    input.measure
+    input.measure,
+    metrics
   );
-  const owner = fitCollectionOwnerLine(input.ownerName, input.measure);
+  const owner = fitCollectionOwnerLine(
+    input.ownerName,
+    input.measure,
+    metrics.panelWidth - metrics.countStickerWidth - metrics.ownerGap,
+    metrics
+  );
   const countText = `${normalizeShareCount(input.itemCount)} JUDUL`;
   const countFontSize = fitFontSize(
-    input.measure(titleFont(COLLECTION_COUNT_FONT_BASE), countText),
-    COLLECTION_COUNT_STICKER_WIDTH - COLLECTION_COUNT_TEXT_PADDING,
-    COLLECTION_COUNT_FONT_BASE,
-    COLLECTION_COUNT_FONT_MIN
+    input.measure(titleFont(metrics.countFontBase), countText),
+    metrics.countStickerWidth - metrics.countTextPadding,
+    metrics.countFontBase,
+    metrics.countFontMin
   );
 
   const titleHeight = title.lines.length * title.lineHeight;
   const descriptionVisible = descriptionLines.length > 0;
   const descriptionHeight = descriptionLines.length
-    ? descriptionLines.length * COLLECTION_DESCRIPTION_LINE_HEIGHT
+    ? descriptionLines.length * metrics.descriptionLineHeight
     : 0;
 
-  const availableTop = COLLECTION_PANEL_TOP + COLLECTION_PANEL_TOP_PADDING;
-  const availableBottom =
-    COLLECTION_FOOTER_TOP - COLLECTION_PANEL_BOTTOM_PADDING;
+  const availableTop = metrics.panelTop + metrics.panelTopPadding;
+  const availableBottom = metrics.footerTop - metrics.panelBottomPadding;
 
   const blocks: Array<{ height: number; gapBefore?: number }> = [
     { height: titleHeight },
@@ -491,12 +664,12 @@ export function getCollectionStoryPanelLayout(input: {
   if (descriptionVisible) {
     blocks.push({
       height: descriptionHeight,
-      gapBefore: COLLECTION_DESCRIPTION_GAP,
+      gapBefore: metrics.descriptionGap,
     });
   }
   blocks.push({
-    height: COLLECTION_COUNT_STICKER_HEIGHT,
-    gapBefore: COLLECTION_ROW_GAP,
+    height: metrics.countStickerHeight,
+    gapBefore: metrics.rowGap,
   });
 
   const budget = getShareLayoutBudget({
@@ -508,11 +681,11 @@ export function getCollectionStoryPanelLayout(input: {
 
   const titleTop = budget.startY;
   const descriptionTop =
-    titleTop + titleHeight + (descriptionVisible ? COLLECTION_DESCRIPTION_GAP : 0);
+    titleTop + titleHeight + (descriptionVisible ? metrics.descriptionGap : 0);
   const rowTop =
     (descriptionVisible ? descriptionTop + descriptionHeight : descriptionTop) +
-    COLLECTION_ROW_GAP;
-  const contentBottom = rowTop + COLLECTION_COUNT_STICKER_HEIGHT;
+    metrics.rowGap;
+  const contentBottom = rowTop + metrics.countStickerHeight;
 
   return {
     titleText: title.text,
@@ -520,29 +693,27 @@ export function getCollectionStoryPanelLayout(input: {
     titleFontSize: title.fontSize,
     titleLineHeight: title.lineHeight,
     titleTop,
-    titleLeft: COLLECTION_PANEL_LEFT,
-    titleWidth: COLLECTION_PANEL_WIDTH,
+    titleLeft: metrics.panelLeft,
+    titleWidth: metrics.panelWidth,
     titleHeight,
     descriptionVisible,
     descriptionLines,
-    descriptionFontSize: COLLECTION_DESCRIPTION_FONT,
-    descriptionLineHeight: COLLECTION_DESCRIPTION_LINE_HEIGHT,
+    descriptionFontSize: metrics.descriptionFont,
+    descriptionLineHeight: metrics.descriptionLineHeight,
     descriptionTop,
     descriptionHeight,
     countText,
     countFontSize,
-    countStickerWidth: COLLECTION_COUNT_STICKER_WIDTH,
-    countStickerHeight: COLLECTION_COUNT_STICKER_HEIGHT,
+    countStickerWidth: metrics.countStickerWidth,
+    countStickerHeight: metrics.countStickerHeight,
     ownerLabel: owner.label,
     ownerFontSize: owner.fontSize,
     ownerLeft:
-      COLLECTION_PANEL_LEFT + COLLECTION_COUNT_STICKER_WIDTH + COLLECTION_OWNER_GAP,
+      metrics.panelLeft + metrics.countStickerWidth + metrics.ownerGap,
     ownerWidth:
-      COLLECTION_PANEL_WIDTH -
-      COLLECTION_COUNT_STICKER_WIDTH -
-      COLLECTION_OWNER_GAP,
+      metrics.panelWidth - metrics.countStickerWidth - metrics.ownerGap,
     rowTop,
-    rowHeight: COLLECTION_COUNT_STICKER_HEIGHT,
+    rowHeight: metrics.countStickerHeight,
     contentTop: titleTop,
     contentBottom,
     fits: budget.fits && contentBottom <= availableBottom + 0.01,
