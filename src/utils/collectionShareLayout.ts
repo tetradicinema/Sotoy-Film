@@ -8,7 +8,6 @@
 import {
   fitFontSize,
   getShareLayoutBudget,
-  normalizeShareCount,
   wrapShareText,
 } from './shareCardText';
 
@@ -74,16 +73,13 @@ export interface CollectionStoryPanelLayout {
   descriptionLineHeight: number;
   descriptionTop: number;
   descriptionHeight: number;
-  countText: string;
-  countFontSize: number;
-  countStickerWidth: number;
-  countStickerHeight: number;
-  ownerLabel: string;
-  ownerFontSize: number;
-  ownerLeft: number;
-  ownerWidth: number;
-  rowTop: number;
-  rowHeight: number;
+  pillText: string;
+  pillFontSize: number;
+  pillWidth: number;
+  pillHeight: number;
+  pillTop: number;
+  pillLeft: number;
+  pillTruncated: boolean;
   contentTop: number;
   contentBottom: number;
   fits: boolean;
@@ -108,14 +104,11 @@ export const COLLECTION_DESCRIPTION_FONT = 36;
 export const COLLECTION_DESCRIPTION_LINE_HEIGHT = 44;
 export const COLLECTION_DESCRIPTION_MAX_LINES = 2;
 export const COLLECTION_DESCRIPTION_GAP = 18;
-export const COLLECTION_COUNT_STICKER_WIDTH = 300;
-export const COLLECTION_COUNT_STICKER_HEIGHT = 92;
-export const COLLECTION_COUNT_FONT_BASE = 34;
-export const COLLECTION_COUNT_FONT_MIN = 22;
-export const COLLECTION_COUNT_TEXT_PADDING = 48;
-export const COLLECTION_OWNER_BASE = 32;
-export const COLLECTION_OWNER_MIN = 20;
-export const COLLECTION_OWNER_GAP = 28;
+export const COLLECTION_PILL_MIN_WIDTH = 300;
+export const COLLECTION_PILL_HEIGHT = 92;
+export const COLLECTION_PILL_FONT_BASE = 34;
+export const COLLECTION_PILL_FONT_MIN = 22;
+export const COLLECTION_PILL_PADDING_X = 44;
 export const COLLECTION_ROW_GAP = 24;
 export const COLLECTION_FOOTER_TOP = 1800;
 export const COLLECTION_FOOTER_HEIGHT = 120;
@@ -159,14 +152,15 @@ export interface CollectionFormatMetrics {
   descriptionLineHeight: number;
   descriptionMaxLines: number;
   descriptionGap: number;
-  countStickerWidth: number;
-  countStickerHeight: number;
-  countFontBase: number;
-  countFontMin: number;
-  countTextPadding: number;
-  ownerBase: number;
-  ownerMin: number;
-  ownerGap: number;
+  pillMinWidth: number;
+  pillHeight: number;
+  pillFontBase: number;
+  pillFontMin: number;
+  pillPaddingX: number;
+  /** Highest title size the panel may grow to when it needs to fill the space. */
+  titleBaseMax?: number;
+  /** Centered free space per side (px) the panel tries to stay under. */
+  maxPanelFreeSpace?: number;
   rowGap: number;
   footerTop: number;
   footerHeight: number;
@@ -209,14 +203,11 @@ export const COLLECTION_SHARE_FORMATS: Record<
     descriptionLineHeight: COLLECTION_DESCRIPTION_LINE_HEIGHT,
     descriptionMaxLines: COLLECTION_DESCRIPTION_MAX_LINES,
     descriptionGap: COLLECTION_DESCRIPTION_GAP,
-    countStickerWidth: COLLECTION_COUNT_STICKER_WIDTH,
-    countStickerHeight: COLLECTION_COUNT_STICKER_HEIGHT,
-    countFontBase: COLLECTION_COUNT_FONT_BASE,
-    countFontMin: COLLECTION_COUNT_FONT_MIN,
-    countTextPadding: COLLECTION_COUNT_TEXT_PADDING,
-    ownerBase: COLLECTION_OWNER_BASE,
-    ownerMin: COLLECTION_OWNER_MIN,
-    ownerGap: COLLECTION_OWNER_GAP,
+    pillMinWidth: COLLECTION_PILL_MIN_WIDTH,
+    pillHeight: COLLECTION_PILL_HEIGHT,
+    pillFontBase: COLLECTION_PILL_FONT_BASE,
+    pillFontMin: COLLECTION_PILL_FONT_MIN,
+    pillPaddingX: COLLECTION_PILL_PADDING_X,
     rowGap: COLLECTION_ROW_GAP,
     footerTop: COLLECTION_FOOTER_TOP,
     footerHeight: COLLECTION_FOOTER_HEIGHT,
@@ -238,40 +229,40 @@ export const COLLECTION_SHARE_FORMATS: Record<
     format: 'feed',
     width: 1080,
     height: COLLECTION_FEED_HEIGHT,
-    // Poster wall takes ~50% of the 1350px canvas.
-    wallHeight: 675,
+    // Poster wall takes ~47% of the 1350px canvas, like the 9:16 card.
+    wallHeight: 640,
     wallGutter: COLLECTION_WALL_GUTTER,
     wallSeparator: COLLECTION_WALL_SEPARATOR,
-    panelTop: 681,
-    panelLeft: 40,
-    panelWidth: 1000,
+    panelTop: 646,
+    panelLeft: 60,
+    panelWidth: 960,
     panelTopPadding: 20,
     panelBottomPadding: 18,
-    titleBase: 92,
-    titleMin: 44,
+    titleBase: 120,
+    titleMin: 56,
     titleLineHeightRatio: COLLECTION_TITLE_LINE_HEIGHT_RATIO,
-    titleMaxWidth: 1000,
+    titleMaxWidth: 960,
     descriptionFont: 28,
     descriptionLineHeight: 34,
-    // The feed copy block is KOLEKSI + title + count row, so no description.
+    // The feed copy block is KOLEKSI + title + owner pill, so no description.
     descriptionMaxLines: 0,
     descriptionGap: 12,
-    countStickerWidth: 250,
-    countStickerHeight: 76,
-    countFontBase: 28,
-    countFontMin: 18,
-    countTextPadding: 40,
-    ownerBase: 26,
-    ownerMin: 16,
-    ownerGap: 20,
+    pillMinWidth: 250,
+    pillHeight: 84,
+    pillFontBase: 32,
+    pillFontMin: 22,
+    pillPaddingX: 38,
+    // A short title grows up to 140px so the panel never looks empty.
+    titleBaseMax: 140,
+    maxPanelFreeSpace: 150,
     rowGap: 20,
     footerTop: 1262,
     footerHeight: 76,
-    footerInsetX: 40,
-    footerFontSize: 22,
-    logoLeft: 40,
+    footerInsetX: 60,
+    footerFontSize: 24,
+    logoLeft: 60,
     logoTop: 44,
-    logoWidth: 260,
+    logoWidth: 300,
     badgeRight: 30,
     badgeTop: 26,
     badgeFontSize: 26,
@@ -563,24 +554,26 @@ export function fitCollectionOwnerLine(
 ): CollectionOwnerFit {
   const name = (ownerName || 'Pengguna Sotoy').trim() || 'Pengguna Sotoy';
   const label = `oleh ${name}`;
-  const defaultWidth =
-    metrics.panelWidth - metrics.countStickerWidth - metrics.ownerGap;
+  const defaultWidth = Math.max(
+    1,
+    metrics.panelWidth - metrics.pillPaddingX * 2
+  );
   const safeWidth = positiveValue(
     maxWidth === undefined ? defaultWidth : maxWidth,
     defaultWidth
   );
 
   let fontSize = fitFontSize(
-    measure(ownerFont(metrics.ownerBase), label),
+    measure(ownerFont(metrics.pillFontBase), label),
     safeWidth,
-    metrics.ownerBase,
-    metrics.ownerMin
+    metrics.pillFontBase,
+    metrics.pillFontMin
   );
   let wrapped = wrapShareText(label, safeWidth, 1, (line) =>
     measure(ownerFont(fontSize), line)
   );
 
-  while (wrapped.truncated && fontSize > metrics.ownerMin) {
+  while (wrapped.truncated && fontSize > metrics.pillFontMin) {
     fontSize -= 1;
     wrapped = wrapShareText(label, safeWidth, 1, (line) =>
       measure(ownerFont(fontSize), line)
@@ -610,7 +603,7 @@ export function wrapCollectionDescription(
 }
 
 /**
- * Places the title, optional description, and count/owner row inside the yellow
+ * Places the title, optional description, and owner pill inside the yellow
  * panel. The content group is centred in the space above the footer so one-line
  * and two-line combinations keep a balanced rhythm, and the budget reports
  * whether everything stays above the footer.
@@ -619,44 +612,66 @@ export function getCollectionStoryPanelLayout(input: {
   title: string;
   description: string;
   ownerName: string;
-  itemCount: number;
   measure: CollectionTextMeasure;
   format?: CollectionShareFormat;
 }): CollectionStoryPanelLayout {
   const metrics = getCollectionShareMetrics(input.format);
-  const title = fitCollectionTitle(
-    input.title,
-    input.measure,
-    metrics.titleMaxWidth,
-    metrics
-  );
   const descriptionLines = wrapCollectionDescription(
     input.description,
     input.measure,
     metrics
   );
-  const owner = fitCollectionOwnerLine(
-    input.ownerName,
-    input.measure,
-    metrics.panelWidth - metrics.countStickerWidth - metrics.ownerGap,
-    metrics
-  );
-  const countText = `${normalizeShareCount(input.itemCount)} JUDUL`;
-  const countFontSize = fitFontSize(
-    input.measure(titleFont(metrics.countFontBase), countText),
-    metrics.countStickerWidth - metrics.countTextPadding,
-    metrics.countFontBase,
-    metrics.countFontMin
-  );
-
-  const titleHeight = title.lines.length * title.lineHeight;
   const descriptionVisible = descriptionLines.length > 0;
   const descriptionHeight = descriptionLines.length
     ? descriptionLines.length * metrics.descriptionLineHeight
     : 0;
 
+  const owner = fitCollectionOwnerLine(
+    input.ownerName,
+    input.measure,
+    undefined,
+    metrics
+  );
+  const pillWidth = clamp(
+    input.measure(ownerFont(owner.fontSize), owner.label) +
+      metrics.pillPaddingX * 2,
+    metrics.pillMinWidth,
+    metrics.panelWidth
+  );
+
   const availableTop = metrics.panelTop + metrics.panelTopPadding;
   const availableBottom = metrics.footerTop - metrics.panelBottomPadding;
+  const availableHeight = availableBottom - availableTop;
+
+  const fitTitleAt = (base: number) =>
+    fitCollectionTitle(input.title, input.measure, metrics.titleMaxWidth, {
+      ...metrics,
+      titleBase: base,
+    });
+  const contentHeightFor = (fit: CollectionTitleFit) =>
+    fit.lines.length * fit.lineHeight +
+    (descriptionVisible ? metrics.descriptionGap + descriptionHeight : 0) +
+    metrics.rowGap +
+    metrics.pillHeight;
+
+  let title = fitTitleAt(metrics.titleBase);
+  const titleBaseMax = Math.max(
+    metrics.titleBase,
+    metrics.titleBaseMax ?? metrics.titleBase
+  );
+  if (metrics.maxPanelFreeSpace !== undefined) {
+    let base = metrics.titleBase;
+    while (
+      (availableHeight - contentHeightFor(title)) / 2 >=
+        metrics.maxPanelFreeSpace &&
+      base < titleBaseMax
+    ) {
+      base = Math.min(titleBaseMax, base + 2);
+      title = fitTitleAt(base);
+    }
+  }
+
+  const titleHeight = title.lines.length * title.lineHeight;
 
   const blocks: Array<{ height: number; gapBefore?: number }> = [
     { height: titleHeight },
@@ -668,7 +683,7 @@ export function getCollectionStoryPanelLayout(input: {
     });
   }
   blocks.push({
-    height: metrics.countStickerHeight,
+    height: metrics.pillHeight,
     gapBefore: metrics.rowGap,
   });
 
@@ -682,10 +697,10 @@ export function getCollectionStoryPanelLayout(input: {
   const titleTop = budget.startY;
   const descriptionTop =
     titleTop + titleHeight + (descriptionVisible ? metrics.descriptionGap : 0);
-  const rowTop =
+  const pillTop =
     (descriptionVisible ? descriptionTop + descriptionHeight : descriptionTop) +
     metrics.rowGap;
-  const contentBottom = rowTop + metrics.countStickerHeight;
+  const contentBottom = pillTop + metrics.pillHeight;
 
   return {
     titleText: title.text,
@@ -702,18 +717,13 @@ export function getCollectionStoryPanelLayout(input: {
     descriptionLineHeight: metrics.descriptionLineHeight,
     descriptionTop,
     descriptionHeight,
-    countText,
-    countFontSize,
-    countStickerWidth: metrics.countStickerWidth,
-    countStickerHeight: metrics.countStickerHeight,
-    ownerLabel: owner.label,
-    ownerFontSize: owner.fontSize,
-    ownerLeft:
-      metrics.panelLeft + metrics.countStickerWidth + metrics.ownerGap,
-    ownerWidth:
-      metrics.panelWidth - metrics.countStickerWidth - metrics.ownerGap,
-    rowTop,
-    rowHeight: metrics.countStickerHeight,
+    pillText: owner.label,
+    pillFontSize: owner.fontSize,
+    pillWidth,
+    pillHeight: metrics.pillHeight,
+    pillTop,
+    pillLeft: metrics.panelLeft,
+    pillTruncated: owner.truncated,
     contentTop: titleTop,
     contentBottom,
     fits: budget.fits && contentBottom <= availableBottom + 0.01,

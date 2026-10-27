@@ -1,8 +1,5 @@
 import {
   buildCollectionStoryItems,
-  COLLECTION_COUNT_STICKER_HEIGHT,
-  COLLECTION_COUNT_STICKER_WIDTH,
-  COLLECTION_COUNT_TEXT_PADDING,
   COLLECTION_DESCRIPTION_LINE_HEIGHT,
   COLLECTION_FEED_HEIGHT,
   COLLECTION_FOOTER_HEIGHT,
@@ -13,9 +10,13 @@ import {
   COLLECTION_LOGO_TEXT_START_RATIO,
   COLLECTION_LOGO_TOP,
   COLLECTION_LOGO_WIDTH,
-  COLLECTION_OWNER_GAP,
   COLLECTION_PANEL_TOP,
   COLLECTION_PANEL_WIDTH,
+  COLLECTION_PILL_FONT_BASE,
+  COLLECTION_PILL_FONT_MIN,
+  COLLECTION_PILL_HEIGHT,
+  COLLECTION_PILL_MIN_WIDTH,
+  COLLECTION_PILL_PADDING_X,
   COLLECTION_TITLE_BASE,
   COLLECTION_TITLE_MAX_WIDTH,
   COLLECTION_TITLE_MIN,
@@ -73,6 +74,7 @@ const LONG_TITLE =
   'Koleksi Film Horor Indonesia Paling Seram Sepanjang Masa';
 const DENSE_DESCRIPTION = `${'Deskripsi koleksi yang sangat panjang '.repeat(12)}`;
 const LONG_OWNER = 'Pengguna Dengan Nama Yang Sangat Panjang Sekali';
+const TRUNCATED_OWNER = `${'Pengguna Dengan Nama Yang Sangat Panjang Sekali '.repeat(4)}`;
 
 console.log('Running Collection Share Layout Tests...\n');
 
@@ -282,29 +284,42 @@ assert(
 const shortOwner = fitCollectionOwnerLine('Budi', measure);
 assert(
   shortOwner.label === 'oleh Budi' &&
-    shortOwner.fontSize === 32 &&
+    shortOwner.fontSize === COLLECTION_PILL_FONT_BASE &&
     !shortOwner.truncated,
   'fitCollectionOwnerLine: a short owner name stays at the base size'
+);
+
+assert(
+  fitCollectionOwnerLine('', measure).label === 'oleh Pengguna Sotoy' &&
+    fitCollectionOwnerLine('   ', measure).label === 'oleh Pengguna Sotoy',
+  'fitCollectionOwnerLine: a missing owner falls back to Pengguna Sotoy'
 );
 
 const longOwner = fitCollectionOwnerLine(LONG_OWNER, measure);
 assert(
   longOwner.label.startsWith('oleh ') &&
     !longOwner.label.includes('\n') &&
-    longOwner.fontSize < 32 &&
-    longOwner.fontSize >= 20,
+    longOwner.fontSize < COLLECTION_PILL_FONT_BASE &&
+    longOwner.fontSize >= COLLECTION_PILL_FONT_MIN,
   'fitCollectionOwnerLine: a long owner name shrinks to a smaller single line'
 );
 assert(
-  measure(
-    `800 ${longOwner.fontSize}px Geist`,
-    longOwner.label
-  ) <=
-    COLLECTION_PANEL_WIDTH -
-      COLLECTION_COUNT_STICKER_WIDTH -
-      COLLECTION_OWNER_GAP +
-      0.01,
-  'fitCollectionOwnerLine: the owner line fits beside the count sticker'
+  measure(`800 ${longOwner.fontSize}px Geist`, longOwner.label) <=
+    COLLECTION_PANEL_WIDTH - COLLECTION_PILL_PADDING_X * 2 + 0.01,
+  'fitCollectionOwnerLine: the owner line fits inside the pill text area'
+);
+
+const truncatedOwner = fitCollectionOwnerLine(TRUNCATED_OWNER, measure);
+assert(
+  truncatedOwner.fontSize === COLLECTION_PILL_FONT_MIN &&
+    truncatedOwner.truncated &&
+    truncatedOwner.label.endsWith('...'),
+  'fitCollectionOwnerLine: an extreme owner name truncates with an ellipsis at the minimum size'
+);
+assert(
+  measure(`800 ${truncatedOwner.fontSize}px Geist`, truncatedOwner.label) <=
+    COLLECTION_PANEL_WIDTH - COLLECTION_PILL_PADDING_X * 2 + 0.01,
+  'fitCollectionOwnerLine: the truncated owner line still fits inside the panel'
 );
 
 // ---------------------------------------------------------------------------
@@ -334,7 +349,6 @@ panelCases.forEach(({ title, description, label }) => {
     title,
     description,
     ownerName: LONG_OWNER,
-    itemCount: 27,
     measure,
   });
 
@@ -347,8 +361,8 @@ panelCases.forEach(({ title, description, label }) => {
     layout.contentTop >= COLLECTION_PANEL_TOP &&
       layout.titleTop + layout.titleHeight <= layout.descriptionTop + 0.01 &&
       layout.descriptionTop + layout.descriptionHeight <=
-        layout.rowTop + 0.01 &&
-      layout.rowTop + layout.rowHeight <= COLLECTION_FOOTER_TOP + 0.01,
+        layout.pillTop + 0.01 &&
+      layout.pillTop + layout.pillHeight <= COLLECTION_FOOTER_TOP + 0.01,
     `getCollectionStoryPanelLayout: ${label} keeps its blocks in order`
   );
   assert(
@@ -364,7 +378,6 @@ const emptyDescriptionLayout = getCollectionStoryPanelLayout({
   title: 'Horor Lokal',
   description: '',
   ownerName: 'Budi',
-  itemCount: 12,
   measure,
 });
 assert(
@@ -374,38 +387,50 @@ assert(
   'getCollectionStoryPanelLayout: an empty description removes its block'
 );
 assert(
-  emptyDescriptionLayout.countText === '12 JUDUL' &&
-    emptyDescriptionLayout.countStickerWidth ===
-      COLLECTION_COUNT_STICKER_WIDTH &&
-    emptyDescriptionLayout.countStickerHeight ===
-      COLLECTION_COUNT_STICKER_HEIGHT,
-  'getCollectionStoryPanelLayout: formats the count sticker'
+  emptyDescriptionLayout.pillText === 'oleh Budi' &&
+    !emptyDescriptionLayout.pillText.includes('JUDUL') &&
+    emptyDescriptionLayout.pillLeft === emptyDescriptionLayout.titleLeft &&
+    emptyDescriptionLayout.pillHeight === COLLECTION_PILL_HEIGHT &&
+    emptyDescriptionLayout.pillWidth >= COLLECTION_PILL_MIN_WIDTH - 0.01 &&
+    emptyDescriptionLayout.pillLeft + emptyDescriptionLayout.pillWidth <=
+      emptyDescriptionLayout.titleLeft +
+        emptyDescriptionLayout.titleWidth +
+        0.01,
+  'getCollectionStoryPanelLayout: renders one left-aligned owner pill inside the panel'
 );
 assert(
-  measure(
-    `900 ${emptyDescriptionLayout.countFontSize}px Geist`,
-    emptyDescriptionLayout.countText
-  ) <=
-    COLLECTION_COUNT_STICKER_WIDTH -
-      COLLECTION_COUNT_TEXT_PADDING +
-      0.01,
-  'getCollectionStoryPanelLayout: the count text fits inside its sticker'
+  close(
+    emptyDescriptionLayout.pillWidth,
+    Math.min(
+      Math.max(
+        measure(
+          `800 ${emptyDescriptionLayout.pillFontSize}px Geist`,
+          emptyDescriptionLayout.pillText
+        ) +
+          COLLECTION_PILL_PADDING_X * 2,
+        COLLECTION_PILL_MIN_WIDTH
+      ),
+      COLLECTION_PANEL_WIDTH
+    )
+  ),
+  'getCollectionStoryPanelLayout: the pill width fits the measured owner text'
 );
 assert(
-  emptyDescriptionLayout.ownerLeft ===
-    emptyDescriptionLayout.titleLeft +
-      COLLECTION_COUNT_STICKER_WIDTH +
-      COLLECTION_OWNER_GAP &&
-    emptyDescriptionLayout.ownerLeft + emptyDescriptionLayout.ownerWidth <=
-      emptyDescriptionLayout.titleLeft + emptyDescriptionLayout.titleWidth,
-  'getCollectionStoryPanelLayout: the owner line stays inside the row'
+  !('countText' in emptyDescriptionLayout) &&
+    !('countStickerWidth' in emptyDescriptionLayout) &&
+    !('countStickerHeight' in emptyDescriptionLayout) &&
+    !('ownerLabel' in emptyDescriptionLayout) &&
+    !('ownerLeft' in emptyDescriptionLayout) &&
+    !('ownerWidth' in emptyDescriptionLayout) &&
+    !('rowTop' in emptyDescriptionLayout) &&
+    !('rowHeight' in emptyDescriptionLayout),
+  'getCollectionStoryPanelLayout: no leftover count sticker or owner text element'
 );
 
 const denseLayout = getCollectionStoryPanelLayout({
   title: LONG_TITLE,
   description: DENSE_DESCRIPTION,
   ownerName: LONG_OWNER,
-  itemCount: 27,
   measure,
 });
 assert(
@@ -426,19 +451,30 @@ const feedMetrics = getCollectionShareMetrics('feed');
 assert(
   storyMetrics.height === 1920 &&
     storyMetrics.wallHeight === COLLECTION_WALL_HEIGHT &&
+    storyMetrics.wallSeparator === COLLECTION_WALL_SEPARATOR &&
     storyMetrics.panelTop === COLLECTION_PANEL_TOP &&
     storyMetrics.panelLeft === 60 &&
     storyMetrics.panelWidth === COLLECTION_PANEL_WIDTH &&
     storyMetrics.titleBase === COLLECTION_TITLE_BASE &&
     storyMetrics.titleMin === COLLECTION_TITLE_MIN &&
+    storyMetrics.titleMaxWidth === COLLECTION_TITLE_MAX_WIDTH &&
     storyMetrics.footerTop === COLLECTION_FOOTER_TOP &&
     storyMetrics.footerHeight === COLLECTION_FOOTER_HEIGHT &&
-    storyMetrics.countStickerWidth === COLLECTION_COUNT_STICKER_WIDTH &&
-    storyMetrics.countStickerHeight === COLLECTION_COUNT_STICKER_HEIGHT &&
-    storyMetrics.ownerBase === 32 &&
+    storyMetrics.footerInsetX === 50 &&
+    storyMetrics.footerFontSize === 26 &&
+    storyMetrics.pillMinWidth === COLLECTION_PILL_MIN_WIDTH &&
+    storyMetrics.pillHeight === COLLECTION_PILL_HEIGHT &&
+    storyMetrics.pillFontBase === COLLECTION_PILL_FONT_BASE &&
+    storyMetrics.pillFontMin === COLLECTION_PILL_FONT_MIN &&
+    storyMetrics.pillPaddingX === COLLECTION_PILL_PADDING_X &&
+    storyMetrics.titleBaseMax === undefined &&
+    storyMetrics.maxPanelFreeSpace === undefined &&
     storyMetrics.logoLeft === COLLECTION_LOGO_LEFT &&
     storyMetrics.logoTop === COLLECTION_LOGO_TOP &&
-    storyMetrics.logoWidth === COLLECTION_LOGO_WIDTH,
+    storyMetrics.logoWidth === COLLECTION_LOGO_WIDTH &&
+    storyMetrics.badgeRight === 46 &&
+    storyMetrics.badgeTop === 48 &&
+    storyMetrics.badgeFontSize === 40,
   'collection story metrics: still exactly the approved 9:16 constants'
 );
 
@@ -446,16 +482,32 @@ assert(
   feedMetrics.height === COLLECTION_FEED_HEIGHT &&
     feedMetrics.height === 1350 &&
     feedMetrics.width === 1080 &&
-    feedMetrics.wallHeight === 675 &&
-    Math.abs(feedMetrics.wallHeight / feedMetrics.height - 0.5) < 0.01,
-  'collection feed metrics: 1080x1350 with a poster wall at 50% of the canvas'
+    feedMetrics.wallHeight === 640 &&
+    feedMetrics.wallSeparator === COLLECTION_WALL_SEPARATOR &&
+    feedMetrics.panelTop === 646 &&
+    feedMetrics.panelTop ===
+      feedMetrics.wallHeight + feedMetrics.wallSeparator,
+  'collection feed metrics: 1080x1350 with the wall and panel at 9:16 proportions'
 );
 
 assert(
-  feedMetrics.panelTop ===
-    feedMetrics.wallHeight + feedMetrics.wallSeparator &&
-    feedMetrics.panelTop > feedMetrics.wallHeight,
-  'collection feed metrics: the yellow panel starts after the wall separator'
+  feedMetrics.panelLeft === 60 &&
+    feedMetrics.panelWidth === 960 &&
+    feedMetrics.titleMaxWidth === 960 &&
+    feedMetrics.footerInsetX === 60 &&
+    feedMetrics.footerFontSize === 24 &&
+    feedMetrics.logoLeft === 60 &&
+    feedMetrics.logoWidth === 300 &&
+    feedMetrics.titleBase === 120 &&
+    feedMetrics.titleMin === 56 &&
+    feedMetrics.titleBaseMax === 140 &&
+    feedMetrics.pillMinWidth === 250 &&
+    feedMetrics.pillHeight === 84 &&
+    feedMetrics.pillFontBase === 32 &&
+    feedMetrics.pillFontMin === 22 &&
+    feedMetrics.pillPaddingX === 38 &&
+    feedMetrics.footerTop === 1262,
+  'collection feed metrics: copy block matches the 9:16 typography'
 );
 
 (['story', 'feed'] as const).forEach((format) => {
@@ -509,14 +561,14 @@ feedCases.forEach(({ title, description, label }) => {
     title,
     description,
     ownerName: LONG_OWNER,
-    itemCount: 27,
     measure,
     format: 'feed',
   });
   assert(
     layout.fits &&
       layout.titleLines.length <= 2 &&
-      layout.titleFontSize <= feedMetrics.titleBase &&
+      layout.titleFontSize <=
+        (feedMetrics.titleBaseMax ?? feedMetrics.titleBase) &&
       layout.titleFontSize >= feedMetrics.titleMin &&
       layout.contentTop >=
         feedMetrics.panelTop + feedMetrics.panelTopPadding - 0.01 &&
@@ -526,24 +578,159 @@ feedCases.forEach(({ title, description, label }) => {
   );
   assert(
     layout.titleTop >= feedMetrics.panelTop &&
-      layout.titleTop + layout.titleHeight <= layout.rowTop + 0.01 &&
-      layout.rowTop + layout.rowHeight <= feedMetrics.footerTop + 0.01 &&
-      layout.rowTop + layout.rowHeight <= feedMetrics.height,
-    `getCollectionStoryPanelLayout feed: ${label} keeps title and count row inside the canvas`
+      layout.titleTop + layout.titleHeight <= layout.pillTop + 0.01 &&
+      layout.pillTop + layout.pillHeight <= feedMetrics.footerTop + 0.01 &&
+      layout.pillTop + layout.pillHeight <= feedMetrics.height,
+    `getCollectionStoryPanelLayout feed: ${label} keeps title and owner pill inside the canvas`
   );
   assert(
     !layout.descriptionVisible &&
       layout.descriptionHeight === 0 &&
       layout.descriptionLines.length === 0,
-    `getCollectionStoryPanelLayout feed: ${label} keeps the copy to KOLEKSI + title + count row`
+    `getCollectionStoryPanelLayout feed: ${label} keeps the copy to KOLEKSI + title + owner pill`
+  );
+  assert(
+    layout.pillText === `oleh ${LONG_OWNER}` &&
+      !layout.pillText.includes('JUDUL') &&
+      layout.pillLeft === feedMetrics.panelLeft &&
+      layout.pillWidth >= feedMetrics.pillMinWidth - 0.01 &&
+      layout.pillLeft + layout.pillWidth <=
+        feedMetrics.panelLeft + feedMetrics.panelWidth + 0.01 &&
+      layout.pillHeight === feedMetrics.pillHeight,
+    `getCollectionStoryPanelLayout feed: ${label} renders one owner pill inside the panel`
   );
 });
+
+const watchlistFeed = getCollectionStoryPanelLayout({
+  title: 'Watchlist Utama',
+  description: '',
+  ownerName: 'Budi',
+  measure,
+  format: 'feed',
+});
+assert(
+  watchlistFeed.titleLines.length === 2 &&
+    watchlistFeed.titleFontSize === feedMetrics.titleBase,
+  'getCollectionStoryPanelLayout feed: WATCHLIST UTAMA wraps to two big lines like the story'
+);
+const watchlistGapAbove = watchlistFeed.titleTop - feedMetrics.panelTop;
+const watchlistGapBelow =
+  feedMetrics.footerTop -
+  (watchlistFeed.pillTop + watchlistFeed.pillHeight);
+assert(
+  watchlistGapAbove < 150 &&
+    watchlistGapBelow < 150 &&
+    watchlistGapAbove > 0 &&
+    watchlistGapBelow > 0,
+  'getCollectionStoryPanelLayout feed: two-line titles keep panel free space under 150px'
+);
+assert(
+  !('countText' in watchlistFeed) &&
+    !('countStickerWidth' in watchlistFeed) &&
+    !('countStickerHeight' in watchlistFeed) &&
+    !('ownerLabel' in watchlistFeed) &&
+    !('ownerLeft' in watchlistFeed) &&
+    !('ownerWidth' in watchlistFeed) &&
+    !('rowTop' in watchlistFeed) &&
+    !('rowHeight' in watchlistFeed),
+  'getCollectionStoryPanelLayout feed: no leftover count sticker or owner text element'
+);
+
+const shortFeed = getCollectionStoryPanelLayout({
+  title: 'Horor Lokal',
+  description: '',
+  ownerName: 'Budi',
+  measure,
+  format: 'feed',
+});
+assert(
+  shortFeed.titleLines.length === 1 &&
+    shortFeed.titleFontSize ===
+      (feedMetrics.titleBaseMax ?? feedMetrics.titleBase) &&
+    shortFeed.pillTop + shortFeed.pillHeight <= feedMetrics.footerTop &&
+    shortFeed.contentBottom <= feedMetrics.height,
+  'getCollectionStoryPanelLayout feed: a short title grows to the 140px cap and stays above the footer'
+);
+
+const feedFallback = getCollectionStoryPanelLayout({
+  title: 'Horor Lokal',
+  description: '',
+  ownerName: '',
+  measure,
+  format: 'feed',
+});
+assert(
+  feedFallback.pillText === 'oleh Pengguna Sotoy',
+  'getCollectionStoryPanelLayout feed: a missing owner falls back to Pengguna Sotoy'
+);
+
+const feedTruncatedOwner = getCollectionStoryPanelLayout({
+  title: 'Horor Lokal',
+  description: '',
+  ownerName: TRUNCATED_OWNER,
+  measure,
+  format: 'feed',
+});
+assert(
+  feedTruncatedOwner.pillTruncated &&
+    feedTruncatedOwner.pillText.endsWith('...') &&
+    feedTruncatedOwner.pillLeft + feedTruncatedOwner.pillWidth <=
+      feedMetrics.panelLeft + feedMetrics.panelWidth + 0.01,
+  'getCollectionStoryPanelLayout feed: a very long owner name truncates with an ellipsis'
+);
+
+const storyFallback = getCollectionStoryPanelLayout({
+  title: 'Horor Lokal',
+  description: '',
+  ownerName: '',
+  measure,
+});
+const storyTruncatedOwner = getCollectionStoryPanelLayout({
+  title: 'Horor Lokal',
+  description: '',
+  ownerName: TRUNCATED_OWNER,
+  measure,
+});
+assert(
+  storyFallback.pillText === 'oleh Pengguna Sotoy' &&
+    storyTruncatedOwner.pillTruncated &&
+    storyTruncatedOwner.pillText.endsWith('...') &&
+    storyTruncatedOwner.pillLeft + storyTruncatedOwner.pillWidth <=
+      storyMetrics.panelLeft + storyMetrics.panelWidth + 0.01,
+  'getCollectionStoryPanelLayout story: owner fallback and ellipsis truncation hold'
+);
+
+assert(
+  close(emptyDescriptionLayout.titleTop, 1401.3) &&
+    close(emptyDescriptionLayout.pillTop, 1552.7) &&
+    close(
+      emptyDescriptionLayout.pillTop + emptyDescriptionLayout.pillHeight,
+      1644.7
+    ) &&
+    COLLECTION_FOOTER_TOP === 1800,
+  'collection story: title, pill and footer keep the approved 9:16 y positions'
+);
+
+assert(
+  close(watchlistFeed.titleTop, 785.4) &&
+    close(watchlistFeed.titleTop + watchlistFeed.titleHeight, 1020.6) &&
+    close(watchlistFeed.pillTop, 1040.6) &&
+    close(watchlistFeed.pillTop + watchlistFeed.pillHeight, 1124.6),
+  'collection feed: two-line title and pill keep the expected 4:5 y positions'
+);
+
+assert(
+  close(shortFeed.titleTop, 834.4) &&
+    close(shortFeed.titleTop + shortFeed.titleHeight, 971.6) &&
+    close(shortFeed.pillTop, 991.6) &&
+    close(shortFeed.pillTop + shortFeed.pillHeight, 1075.6),
+  'collection feed: one-line title and pill keep the expected 4:5 y positions'
+);
 
 const storyExplicit = getCollectionStoryPanelLayout({
   title: LONG_TITLE,
   description: DENSE_DESCRIPTION,
   ownerName: LONG_OWNER,
-  itemCount: 27,
   measure,
   format: 'story',
 });
@@ -551,7 +738,6 @@ const storyImplicit = getCollectionStoryPanelLayout({
   title: LONG_TITLE,
   description: DENSE_DESCRIPTION,
   ownerName: LONG_OWNER,
-  itemCount: 27,
   measure,
 });
 assert(

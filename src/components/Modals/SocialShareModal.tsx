@@ -1176,8 +1176,6 @@ export const CollectionStoryCard: React.FC<CollectionStoryCardProps> = ({
     data.ownerName ||
     data.authorName ||
     'Pengguna Sotoy';
-  const itemCount =
-    data.collectionItemCount ?? data.itemCount ?? visibleItems.length;
 
   const panelLayout: CollectionStoryPanelLayout = React.useMemo(
     () =>
@@ -1185,7 +1183,6 @@ export const CollectionStoryCard: React.FC<CollectionStoryCardProps> = ({
         title: collectionName,
         description: collectionDescription,
         ownerName,
-        itemCount,
         measure,
         format,
       }),
@@ -1193,7 +1190,6 @@ export const CollectionStoryCard: React.FC<CollectionStoryCardProps> = ({
       collectionName,
       collectionDescription,
       ownerName,
-      itemCount,
       measure,
       fontRevision,
       format,
@@ -1501,58 +1497,30 @@ export const CollectionStoryCard: React.FC<CollectionStoryCardProps> = ({
       <div
         style={{
           position: 'absolute',
-          left: `${metrics.panelLeft}px`,
-          top: `${panelLayout.rowTop}px`,
-          width: `${metrics.panelWidth}px`,
-          height: `${panelLayout.rowHeight}px`,
+          left: `${panelLayout.pillLeft}px`,
+          top: `${panelLayout.pillTop}px`,
+          width: `${panelLayout.pillWidth}px`,
+          height: `${panelLayout.pillHeight}px`,
+          boxSizing: 'border-box',
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'center',
+          background: '#0A0A0A',
+          border: '5px solid #0A0A0A',
+          borderRadius: '22px',
+          boxShadow: '8px 8px 0 #FF2E7E',
+          transform: 'rotate(-2deg)',
+          color: '#FFD000',
+          fontFamily: "'Geist', 'Plus Jakarta Sans', sans-serif",
+          fontSize: `${panelLayout.pillFontSize}px`,
+          fontWeight: 900,
+          letterSpacing: '0.02em',
+          lineHeight: 1,
+          whiteSpace: 'nowrap',
           zIndex: 5,
         }}
       >
-        <div
-          style={{
-            width: `${panelLayout.countStickerWidth}px`,
-            height: `${metrics.countStickerHeight}px`,
-            boxSizing: 'border-box',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            background: '#0A0A0A',
-            border: '5px solid #0A0A0A',
-            borderRadius: '22px',
-            boxShadow: '8px 8px 0 #FF2E7E',
-            transform: 'rotate(-2deg)',
-            color: '#FFD000',
-            fontFamily: "'Geist', 'Plus Jakarta Sans', sans-serif",
-            fontSize: `${panelLayout.countFontSize}px`,
-            fontWeight: 900,
-            letterSpacing: '0.02em',
-            lineHeight: 1,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {panelLayout.countText}
-        </div>
-
-        <div
-          style={{
-            width: `${panelLayout.ownerWidth}px`,
-            marginLeft: `${metrics.ownerGap}px`,
-            minWidth: 0,
-            overflow: 'hidden',
-            color: '#0A0A0A',
-            fontFamily: "'Geist', 'Plus Jakarta Sans', sans-serif",
-            fontSize: `${panelLayout.ownerFontSize}px`,
-            fontWeight: 800,
-            lineHeight: 1,
-            whiteSpace: 'nowrap',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {panelLayout.ownerLabel}
-        </div>
+        {panelLayout.pillText}
       </div>
 
       <div
