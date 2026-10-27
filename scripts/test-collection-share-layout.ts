@@ -482,12 +482,14 @@ assert(
   feedMetrics.height === COLLECTION_FEED_HEIGHT &&
     feedMetrics.height === 1350 &&
     feedMetrics.width === 1080 &&
-    feedMetrics.wallHeight === 640 &&
+    feedMetrics.wallHeight === 810 &&
     feedMetrics.wallSeparator === COLLECTION_WALL_SEPARATOR &&
-    feedMetrics.panelTop === 646 &&
+    feedMetrics.panelTop === 816 &&
     feedMetrics.panelTop ===
-      feedMetrics.wallHeight + feedMetrics.wallSeparator,
-  'collection feed metrics: 1080x1350 with the wall and panel at 9:16 proportions'
+      feedMetrics.wallHeight + feedMetrics.wallSeparator &&
+    feedMetrics.wallHeight / feedMetrics.height >= 0.58 &&
+    feedMetrics.wallHeight / feedMetrics.height <= 0.62,
+  'collection feed metrics: 1080x1350 with a poster wall at 60% of the canvas'
 );
 
 assert(
@@ -498,16 +500,17 @@ assert(
     feedMetrics.footerFontSize === 24 &&
     feedMetrics.logoLeft === 60 &&
     feedMetrics.logoWidth === 300 &&
-    feedMetrics.titleBase === 120 &&
-    feedMetrics.titleMin === 56 &&
-    feedMetrics.titleBaseMax === 140 &&
+    feedMetrics.titleBase === 140 &&
+    feedMetrics.titleMin === 60 &&
+    feedMetrics.titleBaseMax === 150 &&
+    feedMetrics.maxPanelFreeSpace === 120 &&
     feedMetrics.pillMinWidth === 250 &&
     feedMetrics.pillHeight === 84 &&
     feedMetrics.pillFontBase === 32 &&
     feedMetrics.pillFontMin === 22 &&
     feedMetrics.pillPaddingX === 38 &&
     feedMetrics.footerTop === 1262,
-  'collection feed metrics: copy block matches the 9:16 typography'
+  'collection feed metrics: bigger title with the 9:16 pill and footer typography'
 );
 
 (['story', 'feed'] as const).forEach((format) => {
@@ -610,7 +613,8 @@ const watchlistFeed = getCollectionStoryPanelLayout({
 });
 assert(
   watchlistFeed.titleLines.length === 2 &&
-    watchlistFeed.titleFontSize === feedMetrics.titleBase,
+    watchlistFeed.titleFontSize === feedMetrics.titleBase &&
+    watchlistFeed.titleFontSize >= 120,
   'getCollectionStoryPanelLayout feed: WATCHLIST UTAMA wraps to two big lines like the story'
 );
 const watchlistGapAbove = watchlistFeed.titleTop - feedMetrics.panelTop;
@@ -618,11 +622,11 @@ const watchlistGapBelow =
   feedMetrics.footerTop -
   (watchlistFeed.pillTop + watchlistFeed.pillHeight);
 assert(
-  watchlistGapAbove < 150 &&
-    watchlistGapBelow < 150 &&
+  watchlistGapAbove <= 120 &&
+    watchlistGapBelow <= 120 &&
     watchlistGapAbove > 0 &&
     watchlistGapBelow > 0,
-  'getCollectionStoryPanelLayout feed: two-line titles keep panel free space under 150px'
+  'getCollectionStoryPanelLayout feed: two-line titles keep panel free space at or under 120px'
 );
 assert(
   !('countText' in watchlistFeed) &&
@@ -637,7 +641,7 @@ assert(
 );
 
 const shortFeed = getCollectionStoryPanelLayout({
-  title: 'Horor Lokal',
+  title: 'Horor',
   description: '',
   ownerName: 'Budi',
   measure,
@@ -645,11 +649,11 @@ const shortFeed = getCollectionStoryPanelLayout({
 });
 assert(
   shortFeed.titleLines.length === 1 &&
-    shortFeed.titleFontSize ===
-      (feedMetrics.titleBaseMax ?? feedMetrics.titleBase) &&
+    shortFeed.titleFontSize === feedMetrics.titleBase &&
+    shortFeed.titleFontSize >= 120 &&
     shortFeed.pillTop + shortFeed.pillHeight <= feedMetrics.footerTop &&
     shortFeed.contentBottom <= feedMetrics.height,
-  'getCollectionStoryPanelLayout feed: a short title grows to the 140px cap and stays above the footer'
+  'getCollectionStoryPanelLayout feed: a one-word title stays at 140px and fits above the footer'
 );
 
 const feedFallback = getCollectionStoryPanelLayout({
@@ -677,6 +681,23 @@ assert(
     feedTruncatedOwner.pillLeft + feedTruncatedOwner.pillWidth <=
       feedMetrics.panelLeft + feedMetrics.panelWidth + 0.01,
   'getCollectionStoryPanelLayout feed: a very long owner name truncates with an ellipsis'
+);
+
+const veryLongFeed = getCollectionStoryPanelLayout({
+  title: `${LONG_TITLE} Dengan Subjudul Yang Sangat Panjang`,
+  description: '',
+  ownerName: TRUNCATED_OWNER,
+  measure,
+  format: 'feed',
+});
+assert(
+  veryLongFeed.fits &&
+    veryLongFeed.titleLines.length <= 2 &&
+    veryLongFeed.titleFontSize >= feedMetrics.titleMin &&
+    veryLongFeed.pillTop + veryLongFeed.pillHeight <= feedMetrics.footerTop &&
+    veryLongFeed.contentBottom <= feedMetrics.height &&
+    veryLongFeed.pillText.endsWith('...'),
+  'getCollectionStoryPanelLayout feed: very long titles and owner names stay above the footer'
 );
 
 const storyFallback = getCollectionStoryPanelLayout({
@@ -712,18 +733,18 @@ assert(
 );
 
 assert(
-  close(watchlistFeed.titleTop, 785.4) &&
-    close(watchlistFeed.titleTop + watchlistFeed.titleHeight, 1020.6) &&
-    close(watchlistFeed.pillTop, 1040.6) &&
-    close(watchlistFeed.pillTop + watchlistFeed.pillHeight, 1124.6),
+  close(watchlistFeed.titleTop, 850.8) &&
+    close(watchlistFeed.titleTop + watchlistFeed.titleHeight, 1125.2) &&
+    close(watchlistFeed.pillTop, 1145.2) &&
+    close(watchlistFeed.pillTop + watchlistFeed.pillHeight, 1229.2),
   'collection feed: two-line title and pill keep the expected 4:5 y positions'
 );
 
 assert(
-  close(shortFeed.titleTop, 834.4) &&
-    close(shortFeed.titleTop + shortFeed.titleHeight, 971.6) &&
-    close(shortFeed.pillTop, 991.6) &&
-    close(shortFeed.pillTop + shortFeed.pillHeight, 1075.6),
+  close(shortFeed.titleTop, 919.4) &&
+    close(shortFeed.titleTop + shortFeed.titleHeight, 1056.6) &&
+    close(shortFeed.pillTop, 1076.6) &&
+    close(shortFeed.pillTop + shortFeed.pillHeight, 1160.6),
   'collection feed: one-line title and pill keep the expected 4:5 y positions'
 );
 

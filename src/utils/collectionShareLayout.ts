@@ -229,17 +229,17 @@ export const COLLECTION_SHARE_FORMATS: Record<
     format: 'feed',
     width: 1080,
     height: COLLECTION_FEED_HEIGHT,
-    // Poster wall takes ~47% of the 1350px canvas, like the 9:16 card.
-    wallHeight: 640,
+    // Poster wall takes 60% of the 1350px canvas; the yellow panel takes 40%.
+    wallHeight: 810,
     wallGutter: COLLECTION_WALL_GUTTER,
     wallSeparator: COLLECTION_WALL_SEPARATOR,
-    panelTop: 646,
+    panelTop: 816,
     panelLeft: 60,
     panelWidth: 960,
     panelTopPadding: 20,
     panelBottomPadding: 18,
-    titleBase: 120,
-    titleMin: 56,
+    titleBase: 140,
+    titleMin: 60,
     titleLineHeightRatio: COLLECTION_TITLE_LINE_HEIGHT_RATIO,
     titleMaxWidth: 960,
     descriptionFont: 28,
@@ -252,9 +252,9 @@ export const COLLECTION_SHARE_FORMATS: Record<
     pillFontBase: 32,
     pillFontMin: 22,
     pillPaddingX: 38,
-    // A short title grows up to 140px so the panel never looks empty.
-    titleBaseMax: 140,
-    maxPanelFreeSpace: 150,
+    // Two-line titles may grow up to 150px so the panel stays filled.
+    titleBaseMax: 150,
+    maxPanelFreeSpace: 120,
     rowGap: 20,
     footerTop: 1262,
     footerHeight: 76,
@@ -662,7 +662,8 @@ export function getCollectionStoryPanelLayout(input: {
   if (metrics.maxPanelFreeSpace !== undefined) {
     let base = metrics.titleBase;
     while (
-      (availableHeight - contentHeightFor(title)) / 2 >=
+      title.lines.length === 2 &&
+      (availableHeight - contentHeightFor(title)) / 2 >
         metrics.maxPanelFreeSpace &&
       base < titleBaseMax
     ) {
