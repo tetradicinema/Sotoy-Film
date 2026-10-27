@@ -11,18 +11,16 @@ export const Footer: React.FC = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Brand Col */}
-          <div className="lg:col-span-2 space-y-3">
+          <div className="lg:col-span-2 space-y-2">
             <div
               onClick={() => navigateTo('home')}
-              className="flex items-center gap-2 cursor-pointer inline-flex group"
+              className="flex items-center cursor-pointer inline-flex group -ml-1"
             >
-              <div className="w-8 h-8 rounded-xl bg-[#171717] border border-white/10 flex items-center justify-center text-[#FF2E7E] transition-all group-hover:border-[#FF2E7E]/50">
-                <Clapperboard className="w-4 h-4 text-[#FF2E7E]" />
-              </div>
-              <div className="flex items-center gap-1 font-display font-black text-xl text-white tracking-tight">
-                <span>SOTOY</span>
-                <span className="text-[#FF2E7E]">FILM</span>
-              </div>
+              <img
+                src="/v2_sotoyfilm%20full%20logo%20transparent.PNG"
+                alt="Sotoy Film — Pop-Culture & Cinema"
+                className="h-16 md:h-20 w-auto object-contain transition-all duration-300 group-hover:scale-[1.015] group-hover:opacity-90"
+              />
             </div>
 
             <p className="text-slate-400 text-xs leading-relaxed max-w-sm">

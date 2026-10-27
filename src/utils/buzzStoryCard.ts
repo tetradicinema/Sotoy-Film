@@ -202,7 +202,7 @@ export async function renderBuzzStoryCanvas(input: BuzzCardInput, deps: BuzzCard
     safeLoad(input.authorAvatar, false),
     safeLoad(input.image, true),
     safeLoad(input.film?.poster, false),
-    safeLoad(encodeURI('/logo-black padding-sotoy film.PNG'), false),
+    safeLoad(encodeURI('/v2_sotoyfilm full logo transparent.PNG'), false),
   ]);
   const hasPhoto = !!photoImg;
   const photoFailed = Boolean(input.image && !photoImg);

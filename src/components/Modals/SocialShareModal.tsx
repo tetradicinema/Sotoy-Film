@@ -180,9 +180,9 @@ export const urlToDataUrl = ensureBlobUrl;
 const logoDataUrlCache = new Map<string, string>();
 
 export const getLogoDataUrl = async (
-  path: string = '/sotoy-logo-full.png'
+  path: string = '/v2_sotoyfilm full logo transparent.PNG'
 ): Promise<string> => {
-  const encodedPath = encodeURI(path || '/sotoy-logo-full.png');
+  const encodedPath = encodeURI(path || '/v2_sotoyfilm full logo transparent.PNG');
   const cached = logoDataUrlCache.get(encodedPath);
   if (cached) return cached;
 
@@ -699,7 +699,7 @@ export const FilmRatingStoryCard: React.FC<FilmRatingStoryCardProps> = ({
     reviewerAvatarUrlForExport !== undefined
       ? reviewerAvatarUrlForExport
       : reviewerAvatarUrl || data.reviewerAvatar || data.authorAvatar;
-  const effectiveLogo = logoUrlForExport || '/sotoy-logo-full.png';
+  const effectiveLogo = logoUrlForExport || '/v2_sotoyfilm full logo transparent.PNG';
   const fontRevision = useShareFontRevision();
 
   const measure = React.useMemo<TextMeasure>(() => {
@@ -2302,11 +2302,11 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
 
         // Draw Sotoy Film Logo (natural aspect ratio, 380px wide)
         try {
-          const logoImg = await loadCanvasImage('/sotoy-logo-full.png');
+          const logoImg = await loadCanvasImage('/v2_sotoyfilm full logo transparent.PNG');
           logoTargetH = logoImg.height * (logoTargetW / logoImg.width);
           ctx.drawImage(logoImg, sidePad, topPad, logoTargetW, logoTargetH);
         } catch (logoErr) {
-          console.warn('[SocialShareModal] Could not load /sotoy-logo-full.png for canvas:', logoErr);
+          console.warn('[SocialShareModal] Could not load /v2_sotoyfilm full logo transparent.PNG for canvas:', logoErr);
           ctx.fillStyle = '#FF2E7E';
           ctx.font = "900 48px 'Geist', 'Plus Jakarta Sans', sans-serif";
           ctx.textAlign = 'left';
@@ -2663,11 +2663,11 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
         let logoTargetH = 95;
 
         try {
-          const logoImg = await loadCanvasImage('/sotoy-logo-full.png');
+          const logoImg = await loadCanvasImage('/v2_sotoyfilm full logo transparent.PNG');
           logoTargetH = logoImg.height * (logoTargetW / logoImg.width);
           ctx.drawImage(logoImg, sidePad, topPad, logoTargetW, logoTargetH);
         } catch (logoErr) {
-          console.warn('[SocialShareModal] Could not load /sotoy-logo-full.png for canvas:', logoErr);
+          console.warn('[SocialShareModal] Could not load /v2_sotoyfilm full logo transparent.PNG for canvas:', logoErr);
           ctx.fillStyle = '#FF2E7E';
           ctx.font = "900 48px 'Geist', 'Plus Jakarta Sans', sans-serif";
           ctx.textAlign = 'left';
@@ -3805,7 +3805,7 @@ export const SocialShareModal: React.FC<SocialShareModalProps> = ({
                 {/* 3. Top Watermark: Logo & Category Pill */}
                 <div className="relative z-10 pt-[24px] px-[13px] flex items-center justify-between">
                   <img
-                    src="/sotoy-logo-full.png"
+                    src="/v2_sotoyfilm full logo transparent.PNG"
                     alt="Sotoy Film"
                     className="w-[84px] h-auto object-contain drop-shadow"
                   />
