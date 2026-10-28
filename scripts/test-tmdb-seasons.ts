@@ -1,5 +1,6 @@
 import {
   pickLastSeason,
+  trimTmdbEpisodeImages,
   trimTmdbSeason,
   trimTmdbSeasons,
   type TmdbSeasonSummary,
@@ -158,6 +159,8 @@ const runTests = () => {
       stillPath: '',
       voteAverage: 0,
       voteCount: 0,
+      crew: [],
+      guestStars: [],
     },
     'trimTmdbSeason: tolerates missing episode fields'
   );
@@ -201,8 +204,104 @@ const runTests = () => {
       stillPath: '/still.jpg',
       voteAverage: 8.1,
       voteCount: 321,
+      crew: [],
+      guestStars: [],
     },
     'trimTmdbSeason: maps and trims the documented episode fields'
+  );
+
+  const crewFiltered = trimTmdbSeason({
+    season_number: 1,
+    episodes: [
+      {
+        episode_number: 1,
+        crew: [
+          { name: '  Ava Director  ', job: 'Director' },
+          { name: 'Ben Writer', job: 'Writer' },
+          { name: 'Cara Script', job: 'Screenplay' },
+          { name: 'Dan Tele', job: 'Teleplay' },
+          { name: 'Eve Story', job: 'Story' },
+          { name: 'Frank Producer', job: 'Producer' },
+          { name: 'Gina Camera', job: 'Director of Photography' },
+          { name: '   ', job: 'Director' },
+          { name: 'Hana NoJob' },
+          null,
+        ],
+      },
+    ],
+  });
+  assertEquals(
+    crewFiltered.episodes[0].crew,
+    [
+      { name: 'Ava Director', job: 'Director' },
+      { name: 'Ben Writer', job: 'Writer' },
+      { name: 'Cara Script', job: 'Screenplay' },
+      { name: 'Dan Tele', job: 'Teleplay' },
+      { name: 'Eve Story', job: 'Story' },
+    ],
+    'trimTmdbSeason: keeps only the crew jobs shown in the episode panel'
+  );
+
+  const manyGuestStars = Array.from({ length: 14 }, (_, index) => ({
+    name: `Star ${index + 1}`,
+    character: `Character ${index + 1}`,
+    profile_path: index === 0 ? null : `/profile-${index + 1}.jpg`,
+  }));
+  const guestStarsTrimmed = trimTmdbSeason({
+    season_number: 1,
+    episodes: [{ episode_number: 1, guest_stars: manyGuestStars }],
+  }).episodes[0].guestStars;
+  assertEquals(
+    guestStarsTrimmed.length,
+    12,
+    'trimTmdbSeason: caps guest stars at 12'
+  );
+  assertEquals(
+    guestStarsTrimmed[0],
+    { name: 'Star 1', character: 'Character 1', profilePath: '' },
+    'trimTmdbSeason: maps guest star fields and tolerates a missing profile'
+  );
+  assertEquals(
+    guestStarsTrimmed[11].name,
+    'Star 12',
+    'trimTmdbSeason: keeps the first 12 guest stars in source order'
+  );
+
+  // ---------------------------------------------------------------------------
+  // trimTmdbEpisodeImages
+  // ---------------------------------------------------------------------------
+  assertEquals(
+    trimTmdbEpisodeImages(null).stills,
+    [],
+    'trimTmdbEpisodeImages: empty or malformed input returns an empty list'
+  );
+
+  const sortedStills = trimTmdbEpisodeImages({
+    stills: [
+      { file_path: '/low.jpg', width: 300, height: 169, vote_average: 1.5 },
+      { file_path: '/high.jpg', width: 1920, height: 1080, vote_average: 6 },
+      { file_path: '', width: 100, height: 100, vote_average: 9 },
+    ],
+  });
+  assertEquals(
+    sortedStills.stills,
+    [
+      { filePath: '/high.jpg', width: 1920, height: 1080, voteAverage: 6 },
+      { filePath: '/low.jpg', width: 300, height: 169, voteAverage: 1.5 },
+    ],
+    'trimTmdbEpisodeImages: sorts stills by vote average and drops empty paths'
+  );
+
+  const cappedStills = trimTmdbEpisodeImages({
+    stills: Array.from({ length: 14 }, (_, index) => ({
+      file_path: `/still-${index + 1}.jpg`,
+      vote_average: index,
+    })),
+  });
+  assertEquals(
+    cappedStills.stills.length,
+    12,
+    'trimTmdbEpisodeImages: caps stills at 12'
   );
 
   // ---------------------------------------------------------------------------

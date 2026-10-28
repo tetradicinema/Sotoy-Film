@@ -3,7 +3,7 @@ import { slugify } from './slugify';
 import { classifyFilmType, FilmFormat } from './filmType';
 import { mapTmdbOriginCountry } from './tmdbCountry';
 import type { TmdbMediaData } from './tmdbMediaTrim';
-import type { TmdbSeasonData, TmdbSeasonsData } from './tmdbSeasonsTrim';
+import type { TmdbSeasonData, TmdbSeasonsData, TmdbEpisodeImagesData } from './tmdbSeasonsTrim';
 
 export interface MappedTmdbFilm {
   title: string;
@@ -769,4 +769,65 @@ export const tmdbSeasonPosterUrl = (filePath: string): string =>
 
 export const tmdbEpisodeStillUrl = (filePath: string): string =>
   `${TMDB_IMAGE_BASE}/w300${filePath}`;
+
+export const tmdbEpisodeStillFullUrl = (filePath: string): string =>
+  `${TMDB_IMAGE_BASE}/w780${filePath}`;
+
+export const tmdbProfileThumbUrl = (filePath: string): string =>
+  `${TMDB_IMAGE_BASE}/w185${filePath}`;
+
+const episodeImagesCache = new Map<string, TmdbEpisodeImagesData>();
+const episodeImagesInFlight = new Map<string, Promise<TmdbEpisodeImagesData | null>>();
+
+/**
+ * Fetches the stills for one episode. Results are cached per episode and
+ * concurrent calls are de-duplicated; any failure resolves to `null`.
+ */
+export const fetchTmdbEpisodeImages = async (
+  tmdbId: number | string | null | undefined,
+  seasonNumber: number | string,
+  episodeNumber: number | string
+): Promise<TmdbEpisodeImagesData | null> => {
+  const id = asTmdbId(tmdbId);
+  if (!id) return null;
+
+  const rawSeason = String(seasonNumber ?? '').trim();
+  const rawEpisode = String(episodeNumber ?? '').trim();
+  if (!/^\d+$/.test(rawSeason) || !/^\d+$/.test(rawEpisode)) return null;
+
+  const season = Number(rawSeason);
+  const episode = Number(rawEpisode);
+  if (!Number.isInteger(season) || season < 0 || season > 100) return null;
+  if (!Number.isInteger(episode) || episode < 1) return null;
+
+  const cacheKey = `${id}:${season}:${episode}`;
+
+  const cached = episodeImagesCache.get(cacheKey);
+  if (cached) return cached;
+
+  const inFlight = episodeImagesInFlight.get(cacheKey);
+  if (inFlight) return inFlight;
+
+  const request = (async (): Promise<TmdbEpisodeImagesData | null> => {
+    try {
+      const res = await fetch(
+        `/api/tmdb?action=episode_images&id=${encodeURIComponent(id)}&season=${season}&episode=${episode}`
+      );
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (!data || typeof data !== 'object' || !Array.isArray(data.stills)) return null;
+      return data as TmdbEpisodeImagesData;
+    } catch {
+      return null;
+    } finally {
+      episodeImagesInFlight.delete(cacheKey);
+    }
+  })();
+
+  episodeImagesInFlight.set(cacheKey, request);
+
+  const result = await request;
+  if (result) episodeImagesCache.set(cacheKey, result);
+  return result;
+};
 

@@ -155,6 +155,24 @@ service cloud.firestore {
         data.score is number && data.score >= 1.0 && data.score <= 10.0;
     }
 
+    // Season / episode scores. One deterministic document per user per target:
+    // `<filmId>__s<season>__<uid>` or `<filmId>__s<season>__e<episode>__<uid>`.
+    function isValidMediaRating(data) {
+      return data.keys().hasAll(['id', 'filmId', 'seasonNumber', 'episodeNumber', 'userId', 'score', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'filmId', 'seasonNumber', 'episodeNumber', 'userId', 'score', 'createdAt', 'updatedAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.filmId is string && data.filmId.size() <= 128 &&
+        data.userId is string && data.userId == request.auth.uid &&
+        data.score is number && data.score >= 1.0 && data.score <= 10.0 &&
+        data.seasonNumber is int && data.seasonNumber >= 0 &&
+        (data.episodeNumber == null || (data.episodeNumber is int && data.episodeNumber >= 1)) &&
+        data.createdAt is string && data.createdAt.size() <= 64 &&
+        data.updatedAt is string && data.updatedAt.size() <= 64 &&
+        data.id == data.filmId + '__s' + string(data.seasonNumber) +
+          (data.episodeNumber == null ? '' : '__e' + string(data.episodeNumber)) +
+          '__' + request.auth.uid;
+    }
+
     function isValidCriticSubmission(data) {
       return data.keys().hasAll(['id', 'userId', 'userName', 'userEmail', 'status']) &&
         data.id is string && data.id.size() <= 128 &&
@@ -567,6 +585,18 @@ service cloud.firestore {
         allow create: if isSignedIn() && isVerifiedUser() && !isSuspended() && request.auth.uid == userId && get(/databases/$(database)/documents/ratings/$(ratingId)).data.userId != request.auth.uid;
         allow delete: if isSignedIn() && request.auth.uid == userId;
       }
+    }
+
+      match /mediaRatings/{ratingId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isVerifiedUser() && !isSuspended() &&
+        isValidId(ratingId) && ratingId == incoming().id &&
+        isValidMediaRating(incoming());
+      allow update: if isSignedIn() && isVerifiedUser() && !isSuspended() &&
+        isOwner(existing().userId) &&
+        isValidMediaRating(incoming()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['score', 'updatedAt']);
+      allow delete: if isSignedIn() && (isOwner(existing().userId) || isAdmin());
     }
 
     match /criticSubmissions/{submissionId} {

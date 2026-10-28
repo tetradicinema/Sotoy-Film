@@ -31,6 +31,17 @@ export interface TmdbSeasonsData {
   nextEpisodeToAir: TmdbEpisodeRef | null;
 }
 
+export interface TmdbEpisodeCrew {
+  name: string;
+  job: string;
+}
+
+export interface TmdbGuestStar {
+  name: string;
+  character: string;
+  profilePath: string;
+}
+
 export interface TmdbEpisode {
   episodeNumber: number;
   name: string;
@@ -40,6 +51,8 @@ export interface TmdbEpisode {
   stillPath: string;
   voteAverage: number;
   voteCount: number;
+  crew: TmdbEpisodeCrew[];
+  guestStars: TmdbGuestStar[];
 }
 
 export interface TmdbSeasonData {
@@ -50,6 +63,29 @@ export interface TmdbSeasonData {
   posterPath: string;
   episodes: TmdbEpisode[];
 }
+
+export interface TmdbEpisodeImage {
+  filePath: string;
+  width: number;
+  height: number;
+  voteAverage: number;
+}
+
+export interface TmdbEpisodeImagesData {
+  stills: TmdbEpisodeImage[];
+}
+
+/** Jobs shown in the episode "Crew" panel (Directed by / Written by). */
+export const EPISODE_CREW_JOBS = [
+  'Director',
+  'Writer',
+  'Screenplay',
+  'Teleplay',
+  'Story',
+];
+
+export const MAX_EPISODE_GUEST_STARS = 12;
+export const MAX_EPISODE_IMAGES = 12;
 
 const asString = (value: unknown): string =>
   typeof value === 'string' ? value.trim() : '';
@@ -73,6 +109,55 @@ const trimEpisodeRef = (raw: unknown): TmdbEpisodeRef | null => {
     airDate: asString(episode.air_date),
   };
 };
+
+const trimEpisodeCrew = (raw: unknown): TmdbEpisodeCrew[] => {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map(member => asRecord(member))
+    .filter((member): member is Record<string, any> => member !== null)
+    .map(member => ({
+      name: asString(member.name),
+      job: asString(member.job),
+    }))
+    .filter(member => member.name.length > 0 && EPISODE_CREW_JOBS.includes(member.job));
+};
+
+const trimGuestStars = (raw: unknown): TmdbGuestStar[] => {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map(star => asRecord(star))
+    .filter((star): star is Record<string, any> => star !== null)
+    .map(star => ({
+      name: asString(star.name),
+      character: asString(star.character),
+      profilePath: asString(star.profile_path),
+    }))
+    .slice(0, MAX_EPISODE_GUEST_STARS);
+};
+
+/**
+ * Normalizes a raw TMDB `tv/{id}/season/{n}/episode/{e}/images` payload into
+ * the compact shape served by `/api/tmdb?action=episode_images`. Stills are
+ * sorted by TMDB vote average (descending) and capped at 12.
+ */
+export function trimTmdbEpisodeImages(raw: any): TmdbEpisodeImagesData {
+  const rawStills: any[] = Array.isArray(raw?.stills) ? raw.stills : [];
+
+  const stills: TmdbEpisodeImage[] = rawStills
+    .map(still => asRecord(still))
+    .filter((still): still is Record<string, any> => still !== null)
+    .map(still => ({
+      filePath: asString(still.file_path),
+      width: asNumber(still.width),
+      height: asNumber(still.height),
+      voteAverage: asNumber(still.vote_average),
+    }))
+    .filter(still => still.filePath.length > 0)
+    .sort((a, b) => b.voteAverage - a.voteAverage)
+    .slice(0, MAX_EPISODE_IMAGES);
+
+  return { stills };
+}
 
 /**
  * Normalizes a raw TMDB `tv/{id}` payload into the compact shape served by
@@ -123,6 +208,8 @@ export function trimTmdbSeason(raw: any): TmdbSeasonData {
       stillPath: asString(episode.still_path),
       voteAverage: asNumber(episode.vote_average),
       voteCount: asNumber(episode.vote_count),
+      crew: trimEpisodeCrew(episode.crew),
+      guestStars: trimGuestStars(episode.guest_stars),
     }))
     .sort((a, b) => a.episodeNumber - b.episodeNumber);
 

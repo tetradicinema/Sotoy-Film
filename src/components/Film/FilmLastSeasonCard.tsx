@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, ChevronRight, Clapperboard, Layers } from 'lucide-react';
+import { Calendar, ChevronRight, Clapperboard, Layers, Star } from 'lucide-react';
 import type { FilmItem } from '../../types';
 import { slugify } from '../../utils/slugify';
 import { tmdbMediaType } from '../../utils/tmdbSync';
@@ -9,6 +9,13 @@ import {
   type TmdbSeasonSummary,
 } from '../../utils/tmdbSeasonsTrim';
 import { fetchTmdbSeasons, tmdbSeasonPosterUrl } from '../../utils/tmdbHelper';
+import {
+  aggregateMediaRatings,
+  formatSkorSotoy,
+  seasonRatingKey,
+  type MediaRatingDoc,
+} from '../../utils/mediaRatings';
+import { fetchFilmSeasonRatingDocs } from './RateMediaModal';
 
 const seasonLabel = (seasonNumber: number): string =>
   seasonNumber === 0 ? 'Specials' : `Season ${seasonNumber}`;
@@ -33,6 +40,7 @@ export const FilmLastSeasonCard: React.FC<{ film: FilmItem }> = ({ film }) => {
   const [started, setStarted] = useState(false);
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [season, setSeason] = useState<TmdbSeasonSummary | null>(null);
+  const [ratingDocs, setRatingDocs] = useState<MediaRatingDoc[]>([]);
 
   const sectionRef = useRef<HTMLElement | null>(null);
 
@@ -86,12 +94,31 @@ export const FilmLastSeasonCard: React.FC<{ film: FilmItem }> = ({ film }) => {
     };
   }, [enabled, started, film.tmdbId]);
 
+  // One query for the film's season-level scores (episodeNumber == null).
+  useEffect(() => {
+    if (!enabled || !started || !film.id) return;
+    let isMounted = true;
+
+    fetchFilmSeasonRatingDocs(film.id).then(docs => {
+      if (isMounted) setRatingDocs(docs);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [enabled, started, film.id]);
+
+  const aggregates = useMemo(() => aggregateMediaRatings(ratingDocs), [ratingDocs]);
+
   if (!enabled) return null;
   if (status === 'error') return null;
   if (status === 'ready' && !season) return null;
 
   const filmSlug = film.slug || slugify(film.title) || film.id;
   const seasonsPath = `/film/${encodeURIComponent(filmSlug)}/seasons`;
+  const seasonAggregate = season
+    ? aggregates[seasonRatingKey(season.seasonNumber)]
+    : undefined;
 
   return (
     <section
@@ -151,6 +178,10 @@ export const FilmLastSeasonCard: React.FC<{ film: FilmItem }> = ({ film }) => {
                 {[airYear(season.airDate), season.episodeCount > 0 ? `${season.episodeCount} Episode` : '']
                   .filter(Boolean)
                   .join(' • ')}
+              </span>
+              <span className="inline-flex items-center gap-1 bg-amber-500/15 border border-amber-500/40 text-amber-400 text-[10px] font-black px-2.5 py-1 rounded-full">
+                <Star className="w-3 h-3 fill-current" />
+                {formatSkorSotoy(seasonAggregate)}
               </span>
             </div>
 

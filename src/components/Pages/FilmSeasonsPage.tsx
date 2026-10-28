@@ -12,6 +12,18 @@ import {
   fetchTmdbSeasons,
   tmdbSeasonPosterUrl,
 } from '../../utils/tmdbHelper';
+import {
+  aggregateMediaRatings,
+  buildMediaRatingId,
+  formatSkorSotoy,
+  seasonRatingKey,
+  type MediaRatingDoc,
+} from '../../utils/mediaRatings';
+import {
+  RateMediaModal,
+  fetchFilmSeasonRatingDocs,
+  useMediaRatingGate,
+} from '../Film/RateMediaModal';
 import { fetchFilmBySlugRest, mapFilmData, readSeoPrefetch } from '../../utils/seoPrefetch';
 
 /**
@@ -109,7 +121,8 @@ export const formatAirDateId = (value: string): string => {
 const airYear = (value: string): string =>
   value && value.length >= 4 ? value.slice(0, 4) : '';
 
-const TMDB_NOTE = 'Data season dan rating episode dari TMDB.';
+const TMDB_NOTE =
+  'Data season dan episode dari TMDB. Skor Sotoy berasal dari penonton Sotoy Film.';
 
 const SeasonStateMessage: React.FC<{
   filmTitle: string;
@@ -133,10 +146,14 @@ const SeasonStateMessage: React.FC<{
 
 export const FilmSeasonsPage: React.FC = () => {
   const { slug } = useParams<{ slug?: string }>();
+  const { currentUser } = useApp();
   const { film, isResolving } = useResolvedFilm(slug);
+  const requireRatingAccess = useMediaRatingGate();
 
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [data, setData] = useState<TmdbSeasonsData | null>(null);
+  const [ratingDocs, setRatingDocs] = useState<MediaRatingDoc[]>([]);
+  const [ratingTarget, setRatingTarget] = useState<number | null>(null);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -164,6 +181,55 @@ export const FilmSeasonsPage: React.FC = () => {
       isMounted = false;
     };
   }, [film?.id, film?.tmdbId, film?.type, film?.duration]);
+
+  // One query for every season-level score of this film; no stored aggregates.
+  useEffect(() => {
+    if (!film?.id) return;
+    let isMounted = true;
+
+    fetchFilmSeasonRatingDocs(film.id).then(docs => {
+      if (isMounted) setRatingDocs(docs);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [film?.id]);
+
+  const aggregates = useMemo(() => aggregateMediaRatings(ratingDocs), [ratingDocs]);
+  const ownScores = useMemo(() => {
+    const map: Record<string, number> = {};
+    if (!currentUser?.id) return map;
+    for (const doc of ratingDocs) {
+      if (doc.userId !== currentUser.id || doc.episodeNumber !== null) continue;
+      map[seasonRatingKey(doc.seasonNumber)] = doc.score;
+    }
+    return map;
+  }, [ratingDocs, currentUser?.id]);
+
+  const handleRateSeason = (seasonNumber: number) => {
+    if (!requireRatingAccess()) return;
+    setRatingTarget(seasonNumber);
+  };
+
+  const handleRatingSaved = (seasonNumber: number, score: number) => {
+    const userId = currentUser?.id;
+    if (!userId) return;
+    setRatingDocs(prev => {
+      const next = prev.filter(
+        doc => !(doc.seasonNumber === seasonNumber && doc.episodeNumber === null && doc.userId === userId)
+      );
+      next.push({
+        id: buildMediaRatingId(film?.id ?? '', seasonNumber, null, userId),
+        filmId: film?.id ?? '',
+        seasonNumber,
+        episodeNumber: null,
+        userId,
+        score,
+      });
+      return next;
+    });
+  };
 
   if (isResolving) {
     return <FilmDetailSkeleton />;
@@ -212,7 +278,7 @@ export const FilmSeasonsPage: React.FC = () => {
     <div className="min-h-screen py-6 sm:py-8">
       <SEOHead
         title={`${film.title} – Semua Season | Sotoy Film`}
-        description={`Daftar lengkap season dan episode ${film.title} (${film.year}) lengkap dengan rating TMDB.`}
+        description={`Daftar lengkap season dan episode ${film.title} (${film.year}) lengkap dengan Skor Sotoy dari penonton Sotoy Film.`}
         image={film.backdrop || film.poster}
         url={`https://www.sotoyfilm.my.id${seasonsUrl}`}
         canonicalUrl={canonicalUrl}
@@ -284,6 +350,9 @@ export const FilmSeasonsPage: React.FC = () => {
           <div className="space-y-4">
             {orderedSeasons.map(season => {
               const seasonHref = `${filmPath}/season/${season.seasonNumber}`;
+              const ratingKey = seasonRatingKey(season.seasonNumber);
+              const aggregate = aggregates[ratingKey];
+              const ownScore = ownScores[ratingKey];
               return (
                 <article
                   key={`season-${season.seasonNumber}`}
@@ -309,12 +378,19 @@ export const FilmSeasonsPage: React.FC = () => {
                       <h2 className="font-display font-black text-base sm:text-lg text-white">
                         {seasonLabel(season.seasonNumber)}
                       </h2>
-                      {season.voteAverage > 0 && (
-                        <span className="inline-flex items-center gap-1 bg-amber-500/15 border border-amber-500/40 text-amber-400 text-[10px] font-black px-2 py-0.5 rounded-full">
-                          <Star className="w-3 h-3 fill-current" />
-                          {season.voteAverage.toFixed(1)} TMDB
-                        </span>
-                      )}
+                      <span className="inline-flex items-center gap-1 bg-amber-500/15 border border-amber-500/40 text-amber-400 text-[10px] font-black px-2 py-0.5 rounded-full">
+                        <Star className="w-3 h-3 fill-current" />
+                        {formatSkorSotoy(aggregate)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRateSeason(season.seasonNumber)}
+                        className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#FF2E7E]/50 text-[#FF2E7E] hover:bg-[#FF2E7E] hover:text-slate-950 transition-colors"
+                      >
+                        {ownScore !== undefined
+                          ? `Skor kamu ${ownScore.toFixed(1)} · Ubah`
+                          : 'Beri Skor'}
+                      </button>
                     </div>
 
                     <p className="text-[11px] sm:text-xs font-semibold text-slate-300 bg-slate-900 px-2.5 py-1 rounded-full border border-slate-800 inline-block">
@@ -352,6 +428,22 @@ export const FilmSeasonsPage: React.FC = () => {
 
         <p className="text-[11px] text-slate-500 text-center">{TMDB_NOTE}</p>
       </div>
+
+      <RateMediaModal
+        film={film}
+        isOpen={ratingTarget !== null}
+        onClose={() => setRatingTarget(null)}
+        seasonNumber={ratingTarget ?? 0}
+        episodeNumber={null}
+        initialScore={
+          ratingTarget !== null
+            ? ownScores[seasonRatingKey(ratingTarget)] ?? null
+            : null
+        }
+        onSaved={score => {
+          if (ratingTarget !== null) handleRatingSaved(ratingTarget, score);
+        }}
+      />
     </div>
   );
 };

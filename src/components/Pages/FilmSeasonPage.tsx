@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
   Calendar,
+  ChevronDown,
   ChevronLeft,
   Clapperboard,
   Clock,
@@ -11,13 +12,32 @@ import {
 } from 'lucide-react';
 import { SEOHead } from '../SEO/SEOHead';
 import { FilmDetailSkeleton } from '../Skeletons';
+import { useApp } from '../../context/AppContext';
 import { tmdbMediaType } from '../../utils/tmdbSync';
-import type { TmdbSeasonData, TmdbSeasonSummary } from '../../utils/tmdbSeasonsTrim';
+import type {
+  TmdbEpisode,
+  TmdbSeasonData,
+  TmdbSeasonSummary,
+} from '../../utils/tmdbSeasonsTrim';
 import {
   fetchTmdbSeason,
   fetchTmdbSeasons,
   tmdbEpisodeStillUrl,
 } from '../../utils/tmdbHelper';
+import {
+  aggregateMediaRatings,
+  buildMediaRatingId,
+  episodeRatingKey,
+  formatSkorSotoy,
+  seasonRatingKey,
+  type MediaRatingDoc,
+} from '../../utils/mediaRatings';
+import {
+  RateMediaModal,
+  fetchSeasonRatingDocs,
+  useMediaRatingGate,
+} from '../Film/RateMediaModal';
+import { EpisodeDetailPanel } from '../Film/EpisodeDetailPanel';
 import {
   filmPathFor,
   formatAirDateId,
@@ -25,14 +45,21 @@ import {
   useResolvedFilm,
 } from './FilmSeasonsPage';
 
-const TMDB_NOTE = 'Data season dan rating episode dari TMDB.';
+const TMDB_NOTE =
+  'Data season dan episode dari TMDB. Skor Sotoy berasal dari penonton Sotoy Film.';
 
-const formatVoteCount = (value: number): string =>
-  new Intl.NumberFormat('id-ID').format(Math.max(0, Math.round(value)));
+interface RatingTarget {
+  seasonNumber: number;
+  episodeNumber: number | null;
+  episodeTitle?: string;
+  initialScore: number | null;
+}
 
 export const FilmSeasonPage: React.FC = () => {
   const { slug, seasonNumber } = useParams<{ slug?: string; seasonNumber?: string }>();
+  const { currentUser } = useApp();
   const { film, isResolving } = useResolvedFilm(slug);
+  const requireRatingAccess = useMediaRatingGate();
 
   const rawSeason = seasonNumber ?? '';
   const parsedSeason = /^\d+$/.test(rawSeason) ? Number(rawSeason) : null;
@@ -40,6 +67,9 @@ export const FilmSeasonPage: React.FC = () => {
   const [seasonStatus, setSeasonStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [season, setSeason] = useState<TmdbSeasonData | null>(null);
   const [seasonList, setSeasonList] = useState<TmdbSeasonSummary[]>([]);
+  const [ratingDocs, setRatingDocs] = useState<MediaRatingDoc[]>([]);
+  const [ratingTarget, setRatingTarget] = useState<RatingTarget | null>(null);
+  const [expandedEpisodes, setExpandedEpisodes] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -85,6 +115,50 @@ export const FilmSeasonPage: React.FC = () => {
     };
   }, [film?.id, film?.tmdbId, film?.type, film?.duration, parsedSeason]);
 
+  // One query per season: the season itself plus every episode, aggregated
+  // client-side. No aggregate is persisted.
+  useEffect(() => {
+    if (!film?.id || parsedSeason === null) return;
+    let isMounted = true;
+
+    fetchSeasonRatingDocs(film.id, parsedSeason).then(docs => {
+      if (isMounted) setRatingDocs(docs);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [film?.id, parsedSeason]);
+
+  useEffect(() => {
+    setExpandedEpisodes(new Set());
+  }, [film?.id, parsedSeason]);
+
+  const aggregates = useMemo(() => aggregateMediaRatings(ratingDocs), [ratingDocs]);
+
+  const ownScores = useMemo(() => {
+    const map: Record<string, number> = {};
+    if (!currentUser?.id) return map;
+    for (const doc of ratingDocs) {
+      if (doc.userId !== currentUser.id) continue;
+      const key =
+        doc.episodeNumber === null
+          ? seasonRatingKey(doc.seasonNumber)
+          : episodeRatingKey(doc.seasonNumber, doc.episodeNumber);
+      map[key] = doc.score;
+    }
+    return map;
+  }, [ratingDocs, currentUser?.id]);
+
+  const toggleEpisode = (episodeNumber: number) => {
+    setExpandedEpisodes(prev => {
+      const next = new Set(prev);
+      if (next.has(episodeNumber)) next.delete(episodeNumber);
+      else next.add(episodeNumber);
+      return next;
+    });
+  };
+
   if (isResolving) {
     return <FilmDetailSkeleton />;
   }
@@ -123,6 +197,56 @@ export const FilmSeasonPage: React.FC = () => {
   const headingName = season?.name?.trim() || label;
   const canonicalUrl = `https://www.sotoyfilm.my.id${filmPath}`;
 
+  const seasonKey = seasonRatingKey(parsedSeason);
+  const seasonAggregate = aggregates[seasonKey];
+  const ownSeasonScore = ownScores[seasonKey];
+
+  const handleRateSeason = () => {
+    if (!requireRatingAccess()) return;
+    setRatingTarget({
+      seasonNumber: parsedSeason,
+      episodeNumber: null,
+      initialScore: ownScores[seasonKey] ?? null,
+    });
+  };
+
+  const handleRateEpisode = (episode: TmdbEpisode) => {
+    if (!requireRatingAccess()) return;
+    setRatingTarget({
+      seasonNumber: parsedSeason,
+      episodeNumber: episode.episodeNumber,
+      episodeTitle: episode.name || undefined,
+      initialScore:
+        ownScores[episodeRatingKey(parsedSeason, episode.episodeNumber)] ?? null,
+    });
+  };
+
+  const handleRatingSaved = (score: number) => {
+    const userId = currentUser?.id;
+    if (!ratingTarget || !userId) return;
+
+    const { seasonNumber: targetSeason, episodeNumber } = ratingTarget;
+    setRatingDocs(prev => {
+      const next = prev.filter(
+        doc =>
+          !(
+            doc.seasonNumber === targetSeason &&
+            doc.episodeNumber === episodeNumber &&
+            doc.userId === userId
+          )
+      );
+      next.push({
+        id: buildMediaRatingId(film.id, targetSeason, episodeNumber, userId),
+        filmId: film.id,
+        seasonNumber: targetSeason,
+        episodeNumber,
+        userId,
+        score,
+      });
+      return next;
+    });
+  };
+
   const orderedSeasons = [
     ...seasonList
       .filter(item => item.seasonNumber !== 0)
@@ -134,7 +258,7 @@ export const FilmSeasonPage: React.FC = () => {
     <div className="min-h-screen py-6 sm:py-8">
       <SEOHead
         title={`${film.title} ${label} – Daftar Episode & Rating | Sotoy Film`}
-        description={`Daftar episode ${label} ${film.title} lengkap dengan tanggal tayang, durasi, dan rating TMDB.`}
+        description={`Daftar episode ${label} ${film.title} lengkap dengan tanggal tayang, durasi, dan Skor Sotoy dari penonton Sotoy Film.`}
         image={film.backdrop || film.poster}
         url={`${canonicalUrl}/season/${parsedSeason}`}
         canonicalUrl={canonicalUrl}
@@ -170,6 +294,21 @@ export const FilmSeasonPage: React.FC = () => {
             {film.title}
           </h1>
           <p className="text-slate-400 text-xs sm:text-sm">{headingName}</p>
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <span className="inline-flex items-center gap-1 bg-amber-500/15 border border-amber-500/40 text-amber-400 text-[11px] font-black px-2.5 py-1 rounded-full">
+              <Star className="w-3.5 h-3.5 fill-current" />
+              {formatSkorSotoy(seasonAggregate)}
+            </span>
+            <button
+              type="button"
+              onClick={handleRateSeason}
+              className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full border border-[#FF2E7E]/50 text-[#FF2E7E] hover:bg-[#FF2E7E] hover:text-slate-950 transition-colors"
+            >
+              {ownSeasonScore !== undefined
+                ? `Skor kamu ${ownSeasonScore.toFixed(1)} · Ubah`
+                : 'Beri Skor'}
+            </button>
+          </div>
         </header>
 
         {orderedSeasons.length > 0 && (
@@ -242,77 +381,107 @@ export const FilmSeasonPage: React.FC = () => {
         ) : (
           <div className="space-y-4">
             {season.episodes.map(episode => {
-              const hasRating = episode.voteCount > 0 && episode.voteAverage > 0;
+              const episodeKey = episodeRatingKey(parsedSeason, episode.episodeNumber);
+              const ownScore = ownScores[episodeKey];
+              const isExpanded = expandedEpisodes.has(episode.episodeNumber);
+              const panelId = `episode-detail-${episode.episodeNumber}`;
               return (
-                <article
-                  key={`episode-${episode.episodeNumber}`}
-                  className="bg-[#171717] border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xl flex flex-col sm:flex-row gap-4 hover:border-[#FF2E7E]/40 transition-colors"
-                >
-                  <div className="w-full sm:w-56 md:w-64 aspect-video rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 shrink-0">
-                    {episode.stillPath ? (
-                      <img
-                        src={tmdbEpisodeStillUrl(episode.stillPath)}
-                        alt={`Still E${episode.episodeNumber} ${episode.name || label}`}
-                        loading="lazy"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 text-slate-600">
-                        <Clapperboard className="w-6 h-6" />
-                        <span className="text-[10px] font-semibold uppercase tracking-wide">
-                          Tanpa Gambar
+                <div key={`episode-${episode.episodeNumber}`}>
+                  <article
+                    className={`bg-[#171717] border border-slate-800 p-4 sm:p-5 shadow-xl flex flex-col sm:flex-row gap-4 hover:border-[#FF2E7E]/40 transition-colors ${
+                      isExpanded ? 'rounded-t-3xl' : 'rounded-3xl'
+                    }`}
+                  >
+                    <div className="w-full sm:w-56 md:w-64 aspect-video rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 shrink-0">
+                      {episode.stillPath ? (
+                        <img
+                          src={tmdbEpisodeStillUrl(episode.stillPath)}
+                          alt={`Still E${episode.episodeNumber} ${episode.name || label}`}
+                          loading="lazy"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 text-slate-600">
+                          <Clapperboard className="w-6 h-6" />
+                          <span className="text-[10px] font-semibold uppercase tracking-wide">
+                            Tanpa Gambar
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="bg-[#FF2E7E]/15 border border-[#FF2E7E]/40 text-[#FF2E7E] text-[10px] font-black px-2 py-0.5 rounded-full">
+                          E{episode.episodeNumber}
                         </span>
+                        <h2 className="font-display font-black text-sm sm:text-base text-white leading-snug min-w-0">
+                          {episode.name || `Episode ${episode.episodeNumber}`}
+                        </h2>
                       </div>
-                    )}
-                  </div>
 
-                  <div className="flex-1 min-w-0 space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="bg-[#FF2E7E]/15 border border-[#FF2E7E]/40 text-[#FF2E7E] text-[10px] font-black px-2 py-0.5 rounded-full">
-                        E{episode.episodeNumber}
-                      </span>
-                      <h2 className="font-display font-black text-sm sm:text-base text-white leading-snug min-w-0">
-                        {episode.name || `Episode ${episode.episodeNumber}`}
-                      </h2>
-                    </div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-400">
+                        {formatAirDateId(episode.airDate) && (
+                          <span className="flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-[#FF2E7E]" />
+                            {formatAirDateId(episode.airDate)}
+                          </span>
+                        )}
+                        {episode.runtime > 0 && (
+                          <span className="flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-[#FF2E7E]" />
+                            {episode.runtime} mnt
+                          </span>
+                        )}
+                      </div>
 
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-400">
-                      {formatAirDateId(episode.airDate) && (
-                        <span className="flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-[#FF2E7E]" />
-                          {formatAirDateId(episode.airDate)}
-                        </span>
+                      {episode.overview && (
+                        <p className="text-slate-300 text-xs sm:text-sm leading-relaxed line-clamp-3">
+                          {episode.overview}
+                        </p>
                       )}
-                      {episode.runtime > 0 && (
-                        <span className="flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5 text-[#FF2E7E]" />
-                          {episode.runtime} mnt
-                        </span>
-                      )}
-                    </div>
 
-                    {episode.overview && (
-                      <p className="text-slate-300 text-xs sm:text-sm leading-relaxed line-clamp-3">
-                        {episode.overview}
-                      </p>
-                    )}
-
-                    {hasRating ? (
-                      <div className="flex flex-wrap items-baseline gap-2 pt-0.5">
-                        <span className="inline-flex items-center gap-1 text-amber-400 font-black text-sm">
+                      <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                        <span className="inline-flex items-center gap-1 text-amber-400 font-black text-[11px] sm:text-xs">
                           <Star className="w-3.5 h-3.5 fill-current" />
-                          {episode.voteAverage.toFixed(1)}
+                          {formatSkorSotoy(aggregates[episodeKey])}
                         </span>
-                        <span className="text-[10px] text-slate-500">
-                          {formatVoteCount(episode.voteCount)} suara
-                        </span>
-                        <span className="text-[10px] text-slate-500">Rating TMDB</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRateEpisode(episode)}
+                          className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#FF2E7E]/50 text-[#FF2E7E] hover:bg-[#FF2E7E] hover:text-slate-950 transition-colors"
+                        >
+                          {ownScore !== undefined
+                            ? `Skor kamu ${ownScore.toFixed(1)} · Ubah`
+                            : 'Beri Skor'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleEpisode(episode.episodeNumber)}
+                          aria-expanded={isExpanded}
+                          aria-controls={panelId}
+                          className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border border-slate-700 text-slate-300 hover:border-[#FF2E7E]/60 hover:text-white transition-colors"
+                        >
+                          Detail
+                          <ChevronDown
+                            className={`w-3.5 h-3.5 transition-transform ${
+                              isExpanded ? 'rotate-180' : ''
+                            }`}
+                          />
+                        </button>
                       </div>
-                    ) : (
-                      <p className="text-[11px] font-semibold text-slate-500">Belum ada rating</p>
-                    )}
-                  </div>
-                </article>
+                    </div>
+                  </article>
+
+                  {isExpanded && (
+                    <EpisodeDetailPanel
+                      id={panelId}
+                      tmdbId={String(film.tmdbId)}
+                      seasonNumber={parsedSeason}
+                      episode={episode}
+                    />
+                  )}
+                </div>
               );
             })}
           </div>
@@ -320,6 +489,17 @@ export const FilmSeasonPage: React.FC = () => {
 
         <p className="text-[11px] text-slate-500 text-center">{TMDB_NOTE}</p>
       </div>
+
+      <RateMediaModal
+        film={film}
+        isOpen={ratingTarget !== null}
+        onClose={() => setRatingTarget(null)}
+        seasonNumber={ratingTarget?.seasonNumber ?? parsedSeason}
+        episodeNumber={ratingTarget?.episodeNumber ?? null}
+        episodeTitle={ratingTarget?.episodeTitle}
+        initialScore={ratingTarget?.initialScore ?? null}
+        onSaved={handleRatingSaved}
+      />
     </div>
   );
 };
