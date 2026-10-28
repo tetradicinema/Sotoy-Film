@@ -2,6 +2,7 @@ import { CastMember, CrewMember } from '../types';
 import { slugify } from './slugify';
 import { classifyFilmType, FilmFormat } from './filmType';
 import { mapTmdbOriginCountry } from './tmdbCountry';
+import type { TmdbMediaData } from './tmdbMediaTrim';
 
 export interface MappedTmdbFilm {
   title: string;
@@ -582,3 +583,83 @@ export const fetchFullTmdbCredits = async (
 
   return { cast, crew, rawCredits: data.credits };
 };
+
+// ---------------------------------------------------------------------------
+// Media gallery (videos, backdrops, posters)
+// ---------------------------------------------------------------------------
+
+const mediaCache = new Map<string, TmdbMediaData>();
+const mediaInFlight = new Map<string, Promise<TmdbMediaData | null>>();
+
+const emptyMediaData = (): TmdbMediaData => ({ videos: [], backdrops: [], posters: [] });
+
+const normalizeMediaData = (data: any): TmdbMediaData => {
+  if (!data || typeof data !== 'object') return emptyMediaData();
+  return {
+    videos: Array.isArray(data.videos) ? data.videos : [],
+    backdrops: Array.isArray(data.backdrops) ? data.backdrops : [],
+    posters: Array.isArray(data.posters) ? data.posters : [],
+  };
+};
+
+/**
+ * Fetches trimmed TMDB media for a movie/series. Results are cached at module
+ * level and concurrent calls for the same id are de-duplicated. Any failure
+ * resolves to `null` without throwing.
+ */
+export const fetchTmdbMedia = async (
+  tmdbId: number | string | null | undefined,
+  type: 'movie' | 'tv'
+): Promise<TmdbMediaData | null> => {
+  const id = String(tmdbId ?? '').trim();
+  if (!/^\d+$/.test(id) || Number(id) <= 0) return null;
+
+  const mediaType: 'movie' | 'tv' = type === 'tv' ? 'tv' : 'movie';
+  const cacheKey = `${mediaType}:${id}`;
+
+  const cached = mediaCache.get(cacheKey);
+  if (cached) return cached;
+
+  const inFlight = mediaInFlight.get(cacheKey);
+  if (inFlight) return inFlight;
+
+  const request = (async (): Promise<TmdbMediaData | null> => {
+    try {
+      const res = await fetch(`/api/tmdb?action=media&id=${encodeURIComponent(id)}&type=${mediaType}`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return normalizeMediaData(data);
+    } catch {
+      return null;
+    } finally {
+      mediaInFlight.delete(cacheKey);
+    }
+  })();
+
+  mediaInFlight.set(cacheKey, request);
+
+  const result = await request;
+  if (result) mediaCache.set(cacheKey, result);
+  return result;
+};
+
+const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
+
+export const tmdbBackdropThumbUrl = (filePath: string): string =>
+  `${TMDB_IMAGE_BASE}/w780${filePath}`;
+
+export const tmdbBackdropFullUrl = (filePath: string): string =>
+  `${TMDB_IMAGE_BASE}/w1280${filePath}`;
+
+export const tmdbPosterThumbUrl = (filePath: string): string =>
+  `${TMDB_IMAGE_BASE}/w342${filePath}`;
+
+export const tmdbPosterFullUrl = (filePath: string): string =>
+  `${TMDB_IMAGE_BASE}/w780${filePath}`;
+
+export const tmdbYoutubeThumbUrl = (key: string): string =>
+  `https://i.ytimg.com/vi/${key}/hqdefault.jpg`;
+
+export const tmdbYoutubeEmbedUrl = (key: string): string =>
+  `https://www.youtube.com/embed/${key}?autoplay=1&rel=0`;
+

@@ -49,6 +49,7 @@ import { PersonAvatar } from '../Common/PersonAvatar';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { FilmDetailSkeleton } from '../Skeletons';
 import { BreadcrumbNavigation } from '../Navigation/BreadcrumbNavigation';
+import { FilmMediaSection } from '../Film/FilmMediaSection';
 import { fetchFullTmdbCredits } from '../../utils/tmdbHelper';
 import { countReviewAudiences } from '../../utils/shareCardText';
 
@@ -699,6 +700,14 @@ export const FilmDetailPage: React.FC = () => {
           >
             Pemeran & Kru ({allCastList.length + allCrewList.length})
           </button>
+          {(film.tmdbId || film.trailerUrl || (film.stills && film.stills.length > 0)) && (
+            <button
+              onClick={() => scrollToSection('section-media')}
+              className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 hover:border-[#FF2E7E] hover:text-white transition-colors shrink-0"
+            >
+              Media
+            </button>
+          )}
           <button
             onClick={() => scrollToSection('section-articles')}
             className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 hover:border-[#FF2E7E] hover:text-white transition-colors shrink-0"
@@ -940,6 +949,9 @@ export const FilmDetailPage: React.FC = () => {
                 </button>
               </div>
             </div>
+
+            {/* 4. MEDIA: VIDEO, BACKDROP, POSTER (CLIENT-SIDE TMDB) */}
+            <FilmMediaSection film={film} />
 
             {/* 5. ARTIKEL & ULASAN PENULIS SOTOY */}
             <div
