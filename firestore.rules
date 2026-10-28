@@ -533,7 +533,7 @@ service cloud.firestore {
 
     match /films/{filmId} {
       allow read: if true;
-      allow create: if (isAdmin() || isWriter()) && isValidId(filmId) && isValidFilmItem(incoming());
+      allow create: if isAdmin() && isValidId(filmId) && isValidFilmItem(incoming());
       allow update: if ((isAdmin() || isWriter()) && isValidId(filmId) && isValidFilmItem(incoming())) ||
                        (isSignedIn() && isVerifiedUser() && !isSuspended() && isValidFilmAggregateDelta()) ||
                        (incoming().diff(existing()).affectedKeys().hasOnly(['slug']) && incoming().slug is string && incoming().slug.size() <= 200);

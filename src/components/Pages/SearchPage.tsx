@@ -64,6 +64,7 @@ export const SearchPage: React.FC = () => {
     isFollowing,
     showToast,
     importAndNavigateToTmdbFilm,
+    isAdmin,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<SearchTab>('all');
@@ -244,10 +245,10 @@ export const SearchPage: React.FC = () => {
     };
   }, [localQuery, films, publishedArticles, buzzList, allUsers, usersById]);
 
-  // Real-time Search to TMDB API for global film dataset
+  // Real-time Search to TMDB API for global film dataset (Admin only)
   useEffect(() => {
     const q = localQuery.trim();
-    if (!q || q.length < 2) {
+    if (!isAdmin || !q || q.length < 2) {
       setTmdbSearchResults([]);
       setIsSearchingTmdb(false);
       return;
@@ -272,11 +273,11 @@ export const SearchPage: React.FC = () => {
       isCancelled = true;
       clearTimeout(timer);
     };
-  }, [localQuery]);
+  }, [localQuery, isAdmin]);
 
   // Filter out TMDB results that already match local database films
   const filteredTmdbResults = useMemo(() => {
-    if (!tmdbSearchResults || tmdbSearchResults.length === 0) return [];
+    if (!isAdmin || !tmdbSearchResults || tmdbSearchResults.length === 0) return [];
     const localTmdbIds = new Set(films.map(f => f.tmdbId).filter(Boolean));
     const localTitles = new Set(films.map(f => f.title.toLowerCase().trim()));
 
@@ -286,10 +287,10 @@ export const SearchPage: React.FC = () => {
       if (title && localTitles.has(title)) return false;
       return true;
     });
-  }, [tmdbSearchResults, films]);
+  }, [isAdmin, tmdbSearchResults, films]);
 
   const totalResults =
-    matchingFilms.length + filteredTmdbResults.length + matchingArticles.length + matchingBuzz.length + matchingUsers.length;
+    matchingFilms.length + (isAdmin ? filteredTmdbResults.length : 0) + matchingArticles.length + matchingBuzz.length + matchingUsers.length;
 
   const hasQuery = localQuery.trim().length > 0;
 
@@ -403,7 +404,7 @@ export const SearchPage: React.FC = () => {
           >
             {[
               { id: 'all', label: 'Semua Hasil', count: totalResults, icon: Filter },
-              { id: 'film', label: 'Film', count: matchingFilms.length + filteredTmdbResults.length, icon: Film },
+              { id: 'film', label: 'Film', count: matchingFilms.length + (isAdmin ? filteredTmdbResults.length : 0), icon: Film },
               { id: 'article', label: 'Artikel & Review', count: matchingArticles.length, icon: FileText },
               { id: 'buzz', label: 'Buzz Komunitas', count: matchingBuzz.length, icon: MessageSquare },
               { id: 'user', label: 'Kritikus & Profil', count: matchingUsers.length, icon: Users },
@@ -605,8 +606,8 @@ export const SearchPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* FILM & SERIES TERKAIT (Real-time Global API) */}
-                {(activeTab === 'all' || activeTab === 'film') && filteredTmdbResults.length > 0 && (
+                {/* FILM & SERIES TERKAIT (Real-time Global API - Admin Only) */}
+                {isAdmin && (activeTab === 'all' || activeTab === 'film') && filteredTmdbResults.length > 0 && (
                   <div className="space-y-4 pt-2">
                     <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                       <h2 className="text-base sm:text-lg font-bold text-cyan-400 flex items-center gap-2">

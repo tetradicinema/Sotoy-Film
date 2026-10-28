@@ -115,7 +115,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
   className = '',
   placeholder = 'Cari film, artikel, buzz, atau kritikus...',
 }) => {
-  const { films, publishedArticles, buzzList, allUsers, usersById, navigateTo, searchQuery, setSearchQuery, importAndNavigateToTmdbFilm } = useApp();
+  const { films, publishedArticles, buzzList, allUsers, usersById, navigateTo, searchQuery, setSearchQuery, importAndNavigateToTmdbFilm, isAdmin } = useApp();
 
   const [isOpen, setIsOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<SearchCategory>('all');
@@ -266,10 +266,10 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
     setIsSearchingFirestore(false);
   }, [searchQuery, films, publishedArticles]);
 
-  // Real-time Search to TMDB API for global film dataset
+  // Real-time Search to TMDB API for global film dataset (Admin only)
   useEffect(() => {
     const q = searchQuery.trim();
-    if (!q || q.length < 2) {
+    if (!isAdmin || !q || q.length < 2) {
       setTmdbSearchResults([]);
       setIsSearchingTmdb(false);
       return;
@@ -294,11 +294,11 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
       isCancelled = true;
       clearTimeout(timer);
     };
-  }, [searchQuery]);
+  }, [searchQuery, isAdmin]);
 
   // Filter out TMDB results that already match local database films
   const filteredTmdbResults = useMemo(() => {
-    if (!tmdbSearchResults || tmdbSearchResults.length === 0) return [];
+    if (!isAdmin || !tmdbSearchResults || tmdbSearchResults.length === 0) return [];
     const localTmdbIds = new Set(films.map(f => f.tmdbId).filter(Boolean));
     const localTitles = new Set(films.map(f => f.title.toLowerCase().trim()));
 
@@ -308,7 +308,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
       if (title && localTitles.has(title)) return false;
       return true;
     });
-  }, [tmdbSearchResults, films]);
+  }, [isAdmin, tmdbSearchResults, films]);
 
   // Real-time filtering logic across all categories
   const { matchingFilms, matchingArticles, matchingBuzz, matchingUsers } = useMemo(() => {
@@ -426,7 +426,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
   }, [searchQuery, films, publishedArticles, buzzList, allUsers, usersById]);
 
   const totalResultsCount =
-    matchingFilms.length + filteredTmdbResults.length + matchingArticles.length + matchingBuzz.length + matchingUsers.length;
+    matchingFilms.length + (isAdmin ? filteredTmdbResults.length : 0) + matchingArticles.length + matchingBuzz.length + matchingUsers.length;
 
   // Flatten currently visible results based on activeCategory for keyboard arrow navigation
   const visibleFlattenedList: SearchResultItem[] = useMemo(() => {
@@ -653,7 +653,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                   <span>Film</span>
                   {hasQuery && (
                     <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/20 text-slate-950 font-black">
-                      {matchingFilms.length + filteredTmdbResults.length}
+                      {matchingFilms.length + (isAdmin ? filteredTmdbResults.length : 0)}
                     </span>
                   )}
                 </button>
@@ -1005,8 +1005,8 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                   </div>
                 )}
 
-                {/* FILM & SERIES TERKAIT (Real-time Global Results) */}
-                {(activeCategory === 'all' || activeCategory === 'film') && filteredTmdbResults.length > 0 && (
+                {/* FILM & SERIES TERKAIT (Real-time Global Results - Admin Only) */}
+                {isAdmin && (activeCategory === 'all' || activeCategory === 'film') && filteredTmdbResults.length > 0 && (
                   <div className="space-y-2 pt-1 border-t border-slate-800/60">
                     <div className="flex items-center justify-between pb-1 border-b border-slate-800/80">
                       <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-cyan-400">

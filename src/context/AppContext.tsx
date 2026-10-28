@@ -6450,6 +6450,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const importAndNavigateToTmdbFilm = async (tmdbItem: { id: number; title?: string; name?: string; media_type?: 'movie' | 'tv' }): Promise<FilmItem | null> => {
+    if (!isAdmin) {
+      showToast('Hanya admin yang dapat menambahkan film ke database.', 'error');
+      return null;
+    }
+
     const mediaType = tmdbItem.media_type === 'tv' ? 'tv' : 'movie';
     const tmdbIdNum = Number(tmdbItem.id);
 
@@ -6493,31 +6498,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         createdAt: new Date().toISOString(),
       };
 
+      // Persist to Firestore so it stays in global database
+      const sanitized = JSON.parse(JSON.stringify(newFilm));
+      await setDoc(doc(db, 'films', newFilm.id), sanitized);
+
       setFilms(prev => {
         if (prev.some(f => f.id === newFilm.id)) return prev;
         return [newFilm, ...prev];
       });
-
-      // Persist to Firestore so it stays in global database
-      try {
-        const sanitized = JSON.parse(JSON.stringify(newFilm));
-        await setDoc(doc(db, 'films', newFilm.id), sanitized);
-        refreshFilms();
-      } catch (e) {
-        console.warn('[AppContext] Could not persist TMDB film to Firestore:', e);
-      }
+      refreshFilms();
 
       showToast(`Berhasil memuat "${newFilm.title}" dari TMDB!`, 'success');
       navigateTo('film-detail', { filmId: newFilm.id });
       return newFilm;
-    } catch (err) {
+    } catch (err: any) {
       console.error('[AppContext] Failed to import TMDB film:', err);
-      showToast('Gagal memuat detail film dari TMDB.', 'error');
+      const errMsg = err?.message || 'Gagal memuat detail film dari TMDB.';
+      showToast(`Gagal menambahkan film ke database: ${errMsg}`, 'error');
       return null;
     }
   };
 
   const addFilm = async (filmData: Omit<FilmItem, 'id'>): Promise<boolean> => {
+    if (!isAdmin) {
+      showToast('Hanya admin yang dapat menambahkan film ke database.', 'error');
+      return false;
+    }
+
     console.log('[AppContext] === [addFilm INVOKED] ===', {
       title: filmData.title,
       type: filmData.type,
@@ -6572,18 +6579,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
 
       if (error?.code === 'permission-denied') {
-        console.warn('[AppContext] DIAGNOSIS: Firestore returned "permission-denied". In firestore.rules, "allow create, update: if (isAdmin() || isWriter()) && isValidId(filmId) && isValidFilmItem(incoming())". Ensure request.auth is signed in with an authorized email (e.g., eksposurmedia@gmail.com) or admin role.');
+        console.warn('[AppContext] DIAGNOSIS: Firestore returned "permission-denied". Ensure user is an admin.');
       }
 
       const errMsg = error?.message || 'Gagal menyimpan ke database Firestore.';
-      showToast(`Gagal menerbitkan film ke Firestore: ${errMsg}`);
-      // Also update local list safely without duplicating
-      setFilms(prev => {
-        if (prev.some(f => f.id === newFilm.id)) {
-          return prev.map(f => f.id === newFilm.id ? newFilm : f);
-        }
-        return [newFilm, ...prev];
-      });
+      showToast(`Gagal menerbitkan film ke Firestore: ${errMsg}`, 'error');
       return false;
     }
   };
