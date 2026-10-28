@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { 
   X, 
   Sparkles, 
@@ -20,7 +20,7 @@ import {
   Check,
   Info
 } from 'lucide-react';
-import { fetchTmdbDetails, mapTmdbDetailsToFilm, fetchTmdbList, MappedTmdbFilm } from '../../utils/tmdbHelper';
+import { fetchTmdbDetails, mapTmdbDetailsToFilm, fetchTmdbList, MappedTmdbFilm, findExistingFilmByTmdb } from '../../utils/tmdbHelper';
 import { slugify } from '../../utils/slugify';
 import { FilmItem } from '../../types';
 import { useApp } from '../../context/AppContext';
@@ -85,21 +85,12 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
 
   const parsedIds = parseIds(rawInput);
 
-  // Duplicate check helper: matched by tmdbId against local state and current session
-  const isFilmDuplicate = (tmdbIdNum: number, sessionProcessed: Set<number>): { isDup: boolean; matchedFilm?: FilmItem } => {
-    if (sessionProcessed.has(tmdbIdNum)) {
-      return { isDup: true };
-    }
-    const match = (films || []).find(f => 
-      (f.tmdbId && Number(f.tmdbId) === tmdbIdNum) ||
-      f.id === `film-tmdb-${tmdbIdNum}` ||
-      f.id === `tmdb-${tmdbIdNum}`
-    );
-    if (match) {
-      return { isDup: true, matchedFilm: match };
-    }
-    return { isDup: false };
-  };
+  // Exclude IDs that already exist in the catalog from the selected count
+  const nonDuplicateManualIds = useMemo(() => {
+    return parsedIds.filter(id => !findExistingFilmByTmdb(films, Number(id), mediaType));
+  }, [parsedIds, films, mediaType]);
+
+  const duplicateManualCount = parsedIds.length - nonDuplicateManualIds.length;
 
   // Shared Core Pipeline for both Curated and Manual ID modes
   const runImportPipeline = async (
@@ -125,7 +116,8 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
     let curSkipped = 0;
     let curError = 0;
     let curDone = 0;
-    const sessionProcessed = new Set<number>();
+    // De-duplicate within the same batch by tracking seen (type:id) keys
+    const sessionProcessedKeys = new Set<string>();
 
     for (let i = 0; i < targetItems.length; i++) {
       if (stopRequestedRef.current) {
@@ -134,10 +126,15 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
 
       const { id: tmdbIdStr, type: itemType } = targetItems[i];
       const tmdbIdNum = Number(tmdbIdStr);
+      const batchKey = `${itemType}:${tmdbIdNum}`;
 
-      // 1. Check Duplicate against loaded catalog
-      const dupCheck = isFilmDuplicate(tmdbIdNum, sessionProcessed);
-      if (dupCheck.isDup) {
+      // 1. Check duplicate within the same batch or in existing catalog
+      const isBatchDuplicate = sessionProcessedKeys.has(batchKey);
+      const matchedCatalogFilm = findExistingFilmByTmdb(films, tmdbIdNum, itemType, {
+        title: targetItems[i].preloadedTitle,
+      });
+
+      if (isBatchDuplicate || matchedCatalogFilm) {
         curSkipped++;
         setSkippedCount(curSkipped);
         curDone++;
@@ -145,13 +142,18 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
         setItems(prev => prev.map((item, idx) => idx === i ? {
           ...item,
           status: 'skipped',
-          title: dupCheck.matchedFilm?.title || item.title || `TMDB ID #${tmdbIdStr}`,
-          poster: dupCheck.matchedFilm?.poster || item.poster,
-          year: dupCheck.matchedFilm?.year || item.year,
-          note: 'Sudah ada di katalog (matched by tmdbId)'
+          title: matchedCatalogFilm?.title || item.title || `TMDB ID #${tmdbIdStr}`,
+          poster: matchedCatalogFilm?.poster || item.poster,
+          year: matchedCatalogFilm?.year || item.year,
+          note: isBatchDuplicate
+            ? 'Duplikat dalam batch yang sama'
+            : `Sudah ada di katalog ("${matchedCatalogFilm?.title}")`
         } : item));
         continue;
       }
+
+      // Mark this key so subsequent entries in the same batch are skipped
+      sessionProcessedKeys.add(batchKey);
 
       // Mark current item as fetching
       setItems(prev => prev.map((item, idx) => idx === i ? { ...item, status: 'fetching' } : item));
@@ -164,6 +166,29 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
 
         // 3. Map details to Sotoy Film structure
         const mapped: MappedTmdbFilm = mapTmdbDetailsToFilm(details, itemType);
+
+        // Guard again after details fetched (exact year and classified type)
+        const recheckFilm = findExistingFilmByTmdb(
+          films,
+          mapped.tmdbId || tmdbIdNum,
+          itemType,
+          { title: mapped.title, year: mapped.year }
+        );
+        if (recheckFilm) {
+          curSkipped++;
+          setSkippedCount(curSkipped);
+          curDone++;
+          setCompletedCount(curDone);
+          setItems(prev => prev.map((item, idx) => idx === i ? {
+            ...item,
+            status: 'skipped',
+            title: recheckFilm.title,
+            year: recheckFilm.year,
+            poster: recheckFilm.poster,
+            note: `Sudah ada di katalog ("${recheckFilm.title}")`
+          } : item));
+          continue;
+        }
 
         const posterUrl = mapped.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80';
         const backdropUrl = mapped.backdrop || 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&w=1200&q=80';
@@ -199,6 +224,8 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
           trailerUrl: mapped.trailerUrl || undefined,
           featuredRecommendation: mapped.featuredRecommendation,
           tmdbId: mapped.tmdbId || tmdbIdNum || undefined,
+          ...(mapped.collectionId ? { collectionId: mapped.collectionId } : {}),
+          ...(mapped.collectionName ? { collectionName: mapped.collectionName } : {}),
         };
 
         const success = await onAddFilm(newFilmData);
@@ -206,7 +233,6 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
         if (success !== false) {
           curSuccess++;
           setSuccessCount(curSuccess);
-          sessionProcessed.add(tmdbIdNum);
           setItems(prev => prev.map((item, idx) => idx === i ? {
             ...item,
             status: 'success',
@@ -249,9 +275,9 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
     setIsFetchingList(false);
 
     if (stopRequestedRef.current) {
-      showToast(`Batch import dihentikan: ${curSuccess} berhasil diimpor, ${curSkipped} dilewati, ${curError} gagal.`);
+      showToast(`Batch import dihentikan: ${curSuccess} berhasil diimpor, ${curSkipped} dilewati (sudah ada)${curError > 0 ? `, ${curError} gagal` : ''}.`);
     } else {
-      showToast(`Batch import selesai: ${curSuccess} berhasil diimpor, ${curSkipped} dilewati karena sudah ada di katalog (matched by tmdbId)${curError > 0 ? `, ${curError} gagal` : ''}.`);
+      showToast(`Batch import selesai: ${curSuccess} berhasil diimpor, ${curSkipped} dilewati (sudah ada)${curError > 0 ? `, ${curError} gagal` : ''}.`);
     }
   };
 
@@ -308,12 +334,16 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
 
   // Start Manual ID-Paste Import
   const handleStartManualBatch = async () => {
-    if (parsedIds.length === 0) {
-      showToast('Masukkan minimal satu ID TMDB yang valid.');
+    if (nonDuplicateManualIds.length === 0) {
+      if (parsedIds.length > 0) {
+        showToast(`Semua ${parsedIds.length} ID TMDB yang dimasukkan sudah ada di katalog.`);
+      } else {
+        showToast('Masukkan minimal satu ID TMDB yang valid.');
+      }
       return;
     }
 
-    const collectedItems = parsedIds.map(id => ({
+    const collectedItems = nonDuplicateManualIds.map(id => ({
       id,
       type: mediaType,
     }));
@@ -600,9 +630,16 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
                       (Pisahkan dengan koma, spasi, atau baris baru)
                     </span>
                   </label>
-                  <span className="text-xs font-mono font-bold text-cyan-400">
-                    {parsedIds.length} ID terdeteksi
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono font-bold text-cyan-400">
+                      {nonDuplicateManualIds.length} ID baru dipilih
+                    </span>
+                    {duplicateManualCount > 0 && (
+                      <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full border border-amber-500/30">
+                        {duplicateManualCount} sudah ada
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <textarea
                   rows={4}
@@ -647,7 +684,7 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
                 </span>
                 <span className="px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/30 flex items-center gap-1.5 font-bold">
                   <CopyCheck className="w-3.5 h-3.5 text-amber-400" />
-                  <span>{skippedCount} Dilewati (Duplikat)</span>
+                  <span>{skippedCount} dilewati (sudah ada)</span>
                 </span>
                 {errorCount > 0 && (
                   <span className="px-2.5 py-1 rounded-lg bg-red-500/10 text-red-300 border border-red-500/30 flex items-center gap-1.5 font-bold">
@@ -670,7 +707,7 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
                 <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center gap-2">
                   <CopyCheck className="w-4 h-4 shrink-0 text-amber-400" />
                   <span>
-                    <strong>Laporan Duplikasi:</strong> {skippedCount} film dilewati karena sudah ada di katalog ({skippedCount} films skipped because they already exist, matched by tmdbId).
+                    <strong>Laporan Duplikasi:</strong> {skippedCount} dilewati (sudah ada).
                   </span>
                 </div>
               )}
@@ -751,7 +788,7 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
                       {item.status === 'skipped' && (
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold flex items-center gap-1">
                           <CopyCheck className="w-3 h-3" />
-                          <span>Dilewati</span>
+                          <span>Sudah ada</span>
                         </span>
                       )}
                       {item.status === 'error' && (
@@ -774,7 +811,7 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
             type="button"
             onClick={handleReset}
             disabled={isRunning || (items.length === 0 && rawInput === '')}
-            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all disabled:opacity-40 flex items-center gap-1.5"
+            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-bold transition-all disabled:opacity-40 flex items-center gap-1.5"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Reset</span>
@@ -817,11 +854,11 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
                 type="button"
                 id="start-manual-tmdb-import-btn"
                 onClick={handleStartManualBatch}
-                disabled={parsedIds.length === 0}
+                disabled={nonDuplicateManualIds.length === 0}
                 className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:brightness-110 text-slate-950 font-black text-xs transition-all shadow-lg shadow-cyan-500/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 <Play className="w-3.5 h-3.5 fill-slate-950" />
-                <span>Mulai Import {parsedIds.length > 0 ? `(${parsedIds.length} Film)` : ''}</span>
+                <span>Mulai Import {nonDuplicateManualIds.length > 0 ? `(${nonDuplicateManualIds.length} Film Baru)` : parsedIds.length > 0 ? '(0 Baru)' : ''}</span>
               </button>
             )}
           </div>

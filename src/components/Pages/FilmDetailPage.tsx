@@ -51,6 +51,7 @@ import { FilmDetailSkeleton } from '../Skeletons';
 import { BreadcrumbNavigation } from '../Navigation/BreadcrumbNavigation';
 import { FilmMediaSection } from '../Film/FilmMediaSection';
 import { FilmLastSeasonCard } from '../Film/FilmLastSeasonCard';
+import { FilmRelatedSection } from '../Film/FilmRelatedSection';
 import { fetchFullTmdbCredits } from '../../utils/tmdbHelper';
 import { tmdbMediaType } from '../../utils/tmdbSync';
 import { countReviewAudiences } from '../../utils/shareCardText';
@@ -119,6 +120,7 @@ export const FilmDetailPage: React.FC = () => {
   const [isPlayingTrailer, setIsPlayingTrailer] = useState(false);
   const [reviewFilter, setReviewFilter] = useState<'all' | 'critics' | 'community'>('all');
   const [collectionModalOpen, setCollectionModalOpen] = useState(false);
+  const [hasRelatedSection, setHasRelatedSection] = useState(false);
 
   const { slug } = useParams<{ slug?: string }>();
   const contextFilm: FilmItem | undefined = (slug ? films.find(f => (f.slug && f.slug === slug) || slugify(f.title) === slug || f.id === slug) : undefined)
@@ -703,6 +705,14 @@ export const FilmDetailPage: React.FC = () => {
           >
             Pemeran & Kru ({allCastList.length + allCrewList.length})
           </button>
+          {hasRelatedSection && (
+            <button
+              onClick={() => scrollToSection('section-related')}
+              className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 hover:border-[#FF2E7E] hover:text-white transition-colors shrink-0"
+            >
+              Terkait
+            </button>
+          )}
           {showSeasonSection && (
             <button
               onClick={() => scrollToSection('section-last-season')}
@@ -960,6 +970,13 @@ export const FilmDetailPage: React.FC = () => {
                 </button>
               </div>
             </div>
+
+            {/* 3.5. SERI / FRANCHISE TERKAIT */}
+            <FilmRelatedSection
+              film={film}
+              allFilms={films}
+              onHasRelatedChange={setHasRelatedSection}
+            />
 
             {/* 4. SEASON TERAKHIR (TV SAJA) */}
             <FilmLastSeasonCard film={film} />

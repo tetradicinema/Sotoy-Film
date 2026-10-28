@@ -30,7 +30,8 @@ import {
   MinusSquare,
   FileSpreadsheet,
   Award,
-  RefreshCw
+  RefreshCw,
+  CopyCheck
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { FilmItem, CastMember } from '../../types';
@@ -42,8 +43,11 @@ import {
   generateSuggestedTags, 
   mapTmdbDetailsToFilm,
   fetchTmdbDetails,
-  buildFilmPayloadTmdbId
+  buildFilmPayloadTmdbId,
+  findExistingFilmByTmdb,
+  findTmdbDuplicateGroups
 } from '../../utils/tmdbHelper';
+import { tmdbMediaType } from '../../utils/tmdbSync';
 import { classifyFilmType, normalizeFilmType } from '../../utils/filmType';
 
 interface FilmFormData {
@@ -69,6 +73,9 @@ interface FilmFormData {
   skorSotoy: number;
   trailerUrl: string;
   featuredRecommendation: boolean;
+  collectionId?: number;
+  collectionName?: string;
+  relatedFilmIds: string[];
 }
 
 const DEFAULT_FORM: FilmFormData = {
@@ -94,6 +101,9 @@ const DEFAULT_FORM: FilmFormData = {
   skorSotoy: 4.0,
   trailerUrl: '',
   featuredRecommendation: false,
+  collectionId: undefined,
+  collectionName: undefined,
+  relatedFilmIds: [],
 };
 
 export const AdminCatalogManager: React.FC = () => {
@@ -126,6 +136,51 @@ export const AdminCatalogManager: React.FC = () => {
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [isTmdbSyncModalOpen, setIsTmdbSyncModalOpen] = useState(false);
   const [customTagInput, setCustomTagInput] = useState('');
+  const [showDuplicatesModal, setShowDuplicatesModal] = useState(false);
+  const duplicateGroups = useMemo(() => findTmdbDuplicateGroups(films), [films]);
+  const [relatedSearchQuery, setRelatedSearchQuery] = useState('');
+
+  const relatedSearchResults = useMemo(() => {
+    const q = relatedSearchQuery.trim().toLowerCase();
+    if (!q) return [];
+    return films
+      .filter(f => {
+        if (!f || !f.id) return false;
+        if (editingFilmId && f.id === editingFilmId) return false;
+        if (formData.relatedFilmIds?.includes(f.id)) return false;
+        return (
+          f.title?.toLowerCase().includes(q) ||
+          f.originalTitle?.toLowerCase().includes(q)
+        );
+      })
+      .slice(0, 6);
+  }, [films, editingFilmId, formData.relatedFilmIds, relatedSearchQuery]);
+
+  const handleAddRelatedFilm = (targetFilmId: string) => {
+    if (!targetFilmId) return;
+    if (editingFilmId && targetFilmId === editingFilmId) {
+      showToast('Film tidak dapat menambahkan dirinya sendiri sebagai film terkait!');
+      return;
+    }
+    const current = formData.relatedFilmIds || [];
+    if (current.includes(targetFilmId)) return;
+    if (current.length >= 12) {
+      showToast('Maksimal 12 film terkait!');
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      relatedFilmIds: [...(prev.relatedFilmIds || []), targetFilmId],
+    }));
+    setRelatedSearchQuery('');
+  };
+
+  const handleRemoveRelatedFilm = (targetFilmId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      relatedFilmIds: (prev.relatedFilmIds || []).filter(id => id !== targetFilmId),
+    }));
+  };
 
   // TMDB Import State
   const [tmdbQuery, setTmdbQuery] = useState('');
@@ -188,11 +243,48 @@ export const AdminCatalogManager: React.FC = () => {
 
   // Handle selecting a TMDB search result to import its full details + cast profile photos + auto-tags
   const handleSelectTmdbResult = async (result: any) => {
+    // Stale list guard: Check if this film is already in catalog
+    const itemTitle = result.title || result.name || '';
+    const itemYear = (result.release_date || result.first_air_date || '').substring(0, 4);
+    const existingBefore = findExistingFilmByTmdb(
+      films,
+      result.id,
+      result.media_type || tmdbType,
+      {
+        title: itemTitle,
+        year: itemYear ? parseInt(itemYear, 10) : undefined,
+      }
+    );
+    if (existingBefore) {
+      const msg = `Film "${existingBefore.title}" (${existingBefore.year}) sudah ada di katalog. Impor dibatalkan untuk mencegah duplikat.`;
+      setTmdbError(msg);
+      showToast(msg);
+      return;
+    }
+
     setIsTmdbImporting(true);
     setTmdbError(null);
     try {
       const details = await fetchTmdbDetails(result.id, tmdbType);
       const mapped = mapTmdbDetailsToFilm(details, tmdbType);
+
+      // Re-guard after details fetch with mapped year and normalized media type
+      const mappedMediaType = tmdbMediaType({ type: mapped.type, duration: mapped.duration });
+      const existingAfter = findExistingFilmByTmdb(
+        films,
+        mapped.tmdbId,
+        mappedMediaType,
+        {
+          title: mapped.title,
+          year: mapped.year,
+        }
+      );
+      if (existingAfter) {
+        const msg = `Film "${existingAfter.title}" (${existingAfter.year}) sudah ada di katalog. Impor dibatalkan untuk mencegah duplikat.`;
+        setTmdbError(msg);
+        showToast(msg);
+        return;
+      }
 
       setFormData(prev => ({
         ...prev,
@@ -217,6 +309,9 @@ export const AdminCatalogManager: React.FC = () => {
         duration: mapped.duration || prev.duration,
         trailerUrl: mapped.trailerUrl || prev.trailerUrl,
         skorSotoy: mapped.skorSotoy || prev.skorSotoy,
+        collectionId: mapped.collectionId ?? prev.collectionId,
+        collectionName: mapped.collectionName ?? prev.collectionName,
+        relatedFilmIds: prev.relatedFilmIds || [],
       }));
 
       setImportedTmdbTitle(mapped.title);
@@ -416,6 +511,7 @@ export const AdminCatalogManager: React.FC = () => {
     setShowTmdbSection(true);
     setIsSubmitting(false);
     setCustomTagInput('');
+    setRelatedSearchQuery('');
     setIsModalOpen(true);
   };
 
@@ -459,6 +555,9 @@ export const AdminCatalogManager: React.FC = () => {
       skorSotoy: film.skorSotoy || 4.0,
       trailerUrl: film.trailerUrl || '',
       featuredRecommendation: !!film.featuredRecommendation,
+      collectionId: film.collectionId,
+      collectionName: film.collectionName,
+      relatedFilmIds: Array.isArray(film.relatedFilmIds) ? [...film.relatedFilmIds] : [],
     });
     setTmdbQuery('');
     setTmdbResults([]);
@@ -467,6 +566,7 @@ export const AdminCatalogManager: React.FC = () => {
     setShowTmdbSection(false);
     setIsSubmitting(false);
     setCustomTagInput('');
+    setRelatedSearchQuery('');
     setIsModalOpen(true);
   };
 
@@ -499,6 +599,29 @@ export const AdminCatalogManager: React.FC = () => {
     const castArray = formData.cast
       ? formData.cast.split(',').map(c => c.trim()).filter(Boolean)
       : [];
+
+    // Step 5: Prevent saving a NEW film (not edits) whose tmdbId + media type already exists
+    if (!editingFilmId) {
+      const targetMediaType = tmdbMediaType({
+        type: formData.type,
+        duration: formData.duration,
+      });
+      const existingDup = findExistingFilmByTmdb(
+        films,
+        formData.tmdbId,
+        targetMediaType,
+        {
+          title: formData.title.trim(),
+          year: parsedYear,
+        }
+      );
+      if (existingDup) {
+        showToast(
+          `Gagal menyimpan: film sudah ada di katalog dengan judul "${existingDup.title}" (${existingDup.year}).`
+        );
+        return;
+      }
+    }
 
     setIsSubmitting(true);
 
@@ -537,6 +660,20 @@ export const AdminCatalogManager: React.FC = () => {
         ? films.find(film => film.id === editingFilmId)
         : undefined;
 
+      const validRelatedIds = (formData.relatedFilmIds || [])
+        .filter(id => id && id !== (editingFilmId || ''))
+        .slice(0, 12);
+
+      const resolvedCollectionId =
+        formData.collectionId !== undefined
+          ? formData.collectionId
+          : existingFilm?.collectionId;
+
+      const resolvedCollectionName =
+        formData.collectionName !== undefined && formData.collectionName.trim() !== ''
+          ? formData.collectionName.trim()
+          : existingFilm?.collectionName;
+
       const filmPayload = {
         title: formData.title.trim(),
         originalTitle: formData.originalTitle.trim() || undefined,
@@ -565,6 +702,9 @@ export const AdminCatalogManager: React.FC = () => {
         ],
         trailerUrl: trailerUrl || undefined,
         featuredRecommendation: formData.featuredRecommendation,
+        ...(resolvedCollectionId ? { collectionId: resolvedCollectionId } : {}),
+        ...(resolvedCollectionName ? { collectionName: resolvedCollectionName } : {}),
+        ...(validRelatedIds.length > 0 ? { relatedFilmIds: validRelatedIds } : {}),
       };
 
       let success = false;
@@ -651,6 +791,22 @@ export const AdminCatalogManager: React.FC = () => {
           >
             <Sparkles className="w-4 h-4 text-[#FF2E7E]" />
             <span>Import dari TMDB</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowDuplicatesModal(true)}
+            id="admin-check-tmdb-duplicates-btn"
+            className="px-3.5 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] text-slate-200 hover:text-white border border-white/10 text-xs font-semibold transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+            title="Cek daftar film di katalog yang memiliki TMDB ID dan format yang sama"
+          >
+            <CopyCheck className="w-4 h-4 text-amber-400" />
+            <span>Cek duplikat TMDB</span>
+            {duplicateGroups.length > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px]">
+                {duplicateGroups.length}
+              </span>
+            )}
           </button>
 
           <button
@@ -1139,25 +1295,42 @@ export const AdminCatalogManager: React.FC = () => {
 
                   <div className="max-h-60 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
                     {tmdbResults.map(item => {
-                      const itemTitle = item.title || item.name;
+                      const itemTitle = item.title || item.name || '';
                       const itemDate = item.release_date || item.first_air_date || '';
                       const itemYear = itemDate ? itemDate.slice(0, 4) : '';
+                      const parsedItemYear = itemYear ? parseInt(itemYear, 10) : undefined;
                       const posterUrl = item.poster_path
                         ? `https://image.tmdb.org/t/p/w185${item.poster_path}`
                         : null;
+                      const itemMediaType = item.media_type || tmdbType;
+                      const existingFilm = findExistingFilmByTmdb(films, item.id, itemMediaType, {
+                        title: itemTitle,
+                        year: parsedItemYear,
+                      });
+                      const isAlreadyInCatalog = Boolean(existingFilm);
 
                       return (
                         <div
                           key={item.id}
-                          onClick={() => handleSelectTmdbResult(item)}
-                          className="bg-slate-900/95 hover:bg-slate-800/90 border border-slate-750 hover:border-cyan-500/60 rounded-xl p-2.5 flex items-center justify-between gap-3 cursor-pointer transition-all group"
+                          onClick={() => {
+                            if (!isAlreadyInCatalog) {
+                              handleSelectTmdbResult(item);
+                            }
+                          }}
+                          className={`rounded-xl p-2.5 flex items-center justify-between gap-3 transition-all ${
+                            isAlreadyInCatalog
+                              ? 'bg-amber-950/20 border border-amber-500/40 opacity-90'
+                              : 'bg-slate-900/95 hover:bg-slate-800/90 border border-slate-750 hover:border-cyan-500/60 cursor-pointer group'
+                          }`}
                         >
                           <div className="flex items-center gap-3 min-w-0">
                             {posterUrl?.trim() ? (
                               <img
                                 src={posterUrl.trim()}
                                 alt={itemTitle}
-                                className="w-9 h-13 rounded-lg object-cover ring-1 ring-slate-700 group-hover:ring-cyan-400 shrink-0"
+                                className={`w-9 h-13 rounded-lg object-cover ring-1 shrink-0 ${
+                                  isAlreadyInCatalog ? 'ring-amber-500/50' : 'ring-slate-700 group-hover:ring-cyan-400'
+                                }`}
                               />
                             ) : (
                               <div className="w-9 h-13 rounded-lg bg-slate-800 border border-slate-750 flex items-center justify-center shrink-0 text-slate-500">
@@ -1166,13 +1339,21 @@ export const AdminCatalogManager: React.FC = () => {
                             )}
 
                             <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <h4 className="font-bold text-white text-xs truncate group-hover:text-cyan-300 transition-colors">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className={`font-bold text-xs truncate transition-colors ${
+                                  isAlreadyInCatalog ? 'text-amber-200' : 'text-white group-hover:text-cyan-300'
+                                }`}>
                                   {itemTitle}
                                 </h4>
                                 {itemYear && (
                                   <span className="px-1.5 py-0.2 text-[10px] font-mono font-bold bg-slate-800 text-amber-300 rounded border border-slate-750 shrink-0">
                                     {itemYear}
+                                  </span>
+                                )}
+                                {isAlreadyInCatalog && (
+                                  <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-full flex items-center gap-1 shrink-0">
+                                    <Check className="w-3 h-3 text-amber-400" />
+                                    <span>Sudah ada</span>
                                   </span>
                                 )}
                               </div>
@@ -1182,20 +1363,56 @@ export const AdminCatalogManager: React.FC = () => {
                                   {item.overview}
                                 </p>
                               )}
+
+                              {isAlreadyInCatalog && existingFilm && (
+                                <div className="mt-1 flex items-center gap-2 text-[10px]">
+                                  <span className="text-amber-300/80">
+                                    Sudah ada di katalog: <strong className="text-white font-medium">{existingFilm.title}</strong>
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenEditModal(existingFilm);
+                                    }}
+                                    className="text-cyan-400 hover:text-cyan-300 underline font-bold cursor-pointer"
+                                  >
+                                    Buka Edit Form
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSelectTmdbResult(item);
-                            }}
-                            className="px-2.5 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500 text-cyan-300 hover:text-slate-950 border border-cyan-500/40 text-[11px] font-bold transition-all shrink-0 flex items-center gap-1 group-hover:shadow-sm"
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline">Pilih & Impor</span>
-                          </button>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {isAlreadyInCatalog && existingFilm ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenEditModal(existingFilm);
+                                }}
+                                className="px-2.5 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border border-amber-500/40 text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+                                title="Buka form edit untuk film ini"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">Edit di Katalog</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSelectTmdbResult(item);
+                                }}
+                                disabled={isAlreadyInCatalog}
+                                className="px-2.5 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500 text-cyan-300 hover:text-slate-950 border border-cyan-500/40 text-[11px] font-bold transition-all shrink-0 flex items-center gap-1 group-hover:shadow-sm disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">Pilih & Impor</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
@@ -1623,6 +1840,104 @@ export const AdminCatalogManager: React.FC = () => {
                   />
                 </div>
 
+                {/* Koleksi TMDB (Read-Only when present) */}
+                {formData.collectionName && (
+                  <div className="sm:col-span-2 space-y-1 bg-slate-900/60 border border-slate-800 rounded-xl p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Layers className="w-3.5 h-3.5 text-[#FF2E7E]" />
+                        <span>Koleksi / Franchise TMDB (Otomatis)</span>
+                      </span>
+                      {formData.collectionId && (
+                        <span className="text-[10px] font-mono text-slate-500">ID #{formData.collectionId}</span>
+                      )}
+                    </div>
+                    <p className="text-xs font-bold text-white pt-0.5">{formData.collectionName}</p>
+                  </div>
+                )}
+
+                {/* Film Terkait Picker */}
+                <div className="sm:col-span-2 space-y-2 pt-2 border-t border-slate-800/80">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <Film className="w-3.5 h-3.5 text-[#FF2E7E]" />
+                      <span>Film Terkait (Franchise / Sekuel / Semesta Sinematik)</span>
+                    </label>
+                    <span className={`text-[10px] font-semibold ${formData.relatedFilmIds.length >= 12 ? 'text-amber-400' : 'text-slate-400'}`}>
+                      {formData.relatedFilmIds.length} / 12 film dipilih
+                    </span>
+                  </div>
+
+                  {/* Selected Chips */}
+                  <div className="flex flex-wrap items-center gap-1.5 min-h-[36px] p-2 bg-slate-900 border border-slate-750 rounded-xl">
+                    {formData.relatedFilmIds && formData.relatedFilmIds.length > 0 ? (
+                      formData.relatedFilmIds.map(relId => {
+                        const relFilm = films.find(f => f.id === relId);
+                        const relTitle = relFilm ? `${relFilm.title} (${relFilm.year || 'N/A'})` : relId;
+                        return (
+                          <span
+                            key={relId}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#FF2E7E]/15 text-[#FF2E7E] border border-[#FF2E7E]/30 text-xs font-semibold"
+                          >
+                            <span className="truncate max-w-[200px]">{relTitle}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveRelatedFilm(relId)}
+                              className="hover:text-white transition-colors"
+                              title="Hapus film terkait"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        );
+                      })
+                    ) : (
+                      <span className="text-xs text-slate-500 italic">
+                        Belum ada film terkait dipilih. Cari judul film dari katalog di bawah untuk menambahkan.
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Search Input for Related Films */}
+                  {formData.relatedFilmIds.length < 12 && (
+                    <div className="relative pt-1">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={relatedSearchQuery}
+                        onChange={e => setRelatedSearchQuery(e.target.value)}
+                        placeholder="Cari judul film di katalog Sotoy untuk dihubungkan..."
+                        className="w-full bg-slate-900 border border-slate-750 focus:border-[#FF2E7E] rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none transition-all"
+                      />
+
+                      {/* Dropdown Results */}
+                      {relatedSearchResults.length > 0 && (
+                        <div className="absolute left-0 right-0 top-full mt-1 z-20 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden max-h-48 overflow-y-auto">
+                          {relatedSearchResults.map(f => (
+                            <button
+                              key={f.id}
+                              type="button"
+                              onClick={() => handleAddRelatedFilm(f.id)}
+                              className="w-full px-3 py-2 text-left hover:bg-slate-800 flex items-center justify-between text-xs text-white border-b border-slate-800 last:border-b-0 transition-colors"
+                            >
+                              <div className="flex items-center gap-2 truncate">
+                                {f.poster && (
+                                  <img src={f.poster} alt={f.title} className="w-5 h-7 object-cover rounded shrink-0 bg-slate-950" />
+                                )}
+                                <div className="truncate">
+                                  <span className="font-bold">{f.title}</span>
+                                  <span className="text-slate-400 ml-1.5 font-normal">({f.year || 'N/A'})</span>
+                                </div>
+                              </div>
+                              <span className="text-[10px] text-[#FF2E7E] font-bold shrink-0 ml-2">+ Hubungkan</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 {/* Synopsis */}
                 <div className="sm:col-span-2 space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
@@ -2001,6 +2316,150 @@ export const AdminCatalogManager: React.FC = () => {
                     <span>Tambahkan Tag</span>
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* READ-ONLY TMDB DUPLICATES REPORT MODAL */}
+      {showDuplicatesModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
+          onClick={() => setShowDuplicatesModal(false)}
+        >
+          <div
+            className="bg-[#171717] border border-amber-500/30 rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="p-5 border-b border-white/[0.08] flex items-center justify-between bg-gradient-to-r from-amber-950/30 via-[#171717] to-slate-900/40">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center">
+                  <CopyCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-white font-display font-black text-base flex items-center gap-2">
+                    <span>Laporan Duplikat TMDB</span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold uppercase">
+                      Read-Only
+                    </span>
+                  </h3>
+                  <p className="text-slate-400 text-xs mt-0.5">
+                    Daftar film di katalog yang berbagi nilai TMDB ID dan format media yang sama.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDuplicatesModal(false)}
+                className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-white/[0.05] transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 overflow-y-auto space-y-4 flex-1">
+              {duplicateGroups.length === 0 ? (
+                <div className="p-6 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 text-center space-y-2">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
+                  <h4 className="text-white font-bold text-sm">Tidak Ditemukan Duplikat TMDB</h4>
+                  <p className="text-slate-400 text-xs max-w-md mx-auto leading-relaxed">
+                    Semua film yang memiliki TMDB ID di katalog Anda sudah unik berdasarkan kombinasi (mediaType, tmdbId).
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-300 text-xs flex items-start gap-2.5">
+                    <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <div className="space-y-0.5 leading-relaxed">
+                      <p className="font-bold">
+                        Ditemukan {duplicateGroups.length} grup entri dengan TMDB ID kembar.
+                      </p>
+                      <p className="text-slate-300 text-[11px]">
+                        Laporan ini bersifat <em>read-only</em> dan tidak mengubah atau menghapus data secara otomatis. Gunakan tombol &ldquo;Edit Film&rdquo; untuk memeriksa atau memperbaiki film bersangkutan.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {duplicateGroups.map((group) => (
+                      <div
+                        key={`${group.mediaType}-${group.tmdbId}`}
+                        className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3"
+                      >
+                        <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-slate-800 text-cyan-300 border border-slate-700 uppercase">
+                              {group.mediaType === 'tv' ? 'TV Series' : 'Movie'}
+                            </span>
+                            <span className="font-mono font-bold text-xs text-amber-300">
+                              TMDB ID #{group.tmdbId}
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-slate-400 font-mono">
+                            {group.films.length} entri kembar
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {group.films.map((film) => (
+                            <div
+                              key={film.id}
+                              className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between gap-3"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <img
+                                  src={film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=120&q=80'}
+                                  alt={film.title}
+                                  className="w-9 h-13 rounded-lg object-cover ring-1 ring-slate-800 shrink-0"
+                                />
+                                <div className="min-w-0">
+                                  <h5 className="font-bold text-white text-xs truncate">
+                                    {film.title}
+                                  </h5>
+                                  <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono mt-0.5">
+                                    <span>Tahun: {film.year || '-'}</span>
+                                    <span>•</span>
+                                    <span>Format: {film.type}</span>
+                                  </div>
+                                  <div className="text-[10px] text-slate-500 font-mono truncate mt-0.5">
+                                    Doc ID: {film.id}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowDuplicatesModal(false);
+                                  handleOpenEditModal(film);
+                                }}
+                                className="px-2.5 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500 text-cyan-300 hover:text-slate-950 border border-cyan-500/40 text-[11px] font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer"
+                                title={`Edit form untuk film ${film.title}`}
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                                <span>Edit</span>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-white/[0.08] bg-slate-900/60 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setShowDuplicatesModal(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-bold transition-all cursor-pointer"
+              >
+                Tutup Laporan
               </button>
             </div>
           </div>

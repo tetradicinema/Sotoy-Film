@@ -158,7 +158,8 @@ import {
   deleteUser
 } from 'firebase/auth';
 import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
-import { fetchTmdbDetails, mapTmdbDetailsToFilm, TmdbSearchResultItem } from '../utils/tmdbHelper';
+import { fetchTmdbDetails, mapTmdbDetailsToFilm, TmdbSearchResultItem, findExistingFilmByTmdb } from '../utils/tmdbHelper';
+import { tmdbMediaType } from '../utils/tmdbSync';
 
 export const ADMIN_UIDS = [
   'QkNGf1ZfhsMyUEk90a6Iz8ZplZS2', // User ID Admin 1
@@ -6452,9 +6453,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const mediaType = tmdbItem.media_type === 'tv' ? 'tv' : 'movie';
     const tmdbIdNum = Number(tmdbItem.id);
 
-    // Check if film already exists in `films` state
-    const existing = films.find(f => f.tmdbId === tmdbIdNum || f.id === `tmdb-${tmdbIdNum}`);
+    // Guard 1: Check if film already exists in `films` state via findExistingFilmByTmdb
+    const existing = findExistingFilmByTmdb(films, tmdbIdNum, mediaType, {
+      title: tmdbItem.title || tmdbItem.name,
+    });
     if (existing) {
+      showToast(`Film "${existing.title}" sudah ada di katalog.`, 'info');
       navigateTo('film-detail', { filmId: existing.id });
       return existing;
     }
@@ -6463,6 +6467,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const details = await fetchTmdbDetails(tmdbIdNum, mediaType);
       const mapped = mapTmdbDetailsToFilm(details, mediaType);
+
+      // Guard 2: Re-check after mapped details are available (with exact year and classified type)
+      const mappedMediaType = tmdbMediaType({ type: mapped.type, duration: mapped.duration });
+      const existingAfter = findExistingFilmByTmdb(films, mapped.tmdbId, mappedMediaType, {
+        title: mapped.title,
+        year: mapped.year,
+      });
+      if (existingAfter) {
+        showToast(`Film "${existingAfter.title}" sudah ada di katalog.`, 'info');
+        navigateTo('film-detail', { filmId: existingAfter.id });
+        return existingAfter;
+      }
 
       const newFilm: FilmItem = {
         ...mapped,

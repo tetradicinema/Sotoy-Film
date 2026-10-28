@@ -149,6 +149,12 @@ export async function fetchTmdbSyncData(
     },
     status: data.status || '',
     originCountry: mapTmdbOriginCountry(data),
+    ...(type === 'movie' && data.belongs_to_collection?.id
+      ? { collectionId: Number(data.belongs_to_collection.id) }
+      : {}),
+    ...(type === 'movie' && data.belongs_to_collection?.name
+      ? { collectionName: String(data.belongs_to_collection.name).trim() }
+      : {}),
   };
 }
 

@@ -26,6 +26,8 @@
     "test:tmdb-id": "node --import tsx scripts/test-tmdb-id-match.ts",
     "test:tmdb-media": "node --import tsx scripts/test-tmdb-media.ts",
     "test:tmdb-seasons": "node --import tsx scripts/test-tmdb-seasons.ts",
+    "test:tmdb-duplicates": "node --import tsx scripts/test-tmdb-duplicates.ts",
+    "test:related-films": "node --import tsx scripts/test-related-films.ts",
     "test:media-ratings": "node --import tsx scripts/test-media-ratings.ts",
     "test:api-imports": "node --import tsx scripts/test-api-imports.ts",
     "test:film-type": "node --import tsx scripts/test-film-type.ts",

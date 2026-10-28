@@ -26,6 +26,8 @@ export interface TmdbSyncData {
   status: string;
   /** ISO 3166-1 alpha-2 country codes, upper case, unique and sorted. */
   originCountry: string[];
+  collectionId?: number;
+  collectionName?: string;
 }
 
 export type WhereToWatchEntry = FilmItem['whereToWatch'][number];
@@ -402,6 +404,19 @@ export function evaluateFilmSync({
   ) {
     updates.originCountry = syncOriginCountry;
     changes.push(`negara: ${syncOriginCountry.join(', ')}`);
+  }
+
+  if (sync.type === 'movie') {
+    if (sync.collectionId && sync.collectionId !== film.collectionId) {
+      updates.collectionId = sync.collectionId;
+      changes.push(`koleksi: ${sync.collectionName || sync.collectionId}`);
+    }
+    if (sync.collectionName && sync.collectionName !== film.collectionName) {
+      updates.collectionName = sync.collectionName;
+      if (!updates.collectionId) {
+        changes.push(`nama koleksi: ${sync.collectionName}`);
+      }
+    }
   }
 
   const effectiveIdReleaseDate = pickedIdReleaseDate ?? film.idReleaseDate;

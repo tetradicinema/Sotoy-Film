@@ -1,7 +1,8 @@
-import { CastMember, CrewMember } from '../types';
+import { CastMember, CrewMember, FilmItem } from '../types';
 import { slugify } from './slugify';
 import { classifyFilmType, FilmFormat } from './filmType';
 import { mapTmdbOriginCountry } from './tmdbCountry';
+import { tmdbMediaType, normalizeTitle } from './tmdbSync';
 import type { TmdbMediaData } from './tmdbMediaTrim';
 import type { TmdbSeasonData, TmdbSeasonsData, TmdbEpisodeImagesData } from './tmdbSeasonsTrim';
 
@@ -30,6 +31,22 @@ export interface MappedTmdbFilm {
   featuredRecommendation: boolean;
   tmdbId: number;
   originCountry: string[];
+  collectionId?: number;
+  collectionName?: string;
+}
+
+export interface TmdbCollectionPart {
+  tmdbId: number;
+  title: string;
+  releaseDate: string;
+  posterPath: string | null;
+  voteAverage: number;
+}
+
+export interface TmdbCollectionResponse {
+  id: number;
+  name: string;
+  parts: TmdbCollectionPart[];
 }
 
 export interface TmdbSearchResultItem {
@@ -129,7 +146,7 @@ export const formatDuration = (minutes?: number): string => {
   return `${m}m`;
 };
 
-const asPositiveTmdbId = (value: unknown): number | undefined => {
+export const asPositiveTmdbId = (value: unknown): number | undefined => {
   if (typeof value === 'number') {
     return Number.isInteger(value) && value > 0 ? value : undefined;
   }
@@ -457,6 +474,15 @@ export const mapTmdbDetailsToFilm = (details: any, type: 'movie' | 'tv'): Mapped
   // Auto-selected initial tags (top 4-5)
   const initialTags = suggestedTags.slice(0, 5);
 
+  const collectionId =
+    isMovie && details.belongs_to_collection?.id
+      ? Number(details.belongs_to_collection.id)
+      : undefined;
+  const collectionName =
+    isMovie && details.belongs_to_collection?.name
+      ? String(details.belongs_to_collection.name).trim()
+      : undefined;
+
   return {
     title: mappedTitle,
     originalTitle: mappedOriginalTitle,
@@ -485,7 +511,60 @@ export const mapTmdbDetailsToFilm = (details: any, type: 'movie' | 'tv'): Mapped
     featuredRecommendation: (details.vote_average || 0) >= 8.0,
     tmdbId: details.id,
     originCountry: mapTmdbOriginCountry(details),
+    ...(collectionId ? { collectionId } : {}),
+    ...(collectionName ? { collectionName } : {}),
   };
+};
+
+const collectionCache = new Map<number, TmdbCollectionResponse | null>();
+const inFlightCollections = new Map<number, Promise<TmdbCollectionResponse | null>>();
+
+/**
+ * Fetches TMDB collection details with in-memory module cache and in-flight deduplication.
+ * Returns null silently on error.
+ */
+export const fetchTmdbCollection = async (
+  collectionId: number
+): Promise<TmdbCollectionResponse | null> => {
+  if (!collectionId || typeof collectionId !== 'number' || isNaN(collectionId) || collectionId <= 0) {
+    return null;
+  }
+  if (collectionCache.has(collectionId)) {
+    return collectionCache.get(collectionId) ?? null;
+  }
+  if (inFlightCollections.has(collectionId)) {
+    return inFlightCollections.get(collectionId)!;
+  }
+
+  const promise = (async () => {
+    try {
+      const res = await fetch(`/api/tmdb?action=collection&id=${collectionId}`);
+      if (!res.ok) {
+        collectionCache.set(collectionId, null);
+        return null;
+      }
+      const data = await res.json();
+      if (!data || typeof data.id !== 'number') {
+        collectionCache.set(collectionId, null);
+        return null;
+      }
+      const result: TmdbCollectionResponse = {
+        id: data.id,
+        name: data.name || '',
+        parts: Array.isArray(data.parts) ? data.parts : [],
+      };
+      collectionCache.set(collectionId, result);
+      return result;
+    } catch {
+      collectionCache.set(collectionId, null);
+      return null;
+    } finally {
+      inFlightCollections.delete(collectionId);
+    }
+  })();
+
+  inFlightCollections.set(collectionId, promise);
+  return promise;
 };
 
 /**
@@ -830,4 +909,158 @@ export const fetchTmdbEpisodeImages = async (
   if (result) episodeImagesCache.set(cacheKey, result);
   return result;
 };
+
+// ---------------------------------------------------------------------------
+// TMDB Duplicate Prevention Helpers
+// ---------------------------------------------------------------------------
+
+export interface CandidateFilmMeta {
+  title?: string;
+  year?: number | string;
+  release_date?: string;
+  first_air_date?: string;
+  name?: string;
+}
+
+/**
+ * Searches the catalog films for a duplicate of a TMDB item.
+ *
+ * Identity key: (mediaType, tmdbId) where mediaType is determined using
+ * tmdbMediaType(film) on catalog films and normalized to 'movie' | 'tv' for
+ * the incoming query.
+ *
+ * Fallback: Only for catalog films WITHOUT a tmdbId, matches if:
+ * normalized title (lowercase, trimmed, punctuation stripped) + same year + same media type.
+ */
+export function findExistingFilmByTmdb(
+  films: readonly FilmItem[] | undefined | null,
+  tmdbId: unknown,
+  mediaType: unknown,
+  candidateMeta?: CandidateFilmMeta | string | null,
+  candidateYear?: number | string | null
+): FilmItem | null {
+  if (!Array.isArray(films) || films.length === 0) {
+    return null;
+  }
+
+  // 1. Normalize mediaType
+  const rawType = typeof mediaType === 'string' ? mediaType.trim().toLowerCase() : '';
+  const targetType: 'movie' | 'tv' = (rawType === 'tv' || rawType === 'series') ? 'tv' : 'movie';
+
+  // 2. Normalize target TMDB ID
+  const targetTmdbId = asPositiveTmdbId(tmdbId);
+
+  // 3. Extract candidate title & year for fallback if supplied
+  let candTitle: string | undefined;
+  let candYear: number | undefined;
+
+  if (typeof candidateMeta === 'string') {
+    candTitle = candidateMeta.trim();
+    if (candidateYear !== undefined && candidateYear !== null) {
+      const y = typeof candidateYear === 'number' ? candidateYear : parseInt(String(candidateYear).slice(0, 4), 10);
+      if (!isNaN(y) && y > 0) candYear = y;
+    }
+  } else if (candidateMeta && typeof candidateMeta === 'object') {
+    const rawTitle = candidateMeta.title || candidateMeta.name;
+    if (typeof rawTitle === 'string') candTitle = rawTitle.trim();
+    const rawY = candidateMeta.year ?? candidateMeta.release_date ?? candidateMeta.first_air_date;
+    if (rawY !== undefined && rawY !== null) {
+      const y = typeof rawY === 'number' ? rawY : parseInt(String(rawY).slice(0, 4), 10);
+      if (!isNaN(y) && y > 0) candYear = y;
+    }
+  }
+
+  // 4. Primary check: (mediaType, tmdbId)
+  if (targetTmdbId !== undefined) {
+    for (const film of films) {
+      if (!film) continue;
+      const filmTmdbId = asPositiveTmdbId(film.tmdbId);
+      const isTmdbIdMatch =
+        filmTmdbId === targetTmdbId ||
+        film.id === `tmdb-${targetTmdbId}` ||
+        film.id === `film-tmdb-${targetTmdbId}`;
+
+      if (isTmdbIdMatch) {
+        if (tmdbMediaType(film) === targetType) {
+          return film;
+        }
+      }
+    }
+  }
+
+  // 5. Fallback ONLY for catalog films WITHOUT a tmdbId:
+  // normalized title + same year + same media type
+  if (candTitle && candYear !== undefined) {
+    const normCandTitle = normalizeTitle(candTitle);
+    if (normCandTitle.length > 0) {
+      for (const film of films) {
+        if (!film) continue;
+        const filmTmdbId = asPositiveTmdbId(film.tmdbId);
+        // Fallback ONLY applies when the catalog film has NO tmdbId
+        if (filmTmdbId !== undefined) {
+          continue;
+        }
+
+        if (tmdbMediaType(film) !== targetType) {
+          continue;
+        }
+
+        if (film.year !== candYear) {
+          continue;
+        }
+
+        const normFilmTitle = normalizeTitle(film.title);
+        const normFilmOrig = film.originalTitle ? normalizeTitle(film.originalTitle) : '';
+        if (normFilmTitle === normCandTitle || (normFilmOrig && normFilmOrig === normCandTitle)) {
+          return film;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+export interface TmdbDuplicateGroup {
+  tmdbId: number;
+  mediaType: 'movie' | 'tv';
+  films: FilmItem[];
+}
+
+/**
+ * Finds all groups of films in the catalog that share the exact same (mediaType, tmdbId).
+ * Does not mutate or delete anything.
+ */
+export function findTmdbDuplicateGroups(films: readonly FilmItem[] | undefined | null): TmdbDuplicateGroup[] {
+  if (!Array.isArray(films) || films.length === 0) {
+    return [];
+  }
+
+  const map = new Map<string, { tmdbId: number; mediaType: 'movie' | 'tv'; films: FilmItem[] }>();
+
+  for (const film of films) {
+    if (!film) continue;
+    const tmdbId = asPositiveTmdbId(film.tmdbId);
+    if (!tmdbId) continue;
+    const mediaType = tmdbMediaType(film);
+    const key = `${mediaType}:${tmdbId}`;
+
+    const existing = map.get(key);
+    if (existing) {
+      existing.films.push(film);
+    } else {
+      map.set(key, { tmdbId, mediaType, films: [film] });
+    }
+  }
+
+  const duplicateGroups: TmdbDuplicateGroup[] = [];
+  for (const group of map.values()) {
+    if (group.films.length > 1) {
+      duplicateGroups.push(group);
+    }
+  }
+
+  // Sort groups by tmdbId
+  return duplicateGroups.sort((a, b) => a.tmdbId - b.tmdbId);
+}
 

@@ -239,6 +239,9 @@ export interface FilmItem {
   isPopularThisWeek?: boolean;
   curatorNote?: string;
   scoreScale?: number;
+  collectionId?: number;
+  collectionName?: string;
+  relatedFilmIds?: string[];
   createdAt?: string;
 }
 

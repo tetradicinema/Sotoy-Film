@@ -200,6 +200,60 @@ export async function handleTmdbRequest(req: any, res: any) {
       return res.status(200).json(trimTmdbMedia(data));
     }
 
+    if (action === 'collection') {
+      if (!/^\d+$/.test(id) || Number(id) <= 0) {
+        return res.status(400).json({
+          error: 'Valid numerical parameter "id" is required for collection action.'
+        });
+      }
+
+      const tmdbUrl = new URL(`https://api.themoviedb.org/3/collection/${id}`);
+      if (!isBearer) {
+        tmdbUrl.searchParams.set('api_key', apiKey);
+      }
+      tmdbUrl.searchParams.set('language', 'en-US');
+
+      const response = await fetch(tmdbUrl.toString(), {
+        method: 'GET',
+        headers: authHeaders,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return res.status(response.status).json({
+          error: data.status_message || `TMDB API error (${response.status})`,
+          code: 'TMDB_API_ERROR'
+        });
+      }
+
+      const rawParts = Array.isArray(data.parts) ? data.parts : [];
+      const parts = rawParts.map((part: any) => ({
+        tmdbId: Number(part.id),
+        title: part.title || part.name || '',
+        releaseDate: part.release_date || part.first_air_date || '',
+        posterPath: part.poster_path || null,
+        voteAverage: typeof part.vote_average === 'number' ? part.vote_average : 0,
+      }));
+
+      // Sort by releaseDate ascending, undated last
+      parts.sort((a: any, b: any) => {
+        const dateA = a.releaseDate ? a.releaseDate.trim() : '';
+        const dateB = b.releaseDate ? b.releaseDate.trim() : '';
+        if (!dateA && !dateB) return 0;
+        if (!dateA) return 1;
+        if (!dateB) return -1;
+        return dateA.localeCompare(dateB);
+      });
+
+      res.setHeader?.('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+      return res.status(200).json({
+        id: Number(data.id),
+        name: data.name || '',
+        parts,
+      });
+    }
+
     if (action === 'seasons') {
       if (!/^\d+$/.test(id) || Number(id) <= 0) {
         return res.status(400).json({
@@ -433,7 +487,7 @@ export async function handleTmdbRequest(req: any, res: any) {
     }
 
     return res.status(400).json({
-      error: 'Invalid action. Supported actions: "search", "details", "media", "list", "sync", "now_playing_ids", "seasons", "season", or "episode_images".'
+      error: 'Invalid action. Supported actions: "search", "details", "media", "collection", "list", "sync", "now_playing_ids", "seasons", "season", or "episode_images".'
     });
   } catch (err: any) {
     console.error('TMDB Proxy Server Error:', err);
