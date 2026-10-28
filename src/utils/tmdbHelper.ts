@@ -3,6 +3,7 @@ import { slugify } from './slugify';
 import { classifyFilmType, FilmFormat } from './filmType';
 import { mapTmdbOriginCountry } from './tmdbCountry';
 import type { TmdbMediaData } from './tmdbMediaTrim';
+import type { TmdbSeasonData, TmdbSeasonsData } from './tmdbSeasonsTrim';
 
 export interface MappedTmdbFilm {
   title: string;
@@ -662,4 +663,110 @@ export const tmdbYoutubeThumbUrl = (key: string): string =>
 
 export const tmdbYoutubeEmbedUrl = (key: string): string =>
   `https://www.youtube.com/embed/${key}?autoplay=1&rel=0`;
+
+// ---------------------------------------------------------------------------
+// TV seasons & episodes
+// ---------------------------------------------------------------------------
+
+const seasonsCache = new Map<string, TmdbSeasonsData>();
+const seasonsInFlight = new Map<string, Promise<TmdbSeasonsData | null>>();
+const seasonCache = new Map<string, TmdbSeasonData>();
+const seasonInFlight = new Map<string, Promise<TmdbSeasonData | null>>();
+
+const asTmdbId = (tmdbId: number | string | null | undefined): string => {
+  const id = String(tmdbId ?? '').trim();
+  return /^\d+$/.test(id) && Number(id) > 0 ? id : '';
+};
+
+/**
+ * Fetches the trimmed season list for a TV show. Results are cached at module
+ * level and concurrent calls for the same id are de-duplicated. Any failure
+ * resolves to `null` without throwing.
+ */
+export const fetchTmdbSeasons = async (
+  tmdbId: number | string | null | undefined
+): Promise<TmdbSeasonsData | null> => {
+  const id = asTmdbId(tmdbId);
+  if (!id) return null;
+
+  const cached = seasonsCache.get(id);
+  if (cached) return cached;
+
+  const inFlight = seasonsInFlight.get(id);
+  if (inFlight) return inFlight;
+
+  const request = (async (): Promise<TmdbSeasonsData | null> => {
+    try {
+      const res = await fetch(`/api/tmdb?action=seasons&id=${encodeURIComponent(id)}`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (!data || typeof data !== 'object' || !Array.isArray(data.seasons)) return null;
+      return data as TmdbSeasonsData;
+    } catch {
+      return null;
+    } finally {
+      seasonsInFlight.delete(id);
+    }
+  })();
+
+  seasonsInFlight.set(id, request);
+
+  const result = await request;
+  if (result) seasonsCache.set(id, result);
+  return result;
+};
+
+/**
+ * Fetches the trimmed episode list for one season of a TV show. Results are
+ * cached at module level and concurrent calls are de-duplicated. Any failure
+ * resolves to `null` without throwing.
+ */
+export const fetchTmdbSeason = async (
+  tmdbId: number | string | null | undefined,
+  seasonNumber: number | string
+): Promise<TmdbSeasonData | null> => {
+  const id = asTmdbId(tmdbId);
+  if (!id) return null;
+
+  const rawSeason = String(seasonNumber ?? '').trim();
+  if (!/^\d+$/.test(rawSeason)) return null;
+  const season = Number(rawSeason);
+  if (!Number.isInteger(season) || season < 0 || season > 100) return null;
+
+  const cacheKey = `${id}:${season}`;
+
+  const cached = seasonCache.get(cacheKey);
+  if (cached) return cached;
+
+  const inFlight = seasonInFlight.get(cacheKey);
+  if (inFlight) return inFlight;
+
+  const request = (async (): Promise<TmdbSeasonData | null> => {
+    try {
+      const res = await fetch(
+        `/api/tmdb?action=season&id=${encodeURIComponent(id)}&season=${season}`
+      );
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (!data || typeof data !== 'object' || !Array.isArray(data.episodes)) return null;
+      return data as TmdbSeasonData;
+    } catch {
+      return null;
+    } finally {
+      seasonInFlight.delete(cacheKey);
+    }
+  })();
+
+  seasonInFlight.set(cacheKey, request);
+
+  const result = await request;
+  if (result) seasonCache.set(cacheKey, result);
+  return result;
+};
+
+export const tmdbSeasonPosterUrl = (filePath: string): string =>
+  `${TMDB_IMAGE_BASE}/w342${filePath}`;
+
+export const tmdbEpisodeStillUrl = (filePath: string): string =>
+  `${TMDB_IMAGE_BASE}/w300${filePath}`;
 

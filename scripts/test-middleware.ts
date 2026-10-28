@@ -666,6 +666,18 @@ const TEST_CASES: TestCase[] = [
     expectedBranch: 'HUMAN', // Falls through gracefully with next() instead of throwing 500
   },
   {
+    name: 'Bot on invalid season number (/film/:slug/season/abc) falls through',
+    userAgent: 'Googlebot/2.1',
+    path: '/film/breaking-bad/season/abc',
+    expectedBranch: 'HUMAN',
+  },
+  {
+    name: 'Bot on unknown film subpath (/film/:slug/other) falls through',
+    userAgent: 'Googlebot/2.1',
+    path: '/film/breaking-bad/other',
+    expectedBranch: 'HUMAN',
+  },
+  {
     name: 'Bot on draft article slug (draft -> generic fallback / pass-through)',
     userAgent: 'Googlebot/2.1',
     path: '/artikel/draft-article',
@@ -962,6 +974,82 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
     check(
       'normal browser response does not include the seo-prefetch script',
       !humanBody.includes('seo-prefetch')
+    );
+  }
+
+  // Season sub-routes reuse the film response with a noindex canonical
+  {
+    const canonicalBase = 'https://www.sotoyfilm.my.id/film/breaking-bad';
+
+    const detailResponse = await middleware(botRequest('/film/breaking-bad'));
+    const detailHtml = await detailResponse.text();
+    check(
+      '/film/:slug keeps its detail canonical',
+      getCanonicalHref(detailHtml) === canonicalBase
+    );
+    check(
+      '/film/:slug keeps the indexable x-robots-tag',
+      detailResponse.headers.get('x-robots-tag') === 'all'
+    );
+    check(
+      '/film/:slug detail title is unchanged',
+      detailHtml.includes('<title>Breaking Bad (2008) — Skor Sotoy & Review Film') ||
+        detailHtml.includes('Skor Sotoy &amp; Review Film')
+    );
+
+    const seasonsResponse = await middleware(botRequest('/film/breaking-bad/seasons'));
+    const seasonsHtml = await seasonsResponse.text();
+    check(
+      '/film/:slug/seasons returns 200 HTML',
+      seasonsResponse.status === 200 &&
+        (seasonsResponse.headers.get('content-type') || '').includes('text/html')
+    );
+    check(
+      '/film/:slug/seasons canonical points at the film page',
+      getCanonicalHref(seasonsHtml) === canonicalBase
+    );
+    check(
+      '/film/:slug/seasons has a noindex,follow robots meta',
+      getMetaContent(seasonsHtml, 'robots') === 'noindex, follow'
+    );
+    check(
+      '/film/:slug/seasons sets the noindex x-robots-tag',
+      seasonsResponse.headers.get('x-robots-tag') === 'noindex, follow'
+    );
+    check('/film/:slug/seasons title mentions all seasons', seasonsHtml.includes('Semua Season'));
+
+    const seasonResponse = await middleware(botRequest('/film/breaking-bad/season/2'));
+    const seasonHtml = await seasonResponse.text();
+    check(
+      '/film/:slug/season/:n returns 200 HTML',
+      seasonResponse.status === 200 &&
+        (seasonResponse.headers.get('content-type') || '').includes('text/html')
+    );
+    check(
+      '/film/:slug/season/:n canonical points at the film page',
+      getCanonicalHref(seasonHtml) === canonicalBase
+    );
+    check(
+      '/film/:slug/season/:n has a noindex,follow robots meta',
+      getMetaContent(seasonHtml, 'robots') === 'noindex, follow'
+    );
+    check(
+      '/film/:slug/season/:n title mentions the season number',
+      seasonHtml.includes('Season 2')
+    );
+
+    const invalidSeasonResponse = await middleware(botRequest('/film/breaking-bad/season/abc'));
+    check(
+      'invalid season number falls through to safeNext()',
+      invalidSeasonResponse.headers.get('x-middleware-next') === '1' &&
+        (await invalidSeasonResponse.text()) === ''
+    );
+
+    const unknownSubpathResponse = await middleware(botRequest('/film/breaking-bad/other'));
+    check(
+      'unknown film subpath falls through to safeNext()',
+      unknownSubpathResponse.headers.get('x-middleware-next') === '1' &&
+        (await unknownSubpathResponse.text()) === ''
     );
   }
 

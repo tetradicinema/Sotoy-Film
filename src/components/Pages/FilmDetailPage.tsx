@@ -50,7 +50,9 @@ import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { FilmDetailSkeleton } from '../Skeletons';
 import { BreadcrumbNavigation } from '../Navigation/BreadcrumbNavigation';
 import { FilmMediaSection } from '../Film/FilmMediaSection';
+import { FilmLastSeasonCard } from '../Film/FilmLastSeasonCard';
 import { fetchFullTmdbCredits } from '../../utils/tmdbHelper';
+import { tmdbMediaType } from '../../utils/tmdbSync';
 import { countReviewAudiences } from '../../utils/shareCardText';
 
 const RelatedArticleAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }> = ({ authorId, defaultAuthor }) => {
@@ -296,6 +298,7 @@ export const FilmDetailPage: React.FC = () => {
   }
 
   const isInWatchlist = isItemInAnyCollection(film.id, 'film');
+  const showSeasonSection = Boolean(film.tmdbId) && tmdbMediaType(film) === 'tv';
 
   // Cast with photos fallback
   const allCastList: CastMember[] = liveCredits.cast && liveCredits.cast.length > 0
@@ -700,6 +703,14 @@ export const FilmDetailPage: React.FC = () => {
           >
             Pemeran & Kru ({allCastList.length + allCrewList.length})
           </button>
+          {showSeasonSection && (
+            <button
+              onClick={() => scrollToSection('section-last-season')}
+              className="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 hover:border-[#FF2E7E] hover:text-white transition-colors shrink-0"
+            >
+              Season
+            </button>
+          )}
           {(film.tmdbId || film.trailerUrl || (film.stills && film.stills.length > 0)) && (
             <button
               onClick={() => scrollToSection('section-media')}
@@ -950,7 +961,10 @@ export const FilmDetailPage: React.FC = () => {
               </div>
             </div>
 
-            {/* 4. MEDIA: VIDEO, BACKDROP, POSTER (CLIENT-SIDE TMDB) */}
+            {/* 4. SEASON TERAKHIR (TV SAJA) */}
+            <FilmLastSeasonCard film={film} />
+
+            {/* 5. MEDIA: VIDEO, BACKDROP, POSTER (CLIENT-SIDE TMDB) */}
             <FilmMediaSection film={film} />
 
             {/* 5. ARTIKEL & ULASAN PENULIS SOTOY */}

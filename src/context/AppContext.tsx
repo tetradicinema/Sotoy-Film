@@ -231,6 +231,8 @@ export type AppView =
   | 'article-detail'
   | 'film-database'
   | 'film-detail'
+  | 'film-seasons'
+  | 'film-season'
   | 'film-recommendations'
   | 'community-feed'
   | 'buzz-detail'
@@ -961,10 +963,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (path === '/') {
       setCurrentView('home');
     } else if (path.startsWith('/film/')) {
-      const slug = decodeURIComponent(path.replace('/film/', ''));
-      setCurrentView('film-detail');
-      const foundFilm = films.find(f => (f.slug && f.slug === slug) || slugify(f.title) === slug || f.id === slug);
-      if (foundFilm) setSelectedFilmId(foundFilm.id);
+      // Only the FIRST path segment after /film/ is the slug; /seasons and
+      // /season/{n} are dedicated views that must not overwrite it.
+      const segments = path.slice('/film/'.length).split('/').filter(Boolean);
+      let slug = segments[0] || '';
+      try {
+        slug = slug ? decodeURIComponent(slug) : '';
+      } catch {
+        // keep the raw segment when it contains malformed escapes
+      }
+
+      if (segments[1] === 'seasons') {
+        setCurrentView('film-seasons');
+      } else if (segments[1] === 'season' && segments[2]) {
+        setCurrentView('film-season');
+      } else {
+        setCurrentView('film-detail');
+      }
+
+      if (slug) {
+        const foundFilm = films.find(f => (f.slug && f.slug === slug) || slugify(f.title) === slug || f.id === slug);
+        if (foundFilm) setSelectedFilmId(foundFilm.id);
+      }
     } else if (path.startsWith('/artikel/') || path.startsWith('/article/')) {
       const slug = decodeURIComponent(path.replace(/^\/(artikel|article)\//, ''));
       setCurrentView('article-detail');

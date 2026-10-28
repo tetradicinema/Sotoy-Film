@@ -36,6 +36,8 @@ export interface SEOHeadProps {
   canonicalUrl?: string;
   schema?: Record<string, any> | Record<string, any>[];
   noindex?: boolean;
+  /** Optional explicit robots meta content (e.g. "noindex, follow"). */
+  robots?: string;
 
   // Complete pre-built metadata (optional direct injection)
   metadata?: CompletePageMetadata;
@@ -78,6 +80,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
   canonicalUrl,
   schema,
   noindex = false,
+  robots,
   metadata: explicitMetadata,
   film,
   article,
@@ -317,7 +320,11 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
       <meta name="description" content={finalDescription || ''} />
       <meta name="keywords" content={finalKeywords || ''} />
       <link rel="canonical" href={finalCanonical || finalUrl} />
-      {effectiveNoindex ? <meta name="robots" content="noindex, nofollow" /> : null}
+      {robots ? (
+        <meta name="robots" content={robots} />
+      ) : effectiveNoindex ? (
+        <meta name="robots" content="noindex, nofollow" />
+      ) : null}
 
       {/* Open Graph / Facebook / WhatsApp */}
       <meta property="og:site_name" content={metadata.openGraph['og:site_name'] || 'Sotoy Film'} />

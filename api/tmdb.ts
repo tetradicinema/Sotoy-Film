@@ -5,6 +5,7 @@ import {
   TmdbRequestError,
 } from '../src/utils/tmdbServerFetch.js';
 import { trimTmdbMedia } from '../src/utils/tmdbMediaTrim.js';
+import { trimTmdbSeasons, trimTmdbSeason } from '../src/utils/tmdbSeasonsTrim.js';
 
 interface TmdbHandlerRequest extends IncomingMessage {
   query?: Record<string, string | string[]>;
@@ -40,6 +41,7 @@ export async function handleTmdbRequest(req: any, res: any) {
   let id = '';
   let list = 'popular';
   let page = '1';
+  let season = '';
 
   if (req.query && typeof req.query === 'object') {
     action = String(req.query.action || '');
@@ -48,6 +50,7 @@ export async function handleTmdbRequest(req: any, res: any) {
     id = String(req.query.id || '');
     list = String(req.query.list || 'popular');
     page = String(req.query.page || '1');
+    season = String(req.query.season || '');
   } else if (req.url) {
     try {
       const parsedUrl = new URL(req.url, 'http://localhost');
@@ -57,6 +60,7 @@ export async function handleTmdbRequest(req: any, res: any) {
       id = parsedUrl.searchParams.get('id') || '';
       list = parsedUrl.searchParams.get('list') || 'popular';
       page = parsedUrl.searchParams.get('page') || '1';
+      season = parsedUrl.searchParams.get('season') || '';
     } catch {
       // ignore
     }
@@ -189,6 +193,74 @@ export async function handleTmdbRequest(req: any, res: any) {
       return res.status(200).json(trimTmdbMedia(data));
     }
 
+    if (action === 'seasons') {
+      if (!/^\d+$/.test(id) || Number(id) <= 0) {
+        return res.status(400).json({
+          error: 'Valid numerical parameter "id" is required for seasons action.'
+        });
+      }
+
+      const tmdbUrl = new URL(`https://api.themoviedb.org/3/tv/${id}`);
+      if (!isBearer) {
+        tmdbUrl.searchParams.set('api_key', apiKey);
+      }
+      tmdbUrl.searchParams.set('language', 'en-US');
+
+      const response = await fetch(tmdbUrl.toString(), {
+        method: 'GET',
+        headers: authHeaders,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return res.status(response.status).json({
+          error: data.status_message || `TMDB API error (${response.status})`,
+          code: 'TMDB_API_ERROR'
+        });
+      }
+
+      res.setHeader?.('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+      return res.status(200).json(trimTmdbSeasons(data));
+    }
+
+    if (action === 'season') {
+      if (!/^\d+$/.test(id) || Number(id) <= 0) {
+        return res.status(400).json({
+          error: 'Valid numerical parameter "id" is required for season action.'
+        });
+      }
+
+      if (!/^\d{1,3}$/.test(season) || Number(season) < 0 || Number(season) > 100) {
+        return res.status(400).json({
+          error: 'Valid integer parameter "season" (0-100) is required for season action.'
+        });
+      }
+
+      const tmdbUrl = new URL(`https://api.themoviedb.org/3/tv/${id}/season/${Number(season)}`);
+      if (!isBearer) {
+        tmdbUrl.searchParams.set('api_key', apiKey);
+      }
+      tmdbUrl.searchParams.set('language', 'en-US');
+
+      const response = await fetch(tmdbUrl.toString(), {
+        method: 'GET',
+        headers: authHeaders,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return res.status(response.status).json({
+          error: data.status_message || `TMDB API error (${response.status})`,
+          code: 'TMDB_API_ERROR'
+        });
+      }
+
+      res.setHeader?.('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+      return res.status(200).json(trimTmdbSeason(data));
+    }
+
     if (action === 'list') {
       let endpoint = '';
       const normalizedList = list.toLowerCase().trim();
@@ -310,7 +382,7 @@ export async function handleTmdbRequest(req: any, res: any) {
     }
 
     return res.status(400).json({
-      error: 'Invalid action. Supported actions: "search", "details", "media", "list", "sync", or "now_playing_ids".'
+      error: 'Invalid action. Supported actions: "search", "details", "media", "list", "sync", "now_playing_ids", "seasons", or "season".'
     });
   } catch (err: any) {
     console.error('TMDB Proxy Server Error:', err);

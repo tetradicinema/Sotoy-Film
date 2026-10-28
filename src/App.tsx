@@ -27,6 +27,8 @@ import {
 import { CategoryPage } from './components/Pages/CategoryPage';
 import { FilmDatabasePage } from './components/Pages/FilmDatabasePage';
 import { FilmDetailPage } from './components/Pages/FilmDetailPage';
+import { FilmSeasonsPage } from './components/Pages/FilmSeasonsPage';
+import { FilmSeasonPage } from './components/Pages/FilmSeasonPage';
 import { FilmRecommendationsPage } from './components/Pages/FilmRecommendationsPage';
 import { CommunityFeedPage } from './components/Pages/CommunityFeedPage';
 import { BuzzDetailPage } from './components/Pages/BuzzDetailPage';
@@ -350,6 +352,8 @@ const AppContent: React.FC = () => {
           
           {/* Film Routes */}
           <Route path="/film" element={<Navigate to="/film-database" replace />} />
+          <Route path="/film/:slug/seasons" element={<FilmSeasonsPage />} />
+          <Route path="/film/:slug/season/:seasonNumber" element={<FilmSeasonPage />} />
           <Route path="/film/:slug" element={<FilmDetailPage />} />
           <Route path="/film-database" element={<FilmDatabasePage />} />
           <Route path="/rekomendasi-film" element={<FilmRecommendationsPage />} />

@@ -36,7 +36,7 @@ export const MobileBottomNav: React.FC = () => {
   }, []);
 
   const isHomeActive = currentView === 'home';
-  const isFilmActive = currentView === 'film-database' || currentView === 'film-detail' || currentView === 'film-recommendations';
+  const isFilmActive = currentView === 'film-database' || currentView === 'film-detail' || currentView === 'film-seasons' || currentView === 'film-season' || currentView === 'film-recommendations';
   const isBuzzActive = currentView === 'community-feed' || currentView === 'buzz-detail';
   const isProfileActive = currentView === 'user-profile' && activeUserTab !== 'watchlist';
 

@@ -287,7 +287,7 @@ export const Navbar: React.FC = () => {
                 id="nav-film-database"
                 onClick={() => navigateTo('film-database')}
                 className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
-                  currentView === 'film-database' || currentView === 'film-detail'
+                  currentView === 'film-database' || currentView === 'film-detail' || currentView === 'film-seasons' || currentView === 'film-season'
                     ? 'bg-[#FF2E7E] text-white shadow-sm'
                     : 'text-slate-300 hover:text-white hover:bg-white/[0.04]'
                 }`}
@@ -775,7 +775,7 @@ export const Navbar: React.FC = () => {
                     setCategoryMenuOpen(false);
                   }}
                   className={`py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border transition-all cursor-pointer ${
-                    currentView === 'film-database' || currentView === 'film-detail'
+                    currentView === 'film-database' || currentView === 'film-detail' || currentView === 'film-seasons' || currentView === 'film-season'
                       ? 'bg-[#FF2E7E] text-white border-[#FF2E7E] shadow-md shadow-[#FF2E7E]/20'
                       : 'text-slate-200 hover:text-white bg-slate-900/80 hover:bg-slate-800 border-white/10'
                   }`}

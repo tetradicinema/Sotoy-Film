@@ -332,10 +332,32 @@ export default async function middleware(request: Request): Promise<Response> {
 
     let collection: 'films' | 'articles' | null = null;
     let slug = '';
+    /** Season sub-route of a film URL, when applicable. */
+    let filmSubpath: { kind: 'seasons' } | { kind: 'season'; season: string } | null = null;
 
     if (pathname.startsWith('/film/')) {
       collection = 'films';
-      slug = decodeURIComponent(pathname.replace(/^\/film\/?/, '')).replace(/\/$/, '');
+      const filmRest = pathname.replace(/^\/film\/?/, '').replace(/\/$/, '');
+      const filmSegments = filmRest.split('/');
+
+      if (filmSegments.length === 2 && filmSegments[1] === 'seasons') {
+        filmSubpath = { kind: 'seasons' };
+      } else if (
+        filmSegments.length === 3 &&
+        filmSegments[1] === 'season' &&
+        /^\d+$/.test(filmSegments[2])
+      ) {
+        filmSubpath = { kind: 'season', season: filmSegments[2] };
+      } else if (filmSegments.length > 1) {
+        // Unknown film subpath: keep the normal SPA response untouched.
+        return safeNext();
+      }
+
+      try {
+        slug = decodeURIComponent(filmSubpath ? filmSegments[0] : filmRest);
+      } catch {
+        return safeNext();
+      }
     } else if (pathname.startsWith('/artikel/')) {
       collection = 'articles';
       slug = decodeURIComponent(pathname.replace(/^\/artikel\/?/, '')).replace(/\/$/, '');
@@ -385,6 +407,12 @@ export default async function middleware(request: Request): Promise<Response> {
       title = `${data.title || 'Film'}${data.year ? ` (${data.year})` : ''} — Skor Sotoy & Review Film`;
       rawDescription = data.synopsis || data.curatorNote || `Lihat ulasan sinema, rating Skor Sotoy, dan tempat nonton film ${data.title}.`;
       rawImage = data.poster || data.backdrop || '';
+
+      if (filmSubpath?.kind === 'seasons') {
+        title = `${data.title || 'Film'}${data.year ? ` (${data.year})` : ''} – Semua Season`;
+      } else if (filmSubpath?.kind === 'season') {
+        title = `${data.title || 'Film'} – Season ${filmSubpath.season} – Daftar Episode & Rating`;
+      }
     } else {
       title = `${data.seoTitle || data.title || 'Artikel'} — Sotoy Film`;
       rawDescription = data.metaDescription || data.excerpt || (typeof data.content === 'string' ? data.content.slice(0, 160) : rawDescription);
@@ -487,6 +515,7 @@ export default async function middleware(request: Request): Promise<Response> {
       videoTags: collection === 'films' ? data.genres : undefined,
       videoActors: collection === 'films' && data.castDetails ? data.castDetails.map((c: any) => c.name) : data.cast,
       schemaJson,
+      robots: filmSubpath ? 'noindex, follow' : undefined,
     });
 
     const bodyHtml =
@@ -505,7 +534,7 @@ export default async function middleware(request: Request): Promise<Response> {
       status: 200,
       headers: {
         'content-type': 'text/html; charset=utf-8',
-        'x-robots-tag': 'all',
+        'x-robots-tag': filmSubpath ? 'noindex, follow' : 'all',
         'cache-control': 'public, s-maxage=60, stale-while-revalidate=300',
       },
     });
