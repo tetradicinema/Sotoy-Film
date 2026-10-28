@@ -571,7 +571,7 @@ export interface SectionConfig {
   // Film sections use a canonical genre filter (see src/utils/filmGenres).
   genre?: string;
   tag?: string;
-  sortBy?: 'newest' | 'rating' | 'views' | 'votes' | 'release_soonest';
+  sortBy?: 'newest' | 'rating' | 'views' | 'votes' | 'release_soonest' | 'random';
   limit?: number;
   itemIds?: string[];
   enabled?: boolean;

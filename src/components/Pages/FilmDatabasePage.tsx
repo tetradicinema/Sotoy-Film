@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Star,
   Search,
@@ -12,6 +12,7 @@ import { useApp } from '../../context/AppContext';
 import { RoleBadge } from '../Common/RoleBadge';
 import { FilmItem, SectionConfig } from '../../types';
 import { FilmDbCard } from '../Film/FilmDbCard';
+import { FilmDbCarousel } from '../Film/FilmDbCarousel';
 import { CollectionPickerPopover } from '../Common/CollectionPickerPopover';
 import { RateFilmModal } from '../Modals/RateFilmModal';
 import { AddToCollectionModal } from '../Modals/AddToCollectionModal';
@@ -23,6 +24,9 @@ import { LeaderboardCard, LeaderboardPeriodTabs } from '../Common/LeaderboardCar
 import {
   buildFilmDbSections,
   resolveStreamingForPlatform,
+  resolveComingSoonForTab,
+  getComingSoonTabs,
+  ComingSoonTab,
 } from '../../utils/filmSections';
 import {
   HOMEPAGE_SECTIONS_META,
@@ -73,6 +77,13 @@ export const FilmDatabasePage: React.FC = () => {
 
   // Active platform chip for the streaming section
   const [activePlatform, setActivePlatform] = useState<string>('all');
+
+  // Active Coming Soon tab state & carousel ref
+  const [activeComingSoonTab, setActiveComingSoonTab] = useState<ComingSoonTab>('movies');
+  const comingSoonCarouselRef = useRef<HTMLDivElement>(null);
+
+  const comingSoonConfig: SectionConfig =
+    homepageSectionsConfig?.sections?.fd_coming_soon ?? { sourceType: 'auto' };
 
   // Helper function to match genres
   const matchesGenre = (film: FilmItem, targetGenre: string): boolean => {
@@ -125,6 +136,20 @@ export const FilmDatabasePage: React.FC = () => {
 
   const streamingConfig: SectionConfig =
     homepageSectionsConfig?.sections?.fd_streaming ?? { sourceType: 'auto' };
+
+  // Coming Soon tabs computed with counts
+  const comingSoonTabs = useMemo(() => {
+    return getComingSoonTabs(films, comingSoonConfig);
+  }, [films, comingSoonConfig]);
+
+  // Default to the first non-empty tab (Movies if it has films), and reset active tab to a valid one if data changes
+  useEffect(() => {
+    if (comingSoonTabs.length > 0) {
+      if (!comingSoonTabs.some(t => t.id === activeComingSoonTab)) {
+        setActiveComingSoonTab(comingSoonTabs[0].id);
+      }
+    }
+  }, [comingSoonTabs, activeComingSoonTab]);
 
   // Search results with smart genre matching
   const allGenres = Array.from(new Set(films.flatMap(f => f.genres)));
@@ -211,14 +236,20 @@ export const FilmDatabasePage: React.FC = () => {
           ))
         ) : (
           filmDbSections.map(section => {
-            const displayFilms =
-              section.key === 'fd_streaming' && activePlatform !== 'all'
-                ? resolveStreamingForPlatform(films, streamingConfig, activePlatform)
-                : section.films;
+            let displayFilms = section.films;
+            if (section.key === 'fd_streaming' && activePlatform !== 'all') {
+              displayFilms = resolveStreamingForPlatform(films, streamingConfig, activePlatform);
+            } else if (section.key === 'fd_coming_soon') {
+              const currentTab = comingSoonTabs.some(t => t.id === activeComingSoonTab)
+                ? activeComingSoonTab
+                : comingSoonTabs[0]?.id ?? 'movies';
+              displayFilms = resolveComingSoonForTab(films, comingSoonConfig, currentTab);
+            }
 
             if (displayFilms.length === 0) return null;
 
             const platforms = section.platforms ?? [];
+            const isSlider = section.key === 'fd_on_theatres' || section.key === 'fd_coming_soon';
 
             return (
               <section key={section.key} id={`film-db-${section.key}`}>
@@ -231,6 +262,41 @@ export const FilmDatabasePage: React.FC = () => {
                     </span>
                   }
                 />
+
+                {section.key === 'fd_coming_soon' && comingSoonTabs.length > 1 && (
+                  <div
+                    role="tablist"
+                    aria-label="Filter coming soon"
+                    className="flex items-center gap-2 overflow-x-auto pb-1 mb-4 scrollbar-none scroll-smooth touch-pan-x"
+                    style={{ WebkitOverflowScrolling: 'touch' }}
+                  >
+                    {comingSoonTabs.map(tab => {
+                      const isSelected = activeComingSoonTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          role="tab"
+                          aria-selected={isSelected}
+                          onClick={() => {
+                            setActiveComingSoonTab(tab.id);
+                            comingSoonCarouselRef.current?.scrollTo({ left: 0, behavior: 'smooth' });
+                          }}
+                          className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-[#FF2E7E] text-slate-950 border-[#FF2E7E]'
+                              : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-white hover:border-[#FF2E7E]'
+                          }`}
+                        >
+                          <span>{tab.label}</span>
+                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-black/20">
+                            {tab.count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {section.key === 'fd_streaming' && platforms.length > 0 && !streamingConfig.platform && (
                   <div
@@ -280,16 +346,32 @@ export const FilmDatabasePage: React.FC = () => {
                   </p>
                 )}
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                  {displayFilms.map(film => (
-                    <FilmDbCard
-                      key={film.id}
-                      film={film}
-                      sectionKey={section.key}
-                      onOpen={item => navigateTo('film-detail', { filmId: item.id })}
-                    />
-                  ))}
-                </div>
+                {isSlider ? (
+                  <FilmDbCarousel
+                    ref={section.key === 'fd_coming_soon' ? comingSoonCarouselRef : undefined}
+                    ariaLabel={section.title}
+                  >
+                    {displayFilms.map(film => (
+                      <FilmDbCard
+                        key={film.id}
+                        film={film}
+                        sectionKey={section.key}
+                        onOpen={item => navigateTo('film-detail', { filmId: item.id })}
+                      />
+                    ))}
+                  </FilmDbCarousel>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    {displayFilms.map(film => (
+                      <FilmDbCard
+                        key={film.id}
+                        film={film}
+                        sectionKey={section.key}
+                        onOpen={item => navigateTo('film-detail', { filmId: item.id })}
+                      />
+                    ))}
+                  </div>
+                )}
               </section>
             );
           })

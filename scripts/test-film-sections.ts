@@ -4,6 +4,9 @@ import {
   buildFilmDbSections,
   getStreamingPlatforms,
   isIndonesianFilm,
+  getComingSoonTab,
+  resolveComingSoonForTab,
+  getComingSoonTabs,
 } from '../src/utils/filmSections';
 import { HOMEPAGE_SECTIONS_META, resolveFilmDbSectionOrder } from '../src/utils/homepageConfigHelper';
 import { FilmItem, SectionConfig, HomepageSectionKey, HomepageSectionsConfig } from '../src/types';
@@ -1381,6 +1384,122 @@ const runTests = () => {
       category: 'series',
     } as SectionConfig, { now: FIXED_NOW });
     assertEquals(result.map(f => f.id), ['id-series'], 'fd_film_indonesia applies the category filter');
+  }
+
+  // 89. getComingSoonTab prioritization
+  {
+    // animation movie
+    const animMovie = createFilm({ id: 'a-mov', type: 'animation', whereToWatch: [{ type: 'cinema' }] });
+    assertEquals(getComingSoonTab(animMovie), 'animation', 'getComingSoonTab: animation movie goes to animation');
+
+    // animation series
+    const animSeries = createFilm({ id: 'a-ser', type: 'series', genres: ['Animasi'] });
+    assertEquals(getComingSoonTab(animSeries), 'animation', 'getComingSoonTab: animation series goes to animation');
+
+    // series (non-animation)
+    const normSeries = createFilm({ id: 'n-ser', type: 'series', genres: ['Drama'] });
+    assertEquals(getComingSoonTab(normSeries), 'streaming', 'getComingSoonTab: series goes to streaming');
+
+    // stream-only movie
+    const streamMovie = createFilm({ id: 's-mov', type: 'movie', whereToWatch: [{ type: 'stream', platform: 'Netflix' }] });
+    assertEquals(getComingSoonTab(streamMovie), 'streaming', 'getComingSoonTab: stream-only movie goes to streaming');
+
+    // cinema + stream movie
+    const dualMovie = createFilm({
+      id: 'd-mov',
+      type: 'movie',
+      whereToWatch: [{ type: 'cinema' }, { type: 'stream', platform: 'Netflix' }],
+    });
+    assertEquals(getComingSoonTab(dualMovie), 'movies', 'getComingSoonTab: cinema+stream movie goes to movies');
+
+    // normal movie (cinema only or without whereToWatch)
+    const normalMovie = createFilm({ id: 'norm-mov', type: 'movie', whereToWatch: [{ type: 'cinema' }] });
+    assertEquals(getComingSoonTab(normalMovie), 'movies', 'getComingSoonTab: normal movie goes to movies');
+  }
+
+  // 90. resolveComingSoonForTab applies tab filter BEFORE limit
+  {
+    // 30 upcoming movies and 10 upcoming series
+    const upcomingMovies = Array.from({ length: 30 }, (_, i) =>
+      createFilm({
+        id: `up-mov-${i}`,
+        type: 'movie',
+        idReleaseDate: daysFromNow(i + 1),
+        whereToWatch: [{ type: 'cinema' }],
+      })
+    );
+    const upcomingSeries = Array.from({ length: 10 }, (_, i) =>
+      createFilm({
+        id: `up-ser-${i}`,
+        type: 'series',
+        idReleaseDate: daysFromNow(i + 1),
+      })
+    );
+    const pool = [...upcomingMovies, ...upcomingSeries];
+
+    // Requesting movies with default limit (24) returns 24 movies
+    const res = resolveComingSoonForTab(pool, undefined, 'movies', { now: FIXED_NOW });
+    assertEquals(res.length, 24, 'resolveComingSoonForTab returns full limit of 24 movies when available');
+    assert(res.every(f => getComingSoonTab(f) === 'movies'), 'All returned films are in movies tab');
+  }
+
+  // 91. resolveComingSoonForTab preserves soonest-first order
+  {
+    const f1 = createFilm({ id: 'soon-10d', type: 'movie', idReleaseDate: daysFromNow(10) });
+    const f2 = createFilm({ id: 'soon-2d', type: 'movie', idReleaseDate: daysFromNow(2) });
+    const f3 = createFilm({ id: 'soon-5d', type: 'movie', idReleaseDate: daysFromNow(5) });
+
+    const res = resolveComingSoonForTab([f1, f2, f3], undefined, 'movies', { now: FIXED_NOW });
+    assertEquals(res.map(f => f.id), ['soon-2d', 'soon-5d', 'soon-10d'], 'Soonest release date is ordered first');
+  }
+
+  // 92. resolveComingSoonForTab excludes past releases
+  {
+    const pastFilm = createFilm({ id: 'past', type: 'movie', idReleaseDate: daysAgo(2) });
+    const futureFilm = createFilm({ id: 'future', type: 'movie', idReleaseDate: daysFromNow(2) });
+
+    const res = resolveComingSoonForTab([pastFilm, futureFilm], undefined, 'movies', { now: FIXED_NOW });
+    assertEquals(res.map(f => f.id), ['future'], 'Past release is excluded from Coming Soon tab');
+  }
+
+  // 93. getComingSoonTabs returns accurate counts and omits empty tabs
+  {
+    const movies = [
+      createFilm({ id: 'm1', type: 'movie', idReleaseDate: daysFromNow(1) }),
+      createFilm({ id: 'm2', type: 'movie', idReleaseDate: daysFromNow(3) }),
+    ];
+    const animations = [
+      createFilm({ id: 'a1', type: 'animation', idReleaseDate: daysFromNow(2) }),
+    ];
+    const pastFilm = createFilm({ id: 'past-m', type: 'movie', idReleaseDate: daysAgo(5) });
+
+    // Pool has 2 movies, 1 animation, 0 streaming, 1 past
+    const pool = [...movies, ...animations, pastFilm];
+    const tabs = getComingSoonTabs(pool, undefined, { now: FIXED_NOW });
+
+    assertEquals(tabs.length, 2, 'getComingSoonTabs returns only non-empty tabs (streaming omitted)');
+    assertEquals(tabs[0].id, 'movies', 'First tab is movies');
+    assertEquals(tabs[0].count, 2, 'Movies tab count is 2 (past movie excluded)');
+    assertEquals(tabs[1].id, 'animation', 'Second tab is animation');
+    assertEquals(tabs[1].count, 1, 'Animation tab count is 1');
+  }
+
+  // 94. Default limit raised to 24 for fd_on_theatres and fd_coming_soon
+  {
+    const upcoming = Array.from({ length: 30 }, (_, i) =>
+      createFilm({ id: `soon-${i}`, idReleaseDate: daysFromNow(i + 1) })
+    );
+    const resSoonDefault = resolveFilmDbSection('fd_coming_soon', upcoming, undefined, { now: FIXED_NOW });
+    assertEquals(resSoonDefault.length, 24, 'fd_coming_soon defaults to 24 limit when unset');
+
+    const resSoonExplicit = resolveFilmDbSection('fd_coming_soon', upcoming, { limit: 7 }, { now: FIXED_NOW });
+    assertEquals(resSoonExplicit.length, 7, 'fd_coming_soon preserves explicit limit: 7');
+
+    const theatreFilms = Array.from({ length: 30 }, (_, i) =>
+      createFilm({ id: `theatre-${i}`, whereToWatch: [{ type: 'cinema' }], idReleaseDate: daysAgo(10) })
+    );
+    const resTheatresDefault = resolveFilmDbSection('fd_on_theatres', theatreFilms, undefined, { now: FIXED_NOW });
+    assertEquals(resTheatresDefault.length, 24, 'fd_on_theatres defaults to 24 limit when unset');
   }
 
   console.log(`\n--- Results: ${passed} passed, ${failed} failed ---`);

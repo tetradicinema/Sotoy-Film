@@ -7,6 +7,7 @@ import {
 import { filmMatchesGenre, resolveFilmSectionGenre } from './filmGenres';
 import { normalizeFilmType } from './filmType';
 import { DEFAULT_POSTER } from '../data/mockData';
+import { seededShuffle, getPageLoadSeed } from './shuffle';
 
 /**
  * Normalizes streaming platform names to canonical forms.
@@ -138,7 +139,8 @@ function resolveCuratedFilms(
   films: FilmItem[],
   config: SectionConfig | undefined,
   defaultLimit: number,
-  maxLimit: number
+  maxLimit: number,
+  opts?: { seed?: number }
 ): FilmItem[] {
   if (config && config.enabled === false) return [];
 
@@ -150,7 +152,7 @@ function resolveCuratedFilms(
   const defaultFilms = getHomeFilmRecsDefault(films, limit);
 
   if (config?.sourceType === 'manual') {
-    return resolveConfigFilms(films, config, defaultFilms).slice(0, limit);
+    return resolveConfigFilms(films, config, defaultFilms, opts).slice(0, limit);
   }
 
   const effectiveGenre = resolveFilmSectionGenre(config);
@@ -162,7 +164,7 @@ function resolveCuratedFilms(
   );
 
   if (config && hasFilters) {
-    return resolveConfigFilms(films, { ...config, limit }, defaultFilms).slice(0, limit);
+    return resolveConfigFilms(films, { ...config, limit }, defaultFilms, opts).slice(0, limit);
   }
 
   return defaultFilms;
@@ -172,8 +174,12 @@ function resolveCuratedFilms(
  * Resolves the homepage "Curated Film Recommendations" film list from the
  * saved section configuration. Default limit 6, capped at 12.
  */
-export function resolveHomeFilmRecs(films: FilmItem[], config?: SectionConfig): FilmItem[] {
-  return resolveCuratedFilms(films, config, 6, 12);
+export function resolveHomeFilmRecs(
+  films: FilmItem[],
+  config?: SectionConfig,
+  opts?: { seed?: number }
+): FilmItem[] {
+  return resolveCuratedFilms(films, config, 6, 12, opts);
 }
 
 /**
@@ -181,8 +187,12 @@ export function resolveHomeFilmRecs(films: FilmItem[], config?: SectionConfig): 
  * manual/auto handling as the homepage recommendations, with a default limit
  * of 5 and a cap of 8.
  */
-export function getHeroToWatch(films: FilmItem[], config?: SectionConfig): FilmItem[] {
-  return resolveCuratedFilms(films, config, 5, 8);
+export function getHeroToWatch(
+  films: FilmItem[],
+  config?: SectionConfig,
+  opts?: { seed?: number }
+): FilmItem[] {
+  return resolveCuratedFilms(films, config, 5, 8, opts);
 }
 
 /**
@@ -194,7 +204,7 @@ export function resolveHomeStreaming(
   films: FilmItem[],
   config?: SectionConfig,
   platform?: string,
-  opts?: { now?: Date }
+  opts?: { now?: Date; seed?: number }
 ): FilmItem[] {
   if (config && config.enabled === false) return [];
 
@@ -215,7 +225,7 @@ export function resolveHomeStreaming(
 export function resolveHomeFilmIndonesia(
   films: FilmItem[],
   config?: SectionConfig,
-  opts?: { now?: Date }
+  opts?: { now?: Date; seed?: number }
 ): FilmItem[] {
   if (config && config.enabled === false) return [];
 
@@ -351,7 +361,7 @@ export function resolveFilmDbSection(
   key: HomepageSectionKey,
   films: FilmItem[],
   config?: SectionConfig,
-  opts?: { now?: Date }
+  opts?: { now?: Date; seed?: number }
 ): FilmItem[] {
   // If explicitly disabled, return empty list
   if (config && config.enabled === false) {
@@ -359,7 +369,8 @@ export function resolveFilmDbSection(
   }
 
   const isRecSection = key.startsWith('rec_');
-  const limit = config?.limit && config.limit > 0 ? config.limit : 12;
+  const defaultLimit = (key === 'fd_on_theatres' || key === 'fd_coming_soon') ? 24 : 12;
+  const limit = config?.limit && config.limit > 0 ? config.limit : defaultLimit;
 
   // Manual mode: exact itemIds order, skipping missing IDs, capped by limit
   if (config?.sourceType === 'manual') {
@@ -598,6 +609,10 @@ export function resolveFilmDbSection(
   const hasSortBy = typeof sortBy === 'string' && sortBy.trim() !== '';
   if (hasSortBy) {
     switch (sortBy) {
+      case 'random': {
+        filtered = seededShuffle(filtered, opts?.seed ?? getPageLoadSeed());
+        break;
+      }
       case 'rating': {
         filtered.sort((a, b) => normalizeFilmScore(b) - normalizeFilmScore(a));
         break;
@@ -726,7 +741,7 @@ export function resolveStreamingForPlatform(
   films: FilmItem[],
   config: SectionConfig,
   platform?: string,
-  opts?: { now?: Date }
+  opts?: { now?: Date; seed?: number }
 ): FilmItem[] {
   return resolveFilmDbSection(
     'fd_streaming',
@@ -736,6 +751,103 @@ export function resolveStreamingForPlatform(
   );
 }
 
+export type ComingSoonTab = 'movies' | 'streaming' | 'animation';
+
+export interface ComingSoonTabInfo {
+  id: ComingSoonTab;
+  tab: ComingSoonTab;
+  label: string;
+  name: string;
+  count: number;
+}
+
+/**
+ * Categorizes an upcoming film into one of three mutually exclusive Coming Soon tabs:
+ * Priority:
+ * 1. isAnimationFilm(film) -> 'animation'
+ * 2. else if the film type is series OR it has whereToWatch type 'stream' and no 'cinema' -> 'streaming'
+ * 3. else -> 'movies'
+ */
+export function getComingSoonTab(film: FilmItem): ComingSoonTab {
+  if (isAnimationFilm(film)) {
+    return 'animation';
+  }
+
+  const isSeries = (film.type || '').toLowerCase() === 'series';
+  const hasStream = Array.isArray(film.whereToWatch) && film.whereToWatch.some(w => w.type === 'stream');
+  const hasCinema = Array.isArray(film.whereToWatch) && film.whereToWatch.some(w => w.type === 'cinema');
+
+  if (isSeries || (hasStream && !hasCinema)) {
+    return 'streaming';
+  }
+
+  return 'movies';
+}
+
+/**
+ * Resolves upcoming films for a specific Coming Soon tab.
+ * Reuses resolveFilmDbSection('fd_coming_soon', ...) but applies the tab filter
+ * BEFORE the limit (the same approach resolveStreamingForPlatform uses, so a tab
+ * never returns fewer items than the limit when enough films match).
+ */
+export function resolveComingSoonForTab(
+  films: FilmItem[],
+  config: SectionConfig | undefined,
+  tab: ComingSoonTab,
+  opts?: { now?: Date; seed?: number }
+): FilmItem[] {
+  const tabFilms = films.filter(f => getComingSoonTab(f) === tab);
+  return resolveFilmDbSection('fd_coming_soon', tabFilms, config, opts);
+}
+
+/**
+ * Computes the non-empty Coming Soon tabs with their counts.
+ * Uses the existing rules for fd_coming_soon (release date strictly after now,
+ * and optional section filters).
+ */
+export function getComingSoonTabs(
+  films: FilmItem[],
+  config?: SectionConfig,
+  opts?: { now?: Date; seed?: number }
+): ComingSoonTabInfo[] {
+  if (config && config.enabled === false) return [];
+
+  // Evaluate all films that meet the fd_coming_soon criteria without limit truncation
+  const allComingSoon = resolveFilmDbSection(
+    'fd_coming_soon',
+    films,
+    { sourceType: 'auto' as const, ...config, limit: Number.MAX_SAFE_INTEGER },
+    opts
+  );
+
+  const counts: Record<ComingSoonTab, number> = {
+    movies: 0,
+    streaming: 0,
+    animation: 0,
+  };
+
+  for (const film of allComingSoon) {
+    const tab = getComingSoonTab(film);
+    counts[tab] = (counts[tab] || 0) + 1;
+  }
+
+  const tabDefs: Array<{ id: ComingSoonTab; label: string }> = [
+    { id: 'movies', label: 'Movies' },
+    { id: 'streaming', label: 'Streaming' },
+    { id: 'animation', label: 'Animation' },
+  ];
+
+  return tabDefs
+    .filter(t => counts[t.id] > 0)
+    .map(t => ({
+      id: t.id,
+      tab: t.id,
+      label: t.label,
+      name: t.label,
+      count: counts[t.id],
+    }));
+}
+
 export interface FilmDbSection {
   key: HomepageSectionKey;
   title: string;
@@ -743,6 +855,7 @@ export interface FilmDbSection {
   films: FilmItem[];
   platforms?: { name: string; count: number }[];
   activePlatform?: string;
+  comingSoonTabs?: ComingSoonTabInfo[];
 }
 
 /**
@@ -753,7 +866,7 @@ export interface FilmDbSection {
 export function buildFilmDbSections(
   films: FilmItem[],
   homepageConfig?: HomepageSectionsConfig | null,
-  opts?: { now?: Date }
+  opts?: { now?: Date; seed?: number }
 ): FilmDbSection[] {
   const config = homepageConfig ?? undefined;
   const order = resolveFilmDbSectionOrder(config?.filmDbSectionOrder);
@@ -781,6 +894,10 @@ export function buildFilmDbSections(
     if (key === 'fd_streaming') {
       section.platforms = sectionConfig.platform ? [] : getStreamingPlatforms(films);
       section.activePlatform = sectionConfig.platform;
+    }
+
+    if (key === 'fd_coming_soon') {
+      section.comingSoonTabs = getComingSoonTabs(films, sectionConfig, opts);
     }
 
     sections.push(section);

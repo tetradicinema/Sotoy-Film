@@ -3,6 +3,7 @@ import { normalizeArticleCategory } from './articleCategory';
 import { normalizeFilmType } from './filmType';
 import { filmMatchesGenre, resolveFilmSectionGenre } from './filmGenres';
 import { isAnimationFilm } from './filmSections';
+import { seededShuffle, getPageLoadSeed } from './shuffle';
 
 export interface SectionMeta {
   key: HomepageSectionKey;
@@ -744,7 +745,8 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
 export function resolveConfigFilms(
   allFilms: FilmItem[],
   config?: SectionConfig,
-  defaultFilms: FilmItem[] = []
+  defaultFilms: FilmItem[] = [],
+  opts?: { seed?: number }
 ): FilmItem[] {
   if (!config) return defaultFilms;
 
@@ -783,7 +785,9 @@ export function resolveConfigFilms(
   }
 
   // Sort
-  if (config.sortBy === 'rating') {
+  if (config.sortBy === 'random') {
+    filtered = seededShuffle(filtered, opts?.seed ?? getPageLoadSeed());
+  } else if (config.sortBy === 'rating') {
     filtered.sort((a, b) => (b.skorSotoy || 0) - (a.skorSotoy || 0));
   } else if (config.sortBy === 'views' || config.sortBy === 'votes') {
     filtered.sort((a, b) => (b.totalVotes || 0) - (a.totalVotes || 0));

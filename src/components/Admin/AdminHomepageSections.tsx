@@ -145,6 +145,7 @@ const getDefaultSectionConfig = (key: HomepageSectionKey, meta: SectionMeta): Se
 
   let limit = 5;
   if (key === 'hero_slider' || key === 'home_film_recs') limit = 6;
+  else if (key === 'fd_on_theatres' || key === 'fd_coming_soon') limit = 24;
   else if (key === 'home_streaming' || key === 'home_film_indonesia' || isFilmDb) limit = 12;
   else if (isRec) limit = 10;
 
@@ -2011,11 +2012,17 @@ export const AdminHomepageSections: React.FC = () => {
                         {currentMeta.area === 'film_database' && (
                           <option value="release_soonest">Rilis Paling Dekat (Release Soonest)</option>
                         )}
+                        <option value="random">Acak (Random)</option>
                       </>
                     ) : (
                       <option value="views">Paling Banyak Dilihat (Views)</option>
                     )}
                   </select>
+                  {currentMeta.targetType === 'films' && currentConfig.sortBy === 'random' && (
+                    <p className="text-[10px] text-slate-400">
+                      Urutan diacak setiap kali halaman dimuat ulang.
+                    </p>
+                  )}
                 </div>
 
                 {/* Limit / Count */}
