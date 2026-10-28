@@ -3,6 +3,15 @@ import { X, Star, Send, Sparkles, CheckCircle2, Lock, LogIn, Share2 } from 'luci
 import { useApp } from '../../context/AppContext';
 import { FilmItem } from '../../types';
 import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
+import { getScoreLabel, type ScoreLabelTone } from '../../utils/scoreLabel';
+
+const SCORE_LABEL_STYLES: Record<ScoreLabelTone, string> = {
+  pink: 'text-[#FF2E7E] border-[#FF2E7E]/50 bg-[#FF2E7E]/10',
+  amber: 'text-amber-400 border-amber-400/50 bg-amber-400/10',
+  neutral: 'text-slate-300 border-slate-600/70 bg-slate-700/30',
+  slate: 'text-slate-400 border-slate-600/60 bg-slate-800/60',
+};
+
 
 interface RateFilmModalProps {
   film: FilmItem;
@@ -19,6 +28,8 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
   const [submitted, setSubmitted] = useState(false);
 
   if (!isOpen) return null;
+
+  const scoreLabel = getScoreLabel(score, 10);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,6 +220,17 @@ export const RateFilmModal: React.FC<RateFilmModalProps> = ({ film, isOpen, onCl
                   {score.toFixed(1)}
                 </span>
                 <span className="text-slate-500 font-medium text-lg">/ 10.0</span>
+              </div>
+
+              {/* Live Score Label (fixed-height slot so changing text causes no jump) */}
+              <div className="h-7 flex items-center justify-center -mt-1">
+                {scoreLabel && (
+                  <span
+                    className={`inline-flex items-center h-6 px-3 rounded-full border text-[11px] font-bold uppercase tracking-wider leading-none whitespace-nowrap ${SCORE_LABEL_STYLES[scoreLabel.tone]}`}
+                  >
+                    {scoreLabel.label}
+                  </span>
+                )}
               </div>
 
               {/* Star Visualizer (10 Stars) */}
