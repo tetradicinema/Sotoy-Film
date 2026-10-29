@@ -52,8 +52,17 @@ window.addEventListener('vite:preloadError', (event) => {
   window.location.reload();
 });
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-);
+// Defer the initial React render past the first paint so the static #app-shell
+// header in index.html is visible before React takes over the #root container.
+const mount = () => {
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  );
+};
+
+let mounted = false;
+const run = () => { if (mounted) return; mounted = true; mount(); };
+requestAnimationFrame(() => setTimeout(run, 0));
+setTimeout(run, 300);
