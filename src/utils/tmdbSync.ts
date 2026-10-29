@@ -46,6 +46,7 @@ export function tmdbMediaType(
 }
 
 export interface BuildWhereToWatchArgs {
+  /** Ignored: every existing entry is discarded and rebuilt from TMDB. */
   existing?: WhereToWatchEntry[];
   providersFlatrate?: string[];
   inTheatres: boolean;
@@ -263,22 +264,29 @@ export function whereToWatchEqual(
 }
 
 /**
- * Rebuilds whereToWatch from manual entries plus TMDB flatrate providers.
- * Exact placeholder cinema entries and previous TMDB entries are removed.
- * Cinema entries come first, followed by streams sorted by platform name.
+ * True for the fake/manual placeholder entries that older admin imports and
+ * the TMDB import wrote before whereToWatch was synced. They must never be
+ * treated as real availability data.
+ */
+export function isPlaceholderWhereToWatch(
+  entry: WhereToWatchEntry | null | undefined
+): boolean {
+  if (!entry) return false;
+  const platform = String(entry.platform || '').trim().toLowerCase();
+  return platform === 'tmdb global' || platform === 'bioskop / cinema';
+}
+
+/**
+ * Rebuilds whereToWatch exclusively from TMDB data. Every existing entry is
+ * discarded, including manual entries, placeholders, and previous TMDB data.
+ * Cinema entries come first, followed by flatrate streams sorted by platform
+ * name. When TMDB has no providers and the film is not in theatres the result
+ * is an empty array.
  */
 export function buildWhereToWatch({
-  existing,
   providersFlatrate,
   inTheatres,
 }: BuildWhereToWatchArgs): WhereToWatchEntry[] {
-  const kept = (existing || []).filter(entry => {
-    if (!entry) return false;
-    if (entry.source === 'tmdb') return false;
-    if (entry.type === 'cinema' && entry.platform === 'Bioskop / Cinema') return false;
-    return true;
-  });
-
   const seen = new Set<string>();
   const dedupe = (entries: WhereToWatchEntry[]): WhereToWatchEntry[] =>
     entries.filter(entry => {
@@ -296,12 +304,14 @@ export function buildWhereToWatch({
     )
   );
 
-  const tmdbStreams: WhereToWatchEntry[] = normalizedProviders.map(platform => ({
-    type: 'stream',
-    platform,
-    badgeColor: getBadgeColor(platform),
-    source: 'tmdb',
-  }));
+  const tmdbStreams: WhereToWatchEntry[] = normalizedProviders
+    .map(platform => ({
+      type: 'stream' as const,
+      platform,
+      badgeColor: getBadgeColor(platform),
+      source: 'tmdb' as const,
+    }))
+    .sort((a, b) => a.platform.localeCompare(b.platform));
 
   const tmdbCinema: WhereToWatchEntry[] = inTheatres
     ? [{
@@ -312,21 +322,7 @@ export function buildWhereToWatch({
       }]
     : [];
 
-  const cinemaEntries = dedupe([
-    ...kept.filter(entry => entry.type === 'cinema'),
-    ...tmdbCinema,
-  ]);
-
-  const streamEntries = dedupe([
-    ...kept.filter(entry => entry.type === 'stream'),
-    ...tmdbStreams,
-  ]).sort((a, b) => a.platform.localeCompare(b.platform));
-
-  const otherEntries = dedupe(
-    kept.filter(entry => entry.type !== 'cinema' && entry.type !== 'stream')
-  );
-
-  return [...cinemaEntries, ...streamEntries, ...otherEntries];
+  return dedupe([...tmdbCinema, ...tmdbStreams]);
 }
 
 /**
@@ -437,22 +433,31 @@ export function evaluateFilmSync({
   if (!whereToWatchEqual(film.whereToWatch, nextWhereToWatch)) {
     updates.whereToWatch = nextWhereToWatch;
 
-    const hadPlaceholder = (film.whereToWatch || []).some(
-      entry => entry.type === 'cinema' && entry.platform === 'Bioskop / Cinema'
+    const previousEntries = film.whereToWatch || [];
+    const hadCinemaPlaceholder = previousEntries.some(
+      entry => entry?.type === 'cinema' && isPlaceholderWhereToWatch(entry)
     );
-    const hadTmdbEntries = (film.whereToWatch || []).some(entry => entry.source === 'tmdb');
+    const hadNonTmdbEntries = previousEntries.some(
+      entry =>
+        Boolean(entry) &&
+        entry.source !== 'tmdb' &&
+        !(entry.type === 'cinema' && isPlaceholderWhereToWatch(entry))
+    );
+    const hadTmdbEntries = previousEntries.some(entry => entry?.source === 'tmdb');
     const newStreamPlatforms = nextWhereToWatch
       .filter(entry => entry.type === 'stream' && entry.source === 'tmdb')
       .map(entry => entry.platform);
 
-    if (hadPlaceholder) changes.push('hapus placeholder bioskop');
+    if (hadCinemaPlaceholder) changes.push('hapus placeholder bioskop');
+    if (hadNonTmdbEntries) changes.push('hapus data non-TMDB');
     if (newStreamPlatforms.length > 0) {
       changes.push(`streaming: ${newStreamPlatforms.join(', ')}`);
     }
     if (inTheatres) changes.push('bioskop: ya');
     if (hadTmdbEntries) changes.push('hapus data TMDB lama');
     if (
-      !hadPlaceholder &&
+      !hadCinemaPlaceholder &&
+      !hadNonTmdbEntries &&
       !hadTmdbEntries &&
       newStreamPlatforms.length === 0 &&
       !inTheatres

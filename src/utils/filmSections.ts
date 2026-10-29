@@ -8,6 +8,7 @@ import { filmMatchesGenre, resolveFilmSectionGenre } from './filmGenres';
 import { normalizeFilmType } from './filmType';
 import { DEFAULT_POSTER } from '../data/mockData';
 import { seededShuffle, getPageLoadSeed } from './shuffle';
+import { isPlaceholderWhereToWatch } from './tmdbSync';
 
 /**
  * Normalizes streaming platform names to canonical forms.
@@ -70,6 +71,7 @@ export function getStreamingPlatforms(films: FilmItem[]): { name: string; count:
     if (!film.whereToWatch || !Array.isArray(film.whereToWatch)) continue;
     const seenForFilm = new Set<string>();
     for (const w of film.whereToWatch) {
+      if (isPlaceholderWhereToWatch(w)) continue;
       if (w.type === 'stream' && w.platform) {
         const norm = normalizePlatform(w.platform);
         if (norm && !seenForFilm.has(norm)) {
@@ -401,7 +403,9 @@ export function resolveFilmDbSection(
     case 'fd_on_theatres': {
       // Films with whereToWatch 'cinema' and release date between now-56 days and now
       filtered = films.filter(f => {
-        const hasCinema = f.whereToWatch?.some(w => w.type === 'cinema');
+        const hasCinema = f.whereToWatch?.some(
+          w => w.type === 'cinema' && !isPlaceholderWhereToWatch(w)
+        );
         if (!hasCinema) return false;
         const relDate = getFilmEffectiveReleaseDate(f);
         if (!relDate) return false;
@@ -430,6 +434,7 @@ export function resolveFilmDbSection(
       filtered = films.filter(f => {
         if (!f.whereToWatch || !Array.isArray(f.whereToWatch)) return false;
         return f.whereToWatch.some(w => {
+          if (isPlaceholderWhereToWatch(w)) return false;
           if (w.type !== 'stream') return false;
           if (!targetPlatform) return true;
           return normalizePlatform(w.platform).toLowerCase() === targetPlatform;

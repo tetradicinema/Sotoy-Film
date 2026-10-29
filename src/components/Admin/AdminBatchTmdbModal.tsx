@@ -218,9 +218,7 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
           skorSotoy: mapped.skorSotoy,
           totalVotes: 1,
           criticsSkorSotoy: mapped.skorSotoy,
-          whereToWatch: [
-            { platform: 'Bioskop / Cinema', type: 'cinema', badgeColor: '#E50914' }
-          ],
+          whereToWatch: [],
           trailerUrl: mapped.trailerUrl || undefined,
           featuredRecommendation: mapped.featuredRecommendation,
           tmdbId: mapped.tmdbId || tmdbIdNum || undefined,

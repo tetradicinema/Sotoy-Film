@@ -1,6 +1,7 @@
 import {
   resolveFilmDbSection,
   resolveStreamingForPlatform,
+  resolveHomeStreaming,
   buildFilmDbSections,
   getStreamingPlatforms,
   isIndonesianFilm,
@@ -1500,6 +1501,76 @@ const runTests = () => {
     );
     const resTheatresDefault = resolveFilmDbSection('fd_on_theatres', theatreFilms, undefined, { now: FIXED_NOW });
     assertEquals(resTheatresDefault.length, 24, 'fd_on_theatres defaults to 24 limit when unset');
+  }
+
+  // 95. placeholder-only whereToWatch entries are ignored by sections and chips
+  {
+    const placeholderFilm = createFilm({
+      id: 'placeholder-only',
+      idReleaseDate: daysAgo(5),
+      whereToWatch: [
+        { type: 'stream', platform: 'TMDB Global', badgeColor: 'bg-cyan-500' },
+        { type: 'cinema', platform: 'Bioskop / Cinema', badgeColor: '#E50914' },
+      ],
+    });
+
+    const streaming = resolveFilmDbSection('fd_streaming', [placeholderFilm], undefined, {
+      now: FIXED_NOW,
+    });
+    assertEquals(
+      streaming.map(f => f.id),
+      [],
+      'placeholder-only films are excluded from fd_streaming'
+    );
+
+    const theatres = resolveFilmDbSection('fd_on_theatres', [placeholderFilm], undefined, {
+      now: FIXED_NOW,
+    });
+    assertEquals(
+      theatres.map(f => f.id),
+      [],
+      'placeholder-only films are excluded from fd_on_theatres'
+    );
+
+    const homeStreaming = resolveHomeStreaming([placeholderFilm], undefined, undefined, {
+      now: FIXED_NOW,
+    });
+    assertEquals(
+      homeStreaming.map(f => f.id),
+      [],
+      'placeholder-only films are excluded from the home streaming resolver'
+    );
+
+    assertEquals(
+      getStreamingPlatforms([placeholderFilm]),
+      [],
+      'placeholder-only films make no streaming platform chip'
+    );
+  }
+
+  // 96. real entries next to a placeholder still count
+  {
+    const mixedFilm = createFilm({
+      id: 'mixed-placeholder',
+      whereToWatch: [
+        { type: 'stream', platform: 'tmdb global', badgeColor: 'bg-cyan-500' },
+        { type: 'stream', platform: 'Netflix', badgeColor: '#E50914' },
+      ],
+    });
+
+    const streaming = resolveFilmDbSection('fd_streaming', [mixedFilm], undefined, {
+      now: FIXED_NOW,
+    });
+    assertEquals(
+      streaming.map(f => f.id),
+      ['mixed-placeholder'],
+      'real streaming entries next to a placeholder are still included'
+    );
+    assertEquals(
+      getStreamingPlatforms([mixedFilm]),
+      [{ name: 'Netflix', count: 1 }],
+      'real streaming entries next to a placeholder still make a platform chip'
+    );
   }
 
   console.log(`\n--- Results: ${passed} passed, ${failed} failed ---`);

@@ -6492,9 +6492,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         genres: mapped.genres ? mapped.genres.split(', ').filter(Boolean) : [],
         totalVotes: details.vote_count || 1,
         criticsSkorSotoy: mapped.skorSotoy,
-        whereToWatch: [
-          { platform: 'TMDB Global', type: 'stream', badgeColor: 'bg-cyan-500' }
-        ],
+        whereToWatch: [],
         createdAt: new Date().toISOString(),
       };
 

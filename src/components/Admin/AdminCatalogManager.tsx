@@ -697,9 +697,6 @@ export const AdminCatalogManager: React.FC = () => {
         skorSotoy: Number(formData.skorSotoy) || 4.0,
         totalVotes: 1,
         criticsSkorSotoy: Number(formData.skorSotoy) || 4.0,
-        whereToWatch: [
-          { platform: 'Bioskop / Cinema', type: 'cinema' as const, badgeColor: '#E50914' }
-        ],
         trailerUrl: trailerUrl || undefined,
         featuredRecommendation: formData.featuredRecommendation,
         ...(resolvedCollectionId ? { collectionId: resolvedCollectionId } : {}),
@@ -709,9 +706,11 @@ export const AdminCatalogManager: React.FC = () => {
 
       let success = false;
       if (editingFilmId) {
+        // Never write whereToWatch when editing: the TMDB sync owns that field.
         success = await updateFilm(editingFilmId, filmPayload);
       } else {
-        success = await addFilm(filmPayload);
+        // New films start with no availability data; the TMDB sync fills it.
+        success = await addFilm({ ...filmPayload, whereToWatch: [] });
       }
 
       if (success !== false) {

@@ -4,6 +4,7 @@ import {
   pickIdReleaseDate,
   getBadgeColor,
   buildWhereToWatch,
+  isPlaceholderWhereToWatch,
   computeInTheatres,
   computeFilmSyncUpdate,
   evaluateFilmSync,
@@ -202,8 +203,8 @@ const runTests = async () => {
       providersFlatrate: [],
       inTheatres: false,
     }),
-    [{ type: 'stream', platform: 'Netflix', badgeColor: '#E50914' }],
-    'buildWhereToWatch removes the exact placeholder cinema entry'
+    [],
+    'buildWhereToWatch drops placeholder and manual entries when TMDB has nothing'
   );
 
   // 11
@@ -214,15 +215,42 @@ const runTests = async () => {
         { type: 'rent', platform: 'Google Play', badgeColor: '#222222' },
         { type: 'stream', platform: 'Vidio', badgeColor: '#E2231A' },
       ],
-      providersFlatrate: [],
+      providersFlatrate: ['Netflix'],
       inTheatres: false,
     }),
+    [{ type: 'stream', platform: 'Netflix', badgeColor: '#E50914', source: 'tmdb' }],
+    'buildWhereToWatch discards manual entries and keeps only TMDB providers'
+  );
+
+  // 11a
+  assertEquals(
+    buildWhereToWatch({
+      existing: [{ type: 'cinema', platform: 'Bioskop / Cinema', badgeColor: '#E50914' }],
+      providersFlatrate: ['Netflix'],
+      inTheatres: true,
+    }),
     [
-      { type: 'cinema', platform: 'Cinema XXI', badgeColor: '#111111' },
-      { type: 'stream', platform: 'Vidio', badgeColor: '#E2231A' },
-      { type: 'rent', platform: 'Google Play', badgeColor: '#222222' },
+      { type: 'cinema', platform: 'Bioskop', badgeColor: '#E50914', source: 'tmdb' },
+      { type: 'stream', platform: 'Netflix', badgeColor: '#E50914', source: 'tmdb' },
     ],
-    'buildWhereToWatch keeps manual entries untouched'
+    'buildWhereToWatch rebuilds only TMDB cinema and flatrate entries'
+  );
+
+  // 11b
+  assertEquals(
+    isPlaceholderWhereToWatch({ type: 'stream', platform: '  TMDB Global  ', badgeColor: '#000' }),
+    true,
+    'isPlaceholderWhereToWatch detects TMDB Global ignoring case and whitespace'
+  );
+  assertEquals(
+    isPlaceholderWhereToWatch({ type: 'cinema', platform: 'bioskop / cinema', badgeColor: '#000' }),
+    true,
+    'isPlaceholderWhereToWatch detects Bioskop / Cinema ignoring case'
+  );
+  assertEquals(
+    isPlaceholderWhereToWatch({ type: 'stream', platform: 'Netflix', badgeColor: '#000' }),
+    false,
+    'isPlaceholderWhereToWatch ignores real platforms'
   );
 
   // 12
@@ -261,7 +289,7 @@ const runTests = async () => {
       providersFlatrate: ['Prime Video', 'Netflix'],
       inTheatres: true,
     }).map(entry => `${entry.type}:${entry.platform}`),
-    ['cinema:Bioskop', 'stream:Netflix', 'stream:Prime Video', 'stream:Vidio'],
+    ['cinema:Bioskop', 'stream:Netflix', 'stream:Prime Video'],
     'buildWhereToWatch returns cinema first, then streams sorted by platform name'
   );
 
@@ -300,8 +328,8 @@ const runTests = async () => {
       providersFlatrate: ['Netflix'],
       inTheatres: false,
     }),
-    [{ type: 'stream', platform: 'Netflix', badgeColor: '#E50914' }],
-    'buildWhereToWatch does not duplicate an existing manual type/platform pair'
+    [{ type: 'stream', platform: 'Netflix', badgeColor: '#E50914', source: 'tmdb' }],
+    'buildWhereToWatch replaces a manual platform pair with the TMDB entry'
   );
 
   // -------------------------------------------------------------------------
@@ -719,6 +747,29 @@ const runTests = async () => {
       ['idReleaseDate', 'releaseDate', 'whereToWatch', 'originCountry'].includes(key)
     ),
     'computeFilmSyncUpdate only writes idReleaseDate, releaseDate, whereToWatch, and originCountry'
+  );
+
+  // 34a
+  const manualRemoval = computeFilmSyncUpdate({
+    film: createFilm({
+      releaseDate: '2026-10-02',
+      whereToWatch: [
+        { type: 'stream', platform: 'Vidio', badgeColor: '#E2231A' },
+        { type: 'stream', platform: 'TMDB Global', badgeColor: 'bg-cyan-500' },
+      ],
+    }),
+    sync: createSync({ releaseDate: '2026-10-02' }),
+    nowPlayingIds: [],
+    now: FIXED_NOW,
+  });
+  assertEquals(
+    manualRemoval?.updates.whereToWatch,
+    [],
+    'computeFilmSyncUpdate empties whereToWatch when TMDB has no availability'
+  );
+  assert(
+    Boolean(manualRemoval?.changes.includes('hapus data non-TMDB')),
+    'computeFilmSyncUpdate reports removal of non-TMDB data'
   );
 
   // 35

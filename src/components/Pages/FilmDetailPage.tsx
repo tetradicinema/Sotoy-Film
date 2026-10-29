@@ -53,7 +53,7 @@ import { FilmMediaSection } from '../Film/FilmMediaSection';
 import { FilmLastSeasonCard } from '../Film/FilmLastSeasonCard';
 import { FilmRelatedSection } from '../Film/FilmRelatedSection';
 import { fetchFullTmdbCredits } from '../../utils/tmdbHelper';
-import { tmdbMediaType } from '../../utils/tmdbSync';
+import { tmdbMediaType, isPlaceholderWhereToWatch } from '../../utils/tmdbSync';
 import { countReviewAudiences } from '../../utils/shareCardText';
 
 const RelatedArticleAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }> = ({ authorId, defaultAuthor }) => {
@@ -1277,7 +1277,9 @@ export const FilmDetailPage: React.FC = () => {
               </div>
 
               <div className="space-y-2.5">
-                {film.whereToWatch.map((w, idx) => (
+                {film.whereToWatch
+                  .filter(w => !isPlaceholderWhereToWatch(w))
+                  .map((w, idx) => (
                   <div
                     key={idx}
                     className="flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-slate-900 border border-slate-800 text-xs text-white hover:border-slate-700 transition-colors"
