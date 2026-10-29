@@ -202,10 +202,12 @@ export const Navbar: React.FC = () => {
                 className="flex items-center cursor-pointer group shrink-0 select-none transition-transform active:scale-95 p-2 -m-2"
               >
                 <img
-                  src="/v2_sotoyfilm%20full%20logo%20transparent.PNG"
+                  src="/sotoy-logo-full.webp"
                   alt="Sotoy Film — Pop-Culture & Cinema"
                   loading="eager"
                   fetchPriority="high"
+                  width="800"
+                  height="292"
                   className="h-14 md:h-[68px] w-auto -my-2 object-contain transition-all duration-300 group-hover:scale-[1.015] group-hover:opacity-90"
                 />
               </div>

@@ -346,10 +346,10 @@ export function generateArticleSchema(input: ArticleSchemaInput) {
         '@type': 'ImageObject',
         url: resolveAbsoluteUrl(
           input.publisherLogo ||
-            'https://www.sotoyfilm.my.id/v2_sotoyfilm%20stacked%20logo_white%20bg.PNG'
+            'https://www.sotoyfilm.my.id/sotoy%20film%20favicon%20512x512.PNG'
         ),
-        width: 1254,
-        height: 1254,
+        width: 512,
+        height: 512,
       },
     },
   };
@@ -412,9 +412,9 @@ export function generateOrganizationSchema(siteUrl = DEFAULT_BASE_URL) {
     url: cleanUrl,
     logo: {
       '@type': 'ImageObject',
-      url: `${cleanUrl}/v2_sotoyfilm%20stacked%20logo_white%20bg.PNG`,
-      width: 1254,
-      height: 1254,
+      url: `${cleanUrl}/sotoy%20film%20favicon%20512x512.PNG`,
+      width: 512,
+      height: 512,
     },
     sameAs: [
       'https://twitter.com/sotoyfilm',

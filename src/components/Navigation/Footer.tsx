@@ -17,8 +17,10 @@ export const Footer: React.FC = () => {
               className="flex items-center cursor-pointer inline-flex group -ml-1"
             >
               <img
-                src="/v2_sotoyfilm%20full%20logo%20transparent.PNG"
+                src="/sotoy-logo-full.webp"
                 alt="Sotoy Film — Pop-Culture & Cinema"
+                width="800"
+                height="292"
                 className="h-16 md:h-20 w-auto object-contain transition-all duration-300 group-hover:scale-[1.015] group-hover:opacity-90"
               />
             </div>
