@@ -26,11 +26,21 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin="anonymous">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preload" as="image" href="/sotoy-logo-full.webp" type="image/webp" fetchpriority="high">
+    <style>
+#app-shell{background:rgba(10,10,10,.95);border-bottom:1px solid rgba(255,255,255,.08)}
+#app-shell .s-in{max-width:80rem;margin:0 auto;padding:0 12px;height:64px;display:flex;align-items:center;gap:4px}
+#app-shell .s-burger{width:44px;height:44px;flex:none}
+#app-shell img{display:block;height:56px;width:auto;margin:-8px 0;object-fit:contain}
+@media(min-width:640px){#app-shell .s-in{padding:0 24px;gap:8px}}
+@media(min-width:768px){#app-shell img{height:68px}}
+@media(min-width:1024px){#app-shell .s-burger{display:none}}
+</style>
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Geist:wght@500;600;700;900&family=Geist+Mono:wght@400;500;600;700;900&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@500;600;700;900&family=Geist+Mono:wght@400;500;600;700;900&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,700&display=swap"></noscript>
   </head>
   <body class="bg-[#0A0A0A] text-slate-100 antialiased selection:bg-[#FF2E7E] selection:text-white min-h-screen">
-    <div id="root"></div>
+    <div id="root"><div id="app-shell" aria-hidden="true"><div class="s-in"><div class="s-burger"></div><img src="/sotoy-logo-full.webp" width="800" height="292" alt="" fetchpriority="high" decoding="async"></div></div></div>
+    <script>if(/^\/onboarding(\/|$)/.test(location.pathname)){var s=document.getElementById('app-shell');if(s)s.remove()}</script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
