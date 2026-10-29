@@ -24,31 +24,7 @@ import {
   resolveSidebarWidgetOrder,
   getCachedHomepageLayout,
 } from './utils/homepageConfigHelper';
-import { CategoryPage } from './components/Pages/CategoryPage';
-import { FilmDatabasePage } from './components/Pages/FilmDatabasePage';
-import { FilmDetailPage } from './components/Pages/FilmDetailPage';
-import { FilmSeasonsPage } from './components/Pages/FilmSeasonsPage';
-import { FilmSeasonPage } from './components/Pages/FilmSeasonPage';
-import { FilmRecommendationsPage } from './components/Pages/FilmRecommendationsPage';
-import { CommunityFeedPage } from './components/Pages/CommunityFeedPage';
-import { BuzzDetailPage } from './components/Pages/BuzzDetailPage';
-import { ArticleDetailPage } from './components/Pages/ArticleDetailPage';
-import { UserPage } from './components/Pages/UserPage';
-import { CollectionDetailPage } from './components/Pages/CollectionDetailPage';
-import { SettingsPage } from './components/Pages/SettingsPage';
-import { SearchPage } from './components/Pages/SearchPage';
-import { AboutUsPage } from './components/Pages/AboutUsPage';
-import { PrivacyPolicyPage } from './components/Pages/PrivacyPolicyPage';
-import { TermsPage } from './components/Pages/TermsPage';
-import { BusinessInquiriesPage } from './components/Pages/BusinessInquiriesPage';
-import { CriticSubmissionPage } from './components/Pages/CriticSubmissionPage';
-import { CriticCriteriaPage } from './components/Pages/CriticCriteriaPage';
-import { AdminCriticSubmissionsPage } from './components/Pages/AdminCriticSubmissionsPage';
-import { LeaderboardGuidePage } from './components/Pages/LeaderboardGuidePage';
-import { GuidePage } from './components/Pages/GuidePage';
-import { OnboardingPage } from './components/Pages/OnboardingPage';
 import { LoginModal } from './components/Modals/LoginModal';
-import { SocialShareModal } from './components/Modals/SocialShareModal';
 import { ComposeBuzzModal } from './components/Modals/ComposeBuzzModal';
 import { SuspendedAccountModal } from './components/Modals/SuspendedAccountModal';
 import { EmailVerificationBanner } from './components/Common/EmailVerificationBanner';
@@ -74,6 +50,81 @@ const AdminHomepageSectionsPage = React.lazy(() =>
 // Code-split the article editor page (pulls in @tiptap editor runtime)
 const WriteArticlePage = React.lazy(() =>
   import('./components/Pages/WriteArticlePage').then(m => ({ default: m.WriteArticlePage }))
+);
+
+// Route-level code splitting for page views so first paint only ships the home shell
+const CategoryPage = React.lazy(() =>
+  import('./components/Pages/CategoryPage').then(m => ({ default: m.CategoryPage }))
+);
+const FilmDatabasePage = React.lazy(() =>
+  import('./components/Pages/FilmDatabasePage').then(m => ({ default: m.FilmDatabasePage }))
+);
+const FilmDetailPage = React.lazy(() =>
+  import('./components/Pages/FilmDetailPage').then(m => ({ default: m.FilmDetailPage }))
+);
+const FilmSeasonsPage = React.lazy(() =>
+  import('./components/Pages/FilmSeasonsPage').then(m => ({ default: m.FilmSeasonsPage }))
+);
+const FilmSeasonPage = React.lazy(() =>
+  import('./components/Pages/FilmSeasonPage').then(m => ({ default: m.FilmSeasonPage }))
+);
+const FilmRecommendationsPage = React.lazy(() =>
+  import('./components/Pages/FilmRecommendationsPage').then(m => ({ default: m.FilmRecommendationsPage }))
+);
+const CommunityFeedPage = React.lazy(() =>
+  import('./components/Pages/CommunityFeedPage').then(m => ({ default: m.CommunityFeedPage }))
+);
+const BuzzDetailPage = React.lazy(() =>
+  import('./components/Pages/BuzzDetailPage').then(m => ({ default: m.BuzzDetailPage }))
+);
+const ArticleDetailPage = React.lazy(() =>
+  import('./components/Pages/ArticleDetailPage').then(m => ({ default: m.ArticleDetailPage }))
+);
+const UserPage = React.lazy(() =>
+  import('./components/Pages/UserPage').then(m => ({ default: m.UserPage }))
+);
+const CollectionDetailPage = React.lazy(() =>
+  import('./components/Pages/CollectionDetailPage').then(m => ({ default: m.CollectionDetailPage }))
+);
+const SettingsPage = React.lazy(() =>
+  import('./components/Pages/SettingsPage').then(m => ({ default: m.SettingsPage }))
+);
+const SearchPage = React.lazy(() =>
+  import('./components/Pages/SearchPage').then(m => ({ default: m.SearchPage }))
+);
+const AboutUsPage = React.lazy(() =>
+  import('./components/Pages/AboutUsPage').then(m => ({ default: m.AboutUsPage }))
+);
+const PrivacyPolicyPage = React.lazy(() =>
+  import('./components/Pages/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage }))
+);
+const TermsPage = React.lazy(() =>
+  import('./components/Pages/TermsPage').then(m => ({ default: m.TermsPage }))
+);
+const BusinessInquiriesPage = React.lazy(() =>
+  import('./components/Pages/BusinessInquiriesPage').then(m => ({ default: m.BusinessInquiriesPage }))
+);
+const CriticSubmissionPage = React.lazy(() =>
+  import('./components/Pages/CriticSubmissionPage').then(m => ({ default: m.CriticSubmissionPage }))
+);
+const CriticCriteriaPage = React.lazy(() =>
+  import('./components/Pages/CriticCriteriaPage').then(m => ({ default: m.CriticCriteriaPage }))
+);
+const AdminCriticSubmissionsPage = React.lazy(() =>
+  import('./components/Pages/AdminCriticSubmissionsPage').then(m => ({ default: m.AdminCriticSubmissionsPage }))
+);
+const LeaderboardGuidePage = React.lazy(() =>
+  import('./components/Pages/LeaderboardGuidePage').then(m => ({ default: m.LeaderboardGuidePage }))
+);
+const GuidePage = React.lazy(() =>
+  import('./components/Pages/GuidePage').then(m => ({ default: m.GuidePage }))
+);
+const OnboardingPage = React.lazy(() =>
+  import('./components/Pages/OnboardingPage').then(m => ({ default: m.OnboardingPage }))
+);
+// Code-split the share modal: it pulls in canvas/export helpers and is only needed while open
+const SocialShareModal = React.lazy(() =>
+  import('./components/Modals/SocialShareModal').then(m => ({ default: m.SocialShareModal }))
 );
 
 import { GenericPageSkeleton } from './components/Skeletons';
@@ -290,7 +341,7 @@ const HomeView: React.FC = () => {
 };
 
 const AppContent: React.FC = () => {
-  const { toastMessage, toastType } = useApp();
+  const { toastMessage, toastType, shareModalData } = useApp();
   const location = useLocation();
 
   const isOnboarding = location.pathname === '/onboarding';
@@ -326,8 +377,12 @@ const AppContent: React.FC = () => {
       {/* Login / Auth Modal */}
       <LoginModal />
 
-      {/* Social Media Share Modal */}
-      <SocialShareModal />
+      {/* Social Media Share Modal (lazy: only mounted while a share payload exists) */}
+      {shareModalData && (
+        <React.Suspense fallback={null}>
+          <SocialShareModal />
+        </React.Suspense>
+      )}
 
       {/* Compose Buzz Modal */}
       <ComposeBuzzModal />
@@ -346,242 +401,244 @@ const AppContent: React.FC = () => {
 
       {/* Main URL-based Route Switcher */}
       <main className="flex-1">
-        <Routes>
-          <Route path="/" element={<HomeView />} />
-          <Route path="/onboarding" element={<OnboardingPage />} />
+        <React.Suspense fallback={<PageLoadingFallback />}>
+          <Routes>
+            <Route path="/" element={<HomeView />} />
+            <Route path="/onboarding" element={<OnboardingPage />} />
           
-          {/* Film Routes */}
-          <Route path="/film" element={<Navigate to="/film-database" replace />} />
-          <Route path="/film/:slug/seasons" element={<FilmSeasonsPage />} />
-          <Route path="/film/:slug/season/:seasonNumber" element={<FilmSeasonPage />} />
-          <Route path="/film/:slug" element={<FilmDetailPage />} />
-          <Route path="/film-database" element={<FilmDatabasePage />} />
-          <Route path="/rekomendasi-film" element={<FilmRecommendationsPage />} />
-          <Route path="/film-recommendations" element={<FilmRecommendationsPage />} />
+            {/* Film Routes */}
+            <Route path="/film" element={<Navigate to="/film-database" replace />} />
+            <Route path="/film/:slug/seasons" element={<FilmSeasonsPage />} />
+            <Route path="/film/:slug/season/:seasonNumber" element={<FilmSeasonPage />} />
+            <Route path="/film/:slug" element={<FilmDetailPage />} />
+            <Route path="/film-database" element={<FilmDatabasePage />} />
+            <Route path="/rekomendasi-film" element={<FilmRecommendationsPage />} />
+            <Route path="/film-recommendations" element={<FilmRecommendationsPage />} />
 
-          {/* Article & Editorial Routes */}
-          <Route path="/artikel" element={<Navigate to="/kategori/movies" replace />} />
-          <Route path="/article" element={<Navigate to="/kategori/movies" replace />} />
-          <Route path="/artikel/:slug" element={<ArticleDetailPage />} />
-          <Route path="/article/:slug" element={<ArticleDetailPage />} />
-          <Route
-            path="/tulis-artikel"
-            element={
-              <React.Suspense fallback={<PageLoadingFallback />}>
-                <WriteArticlePage />
-              </React.Suspense>
-            }
-          />
-          <Route
-            path="/write-article"
-            element={
-              <React.Suspense fallback={<PageLoadingFallback />}>
-                <WriteArticlePage />
-              </React.Suspense>
-            }
-          />
+            {/* Article & Editorial Routes */}
+            <Route path="/artikel" element={<Navigate to="/kategori/movies" replace />} />
+            <Route path="/article" element={<Navigate to="/kategori/movies" replace />} />
+            <Route path="/artikel/:slug" element={<ArticleDetailPage />} />
+            <Route path="/article/:slug" element={<ArticleDetailPage />} />
+            <Route
+              path="/tulis-artikel"
+              element={
+                <React.Suspense fallback={<PageLoadingFallback />}>
+                  <WriteArticlePage />
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="/write-article"
+              element={
+                <React.Suspense fallback={<PageLoadingFallback />}>
+                  <WriteArticlePage />
+                </React.Suspense>
+              }
+            />
 
-          {/* Category & Exploration Routes */}
-          <Route path="/kategori" element={<Navigate to="/kategori/movies" replace />} />
-          <Route path="/category" element={<Navigate to="/kategori/movies" replace />} />
-          <Route path="/kategori/anime" element={<Navigate to="/kategori/animation" replace />} />
-          <Route path="/kategori/anime/:subCategory" element={<LegacyCategoryRedirect target="/kategori/animation" />} />
-          <Route path="/kategori/animasi" element={<Navigate to="/kategori/animation" replace />} />
-          <Route path="/kategori/animasi/:subCategory" element={<LegacyCategoryRedirect target="/kategori/animation" />} />
-          <Route path="/category/anime" element={<Navigate to="/kategori/animation" replace />} />
-          <Route path="/category/anime/:subCategory" element={<LegacyCategoryRedirect target="/kategori/animation" />} />
-          <Route path="/category/animasi" element={<Navigate to="/kategori/animation" replace />} />
-          <Route path="/category/animasi/:subCategory" element={<LegacyCategoryRedirect target="/kategori/animation" />} />
-          <Route path="/kategori/:name" element={<CategoryPage />} />
-          <Route path="/kategori/:name/:subCategory" element={<CategoryPage />} />
-          <Route path="/category/:name" element={<CategoryPage />} />
-          <Route path="/category/:name/:subCategory" element={<CategoryPage />} />
+            {/* Category & Exploration Routes */}
+            <Route path="/kategori" element={<Navigate to="/kategori/movies" replace />} />
+            <Route path="/category" element={<Navigate to="/kategori/movies" replace />} />
+            <Route path="/kategori/anime" element={<Navigate to="/kategori/animation" replace />} />
+            <Route path="/kategori/anime/:subCategory" element={<LegacyCategoryRedirect target="/kategori/animation" />} />
+            <Route path="/kategori/animasi" element={<Navigate to="/kategori/animation" replace />} />
+            <Route path="/kategori/animasi/:subCategory" element={<LegacyCategoryRedirect target="/kategori/animation" />} />
+            <Route path="/category/anime" element={<Navigate to="/kategori/animation" replace />} />
+            <Route path="/category/anime/:subCategory" element={<LegacyCategoryRedirect target="/kategori/animation" />} />
+            <Route path="/category/animasi" element={<Navigate to="/kategori/animation" replace />} />
+            <Route path="/category/animasi/:subCategory" element={<LegacyCategoryRedirect target="/kategori/animation" />} />
+            <Route path="/kategori/:name" element={<CategoryPage />} />
+            <Route path="/kategori/:name/:subCategory" element={<CategoryPage />} />
+            <Route path="/category/:name" element={<CategoryPage />} />
+            <Route path="/category/:name/:subCategory" element={<CategoryPage />} />
 
-          {/* Community & Buzz Routes */}
-          <Route path="/komunitas" element={<CommunityFeedPage />} />
-          <Route path="/community-feed" element={<CommunityFeedPage />} />
-          <Route path="/buzz/:id" element={<BuzzDetailPage />} />
+            {/* Community & Buzz Routes */}
+            <Route path="/komunitas" element={<CommunityFeedPage />} />
+            <Route path="/community-feed" element={<CommunityFeedPage />} />
+            <Route path="/buzz/:id" element={<BuzzDetailPage />} />
 
-          {/* User & Settings Routes */}
-          <Route path="/user/:id" element={<UserPage />} />
-          <Route path="/profil" element={<UserPage />} />
-          <Route path="/profile" element={<UserPage />} />
-          <Route path="/koleksi/:userId/:collectionId" element={<CollectionDetailPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/search" element={<SearchPage />} />
+            {/* User & Settings Routes */}
+            <Route path="/user/:id" element={<UserPage />} />
+            <Route path="/profil" element={<UserPage />} />
+            <Route path="/profile" element={<UserPage />} />
+            <Route path="/koleksi/:userId/:collectionId" element={<CollectionDetailPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/search" element={<SearchPage />} />
 
-          {/* Informational & Legal Pages */}
-          <Route path="/tentang-kami" element={<AboutUsPage />} />
-          <Route path="/about-us" element={<AboutUsPage />} />
-          <Route path="/kebijakan-privasi" element={<PrivacyPolicyPage />} />
-          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-          <Route path="/syarat-ketentuan" element={<TermsPage />} />
-          <Route path="/terms-conditions" element={<TermsPage />} />
-          <Route path="/kontak-bisnis" element={<BusinessInquiriesPage />} />
-          <Route path="/business-inquiries" element={<BusinessInquiriesPage />} />
+            {/* Informational & Legal Pages */}
+            <Route path="/tentang-kami" element={<AboutUsPage />} />
+            <Route path="/about-us" element={<AboutUsPage />} />
+            <Route path="/kebijakan-privasi" element={<PrivacyPolicyPage />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+            <Route path="/syarat-ketentuan" element={<TermsPage />} />
+            <Route path="/terms-conditions" element={<TermsPage />} />
+            <Route path="/kontak-bisnis" element={<BusinessInquiriesPage />} />
+            <Route path="/business-inquiries" element={<BusinessInquiriesPage />} />
 
-          {/* Critic Program & Leaderboard Routes */}
-          <Route path="/gabung-kritikus" element={<CriticSubmissionPage />} />
-          <Route path="/critic-submission" element={<CriticSubmissionPage />} />
-          <Route path="/kriteria-kritikus" element={<CriticCriteriaPage />} />
-          <Route path="/critic-criteria" element={<CriticCriteriaPage />} />
-          <Route path="/panduan-leaderboard" element={<LeaderboardGuidePage />} />
-          <Route path="/panduan" element={<GuidePage />} />
-          <Route path="/guide" element={<GuidePage />} />
-          <Route path="/faq" element={<GuidePage />} />
-          <Route path="/admin/submissions" element={<AdminCriticSubmissionsPage />} />
+            {/* Critic Program & Leaderboard Routes */}
+            <Route path="/gabung-kritikus" element={<CriticSubmissionPage />} />
+            <Route path="/critic-submission" element={<CriticSubmissionPage />} />
+            <Route path="/kriteria-kritikus" element={<CriticCriteriaPage />} />
+            <Route path="/critic-criteria" element={<CriticCriteriaPage />} />
+            <Route path="/panduan-leaderboard" element={<LeaderboardGuidePage />} />
+            <Route path="/panduan" element={<GuidePage />} />
+            <Route path="/guide" element={<GuidePage />} />
+            <Route path="/faq" element={<GuidePage />} />
+            <Route path="/admin/submissions" element={<AdminCriticSubmissionsPage />} />
 
-          {/* Admin Control Center Standalone URLs */}
-          <Route
-            path="/admin"
-            element={
-              <React.Suspense fallback={<PageLoadingFallback />}>
-                <AdminDashboard />
-              </React.Suspense>
-            }
-          />
-          <Route
-            path="/admin/analytics"
-            element={
-              <React.Suspense fallback={<PageLoadingFallback />}>
-                <AdminDashboard />
-              </React.Suspense>
-            }
-          />
-          <Route
-            path="/admin/users"
-            element={
-              <React.Suspense fallback={<PageLoadingFallback />}>
-                <AdminDashboard />
-              </React.Suspense>
-            }
-          />
-          <Route
-            path="/admin/moderation"
-            element={
-              <React.Suspense fallback={<PageLoadingFallback />}>
-                <AdminDashboard />
-              </React.Suspense>
-            }
-          />
-          <Route
-            path="/admin/catalog"
-            element={
-              <React.Suspense fallback={<PageLoadingFallback />}>
-                <AdminDashboard />
-              </React.Suspense>
-            }
-          />
-          <Route
-            path="/admin/storage"
-            element={
-              <React.Suspense fallback={<PageLoadingFallback />}>
-                <AdminDashboard />
-              </React.Suspense>
-            }
-          />
-          <Route
-            path="/admin/appeals"
-            element={
-              <React.Suspense fallback={<PageLoadingFallback />}>
-                <AdminDashboard />
-              </React.Suspense>
-            }
-          />
-          <Route
-            path="/admin/audit"
-            element={
-              <React.Suspense fallback={<PageLoadingFallback />}>
-                <AdminDashboard />
-              </React.Suspense>
-            }
-          />
-          <Route
-            path="/admin/homepage"
-            element={
-              <React.Suspense fallback={<PageLoadingFallback />}>
-                <AdminHomepageSectionsPage />
-              </React.Suspense>
-            }
-          />
-          <Route
-            path="/admin/beranda"
-            element={
-              <React.Suspense fallback={<PageLoadingFallback />}>
-                <AdminHomepageSectionsPage />
-              </React.Suspense>
-            }
-          />
-          <Route
-            path="/admin/seksi-beranda"
-            element={
-              <React.Suspense fallback={<PageLoadingFallback />}>
-                <AdminHomepageSectionsPage />
-              </React.Suspense>
-            }
-          />
-          <Route
-            path="/writer"
-            element={
-              <React.Suspense fallback={<PageLoadingFallback />}>
-                <WriterDashboard />
-              </React.Suspense>
-            }
-          />
-          <Route
-            path="/penulis"
-            element={
-              <React.Suspense fallback={<PageLoadingFallback />}>
-                <WriterDashboard />
-              </React.Suspense>
-            }
-          />
-          <Route
-            path="/critic"
-            element={
-              <React.Suspense fallback={<PageLoadingFallback />}>
-                <CriticDashboard />
-              </React.Suspense>
-            }
-          />
-          <Route
-            path="/kritikus"
-            element={
-              <React.Suspense fallback={<PageLoadingFallback />}>
-                <CriticDashboard />
-              </React.Suspense>
-            }
-          />
+            {/* Admin Control Center Standalone URLs */}
+            <Route
+              path="/admin"
+              element={
+                <React.Suspense fallback={<PageLoadingFallback />}>
+                  <AdminDashboard />
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="/admin/analytics"
+              element={
+                <React.Suspense fallback={<PageLoadingFallback />}>
+                  <AdminDashboard />
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <React.Suspense fallback={<PageLoadingFallback />}>
+                  <AdminDashboard />
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="/admin/moderation"
+              element={
+                <React.Suspense fallback={<PageLoadingFallback />}>
+                  <AdminDashboard />
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="/admin/catalog"
+              element={
+                <React.Suspense fallback={<PageLoadingFallback />}>
+                  <AdminDashboard />
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="/admin/storage"
+              element={
+                <React.Suspense fallback={<PageLoadingFallback />}>
+                  <AdminDashboard />
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="/admin/appeals"
+              element={
+                <React.Suspense fallback={<PageLoadingFallback />}>
+                  <AdminDashboard />
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="/admin/audit"
+              element={
+                <React.Suspense fallback={<PageLoadingFallback />}>
+                  <AdminDashboard />
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="/admin/homepage"
+              element={
+                <React.Suspense fallback={<PageLoadingFallback />}>
+                  <AdminHomepageSectionsPage />
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="/admin/beranda"
+              element={
+                <React.Suspense fallback={<PageLoadingFallback />}>
+                  <AdminHomepageSectionsPage />
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="/admin/seksi-beranda"
+              element={
+                <React.Suspense fallback={<PageLoadingFallback />}>
+                  <AdminHomepageSectionsPage />
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="/writer"
+              element={
+                <React.Suspense fallback={<PageLoadingFallback />}>
+                  <WriterDashboard />
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="/penulis"
+              element={
+                <React.Suspense fallback={<PageLoadingFallback />}>
+                  <WriterDashboard />
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="/critic"
+              element={
+                <React.Suspense fallback={<PageLoadingFallback />}>
+                  <CriticDashboard />
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="/kritikus"
+              element={
+                <React.Suspense fallback={<PageLoadingFallback />}>
+                  <CriticDashboard />
+                </React.Suspense>
+              }
+            />
 
-          {/* Dedicated Full Control CMS & Editorial Workspace Routes */}
-          <Route
-            path="/cms"
-            element={
-              <React.Suspense fallback={<PageLoadingFallback />}>
-                <CMSPage />
-              </React.Suspense>
-            }
-          />
-          <Route
-            path="/workspace"
-            element={
-              <React.Suspense fallback={<PageLoadingFallback />}>
-                <CMSPage />
-              </React.Suspense>
-            }
-          />
-          <Route
-            path="/admin/cms"
-            element={
-              <React.Suspense fallback={<PageLoadingFallback />}>
-                <CMSPage />
-              </React.Suspense>
-            }
-          />
+            {/* Dedicated Full Control CMS & Editorial Workspace Routes */}
+            <Route
+              path="/cms"
+              element={
+                <React.Suspense fallback={<PageLoadingFallback />}>
+                  <CMSPage />
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="/workspace"
+              element={
+                <React.Suspense fallback={<PageLoadingFallback />}>
+                  <CMSPage />
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="/admin/cms"
+              element={
+                <React.Suspense fallback={<PageLoadingFallback />}>
+                  <CMSPage />
+                </React.Suspense>
+              }
+            />
 
-          {/* Catch-all Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            {/* Catch-all Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </React.Suspense>
       </main>
 
       {/* Footer */}

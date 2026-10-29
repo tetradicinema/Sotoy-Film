@@ -38,6 +38,20 @@ if (isStandalone) {
   );
 }
 
+// Stale-chunk guard: after a deploy, an open tab can still point at hashed chunks
+// that no longer exist. Reload once to pick up the new manifest, but never loop.
+window.addEventListener('vite:preloadError', (event) => {
+  event.preventDefault();
+  try {
+    if (sessionStorage.getItem('vite:preload-error-reloaded') === '1') return;
+    sessionStorage.setItem('vite:preload-error-reloaded', '1');
+  } catch {
+    // Storage can throw (private mode / blocked storage): skip reload to avoid a loop
+    return;
+  }
+  window.location.reload();
+});
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
