@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 declare global {
   interface Window {
     dataLayer?: any[];
@@ -16,7 +17,7 @@ let isInitialized = false;
 export function isAnalyticsAllowed(): boolean {
   try {
     if (typeof window === 'undefined') return false;
-    const isProd = Boolean((import.meta as any)?.env?.PROD);
+    const isProd = import.meta.env.PROD === true;
     return isProd && window.location.hostname === 'www.sotoyfilm.my.id';
   } catch {
     return false;

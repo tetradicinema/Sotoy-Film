@@ -358,6 +358,7 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     const pathname = location.pathname;
     if (isExcludedAnalyticsRoute(pathname)) {
+      lastTrackedPathRef.current = null;
       return;
     }
 
