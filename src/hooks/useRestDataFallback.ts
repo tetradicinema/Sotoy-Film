@@ -2,7 +2,7 @@
  * Late REST fallback for the initial films/articles load.
  *
  * The Firestore SDK can leave its Listen streams pending forever inside
- * crawler renderers. Four seconds after mount (and at most once per page
+ * crawler renderers. After a short delay (and at most once per collection per page
  * load) this hook reads whichever collection is still empty through the
  * plain REST client, so Googlebot gets real content instead of empty states.
  */
@@ -23,10 +23,18 @@ export interface RestFallbackCounts {
   articlesCount: number;
 }
 
-const REST_FALLBACK_DELAY_MS = 4000;
+/**
+ * Articles carry the hero (LCP) image and, with the list field mask, are a
+ * small payload, so they fall back early. Films are heavy and not LCP-critical,
+ * so they keep the longer delay and give the SDK time to answer first.
+ */
+const REST_FALLBACK_DELAY_MS: Record<RestFallbackCollection, number> = {
+  articles: 1000,
+  films: 4000,
+};
 
-/** At most one REST fallback run per page load. */
-let restFallbackConsumed = false;
+/** At most one REST fallback run per collection per page load. */
+const restFallbackConsumed = new Set<RestFallbackCollection>();
 
 /**
  * Pure decision helper: returns only the collections whose current count is
@@ -63,48 +71,50 @@ export function useRestDataFallback(options: UseRestDataFallbackOptions): void {
   useEffect(() => {
     let cancelled = false;
 
-    const timer = setTimeout(() => {
-      if (restFallbackConsumed) return;
-      restFallbackConsumed = true;
+    const runTarget = (target: RestFallbackCollection) => {
+      if (restFallbackConsumed.has(target)) return;
+      restFallbackConsumed.add(target);
 
-      const targets = getRestFallbackTargets({
+      const stillEmpty = getRestFallbackTargets({
         filmsCount: latestRef.current.filmsCount,
         articlesCount: latestRef.current.articlesCount,
-      });
-      if (targets.length === 0) return;
+      }).includes(target);
+      if (!stillEmpty) return;
 
-      for (const target of targets) {
-        void (async () => {
-          if (target === 'films') {
-            const docs = await fetchCollectionViaRest('films');
-            if (cancelled || docs.length === 0) return;
-
-            const films = docs
-              .map(normalizeRestFilm)
-              .filter((film): film is FilmItem => film !== null)
-              .sort((a, b) => (a.trendingRank || 99) - (b.trendingRank || 99));
-            if (films.length === 0) return;
-
-            latestRef.current.setFilms(films);
-            latestRef.current.setIsLoadingFilms(false);
-            return;
-          }
-
-          const docs = await fetchCollectionViaRest('articles');
+      void (async () => {
+        if (target === 'films') {
+          const docs = await fetchCollectionViaRest('films');
           if (cancelled || docs.length === 0) return;
 
-          const articles = normalizeRestArticle(docs);
-          if (articles.length === 0) return;
+          const films = docs
+            .map(normalizeRestFilm)
+            .filter((film): film is FilmItem => film !== null)
+            .sort((a, b) => (a.trendingRank || 99) - (b.trendingRank || 99));
+          if (films.length === 0) return;
 
-          latestRef.current.setArticles(articles);
-          latestRef.current.setIsLoadingArticles(false);
-        })();
-      }
-    }, REST_FALLBACK_DELAY_MS);
+          latestRef.current.setFilms(films);
+          latestRef.current.setIsLoadingFilms(false);
+          return;
+        }
+
+        const docs = await fetchCollectionViaRest('articles');
+        if (cancelled || docs.length === 0) return;
+
+        const articles = normalizeRestArticle(docs);
+        if (articles.length === 0) return;
+
+        latestRef.current.setArticles(articles);
+        latestRef.current.setIsLoadingArticles(false);
+      })();
+    };
+
+    const timers = (Object.keys(REST_FALLBACK_DELAY_MS) as RestFallbackCollection[]).map(
+      target => setTimeout(() => runTarget(target), REST_FALLBACK_DELAY_MS[target])
+    );
 
     return () => {
       cancelled = true;
-      clearTimeout(timer);
+      timers.forEach(clearTimeout);
     };
   }, []);
 }
