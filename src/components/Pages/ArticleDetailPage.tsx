@@ -96,10 +96,17 @@ export const ArticleDetailPage: React.FC = () => {
   const restAttemptedSlugRef = useRef<string | null>(null);
   const restRequestIdRef = useRef(0);
 
-  const restArticleForSlug = restArticle && (restArticle.slug === slug || restArticle.id === slug)
+  const restKey = slug || rawArticle?.slug || rawArticle?.id;
+  const restArticleForSlug = restArticle && (restArticle.slug === restKey || restArticle.id === restKey)
     ? restArticle
     : null;
-  const resolvedArticle = rawArticle || prefetchedArticle || restArticleForSlug;
+  // List items loaded through the REST fallback carry no body; use the full
+  // document fetched by slug once it arrives.
+  const rawHasBody = !!rawArticle && !!(rawArticle.content || rawArticle.contentJson);
+  const bodyKey = slug || rawArticle?.slug || rawArticle?.id || '';
+  const needsFullBody = !!rawArticle && !rawHasBody && !!bodyKey;
+  const resolvedArticle =
+    (rawHasBody ? rawArticle : null) || restArticleForSlug || rawArticle || prefetchedArticle;
 
   const unpublished = resolvedArticle ? isArticleUnpublished(resolvedArticle) : false;
   const isOwner = currentUser?.id && (resolvedArticle?.author?.id === currentUser.id || resolvedArticle?.authorId === currentUser.id);
@@ -189,19 +196,21 @@ export const ArticleDetailPage: React.FC = () => {
   // `restAttemptedSlug` is intentionally not a dependency: setting it must not
   // abort the request that is already in flight.
   useEffect(() => {
-    if (!slug || rawArticle || prefetchedArticle || isLoadingArticles) return;
-    if (restAttemptedSlugRef.current === slug) return;
+    const lookupKey = slug || rawArticle?.slug || rawArticle?.id || '';
+    const bodyMissing = !!rawArticle && !(rawArticle.content || rawArticle.contentJson);
+    if (!lookupKey || (rawArticle && !bodyMissing) || (!rawArticle && prefetchedArticle) || isLoadingArticles) return;
+    if (restAttemptedSlugRef.current === lookupKey) return;
 
-    restAttemptedSlugRef.current = slug;
+    restAttemptedSlugRef.current = lookupKey;
     const requestId = restRequestIdRef.current + 1;
     restRequestIdRef.current = requestId;
-    setRestAttemptedSlug(slug);
+    setRestAttemptedSlug(lookupKey);
     setIsRestFetching(true);
 
-    fetchArticleBySlugRest(slug)
+    fetchArticleBySlugRest(lookupKey)
       .then(data => {
         if (restRequestIdRef.current !== requestId) return;
-        setRestArticle(data ? mapArticleData(data, slug) : null);
+        setRestArticle(data ? mapArticleData(data, lookupKey) : null);
       })
       .catch(() => {
         if (restRequestIdRef.current !== requestId) return;
@@ -221,7 +230,9 @@ export const ArticleDetailPage: React.FC = () => {
     !!slug &&
     restAttemptedSlug !== slug;
 
-  if (!article && (isLoadingArticles || isRestFetching || shouldFetchRest)) {
+  const bodyPending = needsFullBody && !restArticleForSlug && (isRestFetching || restAttemptedSlug !== bodyKey);
+
+  if ((!article && (isLoadingArticles || isRestFetching || shouldFetchRest)) || bodyPending) {
     return <ArticleDetailSkeleton />;
   }
 
