@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { HelmetProvider } from '@dr.pogodin/react-helmet';
 import { SEOHead } from './components/SEO/SEOHead';
+import { initAnalytics, trackPageView, isExcludedAnalyticsRoute } from './lib/analytics';
 import { AppProvider, useApp } from './context/AppContext';
 import { Navbar } from './components/Navigation/Navbar';
 import { Footer } from './components/Navigation/Footer';
@@ -345,6 +346,33 @@ const AppContent: React.FC = () => {
   const location = useLocation();
 
   const isOnboarding = location.pathname === '/onboarding';
+
+  // Initialize GA4 once on client mount
+  useEffect(() => {
+    initAnalytics();
+  }, []);
+
+  // Track page_view on every route change after the page title has updated (exactly one per navigation)
+  const lastTrackedPathRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const pathname = location.pathname;
+    if (isExcludedAnalyticsRoute(pathname)) {
+      return;
+    }
+
+    const currentPath = pathname + location.search;
+
+    const timer = setTimeout(() => {
+      if (lastTrackedPathRef.current === currentPath) return;
+      lastTrackedPathRef.current = currentPath;
+      trackPageView(currentPath);
+    }, 150);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [location.pathname, location.search]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0A0A0A] text-slate-100 relative selection:bg-[#FF2E7E] selection:text-white pb-16 lg:pb-0">
