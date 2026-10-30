@@ -3,8 +3,8 @@
  *
  * Googlebot's renderer can keep the Firestore SDK Listen streams pending
  * forever, so the app never receives its initial films/articles payload.
- * This module reads the same collections with plain `fetch` (full documents,
- * no field mask) and mirrors the SDK normalisation used by AppContext.
+ * This module reads the same collections with plain `fetch` (articles without their
+ * heavy body fields) and mirrors the SDK normalisation used by AppContext.
  */
 
 import type { Article, FilmItem, MainCategory } from '../types';
@@ -23,6 +23,21 @@ const REST_PAGE_SIZE = 300;
 const MAX_REST_PAGES = 5;
 const REST_TIMEOUT_MS = 15000;
 const MAX_REST_ARTICLES = 50;
+
+/**
+ * Article list projection: every Article field except the heavy body
+ * (`content`, `contentJson`). The detail page fetches the full document
+ * itself when the body is missing.
+ */
+const ARTICLE_LIST_FIELDS = [
+  'id', 'title', 'slug', 'excerpt', 'contentFormat', 'coverImage',
+  'coverImageAlt', 'coverImageWidth', 'coverImageHeight', 'category',
+  'subCategory', 'authorId', 'author', 'publishedAt', 'publishedAtTimestamp',
+  'readTime', 'skorSotoy', 'featured', 'heroSlider', 'views', 'likes',
+  'commentsCount', 'tags', 'relatedFilmId', 'relatedFilmIds', 'status',
+  'scheduledAt', 'seoTitle', 'metaDescription', 'ogImage', 'seoKeywords',
+  'versionsCount',
+];
 
 /**
  * POSTs one runQuery request; returns the parsed result array, or null for
@@ -69,6 +84,9 @@ export async function fetchCollectionViaRest(
       const results = await fetchRestPage(endpoint, {
         structuredQuery: {
           from: [{ collectionId: collection }],
+          ...(collection === 'articles'
+            ? { select: { fields: ARTICLE_LIST_FIELDS.map(fieldPath => ({ fieldPath })) } }
+            : {}),
           offset: page * REST_PAGE_SIZE,
           limit: REST_PAGE_SIZE,
         },
@@ -169,6 +187,7 @@ function normalizeRestArticleDoc(doc: Record<string, any>): Article | null {
   return {
     ...doc,
     id,
+    content: typeof doc.content === 'string' ? doc.content : '',
     category: normalizeArticleCategory(doc.category) as MainCategory,
   } as Article;
 }
