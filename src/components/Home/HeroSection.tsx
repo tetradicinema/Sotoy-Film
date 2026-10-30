@@ -12,6 +12,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
 import { DEFAULT_POSTER } from '../../data/mockData';
+import { tmdbPosterSized } from '../../utils/tmdbImage';
 import { resolveConfigArticles } from '../../utils/homepageConfigHelper';
 import { getHeroToWatch } from '../../utils/filmSections';
 
@@ -420,7 +421,7 @@ export const HeroSection: React.FC = () => {
 
                           {/* Film Poster */}
                           <img
-                            src={film.poster?.trim() || DEFAULT_POSTER}
+                            src={tmdbPosterSized(film.poster?.trim() || DEFAULT_POSTER, 'w185')}
                             alt={film.title}
                             className="w-12 h-16 object-cover rounded-lg shrink-0 border border-white/10 group-hover:scale-105 transition-transform duration-300"
                           />

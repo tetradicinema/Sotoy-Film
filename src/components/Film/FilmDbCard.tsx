@@ -3,6 +3,7 @@ import { Star } from 'lucide-react';
 import { FilmItem, HomepageSectionKey } from '../../types';
 import { getCardRating } from '../../utils/filmCardRating';
 import { getCardGenres } from '../../utils/filmGenres';
+import { tmdbPosterSized } from '../../utils/tmdbImage';
 import { CollectionPickerPopover } from '../Common/CollectionPickerPopover';
 
 export interface FilmDbCardProps {
@@ -52,7 +53,7 @@ export const FilmDbCard: React.FC<FilmDbCardProps> = ({
     >
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
         <img
-          src={film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80'}
+          src={tmdbPosterSized(film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80', 'w342')}
           alt={film.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 motion-reduce:transition-none motion-reduce:transform-none"
         />
