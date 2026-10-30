@@ -1,28 +1,40 @@
-# Sotoy Film Ecosystem
+# Sotoy Film
 
-Sotoy Film (https://www.sotoyfilm.my.id) is a premier community-driven film criticism and cinematic catalog platform in Indonesia.
+> Sotoy Film (https://www.sotoyfilm.my.id) is a premier community-driven film criticism and cinematic catalog platform in Indonesia. It covers movies, series, and animation with reviews, news, and "Skor Sotoy" (decimal ratings), plus a community feed for film discussion.
 
-## Content Architecture
+## Main Pages
 
-- **Home**: Latest reviews, trending news, and community buzz.
-- **Film Database**: Exhaustive catalog of movies, series, and animation with "Skor Sotoy" (decimal ratings).
-- **Article Categories**:
-  - **Movies**: Reviews of local and international theatrical films.
-  - **Series**: Deep dives into streaming and broadcast serials.
-  - **Animation**: Specialized Japanese animation culture coverage.
-  - **Cinema Gear**: Professional evaluations of cameras, lenses, and production tools.
-  - **Film Studies**: Educational content for aspiring filmmakers.
+- [Home](https://www.sotoyfilm.my.id/): Latest reviews, trending news, and community buzz.
+- [Film Database](https://www.sotoyfilm.my.id/film-database): Exhaustive catalog of movies, series, and animation with "Skor Sotoy" ratings.
+- [Film Recommendations](https://www.sotoyfilm.my.id/rekomendasi-film): Curated film recommendations.
+- [Community Feed](https://www.sotoyfilm.my.id/komunitas): Community buzz and discussion about films.
+
+## Article Categories
+
+- [Movies](https://www.sotoyfilm.my.id/kategori/movies): Reviews of local and international theatrical films.
+- [Series](https://www.sotoyfilm.my.id/kategori/series): Deep dives into streaming and broadcast serials.
+- [Animation](https://www.sotoyfilm.my.id/kategori/animation): Specialized Japanese animation culture coverage.
+- [Cinema Gear](https://www.sotoyfilm.my.id/kategori/cinema-gear): Professional evaluations of cameras, lenses, and production tools.
+- [Film Studies](https://www.sotoyfilm.my.id/kategori/film-studies): Educational content for aspiring filmmakers.
+
+## About and Policies
+
+- [About Us](https://www.sotoyfilm.my.id/tentang-kami): About Sotoy Film.
+- [Guide and FAQ](https://www.sotoyfilm.my.id/panduan): How the platform works.
+- [Leaderboard Guide](https://www.sotoyfilm.my.id/panduan-leaderboard): How the community leaderboard works.
+- [Critic Program](https://www.sotoyfilm.my.id/gabung-kritikus): How to join as a critic.
+- [Critic Criteria](https://www.sotoyfilm.my.id/kriteria-kritikus): Requirements and criteria for critics.
+- [Business Inquiries](https://www.sotoyfilm.my.id/kontak-bisnis): Partnerships and advertising.
+- [Privacy Policy](https://www.sotoyfilm.my.id/kebijakan-privasi): Privacy policy.
+- [Terms and Conditions](https://www.sotoyfilm.my.id/syarat-ketentuan): Terms of use.
 
 ## Key Feeds
 
-- XML Sitemap: https://www.sotoyfilm.my.id/sitemap.xml
-- Robots Directive: https://www.sotoyfilm.my.id/robots.txt
+- [XML Sitemap](https://www.sotoyfilm.my.id/sitemap.xml): All indexable pages.
+- [Robots Directive](https://www.sotoyfilm.my.id/robots.txt): Crawler rules.
 
-## Discovery Endpoints
+## URL Patterns
 
-- Film Directory: `/film-database`
-- Editorial Articles: `/artikel/{slug}`
-- Detailed Film Pages: `/film/{slug}`
-- Category Hubs: `/kategori/{name}`
-- Community Feed: `/community-feed`
-
+- Editorial articles: /artikel/{slug}
+- Film pages: /film/{slug}
+- Category hubs: /kategori/{name}
