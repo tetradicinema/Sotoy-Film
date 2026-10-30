@@ -23,6 +23,8 @@ const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-900">
         <img
           src={article.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=800&q=80'}
+          loading="lazy"
+          decoding="async"
           alt={article.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
         />

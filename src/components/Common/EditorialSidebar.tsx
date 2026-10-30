@@ -360,6 +360,8 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                   </span>
                   <img
                     src={rec.coverImage?.trim() || DEFAULT_COVER}
+                    loading="lazy"
+                    decoding="async"
                     alt={rec.title}
                     className="w-12 h-12 object-cover rounded-xl shrink-0 border border-white/10"
                   />

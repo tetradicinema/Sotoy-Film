@@ -101,6 +101,8 @@ export const HomeCinemaGearBlock: React.FC = () => {
                 <div className="sm:col-span-5 aspect-[16/10] sm:aspect-[4/3] rounded-2xl overflow-hidden bg-slate-900 relative">
                   <img
                     src={gearArticles[0].coverImage || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80'}
+                    loading="lazy"
+                    decoding="async"
                     alt={gearArticles[0].title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
@@ -157,6 +159,8 @@ export const HomeCinemaGearBlock: React.FC = () => {
                     <div className="aspect-[16/10] rounded-xl overflow-hidden bg-slate-900 mb-3 relative">
                       <img
                         src={article.coverImage || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=600&q=80'}
+                        loading="lazy"
+                        decoding="async"
                         alt={article.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />

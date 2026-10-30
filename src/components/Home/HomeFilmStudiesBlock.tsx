@@ -90,6 +90,8 @@ export const HomeFilmStudiesBlock: React.FC = () => {
                 <div className="md:col-span-5 aspect-[16/10] rounded-2xl overflow-hidden bg-slate-900 border border-white/[0.08]">
                   <img
                     src={filmStudiesArticles[0].coverImage || 'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=800&q=80'}
+                    loading="lazy"
+                    decoding="async"
                     alt={filmStudiesArticles[0].title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
@@ -150,6 +152,8 @@ export const HomeFilmStudiesBlock: React.FC = () => {
                     <div className="aspect-[16/10] rounded-xl overflow-hidden bg-slate-900 border border-white/[0.08] mb-3">
                       <img
                         src={article.coverImage || 'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=600&q=80'}
+                        loading="lazy"
+                        decoding="async"
                         alt={article.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />

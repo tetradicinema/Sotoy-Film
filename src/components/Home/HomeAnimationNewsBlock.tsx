@@ -81,6 +81,8 @@ export const HomeAnimationNewsBlock: React.FC = () => {
                 <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-slate-900 border border-white/[0.08]">
                   <img
                     src={article.coverImage || 'https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=160&q=80'}
+                    loading="lazy"
+                    decoding="async"
                     alt={article.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />

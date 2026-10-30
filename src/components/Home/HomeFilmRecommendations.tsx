@@ -62,6 +62,7 @@ export const HomeFilmRecommendations: React.FC = () => {
               key={film.id}
               film={film}
               sectionKey="home_film_recs"
+              lazyImage
               onOpen={item => navigateTo('film-detail', { filmId: item.id })}
             />
           ))}

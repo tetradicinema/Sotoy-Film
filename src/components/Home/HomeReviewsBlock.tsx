@@ -108,6 +108,8 @@ export const HomeReviewsBlock: React.FC = () => {
                   <div className="w-full sm:w-24 sm:h-24 aspect-[16/10] sm:aspect-square rounded-xl overflow-hidden shrink-0 bg-slate-900 border border-white/[0.08]">
                     <img
                       src={article.coverImage || 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=300&q=80'}
+                      loading="lazy"
+                      decoding="async"
                       alt={article.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
@@ -169,6 +171,8 @@ export const HomeReviewsBlock: React.FC = () => {
                   <div className="w-full sm:w-24 sm:h-24 aspect-[16/10] sm:aspect-square rounded-xl overflow-hidden shrink-0 bg-slate-900 border border-white/[0.08]">
                     <img
                       src={article.coverImage || 'https://images.unsplash.com/photo-1528164344705-475426879c0d?auto=format&fit=crop&w=300&q=80'}
+                      loading="lazy"
+                      decoding="async"
                       alt={article.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />

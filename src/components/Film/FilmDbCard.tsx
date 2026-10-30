@@ -10,6 +10,8 @@ export interface FilmDbCardProps {
   film: FilmItem;
   sectionKey: HomepageSectionKey;
   onOpen: (film: FilmItem) => void;
+  /** Defer the poster download until it nears the viewport (below-the-fold rows). */
+  lazyImage?: boolean;
 }
 
 /**
@@ -20,6 +22,7 @@ export const FilmDbCard: React.FC<FilmDbCardProps> = ({
   film,
   sectionKey,
   onOpen,
+  lazyImage = false,
 }) => {
   const rating = getCardRating(film);
   const genres = getCardGenres(film);
@@ -55,6 +58,8 @@ export const FilmDbCard: React.FC<FilmDbCardProps> = ({
         <img
           src={tmdbPosterSized(film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80', 'w342')}
           alt={film.title}
+          loading={lazyImage ? 'lazy' : undefined}
+          decoding={lazyImage ? 'async' : undefined}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 motion-reduce:transition-none motion-reduce:transform-none"
         />
 

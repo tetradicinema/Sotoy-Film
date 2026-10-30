@@ -119,6 +119,7 @@ export const HomeStreamingBlock: React.FC = () => {
               <FilmDbCard
                 film={film}
                 sectionKey="fd_streaming"
+                lazyImage
                 onOpen={item => navigateTo('film-detail', { filmId: item.id })}
               />
             </div>

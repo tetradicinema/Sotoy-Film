@@ -66,6 +66,7 @@ export const HomeFilmIndonesiaBlock: React.FC = () => {
               <FilmDbCard
                 film={film}
                 sectionKey="fd_film_indonesia"
+                lazyImage
                 onOpen={item => navigateTo('film-detail', { filmId: item.id })}
               />
             </div>
