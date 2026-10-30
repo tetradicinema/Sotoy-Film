@@ -556,6 +556,8 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
           ref={inputRef}
           id={isMobile ? 'global-search-input-mobile' : 'global-search-input'}
           type="text"
+          role="combobox"
+          aria-label="Cari film dan artikel"
           value={searchQuery}
           onChange={e => {
             setSearchQuery(e.target.value);

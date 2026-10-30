@@ -148,6 +148,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
 
               <div className="flex items-center justify-between pt-2 border-t border-white/[0.08] mt-1">
                 <select
+                  aria-label="Tag film (opsional)"
                   value={quickTaggedFilmId}
                   onChange={e => setQuickTaggedFilmId(e.target.value)}
                   className="bg-slate-900 text-[11px] text-slate-300 rounded-lg px-2 py-1 border border-white/10 max-w-[130px]"
