@@ -79,55 +79,84 @@ function rawDoc(
 async function testPagination(): Promise<void> {
   let pages = 0;
   const urls: string[] = [];
+  const bodies: any[] = [];
 
-  mockFetch(async url => {
+  mockFetch(async (url, init) => {
     pages++;
     urls.push(url);
-    return response({
-      documents: [rawDoc('films', `film-${pages}`, { title: `Film ${pages}` })],
-      nextPageToken: `page-${pages}`,
-    });
+    bodies.push(JSON.parse(String(init?.body ?? '{}')));
+    // A full page (300 documents) tells the client to ask for the next page.
+    return response(
+      Array.from({ length: 300 }, (_, index) => ({
+        document: rawDoc('films', `film-${pages}-${index}`, { title: `Film ${pages}-${index}` }),
+      }))
+    );
   });
 
   const docs = await fetchCollectionViaRest('films');
   restoreGlobals();
 
   check(
-    'pagination follows nextPageToken and stops after 5 pages',
-    pages === 5 && docs.length === 5,
+    'pagination follows offset and stops after 5 pages',
+    pages === 5 && docs.length === 1500,
     `pages=${pages}, docs=${docs.length}`
   );
   check(
-    'first request uses pageSize=300 without a field mask',
-    urls[0]?.includes(`/films?pageSize=300&key=`) && !urls[0]?.includes('mask.fieldPaths'),
+    'requests use POST :runQuery (the list endpoint is rejected for anonymous visitors)',
+    urls[0]?.includes(':runQuery?key=') === true && !urls[0]?.includes('pageSize'),
     urls[0]
   );
   check(
-    'subsequent requests send pageToken',
-    urls[1]?.includes('pageToken=page-1') === true,
-    urls[1]
+    'first request asks for the collection with offset 0 and limit 300',
+    bodies[0]?.structuredQuery?.from?.[0]?.collectionId === 'films' &&
+      bodies[0]?.structuredQuery?.offset === 0 &&
+      bodies[0]?.structuredQuery?.limit === 300 &&
+      !('select' in (bodies[0]?.structuredQuery ?? {})),
+    JSON.stringify(bodies[0])
+  );
+  check(
+    'subsequent requests advance the offset',
+    bodies[1]?.structuredQuery?.offset === 300 && bodies[4]?.structuredQuery?.offset === 1200,
+    JSON.stringify(bodies.map(body => body?.structuredQuery?.offset))
   );
   check(
     'id is taken from the document name when the id field is missing',
-    docs[0]?.id === 'film-1' && docs[4]?.id === 'film-5',
-    JSON.stringify(docs.map(doc => doc.id))
+    docs[0]?.id === 'film-1-0' && docs[1499]?.id === 'film-5-299',
+    JSON.stringify([docs[0]?.id, docs[1499]?.id])
   );
   check(
     'parsed string fields are kept',
-    docs[0]?.title === 'Film 1',
+    docs[0]?.title === 'Film 1-0',
     String(docs[0]?.title)
   );
 
-  mockFetch(async () =>
-    response({
-      documents: [rawDoc('films', 'only-page', { title: 'Only page' })],
-    })
-  );
+  let partialCalls = 0;
+  mockFetch(async () => {
+    partialCalls++;
+    return response([{ document: rawDoc('films', 'only-page', { title: 'Only page' }) }]);
+  });
   const singlePage = await fetchCollectionViaRest('films');
   restoreGlobals();
   check(
-    'pagination stops when nextPageToken is absent',
-    singlePage.length === 1 && singlePage[0]?.id === 'only-page'
+    'pagination stops when a page has fewer than 300 documents',
+    singlePage.length === 1 && singlePage[0]?.id === 'only-page' && partialCalls === 1,
+    `docs=${singlePage.length}, calls=${partialCalls}`
+  );
+
+  mockFetch(async () => response([{ readTime: '2026-10-30T00:00:00Z' }]));
+  const emptyCollection = await fetchCollectionViaRest('articles');
+  restoreGlobals();
+  check(
+    'an empty collection (entry without document) returns []',
+    Array.isArray(emptyCollection) && emptyCollection.length === 0
+  );
+
+  mockFetch(async () => response({ documents: [] }));
+  const wrongShape = await fetchCollectionViaRest('articles');
+  restoreGlobals();
+  check(
+    'a non-array payload returns []',
+    Array.isArray(wrongShape) && wrongShape.length === 0
   );
 }
 

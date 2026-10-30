@@ -24,18 +24,27 @@ const MAX_REST_PAGES = 5;
 const REST_TIMEOUT_MS = 15000;
 const MAX_REST_ARTICLES = 50;
 
-/** Fetches one page; returns null for HTTP errors, timeouts, and thrown fetches. */
-async function fetchRestPage(endpoint: string): Promise<any | null> {
+/**
+ * POSTs one runQuery request; returns the parsed result array, or null for
+ * HTTP errors, timeouts, thrown fetches and non-array payloads.
+ *
+ * The plain list endpoint (GET .../documents/{collection}) is rejected with
+ * 403 for anonymous visitors, while :runQuery is accepted (same endpoint the
+ * edge SEO code already uses), so the fallback must go through :runQuery.
+ */
+async function fetchRestPage(endpoint: string, body: unknown): Promise<any[] | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REST_TIMEOUT_MS);
   try {
     const response = await fetch(endpoint, {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(body),
       signal: controller.signal,
     });
     if (!response.ok) return null;
-    return await response.json();
+    const payload = await response.json();
+    return Array.isArray(payload) ? payload : null;
   } catch {
     return null;
   } finally {
@@ -44,28 +53,33 @@ async function fetchRestPage(endpoint: string): Promise<any | null> {
 }
 
 /**
- * Fetches raw documents from the Firestore REST API, following pageToken
- * pagination for at most 5 pages. Documents are parsed with the shared REST
- * field parser; the document name supplies the id when the id field is missing.
- * Returns [] on any error and never throws.
+ * Fetches raw documents from the Firestore REST API through :runQuery,
+ * paging with offset/limit for at most 5 pages. Documents are parsed with the
+ * shared REST field parser; the document name supplies the id when the id
+ * field is missing. Returns [] on any error and never throws.
  */
 export async function fetchCollectionViaRest(
   collection: RestCollection
 ): Promise<Record<string, any>[]> {
   const documents: Record<string, any>[] = [];
-  let pageToken: string | undefined;
+  const endpoint = `${FIRESTORE_DOCUMENTS_URL}:runQuery?key=${encodeURIComponent(FIRESTORE_API_KEY)}`;
 
   try {
     for (let page = 0; page < MAX_REST_PAGES; page++) {
-      let endpoint = `${FIRESTORE_DOCUMENTS_URL}/${collection}?pageSize=${REST_PAGE_SIZE}&key=${encodeURIComponent(FIRESTORE_API_KEY)}`;
-      if (pageToken) {
-        endpoint += `&pageToken=${encodeURIComponent(pageToken)}`;
-      }
+      const results = await fetchRestPage(endpoint, {
+        structuredQuery: {
+          from: [{ collectionId: collection }],
+          offset: page * REST_PAGE_SIZE,
+          limit: REST_PAGE_SIZE,
+        },
+      });
+      if (!results) return [];
 
-      const payload = await fetchRestPage(endpoint);
-      if (!payload) return [];
+      // runQuery answers an empty page with a single entry that has no document.
+      const pageDocs = results
+        .filter((entry: any) => entry && entry.document)
+        .map((entry: any) => entry.document);
 
-      const pageDocs = Array.isArray(payload.documents) ? payload.documents : [];
       for (const rawDoc of pageDocs) {
         const parsed = parseFirestoreFields(rawDoc);
         if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) continue;
@@ -78,11 +92,7 @@ export async function fetchCollectionViaRest(
         documents.push(parsed);
       }
 
-      pageToken =
-        typeof payload.nextPageToken === 'string' && payload.nextPageToken
-          ? payload.nextPageToken
-          : undefined;
-      if (!pageToken || pageDocs.length === 0) break;
+      if (pageDocs.length < REST_PAGE_SIZE) break;
     }
   } catch {
     return [];
