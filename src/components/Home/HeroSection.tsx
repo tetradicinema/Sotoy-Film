@@ -119,24 +119,84 @@ export const HeroSection: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [activeTab, setActiveTab] = useState<'to-watch' | 'film-studies' | 'recent'>('to-watch');
 
+  // Stable slide list: the REST fallback and the Firestore snapshot both refill
+  // articlesPool, so trendingArticles is recomputed mid-stream and the active
+  // slide would otherwise flip. Rendering only follows the list when the set of
+  // resolved ids actually changes; currentSlide is kept (clamped only when the
+  // list shrinks past it), never reset to the first slide.
+  const trendingKey = useMemo(
+    () => trendingArticles.map(article => article.id).join(','),
+    [trendingArticles]
+  );
+  const [slideArticles, setSlideArticles] = useState(trendingArticles);
+
+  useEffect(() => {
+    setSlideArticles(prev =>
+      prev.map(article => article.id).join(',') === trendingKey ? prev : trendingArticles
+    );
+    setCurrentSlide(prev =>
+      trendingArticles.length === 0 ? 0 : Math.min(prev, trendingArticles.length - 1)
+    );
+  }, [trendingKey, trendingArticles]);
+
   // Auto slide
   useEffect(() => {
-    if (trendingArticles.length <= 1) return;
+    if (slideArticles.length <= 1) return;
     const interval = setInterval(() => {
-      setCurrentSlide(prev => (prev + 1) % trendingArticles.length);
+      setCurrentSlide(prev => (prev + 1) % slideArticles.length);
     }, 6500);
     return () => clearInterval(interval);
-  }, [trendingArticles.length]);
+  }, [slideArticles.length]);
 
-  const safeSlide = trendingArticles.length > 0 ? currentSlide % trendingArticles.length : 0;
-  const activeArticle = (trendingArticles.length > 0 ? trendingArticles[safeSlide] : null) || articlesPool[0] || null;
+  const safeSlide = slideArticles.length > 0 ? currentSlide % slideArticles.length : 0;
+  const activeArticle = (slideArticles.length > 0 ? slideArticles[safeSlide] : null) || articlesPool[0] || null;
+
+  const nextSlideIndex = slideArticles.length > 1
+    ? (safeSlide + 1) % slideArticles.length
+    : -1;
+
+  // Crossfade layers: previous, active and next only (by index, wrapping), so
+  // at most three covers are mounted at once.
+  const visibleSlides = useMemo(() => {
+    const total = slideArticles.length;
+    if (total === 0) return activeArticle ? [{ article: activeArticle, index: 0 }] : [];
+    if (total === 1) return [{ article: slideArticles[0], index: 0 }];
+    if (total === 2) {
+      return [0, 1].map(offset => {
+        const index = (safeSlide + offset) % total;
+        return { article: slideArticles[index], index };
+      });
+    }
+    return [-1, 0, 1].map(offset => {
+      const index = (safeSlide + offset + total) % total;
+      return { article: slideArticles[index], index };
+    });
+  }, [slideArticles, safeSlide, activeArticle]);
+
+  // Warm the next slide's cover, but only after the current slide's LCP image
+  // has had time to settle, so the prefetch never competes with it on slow
+  // connections. Skipped entirely when the user asked to save data.
+  useEffect(() => {
+    if (nextSlideIndex < 0) return;
+    const nextCover = slideArticles[nextSlideIndex]?.coverImage;
+    if (!nextCover) return;
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+    if (connection?.saveData) return;
+
+    const timer = setTimeout(() => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = nextCover;
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [nextSlideIndex, slideArticles]);
 
   const handlePrevSlide = () => {
-    setCurrentSlide(prev => (prev === 0 ? trendingArticles.length - 1 : prev - 1));
+    setCurrentSlide(prev => (prev === 0 ? slideArticles.length - 1 : prev - 1));
   };
 
   const handleNextSlide = () => {
-    setCurrentSlide(prev => (prev + 1) % trendingArticles.length);
+    setCurrentSlide(prev => (prev + 1) % slideArticles.length);
   };
 
   // Hero "To Watch" tab: editorial film picks (featured first, then score)
@@ -248,14 +308,19 @@ export const HeroSection: React.FC = () => {
               </div>
             ) : (
               <div className="relative w-full flex-1 min-h-[420px] sm:min-h-[480px] lg:min-h-[510px] rounded-3xl overflow-hidden border border-white/[0.08] shadow-2xl bg-[#0A0A0A] group">
-                {/* Background Cover Image with cinematic pan/zoom */}
-                <img
-                  src={activeArticle.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80'}
-                  alt={activeArticle.title || 'Hero Article'}
-                  fetchPriority="high"
-                  decoding="async"
-                  className="absolute inset-0 w-full h-full object-cover object-center transform transition-transform duration-1000 scale-100 group-hover:scale-105"
-                />
+                {/* Background Cover Image with cinematic pan/zoom (prev/active/next crossfade) */}
+                {visibleSlides.map(({ article, index }) => (
+                  <img
+                    key={article.id || `hero-slide-${index}`}
+                    src={article.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80'}
+                    alt={index === safeSlide ? (article.title || 'Hero Article') : ''}
+                    fetchPriority={index === safeSlide ? 'high' : undefined}
+                    decoding="async"
+                    loading={index === safeSlide ? undefined : 'eager'}
+                    aria-hidden={index === safeSlide ? undefined : true}
+                    className={`absolute inset-0 w-full h-full object-cover object-center transition-[opacity,transform] duration-700 transform scale-100 group-hover:scale-105 ${index === safeSlide ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                  />
+                ))}
 
                 {/* Refined contrast scrims: clearer image visibility while keeping text perfectly legible */}
                 <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
@@ -322,9 +387,9 @@ export const HeroSection: React.FC = () => {
                     {/* Minimalist Slide Progress & Controls */}
                     <div className="flex items-center gap-2.5 sm:gap-3">
                       <div className="flex items-center gap-1.5 text-xs font-mono text-slate-300 tabular-nums">
-                        <span className="text-white font-bold">{String(currentSlide + 1).padStart(2, '0')}</span>
+                        <span className="text-white font-bold">{String(safeSlide + 1).padStart(2, '0')}</span>
                         <span className="text-slate-500">/</span>
-                        <span className="text-slate-400">{String(trendingArticles.length || 1).padStart(2, '0')}</span>
+                        <span className="text-slate-400">{String(slideArticles.length || 1).padStart(2, '0')}</span>
                       </div>
 
                       <div className="flex items-center gap-1">
