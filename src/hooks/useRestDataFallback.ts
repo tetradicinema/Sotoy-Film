@@ -29,7 +29,9 @@ export interface RestFallbackCounts {
  * so they keep the longer delay and give the SDK time to answer first.
  */
 const REST_FALLBACK_DELAY_MS: Record<RestFallbackCollection, number> = {
-  articles: 1000,
+  // 0 still runs as setTimeout(..., 0), so the empty check runs after the first
+  // render, letting any cached Firestore snapshot land before we hit REST.
+  articles: 0,
   films: 4000,
 };
 

@@ -252,6 +252,8 @@ export const HeroSection: React.FC = () => {
                 <img
                   src={activeArticle.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80'}
                   alt={activeArticle.title || 'Hero Article'}
+                  fetchPriority="high"
+                  decoding="async"
                   className="absolute inset-0 w-full h-full object-cover object-center transform transition-transform duration-1000 scale-100 group-hover:scale-105"
                 />
 
