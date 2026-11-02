@@ -29,7 +29,7 @@ export const Footer: React.FC = () => {
               Platform media & jejaring sosial film pop-culture independen. Mengulas film, serial, animation, cinema gear, dan studi filmmaking dengan sistem penilaian jujur <strong>Skor Sotoy (Bintang 1-5)</strong>.
             </p>
 
-            <p className="text-slate-500 text-[10px] leading-relaxed max-w-sm">
+            <p className="text-slate-400 text-[10px] leading-relaxed max-w-sm">
               Film database ini memakai TMDB API, tetapi tidak didukung atau disertifikasi oleh TMDB.
             </p>
 
@@ -48,11 +48,11 @@ export const Footer: React.FC = () => {
             <h4 className="font-semibold text-white uppercase tracking-wider text-xs font-mono">
               Kategori Artikel
             </h4>
-            <ul className="space-y-1.5">
+            <ul className="space-y-0">
               <li>
                 <button
                   onClick={() => navigateTo('category', { category: 'movies' })}
-                  className="hover:text-white transition-colors"
+                  className="hover:text-white transition-colors py-2"
                 >
                   Movies (News, Lists, Reviews)
                 </button>
@@ -60,7 +60,7 @@ export const Footer: React.FC = () => {
               <li>
                 <button
                   onClick={() => navigateTo('category', { category: 'series' })}
-                  className="hover:text-white transition-colors"
+                  className="hover:text-white transition-colors py-2"
                 >
                   Series (News, Lists, Reviews)
                 </button>
@@ -68,7 +68,7 @@ export const Footer: React.FC = () => {
               <li>
                 <button
                   onClick={() => navigateTo('category', { category: 'animation' })}
-                  className="hover:text-white transition-colors"
+                  className="hover:text-white transition-colors py-2"
                 >
                   Animation (News, Lists)
                 </button>
@@ -76,7 +76,7 @@ export const Footer: React.FC = () => {
               <li>
                 <button
                   onClick={() => navigateTo('category', { category: 'cinema-gear' })}
-                  className="hover:text-white transition-colors"
+                  className="hover:text-white transition-colors py-2"
                 >
                   Cinema Gear (News & Reviews)
                 </button>
@@ -84,7 +84,7 @@ export const Footer: React.FC = () => {
               <li>
                 <button
                   onClick={() => navigateTo('category', { category: 'film-studies' })}
-                  className="hover:text-white transition-colors"
+                  className="hover:text-white transition-colors py-2"
                 >
                   Film Studies (Producing - Post)
                 </button>
@@ -97,11 +97,11 @@ export const Footer: React.FC = () => {
             <h4 className="font-semibold text-white uppercase tracking-wider text-xs font-mono">
               Fitur Interaktif
             </h4>
-            <ul className="space-y-1.5">
+            <ul className="space-y-0">
               <li>
                 <button
                   onClick={() => navigateTo('film-database')}
-                  className="hover:text-white transition-colors flex items-center gap-1.5"
+                  className="hover:text-white transition-colors flex items-center gap-1.5 py-2"
                 >
                   <Star className="w-3.5 h-3.5 text-slate-400" />
                   <span>Rating Film (Skor Sotoy)</span>
@@ -110,7 +110,7 @@ export const Footer: React.FC = () => {
               <li>
                 <button
                   onClick={() => navigateTo('film-recommendations')}
-                  className="hover:text-white transition-colors"
+                  className="hover:text-white transition-colors py-2"
                 >
                   Watch Next
                 </button>
@@ -118,7 +118,7 @@ export const Footer: React.FC = () => {
               <li>
                 <button
                   onClick={() => navigateTo('community-feed')}
-                  className="hover:text-white transition-colors"
+                  className="hover:text-white transition-colors py-2"
                 >
                   Live Feed Buzz Sotoy
                 </button>
@@ -126,7 +126,7 @@ export const Footer: React.FC = () => {
               <li>
                 <button
                   onClick={() => navigateTo('user-profile')}
-                  className="hover:text-white transition-colors"
+                  className="hover:text-white transition-colors py-2"
                 >
                   Profil & Dashboard Saya
                 </button>
@@ -134,7 +134,7 @@ export const Footer: React.FC = () => {
               <li>
                 <button
                   onClick={() => navigateTo('write-article')}
-                  className="hover:text-white transition-colors"
+                  className="hover:text-white transition-colors py-2"
                 >
                   Portal Penulis Sotoy
                 </button>
@@ -147,11 +147,11 @@ export const Footer: React.FC = () => {
             <h4 className="font-semibold text-white uppercase tracking-wider text-xs font-mono">
               Informasi & Legalitas
             </h4>
-            <ul className="space-y-1.5">
+            <ul className="space-y-0">
               <li>
                 <button
                   onClick={() => navigateTo('about-us')}
-                  className={`hover:text-white transition-colors flex items-center gap-1.5 ${
+                  className={`hover:text-white transition-colors flex items-center gap-1.5 py-2 ${
                     currentView === 'about-us' ? 'text-[#FF2E7E] font-semibold' : ''
                   }`}
                 >
@@ -162,7 +162,7 @@ export const Footer: React.FC = () => {
               <li>
                 <button
                   onClick={() => navigateTo('faq-guide')}
-                  className={`hover:text-white transition-colors flex items-center gap-1.5 ${
+                  className={`hover:text-white transition-colors flex items-center gap-1.5 py-2 ${
                     currentView === 'faq-guide' ? 'text-[#FF2E7E] font-semibold' : ''
                   }`}
                 >
@@ -173,7 +173,7 @@ export const Footer: React.FC = () => {
               <li>
                 <button
                   onClick={() => navigateTo('privacy-policy')}
-                  className={`hover:text-white transition-colors flex items-center gap-1.5 ${
+                  className={`hover:text-white transition-colors flex items-center gap-1.5 py-2 ${
                     currentView === 'privacy-policy' ? 'text-[#FF2E7E] font-semibold' : ''
                   }`}
                 >
@@ -184,7 +184,7 @@ export const Footer: React.FC = () => {
               <li>
                 <button
                   onClick={() => navigateTo('terms-conditions')}
-                  className={`hover:text-white transition-colors flex items-center gap-1.5 ${
+                  className={`hover:text-white transition-colors flex items-center gap-1.5 py-2 ${
                     currentView === 'terms-conditions' ? 'text-[#FF2E7E] font-semibold' : ''
                   }`}
                 >
@@ -195,7 +195,7 @@ export const Footer: React.FC = () => {
               <li>
                 <button
                   onClick={() => navigateTo('business-inquiries')}
-                  className={`hover:text-white transition-colors flex items-center gap-1.5 ${
+                  className={`hover:text-white transition-colors flex items-center gap-1.5 py-2 ${
                     currentView === 'business-inquiries' ? 'text-[#FF2E7E] font-semibold' : ''
                   }`}
                 >
@@ -287,14 +287,14 @@ export const Footer: React.FC = () => {
         </div>
 
         {/* Sponsor space & copyright */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-slate-500 text-[11px]">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-slate-400 text-[11px]">
           <div>
-            © {new Date().getFullYear()} <strong className="text-slate-400 font-semibold">Sotoy Film</strong>. All rights reserved. Bebas berpendapat, tetap santun.
+            © {new Date().getFullYear()} <strong className="text-slate-300 font-semibold">Sotoy Film</strong>. All rights reserved. Bebas berpendapat, tetap santun.
           </div>
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigateTo('business-inquiries')}
-              className="hover:text-white transition-colors"
+              className="hover:text-white transition-colors py-2"
             >
               Slot Iklan & Kemitraan: sponsor@sotoyfilm.com
             </button>

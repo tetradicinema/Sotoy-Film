@@ -161,7 +161,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
 
                 <button
                   type="submit"
-                  className="bg-[#FF2E7E] hover:bg-[#e0266e] text-white text-xs font-semibold px-3 py-1 rounded-lg flex items-center gap-1 transition-all active:scale-95 shadow-md shadow-[#FF2E7E]/20"
+                  className="bg-[#D81B60] hover:bg-[#B5174F] text-white text-xs font-semibold px-3 py-1 rounded-lg flex items-center gap-1 transition-all active:scale-95 shadow-md shadow-[#FF2E7E]/20"
                 >
                   <span>Buzz</span>
                   <Send className="w-3 h-3" />
@@ -355,7 +355,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                   onClick={() => navigateTo('article-detail', { articleId: rec.id })}
                   className="flex items-center gap-3 p-2 rounded-2xl hover:bg-white/[0.04] transition-colors cursor-pointer group"
                 >
-                  <span className="font-mono tabular-nums font-bold text-xs text-slate-500 group-hover:text-slate-300 transition-colors w-5 text-center">
+                  <span className="font-mono tabular-nums font-bold text-xs text-slate-400 group-hover:text-slate-300 transition-colors w-5 text-center">
                     {String(i + 1).padStart(2, '0')}
                   </span>
                   <img
@@ -366,9 +366,9 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                     className="w-12 h-12 object-cover rounded-xl shrink-0 border border-white/10"
                   />
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-xs font-semibold text-white group-hover:text-slate-200 transition-colors line-clamp-2 leading-snug">
+                    <h3 className="text-xs font-semibold text-white group-hover:text-slate-200 transition-colors line-clamp-2 leading-snug">
                       {rec.title}
-                    </h4>
+                    </h3>
                     <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
                       <span className="text-[#FF2E7E] font-medium">{rec.category}</span>
                       <span>{rec.readTime}</span>
@@ -431,7 +431,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
               />
               <button
                 type="submit"
-                className="w-full bg-[#FF2E7E] hover:bg-[#e0266e] text-white font-semibold text-xs py-2.5 rounded-xl shadow-lg shadow-[#FF2E7E]/20 transition-all active:scale-95"
+                className="w-full bg-[#D81B60] hover:bg-[#B5174F] text-white font-semibold text-xs py-2.5 rounded-xl shadow-lg shadow-[#FF2E7E]/20 transition-all active:scale-95"
               >
                 Berlangganan Gratis
               </button>

@@ -86,7 +86,7 @@ export const HomeReviewsBlock: React.FC = () => {
         <div className="space-y-3">
           <div className="flex items-center justify-between pb-1.5 text-xs text-slate-300 font-semibold border-b border-white/[0.04]">
             <span>{homepageSectionsConfig?.sections?.reviews_movie?.title?.trim() || 'Review Film Bioskop'}</span>
-            <span className="text-[11px] font-mono text-slate-500">{movieReviews.length} ulasan</span>
+            <span className="text-[11px] font-mono text-slate-400">{movieReviews.length} ulasan</span>
           </div>
 
           {isLoadingArticles ? (
@@ -122,9 +122,9 @@ export const HomeReviewsBlock: React.FC = () => {
                         <span>{article.readTime}</span>
                       </div>
 
-                      <h4 className="font-display font-bold text-sm text-white group-hover:text-white leading-snug mb-1.5 line-clamp-2">
+                      <h3 className="font-display font-bold text-sm text-white group-hover:text-white leading-snug mb-1.5 line-clamp-2">
                         {article.title}
-                      </h4>
+                      </h3>
 
                       <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
                         "{article.excerpt}"
@@ -149,7 +149,7 @@ export const HomeReviewsBlock: React.FC = () => {
         <div className="space-y-3">
           <div className="flex items-center justify-between pb-1.5 text-xs text-slate-300 font-semibold border-b border-white/[0.04]">
             <span>{homepageSectionsConfig?.sections?.reviews_series?.title?.trim() || 'Review Serial Streaming'}</span>
-            <span className="text-[11px] font-mono text-slate-500">{seriesReviews.length} ulasan</span>
+            <span className="text-[11px] font-mono text-slate-400">{seriesReviews.length} ulasan</span>
           </div>
 
           {isLoadingArticles ? (
@@ -185,9 +185,9 @@ export const HomeReviewsBlock: React.FC = () => {
                         <span>{article.readTime}</span>
                       </div>
 
-                      <h4 className="font-display font-bold text-sm text-white group-hover:text-white leading-snug mb-1.5 line-clamp-2">
+                      <h3 className="font-display font-bold text-sm text-white group-hover:text-white leading-snug mb-1.5 line-clamp-2">
                         {article.title}
-                      </h4>
+                      </h3>
 
                       <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
                         "{article.excerpt}"

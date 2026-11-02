@@ -169,9 +169,9 @@ export const HomeCinemaGearBlock: React.FC = () => {
                       <span className="text-[#FF2E7E] font-medium">{article.subCategory}</span>
                       <span>{article.readTime}</span>
                     </div>
-                    <h4 className="font-display font-bold text-sm text-white group-hover:text-white line-clamp-2 leading-snug mb-1">
+                    <h3 className="font-display font-bold text-sm text-white group-hover:text-white line-clamp-2 leading-snug mb-1">
                       {article.title}
-                    </h4>
+                    </h3>
                   </div>
 
                   <div className="pt-3 mt-3 border-t border-white/[0.06] flex items-center justify-between text-[11px]">

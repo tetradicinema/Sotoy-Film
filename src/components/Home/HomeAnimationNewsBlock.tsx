@@ -55,7 +55,7 @@ export const HomeAnimationNewsBlock: React.FC = () => {
             Warta terkini seputar jadwal tayang musim baru, adaptasi manga, dan kabar resmi dari studio animation Jepang.
           </p>
         </div>
-        <span className="text-[11px] font-mono text-slate-500 self-start sm:self-auto">
+        <span className="text-[11px] font-mono text-slate-400 self-start sm:self-auto">
           News Wire ({animationNews.length})
         </span>
       </div>
@@ -100,9 +100,9 @@ export const HomeAnimationNewsBlock: React.FC = () => {
                   </div>
 
                   {/* Title */}
-                  <h4 className="text-xs sm:text-sm font-semibold text-white group-hover:text-white transition-colors truncate">
+                  <h3 className="text-xs sm:text-sm font-semibold text-white group-hover:text-white transition-colors truncate">
                     {article.title}
-                  </h4>
+                  </h3>
                 </div>
               </div>
 

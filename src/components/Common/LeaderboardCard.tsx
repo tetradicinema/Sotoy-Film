@@ -59,7 +59,7 @@ export const LeaderboardPeriodTabs: React.FC<LeaderboardPeriodTabsProps> = ({
             onClick={() => onChangePeriod(t.id)}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
               isActive
-                ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25'
+                ? 'bg-[#D81B60] text-white shadow-md shadow-[#FF2E7E]/25'
                 : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
             }`}
           >

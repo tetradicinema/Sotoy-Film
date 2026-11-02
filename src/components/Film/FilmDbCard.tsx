@@ -67,7 +67,7 @@ export const FilmDbCard: React.FC<FilmDbCardProps> = ({
           <span
             className={`absolute top-2 left-2 z-10 text-[9px] font-black uppercase px-2 py-0.5 rounded ${
               film.type === 'animation'
-                ? 'bg-[#FF2E7E] text-white'
+                ? 'bg-[#D81B60] text-white'
                 : 'bg-slate-800 text-white'
             }`}
           >

@@ -166,9 +166,9 @@ export const HomeFilmStudiesBlock: React.FC = () => {
                       <span>{article.readTime}</span>
                     </div>
 
-                    <h4 className="font-display font-bold text-sm sm:text-base text-white group-hover:text-white leading-snug mb-2 line-clamp-2">
+                    <h3 className="font-display font-bold text-sm sm:text-base text-white group-hover:text-white leading-snug mb-2 line-clamp-2">
                       {article.title}
-                    </h4>
+                    </h3>
 
                     <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed mb-4">
                       {article.excerpt}

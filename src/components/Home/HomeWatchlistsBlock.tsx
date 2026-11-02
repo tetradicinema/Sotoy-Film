@@ -117,7 +117,7 @@ export const HomeWatchlistsBlock: React.FC = () => {
             className="group flex items-center gap-3 p-2.5 rounded-2xl bg-[#171717] hover:bg-white/[0.04] border border-white/[0.06] hover:border-white/20 transition-all cursor-pointer"
           >
             {/* Rank Number */}
-            <span className="w-5 text-center font-mono font-bold text-xs text-slate-500 group-hover:text-[#FF2E7E] transition-colors shrink-0">
+            <span className="w-5 text-center font-mono font-bold text-xs text-slate-400 group-hover:text-[#FF2E7E] transition-colors shrink-0">
               0{index + 1}
             </span>
 
@@ -132,9 +132,9 @@ export const HomeWatchlistsBlock: React.FC = () => {
 
             {/* Title & Metadata */}
             <div className="min-w-0 flex-1">
-              <h4 className="text-xs font-bold text-white group-hover:text-white line-clamp-2 leading-snug">
+              <h3 className="text-xs font-bold text-white group-hover:text-white line-clamp-2 leading-snug">
                 {article.title}
-              </h4>
+              </h3>
               <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
                 <span className="truncate max-w-[90px]">{article.author?.name || 'Redaksi'}</span>
                 <span className="text-slate-600">·</span>
@@ -209,7 +209,7 @@ export const HomeWatchlistsBlock: React.FC = () => {
             <div className="space-y-2">
               <div className="flex items-center justify-between pb-1 text-xs text-slate-300 font-semibold border-b border-white/[0.04]">
                 <span>{homepageSectionsConfig?.sections?.movie_list?.title?.trim() || 'Movie Lists'}</span>
-                <span className="text-[11px] font-mono text-slate-500">{movieListsArticles.length} artikel</span>
+                <span className="text-[11px] font-mono text-slate-400">{movieListsArticles.length} artikel</span>
               </div>
               {renderCuratedArticleList(movieListsArticles)}
             </div>
@@ -217,7 +217,7 @@ export const HomeWatchlistsBlock: React.FC = () => {
             <div className="space-y-2">
               <div className="flex items-center justify-between pb-1 text-xs text-slate-300 font-semibold border-b border-white/[0.04]">
                 <span>{homepageSectionsConfig?.sections?.series_list?.title?.trim() || 'Series Lists'}</span>
-                <span className="text-[11px] font-mono text-slate-500">{seriesListsArticles.length} artikel</span>
+                <span className="text-[11px] font-mono text-slate-400">{seriesListsArticles.length} artikel</span>
               </div>
               {renderCuratedArticleList(seriesListsArticles)}
             </div>
@@ -225,7 +225,7 @@ export const HomeWatchlistsBlock: React.FC = () => {
             <div className="space-y-2">
               <div className="flex items-center justify-between pb-1 text-xs text-slate-300 font-semibold border-b border-white/[0.04]">
                 <span>{homepageSectionsConfig?.sections?.anime_list?.title?.trim() || 'Animation Lists'}</span>
-                <span className="text-[11px] font-mono text-slate-500">{animationListsArticles.length} artikel</span>
+                <span className="text-[11px] font-mono text-slate-400">{animationListsArticles.length} artikel</span>
               </div>
               {renderCuratedArticleList(animationListsArticles)}
             </div>

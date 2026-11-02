@@ -329,7 +329,7 @@ export const HeroSection: React.FC = () => {
                 {/* Top Row: Trending Badge, Category & Reading Endorsement */}
                 <div className="absolute top-4 sm:top-6 left-4 sm:left-6 right-4 sm:right-6 flex items-center justify-between z-10">
                   <div className="flex items-center gap-2 text-xs text-slate-300 font-medium tracking-wide">
-                    <span className="bg-[#FF2E7E] text-white px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md shadow-[#FF2E7E]/30">
+                    <span className="bg-[#D81B60] text-white px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md shadow-[#FF2E7E]/30">
                       <Flame className="w-3 h-3 fill-current text-white" />
                       <span>Trending</span>
                     </span>
@@ -378,7 +378,7 @@ export const HeroSection: React.FC = () => {
                     <button
                       id="hero-read-article-btn"
                       onClick={() => activeArticle.id && navigateTo('article-detail', { articleId: activeArticle.id })}
-                      className="bg-[#FF2E7E] hover:bg-[#e0266e] text-white font-semibold text-xs sm:text-sm px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-[#FF2E7E]/25 cursor-pointer"
+                      className="bg-[#D81B60] hover:bg-[#B5174F] text-white font-semibold text-xs sm:text-sm px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-[#FF2E7E]/25 cursor-pointer"
                     >
                       <span>Baca Ulasan Lengkap</span>
                       <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -431,7 +431,7 @@ export const HeroSection: React.FC = () => {
                   onClick={() => setActiveTab('to-watch')}
                   className={`flex-1 min-w-[85px] py-1.5 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center shrink-0 cursor-pointer active:scale-95 ${
                     activeTab === 'to-watch'
-                      ? 'bg-[#FF2E7E] text-white shadow-md shadow-[#FF2E7E]/25 font-bold'
+                      ? 'bg-[#D81B60] text-white shadow-md shadow-[#FF2E7E]/25 font-bold'
                       : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                   }`}
                 >
@@ -481,7 +481,7 @@ export const HeroSection: React.FC = () => {
                         >
                           {/* Tabular Index Number */}
                           <span className={`w-4 font-mono tabular-nums text-xs font-bold text-center shrink-0 ${
-                            index === 0 ? 'text-[#FF2E7E]' : 'text-slate-500'
+                            index === 0 ? 'text-[#FF2E7E]' : 'text-slate-400'
                           }`}>
                             {String(index + 1).padStart(2, '0')}
                           </span>
@@ -495,9 +495,9 @@ export const HeroSection: React.FC = () => {
 
                           {/* Metadata */}
                           <div className="flex-1 min-w-0">
-                            <h4 className="text-white font-semibold text-xs leading-snug line-clamp-2 group-hover:text-[#FF2E7E] transition-colors">
+                            <h3 className="text-white font-semibold text-xs leading-snug line-clamp-2 group-hover:text-[#FF2E7E] transition-colors">
                               {film.title}
-                            </h4>
+                            </h3>
                             <div className="mt-0.5 text-[10px] text-slate-400 truncate">
                               <span>{film.year}</span>
                               <span className="text-slate-600"> · </span>
@@ -552,7 +552,7 @@ export const HeroSection: React.FC = () => {
                         >
                           {/* Tabular Index Number */}
                           <span className={`w-4 font-mono tabular-nums text-xs font-bold text-center shrink-0 ${
-                            index === 0 ? 'text-[#FF2E7E]' : 'text-slate-500'
+                            index === 0 ? 'text-[#FF2E7E]' : 'text-slate-400'
                           }`}>
                             {String(index + 1).padStart(2, '0')}
                           </span>
@@ -573,9 +573,9 @@ export const HeroSection: React.FC = () => {
                               <span className="text-slate-600">·</span>
                               <span className="text-slate-400 truncate">{art.publishedAt}</span>
                             </div>
-                            <h4 className="text-white font-semibold text-xs leading-snug line-clamp-2 group-hover:text-[#FF2E7E] transition-colors">
+                            <h3 className="text-white font-semibold text-xs leading-snug line-clamp-2 group-hover:text-[#FF2E7E] transition-colors">
                               {art.title}
-                            </h4>
+                            </h3>
                             <div className="mt-0.5 flex items-center gap-1 text-[10px] text-slate-400">
                               <Clock className="w-2.5 h-2.5 text-slate-500" />
                               <span>{art.readTime}</span>
@@ -617,7 +617,7 @@ export const HeroSection: React.FC = () => {
                         >
                           {/* Tabular Index Number */}
                           <span className={`w-4 font-mono tabular-nums text-xs font-bold text-center shrink-0 ${
-                            index === 0 ? 'text-[#FF2E7E]' : 'text-slate-500'
+                            index === 0 ? 'text-[#FF2E7E]' : 'text-slate-400'
                           }`}>
                             {String(index + 1).padStart(2, '0')}
                           </span>
@@ -638,9 +638,9 @@ export const HeroSection: React.FC = () => {
                               <span className="text-slate-600">·</span>
                               <span className="text-slate-400 truncate">{art.publishedAt}</span>
                             </div>
-                            <h4 className="text-white font-semibold text-xs leading-snug line-clamp-2 group-hover:text-[#FF2E7E] transition-colors">
+                            <h3 className="text-white font-semibold text-xs leading-snug line-clamp-2 group-hover:text-[#FF2E7E] transition-colors">
                               {art.title}
-                            </h4>
+                            </h3>
                             <div className="mt-0.5 flex items-center gap-1 text-[10px] text-slate-400">
                               <Clock className="w-2.5 h-2.5 text-slate-500" />
                               <span>{art.readTime}</span>
