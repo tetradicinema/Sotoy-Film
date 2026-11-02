@@ -203,8 +203,6 @@ export const Navbar: React.FC = () => {
               >
                 <img
                   src="/sotoy-logo-full.webp"
-                  srcSet="/sotoy-logo-400.webp 400w, /sotoy-logo-full.webp 800w"
-                  sizes="(max-width: 640px) 307px, 400px"
                   alt="Sotoy Film — Pop-Culture & Cinema"
                   loading="eager"
                   fetchPriority="high"

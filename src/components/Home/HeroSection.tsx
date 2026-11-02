@@ -314,10 +314,9 @@ export const HeroSection: React.FC = () => {
                     key={article.id || `hero-slide-${index}`}
                     src={article.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80'}
                     alt={index === safeSlide ? (article.title || 'Hero Article') : ''}
-                    fetchPriority={index === safeSlide ? 'high' : 'low'}
+                    fetchPriority={index === safeSlide ? 'high' : undefined}
                     decoding="async"
-                    loading={index === safeSlide ? 'eager' : 'lazy'}
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 800px"
+                    loading={index === safeSlide ? undefined : 'eager'}
                     aria-hidden={index === safeSlide ? undefined : true}
                     className={`absolute inset-0 w-full h-full object-cover object-center transition-[opacity,transform] duration-700 transform scale-100 group-hover:scale-105 ${index === safeSlide ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                   />
@@ -487,10 +486,9 @@ export const HeroSection: React.FC = () => {
                             {String(index + 1).padStart(2, '0')}
                           </span>
 
+                          {/* Film Poster */}
                           <img
-                            src={tmdbPosterSized(film.poster?.trim() || DEFAULT_POSTER, 'w92')}
-                            loading="lazy"
-                            decoding="async"
+                            src={tmdbPosterSized(film.poster?.trim() || DEFAULT_POSTER, 'w185')}
                             alt={film.title}
                             className="w-12 h-16 object-cover rounded-lg shrink-0 border border-white/10 group-hover:scale-105 transition-transform duration-300"
                           />

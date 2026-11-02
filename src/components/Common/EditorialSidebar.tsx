@@ -187,10 +187,6 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                       <img
                         src={(resolvedAuthor.avatar || post.author.avatar)?.trim() || DEFAULT_AVATAR}
                         alt={resolvedAuthor.name || post.author.name}
-                        loading="lazy"
-                        decoding="async"
-                        width="24"
-                        height="24"
                         className="w-6 h-6 rounded-full object-cover ring-1 ring-white/10 group-hover:ring-[#FF2E7E] transition-all"
                       />
                       <div>

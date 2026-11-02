@@ -25,7 +25,6 @@ const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo
           src={article.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=800&q=80'}
           loading="lazy"
           decoding="async"
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 380px"
           alt={article.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
         />
@@ -76,10 +75,6 @@ const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo
               <img
                 src={author.avatarURL || author.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}
                 alt={author.displayName || author.name}
-                loading="lazy"
-                decoding="async"
-                width="20"
-                height="20"
                 className="w-5 h-5 rounded-full object-cover ring-1 ring-white/10 group-hover/author:ring-[#FF2E7E] transition-all"
               />
               <span className="text-slate-300 font-medium text-[11px] group-hover/author:text-white transition-colors truncate max-w-[85px]">

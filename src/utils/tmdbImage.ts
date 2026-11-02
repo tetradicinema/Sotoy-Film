@@ -9,7 +9,7 @@
  * string) is returned unchanged.
  */
 
-export type TmdbPosterSize = 'w92' | 'w154' | 'w185' | 'w342';
+export type TmdbPosterSize = 'w154' | 'w185' | 'w342';
 
 const TMDB_IMAGE_RE = /^(https:\/\/image\.tmdb\.org\/t\/p\/)(w\d+|original)(\/.+)$/;
 
