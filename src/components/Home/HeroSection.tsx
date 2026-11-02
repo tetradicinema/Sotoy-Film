@@ -16,8 +16,6 @@ import { tmdbPosterSized } from '../../utils/tmdbImage';
 import { resolveConfigArticles } from '../../utils/homepageConfigHelper';
 import { getHeroToWatch } from '../../utils/filmSections';
 
-const HERO_AUTOPLAY_TEST_DISABLED = true;
-
 const FILM_TYPE_LABELS: Record<string, string> = {
   movie: 'Movie',
   series: 'Series',
@@ -123,7 +121,7 @@ export const HeroSection: React.FC = () => {
 
   // Auto slide
   useEffect(() => {
-    if (HERO_AUTOPLAY_TEST_DISABLED || trendingArticles.length <= 1) return;
+    if (trendingArticles.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentSlide(prev => (prev + 1) % trendingArticles.length);
     }, 6500);
