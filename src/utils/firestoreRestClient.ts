@@ -40,6 +40,27 @@ const ARTICLE_LIST_FIELDS = [
 ];
 
 /**
+ * Film list projection: every FilmItem field except the heavy detail-page
+ * fields (`castDetails`, `crewDetails`, `stills`). FilmDetailPage fetches the
+ * full document itself when `detailsDeferred` is set.
+ */
+const FILM_LIST_FIELDS = [
+  'id', 'slug', 'tmdbId', 'title', 'originalTitle', 'type', 'year',
+  'releaseDate', 'idReleaseDate', 'poster', 'backdrop', 'synopsis',
+  'director', 'writer', 'studio', 'cast', 'genres', 'tags', 'originCountry',
+  'duration', 'skorSotoy', 'totalVotes', 'criticsSkorSotoy', 'whereToWatch',
+  'trailerUrl', 'trailerTitle', 'relatedArticleIds', 'featuredRecommendation',
+  'trendingRank', 'isRecentRelease', 'isPopularRelease', 'isPopularThisWeek',
+  'curatorNote', 'scoreScale', 'collectionId', 'collectionName',
+  'relatedFilmIds', 'createdAt',
+];
+
+/** Admin screens may save films, so they always get complete documents. */
+function isAdminRoute(): boolean {
+  return typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
+}
+
+/**
  * POSTs one runQuery request; returns the parsed result array, or null for
  * HTTP errors, timeouts, thrown fetches and non-array payloads.
  *
@@ -77,6 +98,7 @@ export async function fetchCollectionViaRest(
   collection: RestCollection
 ): Promise<Record<string, any>[]> {
   const documents: Record<string, any>[] = [];
+  const maskFilms = collection === 'films' && !isAdminRoute();
   const endpoint = `${FIRESTORE_DOCUMENTS_URL}:runQuery?key=${encodeURIComponent(FIRESTORE_API_KEY)}`;
 
   try {
@@ -86,7 +108,9 @@ export async function fetchCollectionViaRest(
           from: [{ collectionId: collection }],
           ...(collection === 'articles'
             ? { select: { fields: ARTICLE_LIST_FIELDS.map(fieldPath => ({ fieldPath })) } }
-            : {}),
+            : maskFilms
+              ? { select: { fields: FILM_LIST_FIELDS.map(fieldPath => ({ fieldPath })) } }
+              : {}),
           offset: page * REST_PAGE_SIZE,
           limit: REST_PAGE_SIZE,
         },
@@ -107,6 +131,7 @@ export async function fetchCollectionViaRest(
           if (docId) parsed.id = docId;
         }
 
+        if (maskFilms) parsed.__listProjection = true;
         documents.push(parsed);
       }
 
@@ -152,8 +177,11 @@ export function normalizeRestFilm(
       ? Number((doc.criticsSkorSotoy * 2).toFixed(1))
       : doc.criticsSkorSotoy;
 
+  const { __listProjection, ...rest } = doc;
+
   return {
-    ...doc,
+    ...rest,
+    ...(__listProjection ? { detailsDeferred: true } : {}),
     id,
     type: normalizeFilmType(doc.type),
     skorSotoy: normalizedSkor,

@@ -243,6 +243,8 @@ export interface FilmItem {
   collectionName?: string;
   relatedFilmIds?: string[];
   createdAt?: string;
+  /** True when loaded through the REST list projection (no cast, crew or stills). */
+  detailsDeferred?: boolean;
 }
 
 export interface UserRating {

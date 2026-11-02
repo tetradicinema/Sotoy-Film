@@ -140,10 +140,18 @@ export const FilmDetailPage: React.FC = () => {
   const restAttemptedSlugRef = useRef<string | null>(null);
   const restRequestIdRef = useRef(0);
 
-  const restFilmForSlug = restFilm && (restFilm.slug === slug || restFilm.id === slug)
+  // Films loaded through the REST list projection carry no cast, crew or
+  // stills; the full document is fetched by slug before the page renders.
+  const needsFullDoc = !!contextFilm?.detailsDeferred;
+  const fullKey = slug || contextFilm?.slug || contextFilm?.id || '';
+  const restFilmForSlug = restFilm && (restFilm.slug === fullKey || restFilm.id === fullKey)
     ? restFilm
     : null;
-  const film: FilmItem | undefined = contextFilm || prefetchedFilm || restFilmForSlug || undefined;
+  const fullDocFailed = needsFullDoc && !restFilmForSlug && restAttemptedSlug === fullKey && !isRestFetching;
+  const pendingFullDoc = needsFullDoc && !restFilmForSlug && !fullDocFailed;
+  const film: FilmItem | undefined = pendingFullDoc
+    ? undefined
+    : (needsFullDoc ? restFilmForSlug : null) || contextFilm || prefetchedFilm || restFilmForSlug || undefined;
 
   // TMDB live cast & crew sync
   const [liveCredits, setLiveCredits] = useState<{ cast: CastMember[]; crew: CrewMember[] }>({
@@ -239,19 +247,21 @@ export const FilmDetailPage: React.FC = () => {
   // `restAttemptedSlug` is intentionally not a dependency: setting it must not
   // abort the request that is already in flight.
   useEffect(() => {
-    if (!slug || contextFilm || prefetchedFilm || isLoadingFilms) return;
-    if (restAttemptedSlugRef.current === slug) return;
+    const lookupKey = slug || contextFilm?.slug || contextFilm?.id || '';
+    if (!lookupKey || prefetchedFilm || isLoadingFilms) return;
+    if (contextFilm && !contextFilm.detailsDeferred) return;
+    if (restAttemptedSlugRef.current === lookupKey) return;
 
-    restAttemptedSlugRef.current = slug;
+    restAttemptedSlugRef.current = lookupKey;
     const requestId = restRequestIdRef.current + 1;
     restRequestIdRef.current = requestId;
-    setRestAttemptedSlug(slug);
+    setRestAttemptedSlug(lookupKey);
     setIsRestFetching(true);
 
-    fetchFilmBySlugRest(slug)
+    fetchFilmBySlugRest(lookupKey)
       .then(data => {
         if (restRequestIdRef.current !== requestId) return;
-        setRestFilm(data ? mapFilmData(data, slug) : null);
+        setRestFilm(data ? mapFilmData(data, lookupKey) : null);
       })
       .catch(() => {
         if (restRequestIdRef.current !== requestId) return;
@@ -272,7 +282,7 @@ export const FilmDetailPage: React.FC = () => {
     restAttemptedSlug !== slug;
 
   // Show the skeleton while context/prefetch/REST resolution is still pending.
-  if (!film && (isLoadingFilms || isRestFetching || shouldFetchRest)) {
+  if ((!film && (isLoadingFilms || isRestFetching || shouldFetchRest)) || pendingFullDoc) {
     return <FilmDetailSkeleton />;
   }
 
