@@ -25,18 +25,17 @@ const REST_TIMEOUT_MS = 15000;
 const MAX_REST_ARTICLES = 50;
 
 /**
- * Article list projection: every Article field except the heavy body
- * (`content`, `contentJson`). The detail page fetches the full document
- * itself when the body is missing.
+ * Article list projection: the fields the homepage renders, plus `slug`,
+ * `commentsCount` and `relatedFilmId(s)` which other pages resolve from this
+ * same shared list. The heavy body (`content`, `contentJson`) is never
+ * requested; the detail page fetches the full document itself when the body
+ * is missing.
  */
 const ARTICLE_LIST_FIELDS = [
-  'id', 'title', 'slug', 'excerpt', 'contentFormat', 'coverImage',
-  'coverImageAlt', 'coverImageWidth', 'coverImageHeight', 'category',
-  'subCategory', 'authorId', 'author', 'publishedAt', 'publishedAtTimestamp',
-  'readTime', 'skorSotoy', 'featured', 'heroSlider', 'views', 'likes',
-  'commentsCount', 'tags', 'relatedFilmId', 'relatedFilmIds', 'status',
-  'scheduledAt', 'seoTitle', 'metaDescription', 'ogImage', 'seoKeywords',
-  'versionsCount',
+  'id', 'title', 'slug', 'excerpt', 'coverImage', 'category', 'subCategory',
+  'authorId', 'author', 'publishedAt', 'publishedAtTimestamp', 'readTime',
+  'skorSotoy', 'featured', 'heroSlider', 'views', 'likes', 'commentsCount',
+  'tags', 'relatedFilmId', 'relatedFilmIds', 'status', 'scheduledAt',
 ];
 
 /**
@@ -101,8 +100,15 @@ export async function fetchCollectionViaRest(
   const maskFilms = collection === 'films' && !isAdminRoute();
   const endpoint = `${FIRESTORE_DOCUMENTS_URL}:runQuery?key=${encodeURIComponent(FIRESTORE_API_KEY)}`;
 
+  // Articles ask for the newest 50 only. Firestore omits documents that lack
+  // the orderBy field, so an empty/failed ordered query retries once without
+  // orderBy and falls back to the legacy paging loop (mirrors the SDK path in
+  // AppContext.refreshArticles).
+  let orderedArticles = collection === 'articles';
+  let pagesToFetch = orderedArticles ? 1 : MAX_REST_PAGES;
+
   try {
-    for (let page = 0; page < MAX_REST_PAGES; page++) {
+    for (let page = 0; page < pagesToFetch; page++) {
       const results = await fetchRestPage(endpoint, {
         structuredQuery: {
           from: [{ collectionId: collection }],
@@ -111,11 +117,25 @@ export async function fetchCollectionViaRest(
             : maskFilms
               ? { select: { fields: FILM_LIST_FIELDS.map(fieldPath => ({ fieldPath })) } }
               : {}),
-          offset: page * REST_PAGE_SIZE,
-          limit: REST_PAGE_SIZE,
+          ...(orderedArticles
+            ? {
+                orderBy: [
+                  { field: { fieldPath: 'publishedAtTimestamp' }, direction: 'DESCENDING' },
+                ],
+                limit: MAX_REST_ARTICLES,
+              }
+            : { offset: page * REST_PAGE_SIZE, limit: REST_PAGE_SIZE }),
         },
       });
-      if (!results) return [];
+      if (!results) {
+        if (orderedArticles) {
+          orderedArticles = false;
+          pagesToFetch = MAX_REST_PAGES;
+          page = -1;
+          continue;
+        }
+        return [];
+      }
 
       // runQuery answers an empty page with a single entry that has no document.
       const pageDocs = results
@@ -133,6 +153,14 @@ export async function fetchCollectionViaRest(
 
         if (maskFilms) parsed.__listProjection = true;
         documents.push(parsed);
+      }
+
+      if (orderedArticles) {
+        if (pageDocs.length > 0) break;
+        orderedArticles = false;
+        pagesToFetch = MAX_REST_PAGES;
+        page = -1;
+        continue;
       }
 
       if (pageDocs.length < REST_PAGE_SIZE) break;
