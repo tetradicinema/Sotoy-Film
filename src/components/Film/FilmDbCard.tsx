@@ -57,6 +57,12 @@ export const FilmDbCard: React.FC<FilmDbCardProps> = ({
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
         <img
           src={tmdbPosterSized(film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80', 'w342')}
+          srcSet={
+            film.poster && film.poster.includes('image.tmdb.org')
+              ? `${tmdbPosterSized(film.poster, 'w185')} 185w, ${tmdbPosterSized(film.poster, 'w342')} 342w`
+              : undefined
+          }
+          sizes="(max-width: 640px) 170px, 240px"
           alt={film.title}
           loading={lazyImage ? 'lazy' : undefined}
           decoding={lazyImage ? 'async' : undefined}

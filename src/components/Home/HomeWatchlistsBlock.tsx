@@ -126,6 +126,8 @@ export const HomeWatchlistsBlock: React.FC = () => {
               src={article.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=140&q=80'}
               loading="lazy"
               decoding="async"
+              width="44"
+              height="56"
               alt={article.title}
               className="w-11 h-14 rounded-xl object-cover shrink-0 bg-slate-900 border border-white/[0.08] group-hover:scale-105 transition-transform duration-300"
             />

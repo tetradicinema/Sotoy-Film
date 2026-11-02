@@ -25,12 +25,20 @@ import {
   resolveSidebarWidgetOrder,
   getCachedHomepageLayout,
 } from './utils/homepageConfigHelper';
-import { LoginModal } from './components/Modals/LoginModal';
-import { ComposeBuzzModal } from './components/Modals/ComposeBuzzModal';
-import { SuspendedAccountModal } from './components/Modals/SuspendedAccountModal';
 import { EmailVerificationBanner } from './components/Common/EmailVerificationBanner';
 import { MobileBottomNav } from './components/Navigation/MobileBottomNav';
 import { Sparkles, CheckCircle, X } from 'lucide-react';
+
+// Lazy-load interactive modals on demand
+const LoginModal = React.lazy(() =>
+  import('./components/Modals/LoginModal').then(m => ({ default: m.LoginModal }))
+);
+const ComposeBuzzModal = React.lazy(() =>
+  import('./components/Modals/ComposeBuzzModal').then(m => ({ default: m.ComposeBuzzModal }))
+);
+const SuspendedAccountModal = React.lazy(() =>
+  import('./components/Modals/SuspendedAccountModal').then(m => ({ default: m.SuspendedAccountModal }))
+);
 
 // Code-split large/rarely-visited dashboard and admin modules
 const AdminDashboard = React.lazy(() =>
@@ -342,7 +350,7 @@ const HomeView: React.FC = () => {
 };
 
 const AppContent: React.FC = () => {
-  const { toastMessage, toastType, shareModalData } = useApp();
+  const { toastMessage, toastType, shareModalData, loginModalOpen, isComposeBuzzOpen, currentUser } = useApp();
   const location = useLocation();
 
   const isOnboarding = location.pathname === '/onboarding';
@@ -403,8 +411,12 @@ const AppContent: React.FC = () => {
         </div>
       )}
 
-      {/* Login / Auth Modal */}
-      <LoginModal />
+      {/* Login / Auth Modal (lazy-loaded on demand) */}
+      {loginModalOpen && (
+        <React.Suspense fallback={null}>
+          <LoginModal />
+        </React.Suspense>
+      )}
 
       {/* Social Media Share Modal (lazy: only mounted while a share payload exists) */}
       {shareModalData && (
@@ -413,11 +425,19 @@ const AppContent: React.FC = () => {
         </React.Suspense>
       )}
 
-      {/* Compose Buzz Modal */}
-      <ComposeBuzzModal />
+      {/* Compose Buzz Modal (lazy-loaded on demand) */}
+      {isComposeBuzzOpen && (
+        <React.Suspense fallback={null}>
+          <ComposeBuzzModal />
+        </React.Suspense>
+      )}
 
       {/* Suspended Account Blocking Modal & Appeal Form */}
-      <SuspendedAccountModal />
+      {currentUser?.isSuspended && (
+        <React.Suspense fallback={null}>
+          <SuspendedAccountModal />
+        </React.Suspense>
+      )}
 
       {/* Persistent Email Verification Banner for unverified email/password accounts */}
       <EmailVerificationBanner />

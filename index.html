@@ -26,8 +26,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin="anonymous">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
-    <link rel="preconnect" href="https://firebasestorage.googleapis.com" crossorigin>
-    <link rel="preload" as="image" href="/sotoy-logo-full.webp" type="image/webp" fetchpriority="high">
+    <link rel="preconnect" href="https://gen-lang-client-0523736875.firebaseapp.com" crossorigin>
+    <link rel="preconnect" href="https://firebasestorage.googleapis.com">
+    <link rel="preconnect" href="https://image.tmdb.org">
+    <link rel="preload" as="image" href="/sotoy-logo-400.webp" type="image/webp" fetchpriority="high" media="(max-width: 640px)">
+    <link rel="preload" as="image" href="/sotoy-logo-full.webp" type="image/webp" fetchpriority="high" media="(min-width: 641px)">
     <style>
 #app-shell{background:rgba(10,10,10,.95);border-bottom:1px solid rgba(255,255,255,.08)}
 #app-shell .s-in{max-width:80rem;margin:0 auto;padding:0 12px;height:64px;display:flex;align-items:center;gap:4px}
@@ -41,7 +44,7 @@
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@500;600;700;900&family=Geist+Mono:wght@400;500;600;700;900&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,700&display=swap"></noscript>
   </head>
   <body class="bg-[#0A0A0A] text-slate-100 antialiased selection:bg-[#FF2E7E] selection:text-white min-h-screen">
-    <div id="root"><div id="app-shell" aria-hidden="true"><div class="s-in"><div class="s-burger"></div><img src="/sotoy-logo-full.webp" width="800" height="292" alt="" fetchpriority="high" decoding="async"></div></div></div>
+    <div id="root"><div id="app-shell" aria-hidden="true"><div class="s-in"><div class="s-burger"></div><img src="/sotoy-logo-400.webp" srcset="/sotoy-logo-400.webp 400w, /sotoy-logo-full.webp 800w" sizes="(max-width: 640px) 307px, 400px" width="400" height="146" alt="" fetchpriority="high" decoding="async"></div></div></div>
     <script>if(/^\/onboarding(\/|$)/.test(location.pathname)){var s=document.getElementById('app-shell');if(s)s.remove()}</script>
     <script type="module" src="/src/main.tsx"></script>
   </body>

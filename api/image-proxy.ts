@@ -170,7 +170,7 @@ export async function handleImageProxy(req: any, res: any) {
     res.setHeader?.('Content-Type', contentType);
     res.setHeader?.('Content-Length', buffer.length);
     res.setHeader?.('Access-Control-Allow-Origin', '*');
-    res.setHeader?.('Cache-Control', 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800');
+    res.setHeader?.('Cache-Control', 'public, max-age=31536000, s-maxage=31536000, immutable');
 
     if (req.method === 'HEAD') {
       return res.status ? res.status(200).end() : res.end();
@@ -183,7 +183,7 @@ export async function handleImageProxy(req: any, res: any) {
         'Content-Type': contentType,
         'Content-Length': buffer.length,
         'Access-Control-Allow-Origin': '*',
-        'Cache-Control': 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800',
+        'Cache-Control': 'public, max-age=31536000, s-maxage=31536000, immutable',
       });
       return res.end(buffer);
     }
