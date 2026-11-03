@@ -1,6 +1,6 @@
 # 🎬 Sotoy Film — Platform Media Pop-Culture & Komunitas Film Indonesia
 
-Selamat datang di **Sotoy Film**! Platform ini adalah rumah hangat bagi seluruh pencinta film, serial TV, dan animation di Indonesia. Di sini, siapa saja bisa menyalurkan opini sinematik mereka, membaca kajian mendalam, berdiskusi di forum komunitas, hingga berpartisipasi dalam menentukan rating film terdemokratis.
+Selamat datang di **Sotoy Film**! Platform ini adalah rumah hangat bagi seluruh pencinta film, serial TV, dan animasi di Indonesia. Di sini, siapa saja bisa menyalurkan opini sinematik mereka, membaca kajian mendalam, berdiskusi di forum komunitas, hingga berpartisipasi dalam menentukan rating film terdemokratis.
 
 ### 🖼️ Pratinjau Antarmuka & Panduan Lengkap
 | 🌟 Tampilan Portal Panduan Utama | 💬 Forum Buzz & Rating Interaktif |
@@ -106,7 +106,7 @@ Sebagai Admin, Anda dapat mengontrol penuh apa saja yang tampil di halaman depan
 Untuk menjaga ekosistem komunitas agar tetap aman, ramah, dan bebas dari spam, Admin dibekali peralatan moderasi lengkap di **Panel Admin**:
 
 1. **Dashboard Analitik:** Pantau pertumbuhan harian pengguna aktif (*DAU*), retensi komunitas, dan demografi peran warga melalui grafik visual yang interaktif.
-2. **Evaluasi Laporan Laporan Laporan:** Tinjau setiap laporan pelanggaran (ulasan kasar, komentar SARA, atau konten Buzz yang tidak relevan) yang diadukan oleh warga.
+2. **Evaluasi Laporan:** Tinjau setiap laporan pelanggaran (ulasan kasar, komentar SARA, atau konten Buzz yang tidak relevan) yang diadukan oleh warga.
 3. **Tindakan Cepat (Bulk Actions):** Tangguhkan (*suspend*) beberapa akun pelanggar aturan sekaligus, atau hapus konten bermasalah dalam satu klik.
 4. **Evaluasi Banding Akun:** Pengguna yang ditangguhkan dapat mengajukan surat banding. Admin dapat membaca argumen mereka dan memutuskan untuk menerima banding (mengaktifkan kembali akun) atau menolaknya.
 5. **Jejak Audit (Audit Logs):** Seluruh tindakan admin dicatat secara otomatis dalam sistem riwayat aktivitas agar pengelolaan platform tetap transparan dan akuntabel.
