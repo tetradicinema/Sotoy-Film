@@ -26,7 +26,7 @@ export const Footer: React.FC = () => {
             </div>
 
             <p className="text-slate-400 text-xs leading-relaxed max-w-sm">
-              Platform media & jejaring sosial film pop-culture independen. Mengulas film, serial, animation, cinema gear, dan studi filmmaking dengan sistem penilaian jujur <strong>Skor Sotoy (Bintang 1-5)</strong>.
+              Platform media & jejaring sosial film pop-culture independen. Mengulas film, serial, animation, cinema gear, dan studi filmmaking dengan sistem penilaian jujur <strong>Skor Sotoy (Skala 1-10)</strong>.
             </p>
 
             <p className="text-slate-400 text-[10px] leading-relaxed max-w-sm">
@@ -35,7 +35,7 @@ export const Footer: React.FC = () => {
 
             <div className="flex items-center gap-2 pt-2">
               <span className="bg-[#171717] border border-white/[0.08] text-slate-300 text-[10px] font-semibold px-2.5 py-1 rounded-md">
-                ★ 1-5 Bintang Skor Sotoy
+                ★ Skor Sotoy 1-10
               </span>
               <span className="bg-[#171717] border border-white/[0.08] text-slate-300 text-[10px] font-semibold px-2.5 py-1 rounded-md">
                 Komunitas Terbuka
@@ -296,7 +296,7 @@ export const Footer: React.FC = () => {
               onClick={() => navigateTo('business-inquiries')}
               className="hover:text-white transition-colors py-2"
             >
-              Slot Iklan & Kemitraan: sponsor@sotoyfilm.com
+              Slot Iklan & Kemitraan: admin.sotoyfilm@gmail.com
             </button>
             <span>•</span>
             <span>Jakarta, Indonesia</span>

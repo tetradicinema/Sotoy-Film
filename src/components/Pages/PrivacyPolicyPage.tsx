@@ -83,13 +83,19 @@ export const PrivacyPolicyPage: React.FC = () => {
                 <strong>Data Profil Pengguna:</strong> Nama tampilan, handle unik (misalnya <em>@wargasotoy</em>), tautan avatar, bio profil, dan peran akun (Warga, Si Paling Sotoy, Penulis, atau Admin).
               </li>
               <li>
-                <strong>Aktivitas Sinematik & Konten Buatan Pengguna:</strong> Ulasan teks, angka rating Skor Sotoy (1.0 - 5.0), postingan Buzz kilat, komentar pada artikel, daftar film di Watchlist, dan penanda suka (likes).
+                <strong>Aktivitas Sinematik & Konten Buatan Pengguna:</strong> Ulasan teks, angka rating Skor Sotoy (1.0 - 10.0), postingan Buzz kilat, komentar pada artikel, daftar film di Watchlist, dan penanda suka (likes).
               </li>
               <li>
                 <strong>Preferensi Akun:</strong> Genre film favorit, preferensi pemutaran cuplikan (trailer), dan pengaturan privasi visibilitas profil yang Anda konfigurasi di menu Pengaturan.
               </li>
               <li>
                 <strong>Data Teknis Perangkat:</strong> Alamat IP tersamar, tipe browser, resolusi layar, dan metadata sesi untuk keamanan pencegahan bot review-bombing.
+              </li>
+              <li>
+                <strong>Data Analitik Kunjungan:</strong> Kami memakai Google Analytics 4 (Google LLC) untuk memahami halaman mana yang dibaca dan bagaimana pengunjung menemukan Sotoy Film. Layanan ini memakai cookie atau pengenal serupa dan mencatat data seperti halaman yang dibuka, jenis perangkat dan browser, serta perkiraan lokasi tingkat kota. Halaman pengelolaan (admin, penulis, dan editor artikel) tidak dilacak. Anda dapat menolaknya lewat pengaturan cookie di browser atau dengan add-on resmi <em>Google Analytics Opt-out Browser Add-on</em>.
+              </li>
+              <li>
+                <strong>Layanan Pihak Ketiga:</strong> Autentikasi akun dan basis data berjalan di Firebase (Google). Data dan poster film berasal dari TMDB, dan font dimuat dari Google Fonts, sehingga browser Anda terhubung langsung ke server mereka saat halaman dibuka. Masing-masing layanan menerapkan kebijakan privasinya sendiri.
               </li>
             </ul>
           </section>
@@ -106,6 +112,7 @@ export const PrivacyPolicyPage: React.FC = () => {
               <li>Menyimpan dan menyinkronkan daftar film tontonan (*Watchlist*) Anda di berbagai sesi browser.</li>
               <li>Mempersonalisasi rekomendasi film pada fitur <em>Rekomendasi Film Mood</em> berdasarkan genre yang Anda minati.</li>
               <li>Mencegah kecurangan peringkat sinema (*anti-manipulation algorithm*) agar hasil voting film tetap jujur dan organik.</li>
+              <li>Menganalisis pola kunjungan secara agregat, misalnya halaman terpopuler, untuk meningkatkan konten dan performa situs.</li>
             </ul>
           </section>
 
@@ -152,7 +159,7 @@ export const PrivacyPolicyPage: React.FC = () => {
               Apabila Anda memiliki pertanyaan, keberatan, atau ingin meminta penghapusan data seputar Kebijakan Privasi ini, silakan hubungi tim legal kami:
             </p>
             <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs space-y-1">
-              <div><strong>Email:</strong> privacy@sotoyfilm.com / legal@sotoyfilm.com</div>
+              <div><strong>Email:</strong> admin.sotoyfilm@gmail.com</div>
               <div><strong>Subjek:</strong> Permohonan Hak Privasi Pengguna Sotoy Film</div>
               <div><strong>Alamat:</strong> Jl. Senopati No. 88, Kebayoran Baru, Jakarta Selatan, 12190</div>
             </div>

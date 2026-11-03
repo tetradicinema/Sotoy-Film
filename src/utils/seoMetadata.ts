@@ -635,6 +635,8 @@ export const STATIC_ROUTE_METADATA_CONFIG: Record<
     keywords?: string[];
     type?: 'website' | 'article' | 'video.movie';
     noindex?: boolean;
+    /** Canonical path an alias route resolves to, e.g. '/guide' -> '/panduan'. */
+    canonicalPath?: string;
   }
 > = {
   '/': {
@@ -826,6 +828,23 @@ export const STATIC_ROUTE_METADATA_CONFIG: Record<
     description: 'Pelajari mekanisme penilaian review, bobot suara suka, dan cara menjadi jawara di leaderboard Sotoy Film.',
     type: 'website',
   },
+  '/panduan': {
+    title: 'Panduan & FAQ Sotoy Film',
+    description: 'Panduan lengkap memakai Sotoy Film: cara menilai film dengan Skor Sotoy, menulis review, ikut komunitas Buzz, dan jawaban pertanyaan yang sering diajukan.',
+    type: 'website',
+  },
+  '/guide': {
+    title: 'Panduan & FAQ Sotoy Film',
+    description: 'Panduan lengkap memakai Sotoy Film: cara menilai film dengan Skor Sotoy, menulis review, ikut komunitas Buzz, dan jawaban pertanyaan yang sering diajukan.',
+    type: 'website',
+    canonicalPath: '/panduan',
+  },
+  '/faq': {
+    title: 'Panduan & FAQ Sotoy Film',
+    description: 'Panduan lengkap memakai Sotoy Film: cara menilai film dengan Skor Sotoy, menulis review, ikut komunitas Buzz, dan jawaban pertanyaan yang sering diajukan.',
+    type: 'website',
+    canonicalPath: '/panduan',
+  },
   '/settings': {
     title: 'Pengaturan Akun & Preferensi',
     description: 'Kelola preferensi akun, privasi profil, dan pengaturan notifikasi ulasan.',
@@ -895,6 +914,10 @@ export function buildRouteMetadata(
     const finalTitle = formatBrandedTitle(rawTitle);
     const primaryImage = resolveAbsoluteUrl(DEFAULT_IMAGE, finalUrl);
     const imageMime = getImageMimeType(primaryImage);
+    // Alias routes point their canonical at the primary route.
+    const resolvedCanonical = config.canonicalPath
+      ? `${DEFAULT_BASE_URL}${config.canonicalPath}`
+      : finalCanonical;
 
     const openGraph: OpenGraphTags = {
       'og:site_name': SITE_NAME,
@@ -926,7 +949,7 @@ export function buildRouteMetadata(
       rawTitle,
       description: config.description,
       keywords: config.keywords || DEFAULT_KEYWORDS,
-      canonicalUrl: finalCanonical,
+      canonicalUrl: resolvedCanonical,
       url: finalUrl,
       type: config.type || 'website',
       primaryImage,
