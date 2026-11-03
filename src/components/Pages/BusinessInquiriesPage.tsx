@@ -2,21 +2,25 @@ import React, { useState } from 'react';
 import {
   Briefcase,
   TrendingUp,
-  Users,
-  Eye,
   Mail,
   Phone,
   Send,
-  Sparkles,
   Award,
   Film,
   Camera,
   CheckCircle2,
-  Calendar,
-  MessageSquare,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
+
+const PARTNERSHIP_TYPE_LABELS: Record<string, string> = {
+  screening: 'Special Community Screening & Premiere',
+  editorial: 'Sponsored Article & Filmmaker Interview',
+  display_ads: 'Display Banner Ads (Leaderboard & Sidebar)',
+  gear_review: 'Cinema Gear Testing & Hardware Review',
+  media_partner: 'Official Media Partner Festival Sinema',
+  custom: 'Program Kustom / Lainnya',
+};
 
 export const BusinessInquiriesPage: React.FC = () => {
   const { showToast, navigateTo } = useApp();
@@ -27,7 +31,6 @@ export const BusinessInquiriesPage: React.FC = () => {
     email: '',
     phone: '',
     partnershipType: 'screening',
-    budgetRange: 'idr_10_25m',
     estimatedTimeline: '',
     message: '',
   });
@@ -47,8 +50,7 @@ export const BusinessInquiriesPage: React.FC = () => {
       `Nama kontak: ${formState.contactName}`,
       `Email: ${formState.email}`,
       `Telepon/WhatsApp: ${formState.phone || '-'}`,
-      `Jenis kolaborasi: ${formState.partnershipType}`,
-      `Rentang anggaran: ${formState.budgetRange}`,
+      `Jenis kolaborasi: ${PARTNERSHIP_TYPE_LABELS[formState.partnershipType] || formState.partnershipType}`,
       `Estimasi waktu: ${formState.estimatedTimeline || '-'}`,
       '',
       'Pesan:',
@@ -173,7 +175,7 @@ export const BusinessInquiriesPage: React.FC = () => {
                 onClick={() => setIsSubmitted(false)}
                 className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs"
               >
-                Kirim Proposal Lainnya
+                Kirim Brief Lainnya
               </button>
             </div>
           ) : (
@@ -268,7 +270,7 @@ export const BusinessInquiriesPage: React.FC = () => {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-300">
-                  Rincian Brief / Catatan Proposal <span className="text-[#FF2E7E]">*</span>
+                  Rincian Brief <span className="text-[#FF2E7E]">*</span>
                 </label>
                 <textarea
                   required

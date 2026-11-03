@@ -50,6 +50,8 @@ export const config = {
     '/faq',
     '/settings',
     '/onboarding',
+    '/profil',
+    '/profile',
     '/film/:path*',
     '/artikel/:path*',
     '/koleksi/:path*',

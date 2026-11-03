@@ -32,7 +32,7 @@ export const PrivacyPolicyPage: React.FC = () => {
           </h1>
 
           <div className="flex items-center gap-3 text-xs text-slate-400">
-            <span>Berlaku efektif sejak: 1 September 2026</span>
+            <span>Berlaku efektif sejak: 3 November 2026</span>
             <span>•</span>
             <span>Versi Dokumen: 2.4.0</span>
           </div>
@@ -156,7 +156,7 @@ export const PrivacyPolicyPage: React.FC = () => {
               <span>5. Hubungi Petugas Perlindungan Data</span>
             </h3>
             <p>
-              Apabila Anda memiliki pertanyaan, keberatan, atau ingin meminta penghapusan data seputar Kebijakan Privasi ini, silakan hubungi tim legal kami:
+              Apabila Anda memiliki pertanyaan, keberatan, atau ingin meminta penghapusan data seputar Kebijakan Privasi ini, silakan hubungi tim Sotoy Film:
             </p>
             <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs space-y-1">
               <div><strong>Email:</strong> admin.sotoyfilm@gmail.com</div>

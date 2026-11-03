@@ -855,6 +855,16 @@ export const STATIC_ROUTE_METADATA_CONFIG: Record<
     description: 'Pilih preferensi genre sinema dan mulai petualangan pop-culture kamu di Sotoy Film.',
     noindex: true,
   },
+  '/profil': {
+    title: 'Profil Saya',
+    description: 'Halaman profil akun Sotoy Film.',
+    noindex: true,
+  },
+  '/profile': {
+    title: 'Profil Saya',
+    description: 'Halaman profil akun Sotoy Film.',
+    noindex: true,
+  },
 };
 
 /**
