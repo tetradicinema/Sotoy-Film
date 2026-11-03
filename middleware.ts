@@ -499,7 +499,7 @@ export default async function middleware(request: Request): Promise<Response> {
         '@type': 'Organization',
         name: 'Sotoy Film',
         url: baseUrl,
-        logo: { '@type': 'ImageObject', url: `${baseUrl}/stacked logo-sotoyfilm.PNG` },
+        logo: { '@type': 'ImageObject', url: `${baseUrl}/sotoy-search-logo-v3-padded.png` },
       },
       mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
     };

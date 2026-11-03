@@ -346,7 +346,7 @@ export function generateArticleSchema(input: ArticleSchemaInput) {
         '@type': 'ImageObject',
         url: resolveAbsoluteUrl(
           input.publisherLogo ||
-            'https://www.sotoyfilm.my.id/sotoy%20film%20favicon%20512x512.PNG'
+            'https://www.sotoyfilm.my.id/sotoy-search-logo-v3-padded.png'
         ),
         width: 512,
         height: 512,
@@ -412,7 +412,7 @@ export function generateOrganizationSchema(siteUrl = DEFAULT_BASE_URL) {
     url: cleanUrl,
     logo: {
       '@type': 'ImageObject',
-      url: `${cleanUrl}/sotoy%20film%20favicon%20512x512.PNG`,
+      url: `${cleanUrl}/sotoy-search-logo-v3-padded.png`,
       width: 512,
       height: 512,
     },

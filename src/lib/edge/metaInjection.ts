@@ -967,7 +967,8 @@ export const FALLBACK_HTML_TEMPLATE = `<!doctype html>
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/v3_favicon%20512%20sotoyfilm.PNG" sizes="512x512" />
+    <link rel="icon" type="image/png" href="/v3_favicon%20512%20sotoyfilm.PNG" sizes="32x32" />
+    <link rel="icon" type="image/png" href="/sotoy-search-logo-v3-padded.png" sizes="512x512" />
     <link rel="apple-touch-icon" href="/sotoy%20film%20favicon%20512x512.PNG" />
     <meta name="apple-mobile-web-app-title" content="Sotoy Film" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
