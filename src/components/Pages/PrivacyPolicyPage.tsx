@@ -161,7 +161,6 @@ export const PrivacyPolicyPage: React.FC = () => {
             <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs space-y-1">
               <div><strong>Email:</strong> admin.sotoyfilm@gmail.com</div>
               <div><strong>Subjek:</strong> Permohonan Hak Privasi Pengguna Sotoy Film</div>
-              <div><strong>Alamat:</strong> Jl. Senopati No. 88, Kebayoran Baru, Jakarta Selatan, 12190</div>
             </div>
           </section>
 

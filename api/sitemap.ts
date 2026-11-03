@@ -96,6 +96,7 @@ function getStaticItems(): SitemapItem[] {
     { link: `${BASE_URL}/rekomendasi-film`, title: 'Rekomendasi Film', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'weekly', priority: '0.8' },
     { link: `${BASE_URL}/komunitas`, title: 'Komunitas', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'daily', priority: '0.8' },
     { link: `${BASE_URL}/panduan-leaderboard`, title: 'Panduan Leaderboard', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.6' },
+    { link: `${BASE_URL}/panduan`, title: 'Panduan & FAQ', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.6' },
     { link: `${BASE_URL}/tentang-kami`, title: 'Tentang Kami', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.5' },
     { link: `${BASE_URL}/kebijakan-privasi`, title: 'Kebijakan Privasi', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.5' },
     { link: `${BASE_URL}/syarat-ketentuan`, title: 'Syarat & Ketentuan', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.5' },

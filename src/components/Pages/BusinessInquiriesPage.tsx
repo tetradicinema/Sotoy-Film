@@ -41,8 +41,24 @@ export const BusinessInquiriesPage: React.FC = () => {
       return;
     }
 
+    const subject = `Brief kerja sama: ${formState.companyName}`;
+    const body = [
+      `Nama perusahaan/brand/PH: ${formState.companyName}`,
+      `Nama kontak: ${formState.contactName}`,
+      `Email: ${formState.email}`,
+      `Telepon/WhatsApp: ${formState.phone || '-'}`,
+      `Jenis kolaborasi: ${formState.partnershipType}`,
+      `Rentang anggaran: ${formState.budgetRange}`,
+      `Estimasi waktu: ${formState.estimatedTimeline || '-'}`,
+      '',
+      'Pesan:',
+      formState.message,
+    ].join('\n');
+
+    window.location.href = `mailto:admin.sotoyfilm@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
     setIsSubmitted(true);
-    showToast(`Terima kasih ${formState.contactName}! Proposal kemitraan ${formState.companyName} telah diterima oleh tim Business Development.`);
+    showToast('Aplikasi email kamu akan terbuka. Kirim emailnya dari sana.');
   };
 
   return (
@@ -53,55 +69,20 @@ export const BusinessInquiriesPage: React.FC = () => {
         <div className="text-center space-y-4 max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 text-[#FF2E7E] text-xs font-black uppercase tracking-wider">
             <Briefcase className="w-3.5 h-3.5" />
-            <span>Kemitraan, Iklan & Kolaborasi Sinema</span>
+            <span>Kemitraan & Iklan</span>
           </div>
 
           <h1 className="font-display font-black text-3xl sm:text-5xl text-white tracking-tight leading-tight">
-            Hubungkan Karya Film & Brand Anda dengan <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF2E7E] via-[#FF2E7E] to-[#FF2E7E]">Audiens Paling Antusias.</span>
+            Kerja sama dengan Sotoy Film
           </h1>
 
           <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-            Sotoy Film menjembatani studio film, rumah produksi, distributor independen, produsen gear kamera, serta brand teknologi dengan komunitas cinephile dan penonton bioskop terbesar di Indonesia.
+            Sotoy Film menerima kerja sama dengan rumah produksi, distributor, komunitas film, dan brand yang relevan dengan dunia film. Ceritakan rencanamu lewat email atau formulir di bawah.
           </p>
         </div>
 
         {/* Global Page Ad Banner */}
         <AdBannerSlot variant="leaderboard" />
-
-        {/* Media Kit Snapshot / Metrics */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-[#171717] border border-slate-800 rounded-3xl p-5 text-center space-y-1 shadow-lg">
-            <div className="font-display font-black text-3xl sm:text-4xl text-[#FF2E7E]">
-              450K+
-            </div>
-            <div className="text-xs font-bold text-white">Pembaca Aktif / Bulan</div>
-            <div className="text-[11px] text-slate-400">Film Enthusiasts & Penonton</div>
-          </div>
-
-          <div className="bg-[#171717] border border-slate-800 rounded-3xl p-5 text-center space-y-1 shadow-lg">
-            <div className="font-display font-black text-3xl sm:text-4xl text-[#FF2E7E]">
-              85K+
-            </div>
-            <div className="text-xs font-bold text-white">Buzz & Interaksi Opini</div>
-            <div className="text-[11px] text-slate-400">Tingkat Retensi Sosial Tinggi</div>
-          </div>
-
-          <div className="bg-[#171717] border border-slate-800 rounded-3xl p-5 text-center space-y-1 shadow-lg">
-            <div className="font-display font-black text-3xl sm:text-4xl text-[#FF2E7E]">
-              72%
-            </div>
-            <div className="text-xs font-bold text-white">Demografi 18 - 34 Tahun</div>
-            <div className="text-[11px] text-slate-400">Gen-Z & Urban Moviegoers</div>
-          </div>
-
-          <div className="bg-[#171717] border border-slate-800 rounded-3xl p-5 text-center space-y-1 shadow-lg">
-            <div className="font-display font-black text-3xl sm:text-4xl text-purple-400">
-              94%
-            </div>
-            <div className="text-xs font-bold text-white">Full-House Screening</div>
-            <div className="text-[11px] text-slate-400">Komunitas Offline Terlibat</div>
-          </div>
-        </div>
 
         {/* 4 Partnership Pillars */}
         <div className="space-y-6">
@@ -110,7 +91,7 @@ export const BusinessInquiriesPage: React.FC = () => {
               Solusi & Format Kolaborasi
             </h2>
             <p className="text-slate-400 text-xs sm:text-sm">
-              Kami menyusun format promosi yang terasa organik, informatif, dan tidak merusak integritas pengalaman membaca penikmat film.
+              Format kerja sama yang bisa dibahas. Semua konten berbayar diberi label sponsor.
             </p>
           </div>
 
@@ -123,7 +104,7 @@ export const BusinessInquiriesPage: React.FC = () => {
                 Exclusive Premiere & Community Screening
               </h3>
               <p className="text-slate-300 text-xs leading-relaxed">
-                Pemutaran perdana bersama 200+ Warga Sotoy dan kritikus terverifikasi (Si Paling Sotoy). Dilengkapi dengan live Q&A bersama sineas/aktor, merchandise kit khusus, dan buzzing serentak di media sosial.
+                Pemutaran atau nonton bareng untuk komunitas, bisa disertai tanya jawab dengan tim film. Format dan kapasitas dibahas per acara.
               </p>
             </div>
 
@@ -135,7 +116,7 @@ export const BusinessInquiriesPage: React.FC = () => {
                 Editorial Showcase & Filmmaker In-Depth
               </h3>
               <p className="text-slate-300 text-xs leading-relaxed">
-                Artikel liputan mendalam proses kreatif, bedah naskah, wawancara sutradara, dan esai teknis di kategori Film Studies yang ditulis langsung oleh jurnalis Penulis Sotoy dengan penandaan transparansi resmi.
+                Artikel liputan, wawancara sineas, atau pembahasan proses kreatif yang ditulis penulis Sotoy Film. Konten berbayar diberi label sponsor yang jelas.
               </p>
             </div>
 
@@ -147,7 +128,7 @@ export const BusinessInquiriesPage: React.FC = () => {
                 Display Ad Placements (Leaderboard & Sidebar)
               </h3>
               <p className="text-slate-300 text-xs leading-relaxed">
-                Slot penayangan banner resmi beresolusi tinggi di posisi strategis: Leaderboard halaman utama, artikel detail, in-feed kategori film, dan sticky sidebar desktop dengan pelaporan CTR yang transparan.
+                Banner di beranda, halaman artikel, dan halaman film. Posisi dan harga disepakati per kampanye.
               </p>
             </div>
 
@@ -159,7 +140,7 @@ export const BusinessInquiriesPage: React.FC = () => {
                 Cinema Gear Testing & Tech Review
               </h3>
               <p className="text-slate-300 text-xs leading-relaxed">
-                Uji coba langsung kamera sinema, lensa anamorphic, lighting rig, dan software grading oleh praktisi sinematografi kami dalam format artikel video dan review tertulis di kanal Cinema Gear.
+                Ulasan peralatan film seperti kamera, lensa, dan lampu dalam bentuk tulisan. Penilaian tetap independen.
               </p>
             </div>
           </div>
@@ -171,10 +152,10 @@ export const BusinessInquiriesPage: React.FC = () => {
 
           <div className="max-w-2xl mb-8 space-y-2">
             <h2 className="font-display font-black text-2xl sm:text-3xl text-white">
-              Kirimkan Proposal / Brief Kemitraan
+              Kirim brief kerja sama
             </h2>
             <p className="text-slate-400 text-xs sm:text-sm">
-              Tim Business Development kami akan mempelajari materi Anda dan memberikan balasan dalam kurun waktu 1x24 jam hari kerja.
+              Kami membalas lewat email.
             </p>
           </div>
 
@@ -182,10 +163,10 @@ export const BusinessInquiriesPage: React.FC = () => {
             <div className="p-8 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-4">
               <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
               <h3 className="font-display font-black text-xl text-white">
-                Proposal Berhasil Dikirimkan!
+                Brief siap dikirim
               </h3>
               <p className="text-slate-300 text-xs sm:text-sm max-w-md mx-auto leading-relaxed">
-                Terima kasih atas ketertarikan Anda berkolaborasi dengan Sotoy Film. Manajer Kemitraan kami akan segera menghubungi email <strong>{formState.email}</strong> beserta penawaran Media Kit & Rate Card lengkap.
+                Aplikasi email kamu sudah terbuka dengan brief ini. Kirim emailnya dari sana agar brief sampai ke tim Sotoy Film.
               </p>
               <button
                 type="button"
@@ -302,14 +283,14 @@ export const BusinessInquiriesPage: React.FC = () => {
               <div className="flex items-center justify-between flex-wrap gap-4 pt-2">
                 <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
                   <Mail className="w-3.5 h-3.5 text-[#FF2E7E]" />
-                  <span>Atau email langsung ke: <strong>business@sotoyfilm.com</strong></span>
+                  <span>Atau email langsung ke: <strong>admin.sotoyfilm@gmail.com</strong></span>
                 </div>
 
                 <button
                   type="submit"
                   className="px-8 py-3 rounded-xl bg-gradient-to-r from-[#FF2E7E] to-[#FF2E7E] hover:brightness-110 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-[#FF2E7E]/20 transition-transform active:scale-95"
                 >
-                  <span>Kirim Proposal Kemitraan</span>
+                  <span>Kirim Brief</span>
                   <Send className="w-4 h-4" />
                 </button>
               </div>
@@ -320,17 +301,17 @@ export const BusinessInquiriesPage: React.FC = () => {
         {/* Office & Direct Contact Bar */}
         <div className="p-6 rounded-3xl bg-slate-900/60 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
           <div>
-            <div className="font-bold text-white mb-0.5">Sotoy Film Media Group</div>
-            <div>Jl. Senopati No. 88, Kebayoran Baru, Jakarta Selatan 12190</div>
+            <div className="font-bold text-white mb-0.5">Sotoy Film</div>
+            <div>Kontak langsung</div>
           </div>
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
               <Mail className="w-4 h-4 text-[#FF2E7E]" />
-              <span className="text-slate-300 font-medium">business@sotoyfilm.com</span>
+              <span className="text-slate-300 font-medium">admin.sotoyfilm@gmail.com</span>
             </div>
             <div className="flex items-center gap-2">
               <Phone className="w-4 h-4 text-[#FF2E7E]" />
-              <span className="text-slate-300 font-medium">+62 812-9900-SOTOY</span>
+              <span className="text-slate-300 font-medium">+62 882-7124-7746</span>
             </div>
           </div>
         </div>

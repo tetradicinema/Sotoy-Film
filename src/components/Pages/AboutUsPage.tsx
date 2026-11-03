@@ -27,15 +27,15 @@ export const AboutUsPage: React.FC = () => {
         <div className="text-center space-y-4 max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 text-[#FF2E7E] text-xs font-black uppercase tracking-wider">
             <Clapperboard className="w-3.5 h-3.5" />
-            <span>Manifesto Redaksi Sotoy Film</span>
+            <span>Tentang Sotoy Film</span>
           </div>
 
           <h1 className="font-display font-black text-3xl sm:text-5xl text-white tracking-tight leading-tight">
-            Berani Mengulas, Bebas Berpendapat, <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF2E7E] via-[#FF2E7E] to-[#FF2E7E]">Tetap Sinematik.</span>
+            Ulasan film yang jujur, dari penonton dan penulis Indonesia.
           </h1>
 
           <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-            Sotoy Film adalah media pop-culture film independen dan jejaring sosial film berbasis di Jakarta, Indonesia. Kami merayakan sinema mulai dari film festival prestisius, blockbuster Hollywood, serial televisi, animation legendaris, hingga riset gear sinematografi.
+            Sotoy Film adalah media film dan komunitas penonton dari Indonesia. Kami membahas film bioskop, film festival, serial, animasi, sampai peralatan dan teknik pembuatan film. Di sini kamu bisa membaca ulasan, memberi skor, dan ngobrol soal film yang baru kamu tonton.
           </p>
         </div>
 
@@ -48,15 +48,15 @@ export const AboutUsPage: React.FC = () => {
           
           <h2 className="font-display font-black text-2xl text-white flex items-center gap-3">
             <Sparkles className="w-6 h-6 text-[#FF2E7E]" />
-            <span>Mengapa Bernama "Sotoy Film"?</span>
+            <span>Kenapa namanya "Sotoy Film"?</span>
           </h2>
 
           <div className="space-y-4 text-slate-300 text-sm sm:text-base leading-relaxed">
             <p>
-              Di Indonesia, kata <em>"sotoy"</em> kerap diidentikkan dengan orang yang sok tahu. Namun di mata kami, setiap penonton film memiliki intuisi, emosi, dan perspektif unik yang berharga setelah lampu bioskop dinyalakan kembali.
+              Di Indonesia, <em>"sotoy"</em> artinya sok tahu. Kami memakai kata itu dengan sengaja: setiap penonton punya pendapat soal film yang baru ditontonnya, dan pendapat itu layak didengar tanpa harus bergelar kritikus.
             </p>
             <p>
-              Terlalu lama ulasan film di tanah air dikotak-kotakkan: antara review akademis yang elitis dan berjarak, atau review pesanan agensi yang serba memuji tanpa kritik membangun. Sotoy Film lahir sebagai jembatan alternatif: tempat di mana siapa pun bisa menjadi kritikus dengan argumen yang santun, tajam, dan menyenangkan.
+              Ulasan film berbahasa Indonesia sering terbagi dua: tulisan akademis yang berjarak, atau ulasan pesanan yang isinya pujian saja. Sotoy Film mencoba jalan tengahnya, tempat penonton biasa, kritikus, dan penulis bisa menilai film dengan jujur dan saling membaca.
             </p>
           </div>
         </div>
@@ -68,7 +68,7 @@ export const AboutUsPage: React.FC = () => {
               Filosofi Sistem Skor Sotoy (★ 1.0 - 10.0)
             </h2>
             <p className="text-slate-400 text-xs sm:text-sm">
-              Standar baku penilaian film berbasis skala 10 poin di ekosistem Sotoy Film. Transparan, presisi, jujur, dan tidak dapat dibeli oleh sponsor mana pun.
+              Cara kami memberi skor, dari 1 sampai 10. Sponsor tidak memengaruhi skor.
             </p>
           </div>
 
@@ -101,7 +101,7 @@ export const AboutUsPage: React.FC = () => {
               Struktur Peran Komunitas Kami
             </h2>
             <p className="text-slate-400 text-xs sm:text-sm">
-              Kami membagi ekosistem agar setiap kontributor memiliki panggung yang sesuai dengan keahliannya.
+              Ada empat peran di Sotoy Film, masing-masing dengan wewenang yang berbeda.
             </p>
           </div>
 
@@ -132,7 +132,7 @@ export const AboutUsPage: React.FC = () => {
                 <h3 className="font-display font-black text-base text-white">Penulis Sotoy (Jurnalis Redaksi)</h3>
               </div>
               <p className="text-slate-300 text-xs leading-relaxed">
-                Jurnalis film dan esais profesional kami yang memproduksi liputan mendalam, wawancara eksklusif sineas, panduan lensa & kamera, dan studi filmmaking.
+                Penulis redaksi yang menulis liputan, wawancara sineas, panduan kamera dan lensa, serta bahasan teknik pembuatan film.
               </p>
             </div>
 
@@ -151,10 +151,10 @@ export const AboutUsPage: React.FC = () => {
         {/* CTA Bottom Box */}
         <div className="p-8 rounded-3xl bg-gradient-to-r from-[#FF2E7E]/20 via-[#171717] to-[#FF2E7E]/20 border border-slate-800 text-center space-y-4">
           <h3 className="font-display font-black text-2xl text-white">
-            Ingin Berkolaborasi atau Bergabung Menjadi Penulis?
+            Mau kerja sama atau jadi penulis?
           </h3>
           <p className="text-slate-300 text-xs sm:text-sm max-w-xl mx-auto leading-relaxed">
-            Pintu redaksi dan kemitraan kami selalu terbuka bagi sineas, promotor film, distributor, maupun mahasiswa film.
+            Kami terbuka untuk kolaborasi dengan sineas, distributor, dan komunitas film. Kirim pesan lewat halaman kemitraan.
           </p>
           <div className="flex items-center justify-center gap-4 flex-wrap pt-2">
             <button
