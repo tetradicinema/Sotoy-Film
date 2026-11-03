@@ -12,7 +12,6 @@ import {
   FileText,
   LayoutGrid,
   ChevronRight,
-  Sparkles,
   HelpCircle,
   ThumbsUp,
   Image as ImageIcon,
@@ -23,16 +22,6 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
-
-// Import the generated images
-// @ts-ignore
-import guideHero from '../../assets/images/sotoy_guide_hero_1791455336765.jpg';
-// @ts-ignore
-import buzzGuide from '../../assets/images/sotoy_buzz_guide_1791455357223.jpg';
-// @ts-ignore
-import ratingGuide from '../../assets/images/sotoy_rating_guide_1791455879959.jpg';
-// @ts-ignore
-import shareGuide from '../../assets/images/sotoy_share_guide_1791455895956.jpg';
 
 type TabKey = 'akun' | 'rating' | 'buzz' | 'admin';
 
@@ -69,8 +58,7 @@ export const GuidePage: React.FC = () => {
       tab: 'rating',
       title: 'Cara Memberikan Rating & Ulasan Film',
       keywords: 'rating ulasan skor bintang tulis review nilai',
-      content: 'Cari film, serial, atau animation pilihan Anda di "Database Film". Di halaman detail film, gulir ke bagian "Berikan Penilaian Anda". Pilih skor bintang Anda dari rentang ★ 1.0 sampai 10.0 (menggunakan klik atau slider presisi desimal). Tulis "Headline Ulasan" yang menarik (contoh: "Visualnya Megah, Tapi Naskahnya Lemah"), lalu ketik ulasan lengkap Anda di kotak teks yang disediakan. Terakhir, klik "Kirim Ulasan". Rating Anda akan langsung digabungkan ke Skor Warga!',
-      image: ratingGuide
+      content: 'Cari film, serial, atau animation pilihan Anda di "Database Film". Di halaman detail film, gulir ke bagian "Berikan Penilaian Anda". Pilih skor bintang Anda dari rentang ★ 1.0 sampai 10.0 (menggunakan klik atau slider presisi desimal). Tulis "Headline Ulasan" yang menarik (contoh: "Visualnya Megah, Tapi Naskahnya Lemah"), lalu ketik ulasan lengkap Anda di kotak teks yang disediakan. Terakhir, klik "Kirim Ulasan". Rating Anda akan langsung digabungkan ke Skor Warga!'
     },
     {
       id: 'edit-review',
@@ -91,8 +79,7 @@ export const GuidePage: React.FC = () => {
       tab: 'buzz',
       title: 'Cara Mengirim Gagasan Film di Forum "Buzz"',
       keywords: 'kirim buzz posting tweet gambar foto utas status tag film',
-      content: 'Masuk ke halaman "Buzz Komunitas" dari menu navigasi. Klik tombol bulat melayang berwarna pink bergambar pensil (di handphone) atau kotak "Tulis Buzz Baru" di bagian atas halaman feed (di desktop). Ketik opini singkat Anda seputar industri film, serial, atau animation. Anda dapat melampirkan 1 foto ilustrasi (dengan pratinjau instan), serta menggunakan fitur "Tagging Film atau Artikel" agar postingan Anda langsung tertaut pada halaman film/artikel yang dibicarakan.',
-      image: buzzGuide
+      content: 'Masuk ke halaman "Buzz Komunitas" dari menu navigasi. Klik tombol bulat melayang berwarna pink bergambar pensil (di handphone) atau kotak "Tulis Buzz Baru" di bagian atas halaman feed (di desktop). Ketik opini singkat Anda seputar industri film, serial, atau animation. Anda dapat melampirkan 1 foto ilustrasi (dengan pratinjau instan), serta menggunakan fitur "Tagging Film atau Artikel" agar postingan Anda langsung tertaut pada halaman film/artikel yang dibicarakan.'
     },
     {
       id: 'balas-buzz',
@@ -106,8 +93,7 @@ export const GuidePage: React.FC = () => {
       tab: 'buzz',
       title: 'Membagikan (Share) Buzz, Ulasan, dan Artikel',
       keywords: 'share bagikan wa twitter facebook salin link copy sosmed',
-      content: 'Sotoy Film dilengkapi dengan modal berbagi yang super canggih. Klik ikon "Share" (Bagikan) di ulasan film, postingan Buzz, maupun halaman artikel editorial. Sebuah jendela modal akan muncul, memungkinkan Anda untuk menyalin tautan instan ke papan klip ("Salin Tautan"), membagikannya langsung ke WhatsApp, memposting ke Twitter/X dengan tagar otomatis, atau membagikannya ke Facebook. Bot crawler media sosial kami akan otomatis menampilkan preview gambar mini yang dinamis saat Anda membagikan tautan tersebut!',
-      image: shareGuide
+      content: 'Sotoy Film dilengkapi dengan modal berbagi yang super canggih. Klik ikon "Share" (Bagikan) di ulasan film, postingan Buzz, maupun halaman artikel editorial. Sebuah jendela modal akan muncul, memungkinkan Anda untuk menyalin tautan instan ke papan klip ("Salin Tautan"), membagikannya langsung ke WhatsApp, memposting ke Twitter/X dengan tagar otomatis, atau membagikannya ke Facebook. Bot crawler media sosial kami akan otomatis menampilkan preview gambar mini yang dinamis saat Anda membagikan tautan tersebut!'
     },
     {
       id: 'tulis-artikel',
@@ -190,13 +176,6 @@ export const GuidePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="w-full md:w-72 lg:w-96 flex-shrink-0 z-10">
-            <img
-              src={guideHero}
-              alt="Sotoy Film Guide Illustration"
-              className="rounded-2xl border border-slate-800 shadow-xl object-cover w-full h-44 sm:h-56 transform md:rotate-2 hover:rotate-0 transition-transform duration-300"
-            />
-          </div>
         </div>
 
         {/* Global Page Ad Banner */}
@@ -265,17 +244,6 @@ export const GuidePage: React.FC = () => {
                       <p className="text-slate-300 text-xs sm:text-sm leading-relaxed whitespace-pre-line">
                         {guide.content}
                       </p>
-                      
-                      {guide.image && (
-                        <div className="mt-4 pt-2 overflow-hidden rounded-xl border border-slate-800 bg-slate-950 max-w-2xl">
-                          <img
-                            src={guide.image}
-                            alt={`${guide.title} Tutorial UI`}
-                            referrerPolicy="no-referrer"
-                            className="w-full h-auto object-cover max-h-[350px] opacity-90 hover:opacity-100 transition-opacity duration-200"
-                          />
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -285,22 +253,6 @@ export const GuidePage: React.FC = () => {
 
           {/* Interactive Tutorial Visual Column */}
           <div className="space-y-6">
-            
-            {/* Visual Screenshot Mockup Card */}
-            <div className="bg-[#121212] border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
-              <h3 className="font-display font-black text-base text-white flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[#FF2E7E]" />
-                <span>Eksplorasi Fitur Komunitas</span>
-              </h3>
-              <img
-                src={buzzGuide}
-                alt="Community Buzz Feed Tutorial"
-                className="rounded-xl border border-slate-800 object-cover w-full h-48 sm:h-52"
-              />
-              <p className="text-[11px] text-slate-400 leading-relaxed">
-                Ilustrasi tampilan modular interaktif Sotoy Film, memudahkan pembaca memberikan rating bintang (★ 1-10) desimal secara instan serta membalas buzz di smartphone.
-              </p>
-            </div>
 
             {/* Hubungi Support */}
             <div className="bg-gradient-to-br from-[#FF2E7E]/10 to-transparent border border-slate-800 rounded-3xl p-5 space-y-4">
