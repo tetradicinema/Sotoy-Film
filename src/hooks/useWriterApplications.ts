@@ -48,6 +48,14 @@ export const useWriterApplications = () => {
     sendNotification,
   } = useApp();
 
+  const reportError = (error: unknown, op: OperationType, path: string) => {
+    try {
+      handleFirestoreError(error, op, path);
+    } catch {
+      // already logged; never let it escape
+    }
+  };
+
   const getMine = async (): Promise<WriterApplication | null> => {
     if (!currentUser?.id) return null;
     const applicationId = `writer-${currentUser.id}`;
@@ -56,7 +64,7 @@ export const useWriterApplications = () => {
       if (!snapshot.exists()) return null;
       return { ...(snapshot.data() as WriterApplication), id: snapshot.id };
     } catch (error) {
-      handleFirestoreError(error, OperationType.GET, `writerApplications/${applicationId}`);
+      reportError(error, OperationType.GET, `writerApplications/${applicationId}`);
       return null;
     }
   };
@@ -91,7 +99,8 @@ export const useWriterApplications = () => {
       await setDoc(doc(db, 'writerApplications', applicationId), payload);
       return true;
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, `writerApplications/${applicationId}`);
+      reportError(error, OperationType.CREATE, `writerApplications/${applicationId}`);
+      showToast('Gagal mengirim pendaftaran. Coba lagi beberapa saat.', 'error');
       return false;
     }
   };
@@ -106,7 +115,7 @@ export const useWriterApplications = () => {
         id: docSnap.id,
       }));
     } catch (error) {
-      handleFirestoreError(error, OperationType.LIST, 'writerApplications');
+      reportError(error, OperationType.LIST, 'writerApplications');
       return [];
     }
   };
@@ -171,7 +180,7 @@ export const useWriterApplications = () => {
 
       return true;
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `writerApplications/${id}`);
+      reportError(error, OperationType.UPDATE, `writerApplications/${id}`);
       return false;
     }
   };

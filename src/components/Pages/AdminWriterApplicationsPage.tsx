@@ -46,6 +46,7 @@ export const AdminWriterApplicationsPage: React.FC = () => {
       .then(result => {
         if (isMounted) setApplications(result);
       })
+      .catch(() => setApplications([]))
       .finally(() => {
         if (isMounted) setIsLoading(false);
       });

@@ -182,12 +182,17 @@ service cloud.firestore {
 
     function isValidWriterApplication(data) {
       return data.keys().hasAll(['id','userId','userName','userEmail','motivation','status','createdAt']) &&
-        data.keys().hasOnly(['id','userId','userName','userEmail','portfolioUrl','sampleUrl','topics','motivation','status','date','createdAt','reviewedAt','reviewedBy']) &&
+        data.keys().hasOnly(['id','userId','userName','userEmail','portfolioUrl','sampleUrl','topics','motivation','status','date','createdAt']) &&
         data.id is string && data.id.size() <= 128 &&
         data.userId is string && data.userId == request.auth.uid &&
         data.userName is string && data.userName.size() > 0 && data.userName.size() <= 120 &&
         data.userEmail is string && data.userEmail.size() <= 200 &&
-        data.motivation is string && data.motivation.size() >= 1 && data.motivation.size() <= 2000 &&
+        data.motivation is string && data.motivation.size() >= 50 && data.motivation.size() <= 2000 &&
+        data.date is string && data.date.size() <= 40 &&
+        data.createdAt is number &&
+        (!data.keys().hasAny(['portfolioUrl']) || (data.portfolioUrl is string && data.portfolioUrl.size() <= 500)) &&
+        (!data.keys().hasAny(['sampleUrl']) || (data.sampleUrl is string && data.sampleUrl.size() <= 500)) &&
+        (!data.keys().hasAny(['topics']) || (data.topics is list && data.topics.size() <= 10)) &&
         data.status in ['pending','approved','rejected'];
     }
 
@@ -623,7 +628,7 @@ service cloud.firestore {
     }
 
     match /writerApplications/{applicationId} {
-      allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin());
+      allow get: if isSignedIn() && (applicationId == ('writer-' + request.auth.uid) || isAdmin());
       allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
       allow create: if isSignedIn() && isVerifiedUser() && isValidId(applicationId) &&
         applicationId == ('writer-' + request.auth.uid) &&

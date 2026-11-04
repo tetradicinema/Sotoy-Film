@@ -61,6 +61,9 @@ export const WriterApplicationPage: React.FC = () => {
       .then(result => {
         if (isMounted) setApplication(result);
       })
+      .catch(() => {
+        if (isMounted) setApplication(null);
+      })
       .finally(() => {
         if (isMounted) setIsLoading(false);
       });
@@ -129,14 +132,18 @@ export const WriterApplicationPage: React.FC = () => {
     if (!validate()) return;
 
     setIsSubmitting(true);
-    const success = await submit({
-      userName: formData.userName.trim(),
-      portfolioUrl: formData.portfolioUrl.trim() || undefined,
-      sampleUrl: formData.sampleUrl.trim() || undefined,
-      topics: formData.topics.length > 0 ? formData.topics : undefined,
-      motivation: formData.motivation.trim(),
-    });
-    setIsSubmitting(false);
+    let success = false;
+    try {
+      success = await submit({
+        userName: formData.userName.trim(),
+        portfolioUrl: formData.portfolioUrl.trim() || undefined,
+        sampleUrl: formData.sampleUrl.trim() || undefined,
+        topics: formData.topics.length > 0 ? formData.topics : undefined,
+        motivation: formData.motivation.trim(),
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
 
     if (success) {
       setIsSubmitted(true);
