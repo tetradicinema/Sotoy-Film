@@ -247,6 +247,7 @@ export type AppView =
   | 'business-inquiries'
   | 'critic-submission'
   | 'writer-application'
+  | 'support-ticket'
   | 'critic-criteria'
   | 'panduan-leaderboard'
   | 'faq-guide'
@@ -516,7 +517,7 @@ interface AppContextType {
     targetName?: string;
     targetEmail?: string;
     targetRole?: string;
-    targetType?: 'user' | 'appeal' | 'report' | 'critic_submission' | 'writer_application' | 'content';
+    targetType?: 'user' | 'appeal' | 'report' | 'critic_submission' | 'writer_application' | 'support_ticket' | 'content';
     details?: string;
     metadata?: Record<string, any>;
   }) => Promise<void>;
@@ -1038,6 +1039,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentView('critic-submission');
     } else if (path === '/gabung-penulis') {
       setCurrentView('writer-application');
+    } else if (path === '/tiket-bantuan') {
+      setCurrentView('support-ticket');
     } else if (path === '/kriteria-kritikus' || path === '/critic-criteria') {
       setCurrentView('critic-criteria');
     } else if (path === '/panduan-leaderboard') {
@@ -4725,6 +4728,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       case 'writer-application':
         targetPath = '/gabung-penulis';
         break;
+      case 'support-ticket':
+        targetPath = '/tiket-bantuan';
+        break;
       case 'critic-criteria':
         targetPath = '/kriteria-kritikus';
         break;
@@ -5726,7 +5732,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     targetName?: string;
     targetEmail?: string;
     targetRole?: string;
-    targetType?: 'user' | 'appeal' | 'report' | 'critic_submission' | 'writer_application' | 'content';
+    targetType?: 'user' | 'appeal' | 'report' | 'critic_submission' | 'writer_application' | 'support_ticket' | 'content';
     details?: string;
     metadata?: Record<string, any>;
   }): Promise<void> => {

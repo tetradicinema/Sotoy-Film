@@ -33,6 +33,7 @@ export const config = {
     '/write-article',
     '/gabung-kritikus',
     '/gabung-penulis',
+    '/tiket-bantuan',
     '/critic-submission',
     '/kriteria-kritikus',
     '/critic-criteria',

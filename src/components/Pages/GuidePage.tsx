@@ -266,7 +266,7 @@ export const GuidePage: React.FC = () => {
                 </p>
               </div>
               <button
-                onClick={() => navigateTo('business-inquiries')}
+                onClick={() => navigateTo('support-ticket')}
                 className="w-full py-2.5 rounded-xl bg-[#FF2E7E] hover:bg-cyan-400 text-slate-950 font-black text-[11px] uppercase tracking-wider transition-all"
               >
                 Kirim Tiket Bantuan →

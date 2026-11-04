@@ -117,6 +117,12 @@ const CriticCriteriaPage = React.lazy(() =>
 const AdminCriticSubmissionsPage = React.lazy(() =>
   import('./components/Pages/AdminCriticSubmissionsPage').then(m => ({ default: m.AdminCriticSubmissionsPage }))
 );
+const SupportTicketPage = React.lazy(() =>
+  import('./components/Pages/SupportTicketPage').then(m => ({ default: m.SupportTicketPage }))
+);
+const AdminSupportTicketsPage = React.lazy(() =>
+  import('./components/Pages/AdminSupportTicketsPage').then(m => ({ default: m.AdminSupportTicketsPage }))
+);
 const AdminWriterApplicationsPage = React.lazy(() =>
   import('./components/Pages/AdminWriterApplicationsPage').then(m => ({ default: m.AdminWriterApplicationsPage }))
 );
@@ -515,6 +521,7 @@ const AppContent: React.FC = () => {
             <Route path="/gabung-kritikus" element={<CriticSubmissionPage />} />
             <Route path="/critic-submission" element={<CriticSubmissionPage />} />
             <Route path="/gabung-penulis" element={<WriterApplicationPage />} />
+            <Route path="/tiket-bantuan" element={<SupportTicketPage />} />
             <Route path="/kriteria-kritikus" element={<CriticCriteriaPage />} />
             <Route path="/critic-criteria" element={<CriticCriteriaPage />} />
             <Route path="/panduan-leaderboard" element={<LeaderboardGuidePage />} />
@@ -523,6 +530,7 @@ const AppContent: React.FC = () => {
             <Route path="/faq" element={<GuidePage />} />
             <Route path="/admin/submissions" element={<AdminCriticSubmissionsPage />} />
             <Route path="/admin/penulis" element={<AdminWriterApplicationsPage />} />
+            <Route path="/admin/tiket" element={<AdminSupportTicketsPage />} />
 
             {/* Admin Control Center Standalone URLs */}
             <Route

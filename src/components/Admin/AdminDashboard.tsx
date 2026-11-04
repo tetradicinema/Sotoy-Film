@@ -14,11 +14,13 @@ import {
   ExternalLink,
   Award,
   Layout,
-  PenLine
+  PenLine,
+  LifeBuoy
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { auth } from '../../lib/firebase';
 import { useWriterApplications } from '../../hooks/useWriterApplications';
+import { useSupportTickets } from '../../hooks/useSupportTickets';
 import { AdminStatsOverview } from './AdminStatsOverview';
 import { AdminUserManagement } from './AdminUserManagement';
 import { AdminModeration } from './AdminModeration';
@@ -86,6 +88,22 @@ export const AdminDashboard: React.FC = () => {
       isMounted = false;
     };
     // countPending is recreated per render; fetch once per admin authorization.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isUserAdminAuthorized]);
+
+  const { countOpen } = useSupportTickets();
+  const [openTicketsCount, setOpenTicketsCount] = useState(0);
+
+  useEffect(() => {
+    if (!isUserAdminAuthorized) return;
+    let isMounted = true;
+    countOpen().then(count => {
+      if (isMounted) setOpenTicketsCount(count);
+    });
+    return () => {
+      isMounted = false;
+    };
+    // countOpen is recreated per render; fetch once per admin authorization.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isUserAdminAuthorized]);
 
@@ -240,6 +258,26 @@ export const AdminDashboard: React.FC = () => {
               className="text-xs font-bold text-slate-400 hover:text-white hover:underline"
             >
               Pendaftaran Penulis →
+            </Link>
+          )}
+
+          {/* Support ticket quick badge */}
+          {openTicketsCount > 0 ? (
+            <Link
+              to="/admin/tiket"
+              id="admin-open-tickets-badge-btn"
+              className="flex items-center gap-1.5 text-xs font-bold text-[#FF2E7E] hover:underline bg-[#FF2E7E]/15 px-3 py-1 rounded-full border border-[#FF2E7E]/30"
+            >
+              <LifeBuoy className="w-3.5 h-3.5 text-[#FF2E7E]" />
+              <span>{openTicketsCount} Tiket Bantuan Baru →</span>
+            </Link>
+          ) : (
+            <Link
+              to="/admin/tiket"
+              id="admin-tickets-link-btn"
+              className="text-xs font-bold text-slate-400 hover:text-white hover:underline"
+            >
+              Tiket Bantuan →
             </Link>
           )}
         </div>

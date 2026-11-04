@@ -756,6 +756,14 @@ export const STATIC_ROUTE_METADATA_CONFIG: Record<
     type: 'website',
     noindex: true,
   },
+  '/tiket-bantuan': {
+    title: 'Tiket Bantuan Sotoy Film',
+    description:
+      'Kirim tiket bantuan ke redaksi Sotoy Film untuk kendala akun, ulasan, atau teknis.',
+    keywords: ['tiket bantuan', 'bantuan sotoy film', 'kontak redaksi'],
+    type: 'website',
+    noindex: true,
+  },
   '/critic-submission': {
     title: 'Program Kurator Kritikus Film Terverifikasi',
     description:

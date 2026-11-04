@@ -196,6 +196,21 @@ service cloud.firestore {
         data.status in ['pending','approved','rejected'];
     }
 
+    function isValidSupportTicket(data) {
+      return data.keys().hasAll(['id','userId','userName','userEmail','category','subject','message','status','date','createdAt']) &&
+        data.keys().hasOnly(['id','userId','userName','userEmail','category','subject','message','status','date','createdAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.userId is string && data.userId == request.auth.uid &&
+        data.userName is string && data.userName.size() > 0 && data.userName.size() <= 120 &&
+        data.userEmail is string && data.userEmail.size() <= 200 &&
+        data.category in ['akun','ulasan','teknis','konten','lainnya'] &&
+        data.subject is string && data.subject.size() >= 5 && data.subject.size() <= 120 &&
+        data.message is string && data.message.size() >= 20 && data.message.size() <= 2000 &&
+        data.date is string && data.date.size() <= 40 &&
+        data.createdAt is number &&
+        data.status == 'open';
+    }
+
     function isValidNotification(data) {
       return data.keys().hasAll(['id', 'userId', 'type', 'title', 'message', 'targetView', 'isRead', 'createdAt', 'sender']) &&
         data.id is string && data.id.size() <= 128 &&
@@ -634,6 +649,19 @@ service cloud.firestore {
         applicationId == ('writer-' + request.auth.uid) &&
         isValidWriterApplication(incoming()) && incoming().status == 'pending';
       allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /supportTickets/{ticketId} {
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isVerifiedUser() && isValidId(ticketId) &&
+        incoming().id == ticketId &&
+        ticketId.matches('^ticket-' + request.auth.uid + '-[a-z0-9]+$') &&
+        isValidSupportTicket(incoming());
+      allow update: if isAdmin() &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['status','updatedAt','handledBy']) &&
+        incoming().status in ['open','in_progress','resolved'];
       allow delete: if isAdmin();
     }
 

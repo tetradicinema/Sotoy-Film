@@ -411,6 +411,24 @@ export interface AdBanner {
   sponsorName: string;
 }
 
+export type SupportTicketStatus = 'open' | 'in_progress' | 'resolved';
+export type SupportTicketCategory = 'akun' | 'ulasan' | 'teknis' | 'konten' | 'lainnya';
+
+export interface SupportTicket {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  category: SupportTicketCategory;
+  subject: string;
+  message: string;
+  status: SupportTicketStatus;
+  date: string;
+  createdAt: number;
+  updatedAt?: number;
+  handledBy?: string;
+}
+
 export interface WriterApplication {
   id: string;
   userId: string;
@@ -505,6 +523,7 @@ export type AuditLogActionType =
   | 'critic_rejected'
   | 'writer_application_approved'
   | 'writer_application_rejected'
+  | 'support_ticket_status_changed'
   | 'custom_badge_override'
   | 'profile_links_cleared';
 
@@ -520,7 +539,7 @@ export interface AuditLog {
   targetName?: string;
   targetEmail?: string;
   targetRole?: string;
-  targetType?: 'user' | 'appeal' | 'report' | 'critic_submission' | 'writer_application' | 'content';
+  targetType?: 'user' | 'appeal' | 'report' | 'critic_submission' | 'writer_application' | 'support_ticket' | 'content';
   details?: string;
   metadata?: Record<string, any>;
   timestamp: string;
