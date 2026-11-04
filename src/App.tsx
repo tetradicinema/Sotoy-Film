@@ -108,11 +108,17 @@ const BusinessInquiriesPage = React.lazy(() =>
 const CriticSubmissionPage = React.lazy(() =>
   import('./components/Pages/CriticSubmissionPage').then(m => ({ default: m.CriticSubmissionPage }))
 );
+const WriterApplicationPage = React.lazy(() =>
+  import('./components/Pages/WriterApplicationPage').then(m => ({ default: m.WriterApplicationPage }))
+);
 const CriticCriteriaPage = React.lazy(() =>
   import('./components/Pages/CriticCriteriaPage').then(m => ({ default: m.CriticCriteriaPage }))
 );
 const AdminCriticSubmissionsPage = React.lazy(() =>
   import('./components/Pages/AdminCriticSubmissionsPage').then(m => ({ default: m.AdminCriticSubmissionsPage }))
+);
+const AdminWriterApplicationsPage = React.lazy(() =>
+  import('./components/Pages/AdminWriterApplicationsPage').then(m => ({ default: m.AdminWriterApplicationsPage }))
 );
 const LeaderboardGuidePage = React.lazy(() =>
   import('./components/Pages/LeaderboardGuidePage').then(m => ({ default: m.LeaderboardGuidePage }))
@@ -508,6 +514,7 @@ const AppContent: React.FC = () => {
             {/* Critic Program & Leaderboard Routes */}
             <Route path="/gabung-kritikus" element={<CriticSubmissionPage />} />
             <Route path="/critic-submission" element={<CriticSubmissionPage />} />
+            <Route path="/gabung-penulis" element={<WriterApplicationPage />} />
             <Route path="/kriteria-kritikus" element={<CriticCriteriaPage />} />
             <Route path="/critic-criteria" element={<CriticCriteriaPage />} />
             <Route path="/panduan-leaderboard" element={<LeaderboardGuidePage />} />
@@ -515,6 +522,7 @@ const AppContent: React.FC = () => {
             <Route path="/guide" element={<GuidePage />} />
             <Route path="/faq" element={<GuidePage />} />
             <Route path="/admin/submissions" element={<AdminCriticSubmissionsPage />} />
+            <Route path="/admin/penulis" element={<AdminWriterApplicationsPage />} />
 
             {/* Admin Control Center Standalone URLs */}
             <Route

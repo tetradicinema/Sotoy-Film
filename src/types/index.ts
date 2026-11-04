@@ -411,6 +411,22 @@ export interface AdBanner {
   sponsorName: string;
 }
 
+export interface WriterApplication {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  portfolioUrl?: string;
+  sampleUrl?: string;
+  topics?: string[];
+  motivation: string;
+  status: 'pending' | 'approved' | 'rejected';
+  date: string;
+  createdAt: number;
+  reviewedAt?: number;
+  reviewedBy?: string;
+}
+
 export interface CriticSubmission {
   id: string;
   userId: string;
@@ -487,6 +503,8 @@ export type AuditLogActionType =
   | 'content_report_dismissed'
   | 'critic_approved'
   | 'critic_rejected'
+  | 'writer_application_approved'
+  | 'writer_application_rejected'
   | 'custom_badge_override'
   | 'profile_links_cleared';
 
@@ -502,7 +520,7 @@ export interface AuditLog {
   targetName?: string;
   targetEmail?: string;
   targetRole?: string;
-  targetType?: 'user' | 'appeal' | 'report' | 'critic_submission' | 'content';
+  targetType?: 'user' | 'appeal' | 'report' | 'critic_submission' | 'writer_application' | 'content';
   details?: string;
   metadata?: Record<string, any>;
   timestamp: string;

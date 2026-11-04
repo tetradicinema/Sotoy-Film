@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   ShieldCheck, 
@@ -13,10 +13,12 @@ import {
   FileText,
   ExternalLink,
   Award,
-  Layout
+  Layout,
+  PenLine
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { auth } from '../../lib/firebase';
+import { useWriterApplications } from '../../hooks/useWriterApplications';
 import { AdminStatsOverview } from './AdminStatsOverview';
 import { AdminUserManagement } from './AdminUserManagement';
 import { AdminModeration } from './AdminModeration';
@@ -70,6 +72,22 @@ export const AdminDashboard: React.FC = () => {
   const pendingAppealsCount = appeals.filter(a => a.status === 'pending').length;
 
   const isUserAdminAuthorized = isAdmin || currentUser.role === 'admin' || (currentUser.email === 'eksposurmedia@gmail.com' && auth.currentUser?.emailVerified === true);
+
+  const { countPending } = useWriterApplications();
+  const [pendingWritersCount, setPendingWritersCount] = useState(0);
+
+  useEffect(() => {
+    if (!isUserAdminAuthorized) return;
+    let isMounted = true;
+    countPending().then(count => {
+      if (isMounted) setPendingWritersCount(count);
+    });
+    return () => {
+      isMounted = false;
+    };
+    // countPending is recreated per render; fetch once per admin authorization.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isUserAdminAuthorized]);
 
   if (!isUserAdminAuthorized) {
     return (
@@ -202,6 +220,26 @@ export const AdminDashboard: React.FC = () => {
             >
               <Award className="w-3.5 h-3.5 text-amber-400" />
               <span>{pendingCriticsCount} Pengajuan Si Paling Sotoy Menunggu Review →</span>
+            </Link>
+          )}
+
+          {/* Writer application quick badge */}
+          {pendingWritersCount > 0 ? (
+            <Link
+              to="/admin/penulis"
+              id="admin-pending-writers-badge-btn"
+              className="flex items-center gap-1.5 text-xs font-bold text-[#FF2E7E] hover:underline bg-[#FF2E7E]/15 px-3 py-1 rounded-full border border-[#FF2E7E]/30"
+            >
+              <PenLine className="w-3.5 h-3.5 text-[#FF2E7E]" />
+              <span>{pendingWritersCount} Pendaftar Penulis Menunggu Review →</span>
+            </Link>
+          ) : (
+            <Link
+              to="/admin/penulis"
+              id="admin-writers-link-btn"
+              className="text-xs font-bold text-slate-400 hover:text-white hover:underline"
+            >
+              Pendaftaran Penulis →
             </Link>
           )}
         </div>

@@ -149,20 +149,40 @@ export const AboutUsPage: React.FC = () => {
         </div>
 
         {/* CTA Bottom Box */}
-        <div className="p-8 rounded-3xl bg-gradient-to-r from-[#FF2E7E]/20 via-[#171717] to-[#FF2E7E]/20 border border-slate-800 text-center space-y-4">
-          <h3 className="font-display font-black text-2xl text-white">
-            Mau kerja sama atau jadi penulis?
-          </h3>
-          <p className="text-slate-300 text-xs sm:text-sm max-w-xl mx-auto leading-relaxed">
-            Kami terbuka untuk kolaborasi dengan sineas, distributor, dan komunitas film. Kirim pesan lewat halaman kemitraan.
-          </p>
-          <div className="flex items-center justify-center gap-4 flex-wrap pt-2">
-            <button
-              onClick={() => navigateTo('business-inquiries')}
-              className="px-6 py-2.5 rounded-xl bg-[#FF2E7E] hover:bg-cyan-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-transform active:scale-95 shadow-lg shadow-[#FF2E7E]/20"
-            >
-              Hubungi Kemitraan Bisnis →
-            </button>
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-6 sm:p-8 rounded-3xl bg-[#171717] border border-slate-800 space-y-3">
+              <h3 className="font-display font-black text-2xl text-white">
+                Mau kerja sama?
+              </h3>
+              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                Untuk rumah produksi, distributor, komunitas film, dan brand. Kirim brief lewat halaman kemitraan.
+              </p>
+              <button
+                onClick={() => navigateTo('business-inquiries')}
+                className="px-6 py-2.5 rounded-xl bg-[#FF2E7E] hover:bg-cyan-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-transform active:scale-95 shadow-lg shadow-[#FF2E7E]/20"
+              >
+                Hubungi Kemitraan →
+              </button>
+            </div>
+
+            <div className="p-6 sm:p-8 rounded-3xl bg-[#171717] border border-slate-800 space-y-3">
+              <h3 className="font-display font-black text-2xl text-white">
+                Mau jadi penulis?
+              </h3>
+              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                Punya sudut pandang soal film dan senang menulis? Kirim portofolio dan topik yang ingin kamu tulis lewat formulir pendaftaran.
+              </p>
+              <button
+                onClick={() => navigateTo('writer-application')}
+                className="px-6 py-2.5 rounded-xl bg-[#FF2E7E] hover:bg-cyan-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-transform active:scale-95 shadow-lg shadow-[#FF2E7E]/20"
+              >
+                Daftar Jadi Penulis →
+              </button>
+            </div>
+          </div>
+
+          <div className="text-center">
             <button
               onClick={() => navigateTo('community-feed')}
               className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors"

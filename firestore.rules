@@ -180,6 +180,17 @@ service cloud.firestore {
         data.status in ['pending', 'approved', 'rejected'];
     }
 
+    function isValidWriterApplication(data) {
+      return data.keys().hasAll(['id','userId','userName','userEmail','motivation','status','createdAt']) &&
+        data.keys().hasOnly(['id','userId','userName','userEmail','portfolioUrl','sampleUrl','topics','motivation','status','date','createdAt','reviewedAt','reviewedBy']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.userId is string && data.userId == request.auth.uid &&
+        data.userName is string && data.userName.size() > 0 && data.userName.size() <= 120 &&
+        data.userEmail is string && data.userEmail.size() <= 200 &&
+        data.motivation is string && data.motivation.size() >= 1 && data.motivation.size() <= 2000 &&
+        data.status in ['pending','approved','rejected'];
+    }
+
     function isValidNotification(data) {
       return data.keys().hasAll(['id', 'userId', 'type', 'title', 'message', 'targetView', 'isRead', 'createdAt', 'sender']) &&
         data.id is string && data.id.size() <= 128 &&
@@ -609,6 +620,16 @@ service cloud.firestore {
         isWriter()
       );
       allow delete: if isAdmin() || isWriter();
+    }
+
+    match /writerApplications/{applicationId} {
+      allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isVerifiedUser() && isValidId(applicationId) &&
+        applicationId == ('writer-' + request.auth.uid) &&
+        isValidWriterApplication(incoming()) && incoming().status == 'pending';
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     match /reports/{reportId} {

@@ -748,6 +748,14 @@ export const STATIC_ROUTE_METADATA_CONFIG: Record<
     keywords: ['kritikus film', 'program kurator', 'daftar kritikus', 'sotoy film critic'],
     type: 'website',
   },
+  '/gabung-penulis': {
+    title: 'Daftar Jadi Penulis Sotoy Film',
+    description:
+      'Daftar menjadi penulis redaksi Sotoy Film dan kirim portofolio tulisanmu.',
+    keywords: ['penulis film', 'daftar penulis', 'sotoy film'],
+    type: 'website',
+    noindex: true,
+  },
   '/critic-submission': {
     title: 'Program Kurator Kritikus Film Terverifikasi',
     description:
