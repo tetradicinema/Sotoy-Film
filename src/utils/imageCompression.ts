@@ -1,5 +1,3 @@
-import imageCompression from 'browser-image-compression';
-
 export const ALLOWED_IMAGE_TYPES = [
   'image/jpeg',
   'image/jpg',
@@ -40,6 +38,8 @@ export async function compressBuzzImage(file: File): Promise<string> {
     useWebWorker: true,
   };
 
+  // Loaded on demand so the compression library stays out of the initial bundle.
+  const { default: imageCompression } = await import('browser-image-compression');
   const compressedBlob = await imageCompression(file, options);
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();

@@ -1,8 +1,27 @@
 import React from 'react';
 import { Home, Film, MessageSquare, LogIn, Plus } from 'lucide-react';
-import { motion } from 'motion/react';
 import { useApp } from '../../context/AppContext';
 import { DEFAULT_AVATAR } from '../../data/mockData';
+
+// The animated dot (and therefore motion/react) is loaded on demand.
+const MobileNavActiveDot = React.lazy(() =>
+  import('./MobileNavActiveDot').then(m => ({ default: m.MobileNavActiveDot }))
+);
+
+// Same box model/color as the real dot so there is no layout shift or flicker
+// while the lazy chunk resolves.
+const ActiveDotPlaceholder: React.FC = () => (
+  <span
+    aria-hidden="true"
+    className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#FF2E7E]"
+  />
+);
+
+const NavActiveDot: React.FC = () => (
+  <React.Suspense fallback={<ActiveDotPlaceholder />}>
+    <MobileNavActiveDot />
+  </React.Suspense>
+);
 
 export const MobileBottomNav: React.FC = () => {
   const {
@@ -65,11 +84,7 @@ export const MobileBottomNav: React.FC = () => {
           <div className="relative">
             <Home className={`w-5 h-5 md:w-6 md:h-6 transition-transform ${isHomeActive ? 'scale-110 stroke-[2.5]' : 'stroke-2'}`} />
             {isHomeActive && (
-              <motion.span
-                layoutId="mobileActiveIndicatorDot"
-                className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#FF2E7E]"
-                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-              />
+              <NavActiveDot />
             )}
           </div>
           <span className={`text-[10px] md:text-xs mt-1 md:mt-1.5 tracking-tight font-semibold ${isHomeActive ? 'text-white' : 'text-slate-400'}`}>
@@ -90,11 +105,7 @@ export const MobileBottomNav: React.FC = () => {
           <div className="relative">
             <Film className={`w-5 h-5 md:w-6 md:h-6 transition-transform ${isFilmActive ? 'scale-110 stroke-[2.5]' : 'stroke-2'}`} />
             {isFilmActive && (
-              <motion.span
-                layoutId="mobileActiveIndicatorDot"
-                className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#FF2E7E]"
-                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-              />
+              <NavActiveDot />
             )}
           </div>
           <span className={`text-[10px] md:text-xs mt-1 md:mt-1.5 tracking-tight font-semibold ${isFilmActive ? 'text-white' : 'text-slate-400'}`}>
@@ -137,11 +148,7 @@ export const MobileBottomNav: React.FC = () => {
           <div className="relative">
             <MessageSquare className={`w-5 h-5 md:w-6 md:h-6 transition-transform ${isBuzzActive ? 'scale-110 stroke-[2.5]' : 'stroke-2'}`} />
             {isBuzzActive && (
-              <motion.span
-                layoutId="mobileActiveIndicatorDot"
-                className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#FF2E7E]"
-                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-              />
+              <NavActiveDot />
             )}
           </div>
           <span className={`text-[10px] md:text-xs mt-1 md:mt-1.5 tracking-tight font-semibold ${isBuzzActive ? 'text-white' : 'text-slate-400'}`}>
@@ -177,11 +184,7 @@ export const MobileBottomNav: React.FC = () => {
                 </span>
               )}
               {isProfileActive && (
-                <motion.span
-                  layoutId="mobileActiveIndicatorDot"
-                  className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#FF2E7E]"
-                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                />
+                <NavActiveDot />
               )}
             </div>
             <span className={`text-[10px] md:text-xs mt-1 md:mt-1.5 tracking-tight font-semibold ${isProfileActive ? 'text-white' : 'text-slate-400'}`}>

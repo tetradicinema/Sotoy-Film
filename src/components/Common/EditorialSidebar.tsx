@@ -22,11 +22,70 @@ import { AdBannerSlot } from './AdBannerSlot';
 import { QuickReactionBar } from './QuickReactionBar';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
 import { getCombinedLeaderboard, LeaderboardPeriod } from '../../utils/leaderboard';
-import { LeaderboardCard, LeaderboardPeriodTabs } from './LeaderboardCard';
 import { DEFAULT_AVATAR, DEFAULT_COVER } from '../../data/mockData';
 import { HomeSidebarWidgetKey } from '../../types';
 import { resolveSidebarWidgetOrder } from '../../utils/homepageConfigHelper';
 import { resolveAuthor } from '../../utils/resolveAuthor';
+
+// Leaderboard widgets are deferred so motion/react is not part of the initial bundle.
+// Both lazy components share the same dynamically-imported module (one chunk).
+const LeaderboardCard = React.lazy(() =>
+  import('./LeaderboardCard').then(m => ({ default: m.LeaderboardCard }))
+);
+const LeaderboardPeriodTabs = React.lazy(() =>
+  import('./LeaderboardCard').then(m => ({ default: m.LeaderboardPeriodTabs }))
+);
+
+// Plain placeholders that mirror the real widgets' box model to avoid layout shift
+// while the lazy chunk is being fetched.
+const LeaderboardTabsPlaceholder: React.FC = () => (
+  <div
+    aria-hidden="true"
+    className="flex items-center gap-1 p-1 bg-slate-900/90 border border-slate-800 rounded-2xl overflow-x-auto scrollbar-none whitespace-nowrap shrink-0"
+  >
+    {['This Week', 'This Month', 'All Time'].map(label => (
+      <span
+        key={label}
+        className="px-3.5 py-1.5 rounded-xl text-xs font-bold shrink-0 text-transparent bg-white/[0.04] select-none"
+      >
+        {label}
+      </span>
+    ))}
+  </div>
+);
+
+const LeaderboardRowsPlaceholder: React.FC<{ rows: number }> = ({ rows }) => (
+  <div aria-hidden="true" className="flex flex-col justify-start space-y-3">
+    {rows > 0 ? (
+      Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="flex items-center justify-between gap-2 sm:gap-3 py-1">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="w-6 h-6 rounded-full bg-slate-800/70 shrink-0" />
+            <div className="w-8 h-8 rounded-full bg-slate-800/70 shrink-0" />
+            <div className="h-3 w-24 sm:w-32 rounded bg-slate-800/70" />
+          </div>
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            <div className="h-3 w-8 rounded bg-slate-800/70" />
+            <div className="h-3 w-8 rounded bg-slate-800/70" />
+            <div className="h-3 w-8 rounded bg-slate-800/70" />
+          </div>
+        </div>
+      ))
+    ) : (
+      <div className="text-center py-10 px-6 bg-slate-900/40 rounded-3xl border border-dashed border-slate-800/60 flex flex-col items-center gap-4">
+        <div className="w-12 h-12 rounded-full bg-slate-800/70" />
+        <div className="space-y-2">
+          <div className="h-3 w-40 rounded bg-slate-800/70 mx-auto" />
+          <div className="h-2.5 w-52 rounded bg-slate-800/70 mx-auto" />
+        </div>
+        <div className="h-8 w-36 rounded-xl bg-slate-800/70" />
+      </div>
+    )}
+    <div className="pt-3 border-t border-slate-800/80 text-center">
+      <div className="h-4 w-40 rounded bg-slate-800/70 mx-auto" />
+    </div>
+  </div>
+);
 
 interface EditorialSidebarProps {
   currentArticleId?: string;
@@ -319,22 +378,28 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
 
             {/* Period Tabs */}
             <div className="flex items-center justify-start">
-              <LeaderboardPeriodTabs
-                activePeriod={sidebarLeaderboardPeriod}
-                onChangePeriod={setSidebarLeaderboardPeriod}
-              />
+              <React.Suspense fallback={<LeaderboardTabsPlaceholder />}>
+                <LeaderboardPeriodTabs
+                  activePeriod={sidebarLeaderboardPeriod}
+                  onChangePeriod={setSidebarLeaderboardPeriod}
+                />
+              </React.Suspense>
             </div>
 
             {/* Flat Leaderboard List */}
-            <LeaderboardCard
-              entries={leaderboardData}
-              compact={true}
-              limit={5}
-              flat={true}
-              minimal={false}
-              hideHeader={true}
-              showFooterLink={true}
-            />
+            <React.Suspense
+              fallback={<LeaderboardRowsPlaceholder rows={Math.min(leaderboardData.length, 5)} />}
+            >
+              <LeaderboardCard
+                entries={leaderboardData}
+                compact={true}
+                limit={5}
+                flat={true}
+                minimal={false}
+                hideHeader={true}
+                showFooterLink={true}
+              />
+            </React.Suspense>
           </div>
         );
 

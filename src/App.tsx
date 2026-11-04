@@ -25,9 +25,6 @@ import {
   resolveSidebarWidgetOrder,
   getCachedHomepageLayout,
 } from './utils/homepageConfigHelper';
-import { LoginModal } from './components/Modals/LoginModal';
-import { ComposeBuzzModal } from './components/Modals/ComposeBuzzModal';
-import { SuspendedAccountModal } from './components/Modals/SuspendedAccountModal';
 import { EmailVerificationBanner } from './components/Common/EmailVerificationBanner';
 import { MobileBottomNav } from './components/Navigation/MobileBottomNav';
 import { Sparkles, CheckCircle, X } from 'lucide-react';
@@ -138,6 +135,18 @@ const OnboardingPage = React.lazy(() =>
 // Code-split the share modal: it pulls in canvas/export helpers and is only needed while open
 const SocialShareModal = React.lazy(() =>
   import('./components/Modals/SocialShareModal').then(m => ({ default: m.SocialShareModal }))
+);
+
+// Code-split conditionally-mounted modals so their code (and dependencies like
+// the image compression library) is never part of the initial homepage bundle.
+const LoginModal = React.lazy(() =>
+  import('./components/Modals/LoginModal').then(m => ({ default: m.LoginModal }))
+);
+const ComposeBuzzModal = React.lazy(() =>
+  import('./components/Modals/ComposeBuzzModal').then(m => ({ default: m.ComposeBuzzModal }))
+);
+const SuspendedAccountModal = React.lazy(() =>
+  import('./components/Modals/SuspendedAccountModal').then(m => ({ default: m.SuspendedAccountModal }))
 );
 
 import { GenericPageSkeleton } from './components/Skeletons';
@@ -354,7 +363,7 @@ const HomeView: React.FC = () => {
 };
 
 const AppContent: React.FC = () => {
-  const { toastMessage, toastType, shareModalData } = useApp();
+  const { toastMessage, toastType, shareModalData, loginModalOpen, isComposeBuzzOpen, currentUser } = useApp();
   const location = useLocation();
 
   const isOnboarding = location.pathname === '/onboarding';
@@ -415,8 +424,12 @@ const AppContent: React.FC = () => {
         </div>
       )}
 
-      {/* Login / Auth Modal */}
-      <LoginModal />
+      {/* Login / Auth Modal (lazy, mounted only while open so form state resets) */}
+      {loginModalOpen && (
+        <React.Suspense fallback={null}>
+          <LoginModal />
+        </React.Suspense>
+      )}
 
       {/* Social Media Share Modal (lazy: only mounted while a share payload exists) */}
       {shareModalData && (
@@ -425,11 +438,19 @@ const AppContent: React.FC = () => {
         </React.Suspense>
       )}
 
-      {/* Compose Buzz Modal */}
-      <ComposeBuzzModal />
+      {/* Compose Buzz Modal (lazy, mounted only while open so form state resets) */}
+      {isComposeBuzzOpen && (
+        <React.Suspense fallback={null}>
+          <ComposeBuzzModal />
+        </React.Suspense>
+      )}
 
-      {/* Suspended Account Blocking Modal & Appeal Form */}
-      <SuspendedAccountModal />
+      {/* Suspended Account Blocking Modal & Appeal Form (lazy, only while suspended) */}
+      {currentUser?.isSuspended && (
+        <React.Suspense fallback={null}>
+          <SuspendedAccountModal />
+        </React.Suspense>
+      )}
 
       {/* Persistent Email Verification Banner for unverified email/password accounts */}
       <EmailVerificationBanner />
