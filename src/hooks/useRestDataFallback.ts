@@ -1,10 +1,11 @@
 /**
- * Late REST fallback for the initial films/articles load.
+ * REST fallback for the initial films/articles load.
  *
  * The Firestore SDK can leave its Listen streams pending forever inside
- * crawler renderers. After a short delay (and at most once per collection per page
- * load) this hook reads whichever collection is still empty through the
- * plain REST client, so Googlebot gets real content instead of empty states.
+ * crawler renderers. Articles are fetched immediately through the light REST
+ * projection (no bodies) so the homepage hero does not wait on the SDK. Films
+ * keep their 4s delay. If the light article fetch fails, the SDK list refresh
+ * runs after 1.5s as a safety net.
  */
 
 import { useEffect, useRef } from 'react';
@@ -24,16 +25,74 @@ export interface RestFallbackCounts {
 }
 
 /**
- * Both collections wait 4s so the SDK snapshot gets a chance to fill state
- * first. The REST call then only runs when the collection is still empty.
+ * Articles use the light REST projection immediately; films keep the longer
+ * delay so the SDK gets a chance to answer first.
  */
 const REST_FALLBACK_DELAY_MS: Record<RestFallbackCollection, number> = {
-  articles: 4000,
+  articles: 0,
   films: 4000,
 };
 
+/** How long to wait before the SDK list refresh acts as an article fallback. */
+const ARTICLE_SDK_FALLBACK_DELAY_MS = 1500;
+
 /** At most one REST fallback run per collection per page load. */
 const restFallbackConsumed = new Set<RestFallbackCollection>();
+
+function getArticleTimestamp(article: Article): number {
+  if (article.publishedAtTimestamp) {
+    const t = new Date(article.publishedAtTimestamp).getTime();
+    if (!isNaN(t)) return t;
+  }
+  if (article.scheduledAt) {
+    const t = new Date(article.scheduledAt).getTime();
+    if (!isNaN(t)) return t;
+  }
+  if (article.publishedAt) {
+    const t = new Date(article.publishedAt).getTime();
+    if (!isNaN(t)) return t;
+  }
+  return 0;
+}
+
+function hasArticleBody(article: Article): boolean {
+  return Boolean(article.content || article.contentJson);
+}
+
+/**
+ * Merges a light REST list into the current article state.
+ * - Articles missing from state are added.
+ * - An older incoming article never replaces a newer one.
+ * - A body-less incoming article keeps any body already in state.
+ */
+export function mergeArticleCollections(
+  existing: ReadonlyArray<Article>,
+  incoming: ReadonlyArray<Article>
+): Article[] {
+  const merged = new Map<string, Article>(existing.map(article => [article.id, article]));
+
+  for (const next of incoming) {
+    const current = merged.get(next.id);
+    if (!current) {
+      merged.set(next.id, next);
+      continue;
+    }
+
+    if (getArticleTimestamp(current) > getArticleTimestamp(next)) continue;
+
+    const combined: Article = { ...current, ...next };
+    if (!hasArticleBody(next) && hasArticleBody(current)) {
+      combined.content = current.content;
+      combined.contentJson = current.contentJson;
+      combined.contentFormat = current.contentFormat;
+    }
+    merged.set(next.id, combined);
+  }
+
+  return Array.from(merged.values()).sort(
+    (a, b) => getArticleTimestamp(b) - getArticleTimestamp(a)
+  );
+}
 
 /**
  * Pure decision helper: returns only the collections whose current count is
@@ -49,6 +108,8 @@ export function getRestFallbackTargets({
   return targets;
 }
 
+export type ArticleLoadMode = 'light' | 'full';
+
 export interface UseRestDataFallbackOptions {
   filmsCount: number;
   articlesCount: number;
@@ -56,6 +117,10 @@ export interface UseRestDataFallbackOptions {
   setArticles: Dispatch<SetStateAction<Article[]>>;
   setIsLoadingFilms: Dispatch<SetStateAction<boolean>>;
   setIsLoadingArticles: Dispatch<SetStateAction<boolean>>;
+  /** 'full' skips the light REST read on editor/admin routes. Default: 'light'. */
+  articlesMode?: ArticleLoadMode;
+  /** SDK list refresh used only when the light article REST read fails. */
+  refreshArticles: () => Promise<void>;
 }
 
 /**
@@ -75,6 +140,16 @@ export function useRestDataFallback(options: UseRestDataFallbackOptions): void {
 
   useEffect(() => {
     let cancelled = false;
+    let articleSdkFallbackTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const scheduleArticleSdkFallback = () => {
+      if (cancelled || articleSdkFallbackTimer) return;
+      articleSdkFallbackTimer = setTimeout(() => {
+        articleSdkFallbackTimer = null;
+        if (cancelled) return;
+        void latestRef.current.refreshArticles();
+      }, ARTICLE_SDK_FALLBACK_DELAY_MS);
+    };
 
     const runTarget = (target: RestFallbackCollection) => {
       timersRef.current[target] = null;
@@ -104,17 +179,27 @@ export function useRestDataFallback(options: UseRestDataFallbackOptions): void {
         }
 
         const docs = await fetchCollectionViaRest('articles');
-        if (cancelled || docs.length === 0) return;
+        if (cancelled) return;
+        if (docs.length === 0) {
+          scheduleArticleSdkFallback();
+          return;
+        }
 
         const articles = normalizeRestArticle(docs);
-        if (articles.length === 0) return;
+        if (articles.length === 0) {
+          scheduleArticleSdkFallback();
+          return;
+        }
 
-        latestRef.current.setArticles(articles);
+        latestRef.current.setArticles(prev => mergeArticleCollections(prev, articles));
         latestRef.current.setIsLoadingArticles(false);
       })();
     };
 
     (Object.keys(REST_FALLBACK_DELAY_MS) as RestFallbackCollection[]).forEach(target => {
+      // Editor/admin routes load full documents through refreshArticles, so the
+      // light article REST read would only be redundant there.
+      if (target === 'articles' && latestRef.current.articlesMode === 'full') return;
       timersRef.current[target] = setTimeout(
         () => runTarget(target),
         REST_FALLBACK_DELAY_MS[target]
@@ -123,6 +208,8 @@ export function useRestDataFallback(options: UseRestDataFallbackOptions): void {
 
     return () => {
       cancelled = true;
+      if (articleSdkFallbackTimer) clearTimeout(articleSdkFallbackTimer);
+      articleSdkFallbackTimer = null;
       (Object.keys(timersRef.current) as RestFallbackCollection[]).forEach(target => {
         const timer = timersRef.current[target];
         if (timer) clearTimeout(timer);

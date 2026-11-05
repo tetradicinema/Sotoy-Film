@@ -561,6 +561,29 @@ const getInitialSeoLists = (): SeoListsPayload | null => {
   return initialSeoListsCache;
 };
 
+/**
+ * Routes whose UI reads article `content`/`contentJson` need the full SDK
+ * documents. Public list pages and article detail use the light REST list;
+ * ArticleDetailPage fetches its own full document when a body is missing.
+ */
+const ARTICLE_BODY_ROUTE_PREFIXES = [
+  '/admin',
+  '/cms',
+  '/workspace',
+  '/writer',
+  '/penulis',
+  '/tulis-artikel',
+  '/write-article',
+  '/search',
+];
+
+const routeNeedsFullArticleBodies = (pathname: string): boolean => {
+  const path = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
+  return ARTICLE_BODY_ROUTE_PREFIXES.some(
+    prefix => path === prefix || path.startsWith(`${prefix}/`)
+  );
+};
+
 /** Normalizes list-payload films exactly like refreshFilms(). */
 const buildInitialListFilms = (docs: Record<string, any>[]): FilmItem[] => {
   const filmMap = new Map<string, FilmItem>();
@@ -721,6 +744,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const lists = getInitialSeoLists();
     return lists ? normalizeRestArticle(lists.articles) : [];
   });
+  // Full-body routes must never render the light REST list in editor/CMS UI.
+  // Until refreshArticles() delivers full documents, those routes see an empty list.
+  const [fullArticlesLoaded, setFullArticlesLoaded] = useState(false);
   // Hydrate films from localStorage cache on load so repeat visits within 10 minutes cost 0 reads
   const initialCachedFilms = useMemo(() => hydrateCachedFilms(), []);
   const [films, setFilms] = useState<FilmItem[]>(() => {
@@ -1252,14 +1278,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const fetchedArticles = Array.from(articleMap.values());
       if (shouldKeepSeoList(getInitialSeoLists(), 'articles', fetchedArticles.length)) {
         console.warn('[AppContext] Empty articles snapshot ignored: #seo-lists already hydrated the list.');
+        setFullArticlesLoaded(true);
         setIsLoadingArticles(false);
         return;
       }
       setArticles(fetchedArticles.sort((a, b) => getArticleTime(b) - getArticleTime(a)));
+      setFullArticlesLoaded(true);
       setIsLoadingArticles(false);
     } catch (err: any) {
       console.warn('[Firestore] Error fetching articles from Firestore:', err.message);
       setArticles(prev => prev);
+      // Unblock body routes with whatever state already exists, matching the
+      // pre-Batch-2 behaviour when the full refresh fails.
+      setFullArticlesLoaded(true);
       setIsLoadingArticles(false);
     }
   }, []);
@@ -1354,13 +1385,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [normalizeRating, getSortTimestamp]);
 
-  // Initial load for films and articles
+  const needsFullArticleBodies = routeNeedsFullArticleBodies(location.pathname);
+
+  // Initial films load (kept independent from article data so route changes do
+  // not trigger another catalog fetch).
   useEffect(() => {
     refreshFilms({ isInitialMount: true });
-    refreshArticles();
-  }, [refreshFilms, refreshArticles]);
+  }, [refreshFilms]);
 
-  useRestDataFallback({ filmsCount: films.length, articlesCount: articles.length, setFilms, setArticles, setIsLoadingFilms, setIsLoadingArticles });
+  // Full article documents are only loaded on editor/CMS/admin/search routes.
+  // Public routes get the light REST projection through the fallback hook.
+  useEffect(() => {
+    if (needsFullArticleBodies) {
+      refreshArticles();
+    }
+  }, [needsFullArticleBodies, refreshArticles]);
+
+  useRestDataFallback({
+    filmsCount: films.length,
+    articlesCount: articles.length,
+    setFilms,
+    setArticles,
+    setIsLoadingFilms,
+    setIsLoadingArticles,
+    articlesMode: needsFullArticleBodies ? 'full' : 'light',
+    refreshArticles,
+  });
 
   // Fetch logged-in user ratings for quick access
   useEffect(() => {
@@ -6885,6 +6935,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Editor/admin routes only ever receive full SDK documents; while the full
+  // refresh is in flight they get an empty list instead of body-less articles.
+  const exposedArticles = needsFullArticleBodies && !fullArticlesLoaded ? [] : resolvedArticles;
+  const exposedPublishedArticles = needsFullArticleBodies && !fullArticlesLoaded ? [] : publishedArticles;
+
   return (
     <AppContext.Provider
       value={{
@@ -6910,8 +6965,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         signInWithGoogle,
         getLastAuthErrorCode,
         clearAuthError,
-        articles: resolvedArticles,
-        publishedArticles,
+        articles: exposedArticles,
+        publishedArticles: exposedPublishedArticles,
         films,
         buzzList,
         isLoadingArticles,
