@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -15,6 +15,7 @@ import { DEFAULT_POSTER } from '../../data/mockData';
 import { tmdbPosterSized } from '../../utils/tmdbImage';
 import { resolveConfigArticles } from '../../utils/homepageConfigHelper';
 import { getHeroToWatch } from '../../utils/filmSections';
+import { markHeroImageSettled } from '../../utils/heroImageSignal';
 
 const FILM_TYPE_LABELS: Record<string, string> = {
   movie: 'Movie',
@@ -119,6 +120,77 @@ export const HeroSection: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [activeTab, setActiveTab] = useState<'to-watch' | 'film-studies' | 'recent'>('to-watch');
 
+  // LCP gating: only the active cover is mounted first. The prev/next covers
+  // mount after the active image settles and the browser is idle, or
+  // immediately when the user navigates the slider.
+  const [neighborsReady, setNeighborsReady] = useState(false);
+  const [activeCoverSettled, setActiveCoverSettled] = useState(false);
+  const [autoplayReady, setAutoplayReady] = useState(false);
+  const heroSignalSentRef = useRef(false);
+  const neighborsQueuedRef = useRef(false);
+  const idleCallbackRef = useRef<number | null>(null);
+  const idleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelNeighborIdle = useCallback(() => {
+    if (typeof window !== 'undefined' && idleCallbackRef.current !== null) {
+      const win = window as typeof window & { cancelIdleCallback?: (handle: number) => void };
+      if (typeof win.cancelIdleCallback === 'function') {
+        win.cancelIdleCallback(idleCallbackRef.current);
+      }
+    }
+    idleCallbackRef.current = null;
+    if (idleTimeoutRef.current) {
+      clearTimeout(idleTimeoutRef.current);
+      idleTimeoutRef.current = null;
+    }
+  }, []);
+
+  const revealNeighborsOnIdle = useCallback(() => {
+    if (neighborsQueuedRef.current) return;
+    neighborsQueuedRef.current = true;
+
+    const win = typeof window !== 'undefined'
+      ? (window as typeof window & {
+          requestIdleCallback?: (
+            callback: () => void,
+            options?: { timeout?: number }
+          ) => number;
+        })
+      : null;
+
+    if (win && typeof win.requestIdleCallback === 'function') {
+      idleCallbackRef.current = win.requestIdleCallback(() => {
+        idleCallbackRef.current = null;
+        setNeighborsReady(true);
+      }, { timeout: 1500 });
+    } else {
+      idleTimeoutRef.current = setTimeout(() => {
+        idleTimeoutRef.current = null;
+        setNeighborsReady(true);
+      }, 1500);
+    }
+  }, []);
+
+  const ensureNeighborsReady = useCallback(() => {
+    cancelNeighborIdle();
+    neighborsQueuedRef.current = true;
+    setNeighborsReady(true);
+  }, [cancelNeighborIdle]);
+
+  // First active cover settled: release the films REST signal, allow the
+  // neighbours to mount on idle, and let the carousel start.
+  const handleActiveCoverSettled = useCallback(() => {
+    if (!heroSignalSentRef.current) {
+      heroSignalSentRef.current = true;
+      markHeroImageSettled();
+    }
+    setActiveCoverSettled(true);
+    setAutoplayReady(true);
+    revealNeighborsOnIdle();
+  }, [revealNeighborsOnIdle]);
+
+  useEffect(() => () => cancelNeighborIdle(), [cancelNeighborIdle]);
+
   // Stable slide list: the REST fallback and the Firestore snapshot both refill
   // articlesPool, so trendingArticles is recomputed mid-stream and the active
   // slide would otherwise flip. Rendering only follows the list when the set of
@@ -139,24 +211,38 @@ export const HeroSection: React.FC = () => {
     );
   }, [trendingKey, trendingArticles]);
 
-  // Auto slide
+  // Auto slide starts only after the first active cover has loaded (or the
+  // guard below fires), so the carousel cannot move the LCP candidate while
+  // the first cover is still downloading.
   useEffect(() => {
+    if (!autoplayReady) return;
     if (slideArticles.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentSlide(prev => (prev + 1) % slideArticles.length);
     }, 6500);
     return () => clearInterval(interval);
-  }, [slideArticles.length]);
+  }, [autoplayReady, slideArticles.length]);
 
   const safeSlide = slideArticles.length > 0 ? currentSlide % slideArticles.length : 0;
   const activeArticle = (slideArticles.length > 0 ? slideArticles[safeSlide] : null) || articlesPool[0] || null;
+
+  // If no load/error ever fires (blocked image, crawler renderer), do not block
+  // the carousel forever.
+  const activeArticleId = activeArticle?.id;
+  useEffect(() => {
+    if (autoplayReady) return;
+    if (!activeArticleId) return;
+    if (slideArticles.length <= 1) return;
+    const timer = setTimeout(() => setAutoplayReady(true), 3000);
+    return () => clearTimeout(timer);
+  }, [autoplayReady, activeArticleId, slideArticles.length]);
 
   const nextSlideIndex = slideArticles.length > 1
     ? (safeSlide + 1) % slideArticles.length
     : -1;
 
-  // Crossfade layers: previous, active and next only (by index, wrapping), so
-  // at most three covers are mounted at once.
+  // Crossfade layers: previous, active and next only (by index, wrapping).
+  // Until the active cover settles only the active layer is rendered.
   const visibleSlides = useMemo(() => {
     const total = slideArticles.length;
     if (total === 0) return activeArticle ? [{ article: activeArticle, index: 0 }] : [];
@@ -173,29 +259,52 @@ export const HeroSection: React.FC = () => {
     });
   }, [slideArticles, safeSlide, activeArticle]);
 
-  // Warm the next slide's cover, but only after the current slide's LCP image
-  // has had time to settle, so the prefetch never competes with it on slow
-  // connections. Skipped entirely when the user asked to save data.
+  // Warm the next slide's cover only after the active one settled, and only
+  // when the browser is idle. Skipped entirely when the user asked to save
+  // data.
   useEffect(() => {
+    if (!activeCoverSettled) return;
     if (nextSlideIndex < 0) return;
     const nextCover = slideArticles[nextSlideIndex]?.coverImage;
     if (!nextCover) return;
     const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
     if (connection?.saveData) return;
 
-    const timer = setTimeout(() => {
+    const loadNextCover = () => {
       const img = new Image();
       img.decoding = 'async';
       img.src = nextCover;
-    }, 2500);
-    return () => clearTimeout(timer);
-  }, [nextSlideIndex, slideArticles]);
+    };
+
+    const win = window as typeof window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout?: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+
+    let idleHandle: number | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    if (typeof win.requestIdleCallback === 'function') {
+      idleHandle = win.requestIdleCallback(loadNextCover, { timeout: 1500 });
+    } else {
+      timer = setTimeout(loadNextCover, 1500);
+    }
+
+    return () => {
+      if (idleHandle !== null && typeof win.cancelIdleCallback === 'function') {
+        win.cancelIdleCallback(idleHandle);
+      }
+      if (timer) clearTimeout(timer);
+    };
+  }, [activeCoverSettled, nextSlideIndex, slideArticles]);
 
   const handlePrevSlide = () => {
+    ensureNeighborsReady();
     setCurrentSlide(prev => (prev === 0 ? slideArticles.length - 1 : prev - 1));
   };
 
   const handleNextSlide = () => {
+    ensureNeighborsReady();
     setCurrentSlide(prev => (prev + 1) % slideArticles.length);
   };
 
@@ -309,18 +418,22 @@ export const HeroSection: React.FC = () => {
             ) : (
               <div className="relative w-full flex-1 min-h-[420px] sm:min-h-[480px] lg:min-h-[510px] rounded-3xl overflow-hidden border border-white/[0.08] shadow-2xl bg-[#0A0A0A] group">
                 {/* Background Cover Image with cinematic pan/zoom (prev/active/next crossfade) */}
-                {visibleSlides.map(({ article, index }) => (
-                  <img
-                    key={article.id || `hero-slide-${index}`}
-                    src={article.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80'}
-                    alt={index === safeSlide ? (article.title || 'Hero Article') : ''}
-                    fetchPriority={index === safeSlide ? 'high' : undefined}
-                    decoding="async"
-                    loading={index === safeSlide ? undefined : 'eager'}
-                    aria-hidden={index === safeSlide ? undefined : true}
-                    className={`absolute inset-0 w-full h-full object-cover object-center transition-[opacity,transform] duration-700 transform scale-100 group-hover:scale-105 ${index === safeSlide ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-                  />
-                ))}
+                {visibleSlides
+                  .filter(({ index }) => neighborsReady || index === safeSlide)
+                  .map(({ article, index }) => (
+                    <img
+                      key={article.id || `hero-slide-${index}`}
+                      src={article.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80'}
+                      alt={index === safeSlide ? (article.title || 'Hero Article') : ''}
+                      fetchPriority={index === safeSlide ? 'high' : undefined}
+                      decoding="async"
+                      loading={index === safeSlide ? undefined : 'eager'}
+                      aria-hidden={index === safeSlide ? undefined : true}
+                      onLoad={index === safeSlide ? handleActiveCoverSettled : undefined}
+                      onError={index === safeSlide ? handleActiveCoverSettled : undefined}
+                      className={`absolute inset-0 w-full h-full object-cover object-center transition-[opacity,transform] duration-700 transform scale-100 group-hover:scale-105 ${index === safeSlide ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                    />
+                  ))}
 
                 {/* Refined contrast scrims: clearer image visibility while keeping text perfectly legible */}
                 <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />

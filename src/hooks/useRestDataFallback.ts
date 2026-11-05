@@ -4,8 +4,10 @@
  * The Firestore SDK can leave its Listen streams pending forever inside
  * crawler renderers. Articles are fetched immediately through the light REST
  * projection (no bodies) so the homepage hero does not wait on the SDK. Films
- * keep their 4s delay. If the light article fetch fails, the SDK list refresh
- * runs after 1.5s as a safety net.
+ * wait for the hero cover to settle (plus an idle slot) so the catalog fetch
+ * never competes with the LCP image; a hard cap keeps crawlers working when no
+ * image event ever fires. If the light article fetch fails, the SDK list
+ * refresh runs after 1.5s as a safety net.
  */
 
 import { useEffect, useRef } from 'react';
@@ -16,6 +18,7 @@ import {
   normalizeRestArticle,
   normalizeRestFilm,
 } from '../utils/firestoreRestClient';
+import { onHeroImageSettled } from '../utils/heroImageSignal';
 
 export type RestFallbackCollection = 'films' | 'articles';
 
@@ -24,14 +27,17 @@ export interface RestFallbackCounts {
   articlesCount: number;
 }
 
-/**
- * Articles use the light REST projection immediately; films keep the longer
- * delay so the SDK gets a chance to answer first.
- */
-const REST_FALLBACK_DELAY_MS: Record<RestFallbackCollection, number> = {
-  articles: 0,
-  films: 4000,
-};
+/** Articles use the light REST projection immediately. */
+const ARTICLE_REST_DELAY_MS = 0;
+
+/** Never start the films fallback before this point after mount. */
+const FILM_FALLBACK_MIN_DELAY_MS = 1500;
+
+/** Hard cap so crawlers (no image load/error event) still receive films. */
+const FILM_FALLBACK_HARD_CAP_MS = 5000;
+
+/** How long requestIdleCallback may wait for an idle slot. */
+const FILM_FALLBACK_IDLE_TIMEOUT_MS = 1500;
 
 /** How long to wait before the SDK list refresh acts as an article fallback. */
 const ARTICLE_SDK_FALLBACK_DELAY_MS = 1500;
@@ -141,6 +147,9 @@ export function useRestDataFallback(options: UseRestDataFallbackOptions): void {
   useEffect(() => {
     let cancelled = false;
     let articleSdkFallbackTimer: ReturnType<typeof setTimeout> | null = null;
+    let filmDelayTimer: ReturnType<typeof setTimeout> | null = null;
+    let filmIdleHandle: number | null = null;
+    const mountedAt = Date.now();
 
     const scheduleArticleSdkFallback = () => {
       if (cancelled || articleSdkFallbackTimer) return;
@@ -149,6 +158,20 @@ export function useRestDataFallback(options: UseRestDataFallbackOptions): void {
         if (cancelled) return;
         void latestRef.current.refreshArticles();
       }, ARTICLE_SDK_FALLBACK_DELAY_MS);
+    };
+
+    const cancelFilmIdle = () => {
+      const win = typeof window !== 'undefined'
+        ? (window as typeof window & { cancelIdleCallback?: (handle: number) => void })
+        : null;
+      if (filmIdleHandle !== null && win && typeof win.cancelIdleCallback === 'function') {
+        win.cancelIdleCallback(filmIdleHandle);
+      }
+      filmIdleHandle = null;
+      if (filmDelayTimer) {
+        clearTimeout(filmDelayTimer);
+        filmDelayTimer = null;
+      }
     };
 
     const runTarget = (target: RestFallbackCollection) => {
@@ -196,20 +219,71 @@ export function useRestDataFallback(options: UseRestDataFallbackOptions): void {
       })();
     };
 
-    (Object.keys(REST_FALLBACK_DELAY_MS) as RestFallbackCollection[]).forEach(target => {
-      // Editor/admin routes load full documents through refreshArticles, so the
-      // light article REST read would only be redundant there.
-      if (target === 'articles' && latestRef.current.articlesMode === 'full') return;
-      timersRef.current[target] = setTimeout(
-        () => runTarget(target),
-        REST_FALLBACK_DELAY_MS[target]
+    // Articles: unchanged — light REST immediately, unless a body route already
+    // runs the full SDK refresh.
+    if (latestRef.current.articlesMode !== 'full') {
+      timersRef.current.articles = setTimeout(
+        () => runTarget('articles'),
+        ARTICLE_REST_DELAY_MS
       );
-    });
+    }
+
+    const triggerFilms = () => {
+      if (cancelled) return;
+      const capTimer = timersRef.current.films;
+      if (capTimer) clearTimeout(capTimer);
+      timersRef.current.films = null;
+      cancelFilmIdle();
+      if (latestRef.current.filmsCount > 0) return;
+      runTarget('films');
+    };
+
+    // Films: earliest of (hero cover settled + idle) or the 5s hard cap, and
+    // never before the 1.5s minimum.
+    const scheduleFilmsAfterIdle = () => {
+      if (cancelled || latestRef.current.filmsCount > 0) return;
+
+      const runWhenIdle = () => {
+        if (cancelled || latestRef.current.filmsCount > 0) return;
+        const win = typeof window !== 'undefined'
+          ? (window as typeof window & {
+              requestIdleCallback?: (
+                callback: () => void,
+                options?: { timeout?: number }
+              ) => number;
+            })
+          : null;
+
+        if (win && typeof win.requestIdleCallback === 'function') {
+          filmIdleHandle = win.requestIdleCallback(() => {
+            filmIdleHandle = null;
+            triggerFilms();
+          }, { timeout: FILM_FALLBACK_IDLE_TIMEOUT_MS });
+        } else {
+          filmDelayTimer = setTimeout(triggerFilms, FILM_FALLBACK_IDLE_TIMEOUT_MS);
+        }
+      };
+
+      const remainingMinDelay = Math.max(
+        0,
+        FILM_FALLBACK_MIN_DELAY_MS - (Date.now() - mountedAt)
+      );
+      if (remainingMinDelay > 0) {
+        filmDelayTimer = setTimeout(runWhenIdle, remainingMinDelay);
+      } else {
+        runWhenIdle();
+      }
+    };
+
+    timersRef.current.films = setTimeout(triggerFilms, FILM_FALLBACK_HARD_CAP_MS);
+    const unsubscribeHero = onHeroImageSettled(scheduleFilmsAfterIdle);
 
     return () => {
       cancelled = true;
+      unsubscribeHero();
       if (articleSdkFallbackTimer) clearTimeout(articleSdkFallbackTimer);
       articleSdkFallbackTimer = null;
+      cancelFilmIdle();
       (Object.keys(timersRef.current) as RestFallbackCollection[]).forEach(target => {
         const timer = timersRef.current[target];
         if (timer) clearTimeout(timer);
