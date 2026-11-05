@@ -126,6 +126,10 @@ export const HeroSection: React.FC = () => {
   const [neighborsReady, setNeighborsReady] = useState(false);
   const [activeCoverSettled, setActiveCoverSettled] = useState(false);
   const [autoplayReady, setAutoplayReady] = useState(false);
+  // Last cover that actually finished loading. Painted as a background layer so
+  // a reconcile that swaps the active article never shows the empty dark panel
+  // while the new cover downloads.
+  const [lastSettledCover, setLastSettledCover] = useState<string | null>(null);
   const heroSignalSentRef = useRef(false);
   const neighborsQueuedRef = useRef(false);
   const idleCallbackRef = useRef<number | null>(null);
@@ -178,11 +182,17 @@ export const HeroSection: React.FC = () => {
   }, [cancelNeighborIdle]);
 
   // First active cover settled: release the films REST signal, allow the
-  // neighbours to mount on idle, and let the carousel start.
-  const handleActiveCoverSettled = useCallback(() => {
+  // neighbours to mount on idle, and let the carousel start. On every later
+  // settle (config reconcile / slide change) remember the painted cover so the
+  // panel keeps it while the next image downloads.
+  const handleActiveCoverSettled = useCallback((event?: React.SyntheticEvent<HTMLImageElement>) => {
     if (!heroSignalSentRef.current) {
       heroSignalSentRef.current = true;
       markHeroImageSettled();
+    }
+    const img = event?.currentTarget;
+    if (img && img.naturalWidth > 0) {
+      setLastSettledCover(img.currentSrc || img.src);
     }
     setActiveCoverSettled(true);
     setAutoplayReady(true);
@@ -416,7 +426,16 @@ export const HeroSection: React.FC = () => {
                 )}
               </div>
             ) : (
-              <div className="relative w-full flex-1 min-h-[420px] sm:min-h-[480px] lg:min-h-[510px] rounded-3xl overflow-hidden border border-white/[0.08] shadow-2xl bg-[#0A0A0A] group">
+              <div
+                className="relative w-full flex-1 min-h-[420px] sm:min-h-[480px] lg:min-h-[510px] rounded-3xl overflow-hidden border border-white/[0.08] shadow-2xl bg-[#0A0A0A] group"
+                style={lastSettledCover
+                  ? {
+                      backgroundImage: `url("${lastSettledCover}")`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                    }
+                  : undefined}
+              >
                 {/* Background Cover Image with cinematic pan/zoom (prev/active/next crossfade) */}
                 {visibleSlides
                   .filter(({ index }) => neighborsReady || index === safeSlide)

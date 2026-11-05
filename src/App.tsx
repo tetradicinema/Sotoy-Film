@@ -176,17 +176,9 @@ const HomeView: React.FC = () => {
   // Try reading cached layout synchronously so repeat visits render without flash
   const cachedLayout = React.useMemo(() => getCachedHomepageLayout(), []);
 
-  // Cap initial skeleton to at most 1500ms if not loaded and no cache exists
-  const [skeletonTimedOut, setSkeletonTimedOut] = React.useState(false);
-
-  React.useEffect(() => {
-    if (homepageConfigLoaded || cachedLayout) return;
-    const timer = setTimeout(() => {
-      setSkeletonTimedOut(true);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [homepageConfigLoaded, cachedLayout]);
-
+  // No config gate: first-time visitors render the default layout immediately and
+  // reconcile to the configured layout when the siteConfig snapshot arrives (or
+  // fails). Only the cached-layout path can pre-empt the defaults before that.
   // Active configuration: use cachedLayout ONLY while !homepageConfigLoaded.
   // Once the config has loaded, use only live values (falling back to defaults, not cache).
   const rawBlockOrder = homepageConfigLoaded
@@ -254,12 +246,6 @@ const HomeView: React.FC = () => {
 
     return result;
   }, [effectiveBlockOrder]);
-
-  // Show a lightweight skeleton on first load if we don't even have a cached layout (for at most 1500ms)
-  // (Ensuring all hooks execute in identical order on every render)
-  if (!homepageConfigLoaded && !cachedLayout && !skeletonTimedOut) {
-    return <GenericPageSkeleton />;
-  }
 
   const renderSingleBlock = (key: HomeBlockKey) => {
     switch (key) {
