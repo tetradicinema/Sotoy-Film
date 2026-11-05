@@ -24,14 +24,11 @@ export interface RestFallbackCounts {
 }
 
 /**
- * Articles carry the hero (LCP) image and, with the list field mask, are a
- * small payload, so they fall back early. Films are heavy and not LCP-critical,
- * so they keep the longer delay and give the SDK time to answer first.
+ * Both collections wait 4s so the SDK snapshot gets a chance to fill state
+ * first. The REST call then only runs when the collection is still empty.
  */
 const REST_FALLBACK_DELAY_MS: Record<RestFallbackCollection, number> = {
-  // 0 still runs as setTimeout(..., 0), so the empty check runs after the first
-  // render, letting any cached Firestore snapshot land before we hit REST.
-  articles: 0,
+  articles: 4000,
   films: 4000,
 };
 
@@ -67,13 +64,20 @@ export interface UseRestDataFallbackOptions {
  * unmount and the hook never re-fetches on later renders.
  */
 export function useRestDataFallback(options: UseRestDataFallbackOptions): void {
+  const { filmsCount, articlesCount } = options;
   const latestRef = useRef(options);
   latestRef.current = options;
+
+  const timersRef = useRef<Record<RestFallbackCollection, ReturnType<typeof setTimeout> | null>>({
+    films: null,
+    articles: null,
+  });
 
   useEffect(() => {
     let cancelled = false;
 
     const runTarget = (target: RestFallbackCollection) => {
+      timersRef.current[target] = null;
       if (restFallbackConsumed.has(target)) return;
       restFallbackConsumed.add(target);
 
@@ -110,13 +114,32 @@ export function useRestDataFallback(options: UseRestDataFallbackOptions): void {
       })();
     };
 
-    const timers = (Object.keys(REST_FALLBACK_DELAY_MS) as RestFallbackCollection[]).map(
-      target => setTimeout(() => runTarget(target), REST_FALLBACK_DELAY_MS[target])
-    );
+    (Object.keys(REST_FALLBACK_DELAY_MS) as RestFallbackCollection[]).forEach(target => {
+      timersRef.current[target] = setTimeout(
+        () => runTarget(target),
+        REST_FALLBACK_DELAY_MS[target]
+      );
+    });
 
     return () => {
       cancelled = true;
-      timers.forEach(clearTimeout);
+      (Object.keys(timersRef.current) as RestFallbackCollection[]).forEach(target => {
+        const timer = timersRef.current[target];
+        if (timer) clearTimeout(timer);
+        timersRef.current[target] = null;
+      });
     };
   }, []);
+
+  // Cancel a pending fallback as soon as the SDK snapshot fills the collection,
+  // so we never issue a redundant REST read after the real data arrives.
+  useEffect(() => {
+    (Object.keys(timersRef.current) as RestFallbackCollection[]).forEach(target => {
+      const isFilled = target === 'films' ? filmsCount > 0 : articlesCount > 0;
+      if (!isFilled) return;
+      const timer = timersRef.current[target];
+      if (timer) clearTimeout(timer);
+      timersRef.current[target] = null;
+    });
+  }, [filmsCount, articlesCount]);
 }

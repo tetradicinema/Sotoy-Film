@@ -193,7 +193,36 @@ export function useDynamicArticleAuthor(authorId?: string, initialData?: any): D
       return;
     }
 
-    // 3. One-time fetch via getDoc with in-flight deduplication
+    // 3. Use the author data embedded in the article when it already has the
+    //    fields we need, avoiding a redundant users/{id} getDoc.
+    const embeddedName = typeof initialData?.name === 'string' ? initialData.name : '';
+    const embeddedAvatar =
+      initialData?.avatar || initialData?.avatarURL || initialData?.photoURL || '';
+    const hasEmbeddedIdentity = Boolean(
+      embeddedName &&
+      !embeddedName.includes('Dinda') &&
+      !embeddedName.includes('Chief Admin') &&
+      embeddedAvatar
+    );
+    if (hasEmbeddedIdentity) {
+      setAuthor({
+        id: authorId,
+        name: embeddedName,
+        displayName: initialData.displayName || embeddedName,
+        avatar: embeddedAvatar,
+        avatarURL: initialData.avatarURL || initialData.avatar || embeddedAvatar,
+        role: initialData.role || 'warga_sotoy',
+        roleTitle: initialData.roleTitle,
+        customBadge: initialData.customBadge || getBadgeForRole(initialData.role),
+        roleBadge: initialData.roleBadge || getBadgeForRole(initialData.role),
+        bio: initialData.bio,
+        articleCount: 0,
+        loading: false,
+      });
+      return;
+    }
+
+    // 4. One-time fetch via getDoc with in-flight deduplication
     let isCancelled = false;
     let promise = inFlightRequests.get(authorId);
 

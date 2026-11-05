@@ -112,6 +112,8 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
 
   const [quickBuzzText, setQuickBuzzText] = useState('');
   const [quickTaggedFilmId, setQuickTaggedFilmId] = useState('');
+  const [quickFilmSearch, setQuickFilmSearch] = useState('');
+  const [isQuickFilmPickerOpen, setIsQuickFilmPickerOpen] = useState(false);
   const [quickSkor, setQuickSkor] = useState<number | undefined>(undefined);
   const [newsletterEmail, setNewsletterEmail] = useState('');
 
@@ -132,6 +134,22 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
     .filter(a => a.tags.includes('IMAX') || a.tags.includes('Denis Villeneuve') || a.tags.includes('Plot Twist') || a.featured)
     .slice(0, 4);
 
+  // Keep the quick-buzz film picker lightweight: never render the whole catalog,
+  // only the first 10 matches for the current query.
+  const quickFilmMatches = useMemo(() => {
+    const query = quickFilmSearch.trim().toLowerCase();
+    const matches = query
+      ? films.filter(f => f.title.toLowerCase().includes(query))
+      : films;
+    return matches.slice(0, 10);
+  }, [films, quickFilmSearch]);
+
+  const handleQuickFilmSelect = (film: { id: string; title: string }) => {
+    setQuickTaggedFilmId(film.id);
+    setQuickFilmSearch(film.title);
+    setIsQuickFilmPickerOpen(false);
+  };
+
   const handleQuickBuzzSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isLoggedIn) {
@@ -143,6 +161,8 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
     addBuzzPost(quickBuzzText, quickTaggedFilmId || undefined, quickSkor);
     setQuickBuzzText('');
     setQuickTaggedFilmId('');
+    setQuickFilmSearch('');
+    setIsQuickFilmPickerOpen(false);
     setQuickSkor(undefined);
     showToast('Buzz opini kamu berhasil diposting ke feed komunitas!');
   };
@@ -206,17 +226,63 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
               />
 
               <div className="flex items-center justify-between pt-2 border-t border-white/[0.08] mt-1">
-                <select
-                  aria-label="Tag film (opsional)"
-                  value={quickTaggedFilmId}
-                  onChange={e => setQuickTaggedFilmId(e.target.value)}
-                  className="bg-slate-900 text-[11px] text-slate-300 rounded-lg px-2 py-1 border border-white/10 max-w-[130px]"
+                <div
+                  className="relative"
+                  onBlur={e => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                      setIsQuickFilmPickerOpen(false);
+                    }
+                  }}
                 >
-                  <option value="">Tag Film (Opsional)</option>
-                  {films.map(f => (
-                    <option key={f.id} value={f.id}>{f.title}</option>
-                  ))}
-                </select>
+                  <input
+                    type="text"
+                    aria-label="Tag film (opsional)"
+                    value={quickFilmSearch}
+                    onChange={e => {
+                      const value = e.target.value;
+                      setQuickFilmSearch(value);
+                      setIsQuickFilmPickerOpen(true);
+                      if (quickTaggedFilmId) {
+                        const selected = films.find(f => f.id === quickTaggedFilmId);
+                        if (!selected || value !== selected.title) {
+                          setQuickTaggedFilmId('');
+                        }
+                      }
+                    }}
+                    onFocus={() => setIsQuickFilmPickerOpen(true)}
+                    onKeyDown={e => {
+                      if (e.key === 'Escape') setIsQuickFilmPickerOpen(false);
+                    }}
+                    placeholder="Tag Film (Opsional)"
+                    autoComplete="off"
+                    className="bg-slate-900 text-[11px] text-slate-300 rounded-lg px-2 py-1 border border-white/10 w-[130px] max-w-[130px] placeholder:text-slate-500 focus:outline-none focus:border-[#FF2E7E]/60"
+                  />
+
+                  {isQuickFilmPickerOpen && (
+                    <div className="absolute bottom-full left-0 mb-1 w-[220px] max-h-56 overflow-y-auto bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-30 py-1">
+                      {quickFilmMatches.length > 0 ? (
+                        quickFilmMatches.map(film => (
+                          <button
+                            key={film.id}
+                            type="button"
+                            onClick={() => handleQuickFilmSelect(film)}
+                            className={`w-full text-left px-2.5 py-1.5 text-[11px] truncate transition-colors ${
+                              film.id === quickTaggedFilmId
+                                ? 'bg-[#D81B60]/20 text-[#FF2E7E]'
+                                : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                            }`}
+                          >
+                            {film.title}
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-2.5 py-1.5 text-[11px] text-slate-500">
+                          Film tidak ditemukan
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 <button
                   type="submit"

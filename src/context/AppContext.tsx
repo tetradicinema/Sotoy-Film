@@ -1178,13 +1178,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setFilms(sortedFilms);
         lastFilmsFetchTsRef.current = Date.now();
 
-        // Update localStorage cache with TTL tracking
-        try {
-          localStorage.setItem(FILMS_CACHE_KEY, JSON.stringify({ films: sortedFilms }));
-          localStorage.setItem(FILMS_CACHE_TS_KEY, String(Date.now()));
-        } catch (storageErr) {
-          // If storage quota exceeded, silently skip caching
-          console.warn('[AppContext] Failed to cache films to localStorage:', storageErr);
+        // Update localStorage cache with TTL tracking, off the synchronous path.
+        // The catalog is large, so defer serialization until the browser is idle.
+        const persistFilmsCache = () => {
+          try {
+            localStorage.setItem(FILMS_CACHE_KEY, JSON.stringify({ films: sortedFilms }));
+            localStorage.setItem(FILMS_CACHE_TS_KEY, String(Date.now()));
+          } catch (storageErr) {
+            // If storage quota exceeded, silently skip caching
+            console.warn('[AppContext] Failed to cache films to localStorage:', storageErr);
+          }
+        };
+        if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+          window.requestIdleCallback(persistFilmsCache, { timeout: 2000 });
+        } else {
+          setTimeout(persistFilmsCache, 0);
         }
 
         setIsLoadingFilms(false);
@@ -1978,7 +1986,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   useEffect(() => {
-    if (!currentUser?.id) {
+    if (!currentUser?.id || currentUser.id === 'guest') {
       setNotifications([]);
       return;
     }
