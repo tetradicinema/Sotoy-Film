@@ -8,7 +8,7 @@
  */
 
 import { FilmItem, Article, BuzzPost, User } from '../types';
-import { pickArticleIsoDate } from '../lib/edge/isoDate';
+import { pickArticleIsoDate } from '../lib/edge/isoDate.js';
 
 export interface OpenGraphTags {
   'og:title': string;
