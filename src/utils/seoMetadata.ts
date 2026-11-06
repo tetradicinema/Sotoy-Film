@@ -8,6 +8,7 @@
  */
 
 import { FilmItem, Article, BuzzPost, User } from '../types';
+import { pickArticleIsoDate } from '../lib/edge/isoDate';
 
 export interface OpenGraphTags {
   'og:title': string;
@@ -336,8 +337,8 @@ export function buildArticleMetadata(
   const authorAvatar = options.author?.avatar || article.author?.avatar;
   const twitterCreator = authorName ? `@${authorName.replace(/\s+/g, '')}` : DEFAULT_TWITTER_SITE;
 
-  const publishedTime = article.publishedAt || new Date().toISOString();
-  const modifiedTime = (article as any)?.updatedAt || publishedTime;
+  const publishedTime = pickArticleIsoDate(article, 'published');
+  const modifiedTime = pickArticleIsoDate(article, 'modified');
   const section = article.category || 'Movies';
   const tags = article.tags || [];
 
@@ -367,8 +368,8 @@ export function buildArticleMetadata(
     'og:image:alt': imageAlt,
     'og:image:width': '1200',
     'og:image:height': '630',
-    'article:published_time': publishedTime,
-    'article:modified_time': modifiedTime,
+    ...(publishedTime ? { 'article:published_time': publishedTime } : {}),
+    ...(modifiedTime ? { 'article:modified_time': modifiedTime } : {}),
     'article:author': authorName,
     'article:section': section,
     ...(tags.length > 0 ? { 'article:tag': tags } : {}),

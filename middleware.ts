@@ -13,6 +13,7 @@ import {
 } from './src/lib/edge/firestoreRest.js';
 import { injectMetaTags, injectRootContent, injectPrefetchData, injectSeoLists, buildArticleBodyHtml, buildFilmBodyHtml, FALLBACK_HTML_TEMPLATE } from './src/lib/edge/metaInjection.js';
 import { buildRouteMetadata, STATIC_ROUTE_METADATA_CONFIG } from './src/utils/seoMetadata.js';
+import { pickArticleIsoDate } from './src/lib/edge/isoDate.js';
 
 // Re-export for unit tests and external consumers
 export { isBotUserAgent };
@@ -448,7 +449,8 @@ export default async function middleware(request: Request): Promise<Response> {
     // Truncate description to about 200 characters at word boundary
     const description = truncateDescription(rawDescription, 200);
 
-    const publishedTime = collection === 'articles' ? data.publishedAt : undefined;
+    const publishedTime = collection === 'articles' ? pickArticleIsoDate(data, 'published') : undefined;
+    const modifiedTime = collection === 'articles' ? pickArticleIsoDate(data, 'modified') : undefined;
 
     // 4. Fetch the base index.html from origin
     let baseHtml = '';
@@ -494,8 +496,8 @@ export default async function middleware(request: Request): Promise<Response> {
       headline: data.seoTitle || data.title || title,
       description,
       image: [image],
-      datePublished: data.publishedAt,
-      dateModified: data.updatedAt || data.publishedAt,
+      datePublished: publishedTime,
+      dateModified: modifiedTime,
       author: data.author?.name ? { '@type': 'Person', name: data.author.name } : undefined,
       publisher: {
         '@type': 'Organization',

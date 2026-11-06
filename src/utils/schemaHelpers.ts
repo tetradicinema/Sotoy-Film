@@ -8,6 +8,7 @@
 
 import { FilmItem, Article } from '../types';
 import { resolveAbsoluteUrl, DEFAULT_BASE_URL } from './seoMetadata';
+import { toIsoWithTimezone, pickArticleIsoDate } from '../lib/edge/isoDate';
 
 export interface BreadcrumbItem {
   name: string;
@@ -172,17 +173,25 @@ export function generateMovieSchema(input: MovieSchemaInput) {
   // ISO 8601 Duration
   const isoDuration = formatIso8601Duration(input.duration);
 
-  // VideoObject Trailer
-  const trailer = input.trailerUrl
-    ? {
-        '@type': 'VideoObject',
-        name: input.trailerTitle || `Official Trailer - ${input.title}`,
-        description: `Trailer resmi dan cuplikan film ${input.title} (${input.year}).`,
-        thumbnailUrl: images,
-        embedUrl: input.trailerUrl,
-        uploadDate: input.releaseDate || `${input.year}-01-01`,
-      }
+  // VideoObject Trailer. Google requires uploadDate to be a full ISO 8601
+  // datetime with an explicit timezone, so omit the trailer if none is valid.
+  const trailerYear = String(input.year ?? '').trim();
+  const trailerUploadDate = input.trailerUrl
+    ? toIsoWithTimezone(input.releaseDate) ||
+      (/^\d{4}$/.test(trailerYear) ? `${trailerYear}-01-01T00:00:00+07:00` : undefined)
     : undefined;
+
+  const trailer =
+    input.trailerUrl && trailerUploadDate
+      ? {
+          '@type': 'VideoObject',
+          name: input.trailerTitle || `Official Trailer - ${input.title}`,
+          description: `Trailer resmi dan cuplikan film ${input.title} (${input.year}).`,
+          thumbnailUrl: images,
+          embedUrl: input.trailerUrl,
+          uploadDate: trailerUploadDate,
+        }
+      : undefined;
 
   // Where to watch providers / offers
   const offers =
@@ -284,7 +293,7 @@ export interface ArticleSchemaInput {
   description: string;
   image: string | string[];
   url: string;
-  datePublished: string;
+  datePublished?: string;
   dateModified?: string;
   authorName: string;
   authorUrl?: string;
@@ -500,14 +509,16 @@ export function createArticleSchemaFromArticle(
   const canonicalUrl = options?.currentUrl || `${DEFAULT_BASE_URL}/artikel/${encodeURIComponent(slug)}`;
 
   const images = [article.ogImage, article.coverImage].filter(Boolean) as string[];
+  const datePublished = pickArticleIsoDate(article, 'published');
+  const dateModified = pickArticleIsoDate(article, 'modified');
 
   return generateArticleSchema({
     title: article.seoTitle || article.title,
     description: article.metaDescription || article.excerpt || (article.content ? article.content.slice(0, 160) : ''),
     image: images.length > 0 ? images : '/og-default.png',
     url: canonicalUrl,
-    datePublished: article.publishedAt || new Date().toISOString(),
-    dateModified: (article as any)?.updatedAt || article.publishedAt,
+    datePublished,
+    dateModified,
     authorName,
     authorAvatar,
     authorUrl,
