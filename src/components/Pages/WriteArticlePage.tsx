@@ -580,6 +580,7 @@ export const WriteArticlePage: React.FC = () => {
           : slugify(form.title) || `draft-${newId}`;
         const cleanTags = form.tagsInput.split(',').map(t => t.trim()).filter(Boolean);
         const payload = {
+          id: newId,
           title: form.title.trim(),
           slug: finalSlug,
           excerpt: form.excerpt.trim() || form.title.trim(),
