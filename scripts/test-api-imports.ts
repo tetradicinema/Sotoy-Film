@@ -83,7 +83,8 @@ export function findImportViolations(
       item =>
         !item.typeOnly &&
         (item.specifier.startsWith('./') || item.specifier.startsWith('../')) &&
-        !item.specifier.endsWith('.js')
+        !item.specifier.endsWith('.js') &&
+        !item.specifier.endsWith('.json')
     )
     .map(item => ({
       file,
@@ -147,7 +148,7 @@ export function traceImportGraph(
       if (item.typeOnly) continue;
       if (!item.specifier.startsWith('./') && !item.specifier.startsWith('../')) continue;
 
-      if (!item.specifier.endsWith('.js')) {
+      if (!item.specifier.endsWith('.js') && !item.specifier.endsWith('.json')) {
         violations.push({
           file,
           line: item.line,
@@ -365,6 +366,7 @@ const runRepositoryCheck = (): boolean => {
     .readdirSync(apiDir)
     .filter(name => name.endsWith('.ts'))
     .map(name => path.join(apiDir, name));
+  entryFiles.push(path.join(repoRoot, 'middleware.ts'));
 
   const readFile = (file: string): string | null => {
     try {
@@ -384,15 +386,20 @@ const runRepositoryCheck = (): boolean => {
   const result = traceImportGraph(entryFiles, readFile, exists);
   const toRelative = (file: string) => path.relative(repoRoot, file).replace(/\\/g, '/');
 
-  // The production guard covers the API entrypoints and the shared helpers in
-  // src/utils that they reach. Other pre-existing runtime modules keep their
-  // own conventions and are traversed but not validated here.
+  // The production guard covers the API entrypoints, middleware.ts, and the
+  // shared helpers in src/utils and src/lib/edge that they reach. Other
+  // pre-existing runtime modules keep their own conventions and are traversed
+  // but not validated here.
   const utilsDir = path.join(repoRoot, 'src', 'utils');
+  const edgeDir = path.join(repoRoot, 'src', 'lib', 'edge');
+  const middlewareFile = path.resolve(repoRoot, 'middleware.ts');
   const isCheckedFile = (file: string): boolean => {
     const normalized = path.resolve(file);
     return (
+      normalized === middlewareFile ||
       normalized.startsWith(`${path.resolve(apiDir)}${path.sep}`) ||
-      normalized.startsWith(`${path.resolve(utilsDir)}${path.sep}`)
+      normalized.startsWith(`${path.resolve(utilsDir)}${path.sep}`) ||
+      normalized.startsWith(`${path.resolve(edgeDir)}${path.sep}`)
     );
   };
   const scopedViolations = result.violations.filter(item => isCheckedFile(item.file));
@@ -418,7 +425,7 @@ const runRepositoryCheck = (): boolean => {
     return false;
   }
 
-  assert(true, 'every runtime relative import reachable from api/*.ts ends with .js');
+  assert(true, 'every runtime relative import reachable from api/*.ts and middleware.ts ends with .js');
   return true;
 };
 

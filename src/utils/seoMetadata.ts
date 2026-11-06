@@ -7,7 +7,7 @@
  * and dynamic entity routes (such as /film/:slug, /artikel/:slug, /kategori/:name, etc.).
  */
 
-import { FilmItem, Article, BuzzPost, User } from '../types';
+import type { FilmItem, Article, BuzzPost, User } from '../types';
 import { pickArticleIsoDate } from '../lib/edge/isoDate.js';
 
 export interface OpenGraphTags {
