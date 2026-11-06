@@ -44,7 +44,7 @@ import { canAutosave } from '../../utils/articleFlow';
 import { MainCategory, SubCategory, FilmItem, ArticleVersion } from '../../types';
 import { db, storage } from '../../lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, query, where, orderBy } from 'firebase/firestore';
+import { doc, getDoc, getDocs, setDoc, deleteDoc, onSnapshot, collection, query, where, orderBy } from 'firebase/firestore';
 import { ArticleEditor } from '../CMS/ArticleEditor';
 import { RichTextEditor } from '../CMS/RichTextEditor';
 import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
@@ -60,6 +60,7 @@ import {
   imageFileExtension,
   optimizeImageForWeb,
 } from '../../utils/imageOptimize';
+import { findSlugConflict, makeUniqueSlug } from '../../utils/articleSlug';
 
 interface CoEditor {
   userId: string;
@@ -306,6 +307,18 @@ export const WriteArticlePage: React.FC = () => {
   useEffect(() => {
     editingIdRef.current = editingId;
   }, [editingId]);
+
+  // Autosave callbacks are created before the async article list settles. Keep
+  // the latest list in a ref so draft-suffix decisions see real conflicts.
+  const articlesRef = useRef(articles);
+  useEffect(() => {
+    articlesRef.current = articles;
+  }, [articles]);
+
+  const slugConflict = useMemo(
+    () => findSlugConflict(customSlug, articles, editingId),
+    [articles, customSlug, editingId]
+  );
 
   const creatingDraftPromiseRef = useRef<Promise<string | null> | null>(null);
   const lastSavedHashRef = useRef<string>('');
@@ -575,9 +588,16 @@ export const WriteArticlePage: React.FC = () => {
           return null;
         }
         const newId = `art-draft-${currentUser.id}-${Date.now()}`;
-        const finalSlug = form.isSlugManuallyEdited && form.customSlug.trim()
+        let finalSlug = form.isSlugManuallyEdited && form.customSlug.trim()
           ? form.customSlug.trim()
           : slugify(form.title) || `draft-${newId}`;
+        if (!form.isSlugManuallyEdited) {
+          const uniqueSlug = makeUniqueSlug(finalSlug, articlesRef.current, editingIdRef.current);
+          if (uniqueSlug !== finalSlug) {
+            finalSlug = uniqueSlug;
+            setCustomSlug(uniqueSlug);
+          }
+        }
         const cleanTags = form.tagsInput.split(',').map(t => t.trim()).filter(Boolean);
         const payload = {
           id: newId,
@@ -706,9 +726,17 @@ export const WriteArticlePage: React.FC = () => {
         }
       }
 
-      const finalSlug = form.isSlugManuallyEdited && form.customSlug.trim()
+      const finalSlugBase = form.isSlugManuallyEdited && form.customSlug.trim()
         ? form.customSlug.trim()
         : slugify(form.title) || (targetId ? `draft-${targetId}` : `draft-${Date.now()}`);
+      let finalSlug = finalSlugBase;
+      if (!isPublishedOrScheduled && !form.isSlugManuallyEdited) {
+        const uniqueSlug = makeUniqueSlug(finalSlugBase, articlesRef.current, targetId);
+        if (uniqueSlug !== finalSlugBase) {
+          finalSlug = uniqueSlug;
+          setCustomSlug(uniqueSlug);
+        }
+      }
 
       const cleanTags = form.tagsInput.split(',').map(t => t.trim()).filter(Boolean);
       const payload: Record<string, any> = {
@@ -1197,6 +1225,33 @@ export const WriteArticlePage: React.FC = () => {
     setPublishOption('scheduled');
   };
 
+  /**
+   * Last-resort exact-slug check before publish/schedule. The in-memory list is
+   * capped at the 50 newest documents, so older or otherwise-missing articles
+   * can be caught here. Network failures fail open so publishing still works.
+   */
+  const findSlugConflictInFirestore = async (
+    slug: string,
+    excludeId: string | null
+  ) => {
+    try {
+      const snapshot = await getDocs(
+        query(collection(db, 'articles'), where('slug', '==', slug))
+      );
+      const candidates = snapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...(docSnap.data() as any),
+      }));
+      return findSlugConflict(slug, candidates, excludeId);
+    } catch (err) {
+      console.warn(
+        '[Article] Pemeriksaan slug ke Firestore gagal; publikasi tetap dilanjutkan.',
+        err
+      );
+      return undefined;
+    }
+  };
+
   const handleSaveArticle = async (targetStatus: 'published' | 'draft' | 'scheduled') => {
     if (!title.trim() || !content.trim()) {
       showToast('Harap isi judul dan konten artikel!');
@@ -1230,7 +1285,27 @@ export const WriteArticlePage: React.FC = () => {
       .map(t => t.trim())
       .filter(Boolean);
 
-    const finalSlug = customSlug.trim() || slugify(title) || `artikel-${Date.now()}`;
+    let finalSlug = customSlug.trim() || slugify(title) || `artikel-${Date.now()}`;
+
+    if (targetStatus === 'published' || targetStatus === 'scheduled') {
+      let conflict = findSlugConflict(finalSlug, articles, editingIdRef.current);
+      if (!conflict) {
+        conflict = await findSlugConflictInFirestore(finalSlug, editingIdRef.current);
+      }
+      if (conflict) {
+        showToast(
+          `Slug "${finalSlug}" sudah dipakai artikel "${conflict.title || 'Tanpa judul'}" (${conflict.status || 'published'}). Ubah slug dulu.`,
+          'error'
+        );
+        return;
+      }
+    } else if (
+      !isSlugManuallyEdited &&
+      findSlugConflict(finalSlug, articles, editingIdRef.current)
+    ) {
+      finalSlug = makeUniqueSlug(finalSlug, articles, editingIdRef.current);
+      setCustomSlug(finalSlug);
+    }
 
     submitLockRef.current = true;
     setIsSubmitLocked(true);
@@ -1337,7 +1412,7 @@ export const WriteArticlePage: React.FC = () => {
         setArticleStatus(targetStatus);
         lastSavedHashRef.current = JSON.stringify({
           title,
-          slug: customSlug,
+          slug: finalSlug,
           category,
           subCategory,
           excerpt,
@@ -1636,7 +1711,7 @@ export const WriteArticlePage: React.FC = () => {
                 <div className="flex items-stretch rounded-xl bg-slate-900 border border-slate-700 focus-within:border-[#FF2E7E] focus-within:ring-1 focus-within:ring-[#FF2E7E] overflow-hidden text-xs transition-all">
                   <div className="px-3.5 py-2.5 text-slate-400 bg-slate-950/70 font-mono text-[11px] border-r border-slate-800 select-none flex items-center gap-1.5 shrink-0">
                     <Globe className="w-3 h-3 text-[#FF2E7E]" />
-                    <span>sotoyfilm.id/artikel/</span>
+                    <span>sotoyfilm.my.id/artikel/</span>
                   </div>
                   <input
                     type="text"
@@ -1647,9 +1722,25 @@ export const WriteArticlePage: React.FC = () => {
                   />
                 </div>
 
+                {slugConflict && (
+                  <div
+                    className={`flex items-start gap-1.5 text-[11px] leading-relaxed ${
+                      isSlugManuallyEdited ? 'text-red-300' : 'text-amber-300'
+                    }`}
+                  >
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                    <span>
+                      Slug "{customSlug.trim()}" sudah dipakai artikel "{slugConflict.title || 'Tanpa judul'}" ({slugConflict.status || 'published'}).
+                      {isSlugManuallyEdited
+                        ? ' Ubah slug dulu sebelum menerbitkan.'
+                        : ' Slug akan disesuaikan otomatis saat disimpan.'}
+                    </span>
+                  </div>
+                )}
+
                 <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
                   <p>
-                    Pratinjau URL: <span className="text-[#FF2E7E] font-mono font-semibold">https://sotoyfilm.id/artikel/{customSlug || 'judul-artikel'}</span>
+                    Pratinjau URL: <span className="text-[#FF2E7E] font-mono font-semibold">https://www.sotoyfilm.my.id/artikel/{customSlug || 'judul-artikel'}</span>
                   </p>
                   <span className="font-mono text-[10px] text-slate-400">
                     {customSlug.length} karakter
@@ -2260,7 +2351,7 @@ export const WriteArticlePage: React.FC = () => {
                           </div>
                         )}
                         <span className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-md text-[10px] text-white px-2 py-0.5 rounded-md font-mono">
-                          sotoyfilm.com
+                          sotoyfilm.my.id
                         </span>
                       </div>
                       <div className="p-3.5 space-y-1">
@@ -2841,12 +2932,12 @@ export const WriteArticlePage: React.FC = () => {
                 </h3>
                 <div className="mt-2 flex items-center gap-2">
                   <span className="text-[11px] font-mono text-cyan-400 truncate">
-                    sotoyfilm.id/artikel/{publishedSuccessModal.slug}
+                    https://www.sotoyfilm.my.id/artikel/{publishedSuccessModal.slug}
                   </span>
                   <button
                     type="button"
                     onClick={() => {
-                      const url = `https://sotoyfilm.id/artikel/${publishedSuccessModal.slug}`;
+                      const url = `https://www.sotoyfilm.my.id/artikel/${publishedSuccessModal.slug}`;
                       navigator.clipboard.writeText(url);
                       setCopiedLink(true);
                       setTimeout(() => setCopiedLink(false), 2000);

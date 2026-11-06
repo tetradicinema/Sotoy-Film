@@ -12,6 +12,7 @@
     "start": "NODE_ENV=production node dist/server.cjs",
     "lint": "tsc --noEmit",
     "test:middleware": "node --import tsx scripts/test-middleware.ts",
+    "test:article-slug": "node --import tsx scripts/test-article-slug.ts",
     "test:iso-date": "node --import tsx scripts/test-iso-date.ts",
     "test:seo-prefetch": "node --import tsx scripts/test-seo-prefetch.ts",
     "test:rest-fallback": "node --import tsx scripts/test-rest-fallback.ts",
