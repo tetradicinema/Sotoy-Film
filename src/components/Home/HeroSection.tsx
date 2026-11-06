@@ -23,6 +23,12 @@ const FILM_TYPE_LABELS: Record<string, string> = {
   animation: 'Animation',
 };
 
+const DEFAULT_HERO_COVER =
+  'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80';
+
+const getCoverUrl = (article?: { coverImage?: string } | null) =>
+  article?.coverImage || DEFAULT_HERO_COVER;
+
 const HeroActiveAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }> = ({ authorId, defaultAuthor }) => {
   const author = useDynamicArticleAuthor(authorId, defaultAuthor);
   const { navigateTo } = useApp();
@@ -130,6 +136,13 @@ export const HeroSection: React.FC = () => {
   const neighborsQueuedRef = useRef(false);
   const idleCallbackRef = useRef<number | null>(null);
   const idleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Cover URLs whose <img> already fired onLoad/onError (all mounted covers).
+  const loadedCoverUrlsRef = useRef<Set<string>>(new Set());
+  // Pending manual navigation: keep the current slide visible until the target
+  // cover is ready (loaded event) or an 800 ms watchdog fires.
+  const pendingSlideRef = useRef<{ index: number; token: number } | null>(null);
+  const pendingSwitchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingTokenRef = useRef(0);
 
   const cancelNeighborIdle = useCallback(() => {
     if (typeof window !== 'undefined' && idleCallbackRef.current !== null) {
@@ -162,12 +175,12 @@ export const HeroSection: React.FC = () => {
       idleCallbackRef.current = win.requestIdleCallback(() => {
         idleCallbackRef.current = null;
         setNeighborsReady(true);
-      }, { timeout: 1500 });
+      }, { timeout: 500 });
     } else {
       idleTimeoutRef.current = setTimeout(() => {
         idleTimeoutRef.current = null;
         setNeighborsReady(true);
-      }, 1500);
+      }, 500);
     }
   }, []);
 
@@ -201,6 +214,11 @@ export const HeroSection: React.FC = () => {
     [trendingArticles]
   );
   const [slideArticles, setSlideArticles] = useState(trendingArticles);
+  const slideArticlesRef = useRef(slideArticles);
+
+  useEffect(() => {
+    slideArticlesRef.current = slideArticles;
+  }, [slideArticles]);
 
   useEffect(() => {
     setSlideArticles(prev =>
@@ -211,20 +229,129 @@ export const HeroSection: React.FC = () => {
     );
   }, [trendingKey, trendingArticles]);
 
+  const safeSlide = slideArticles.length > 0 ? currentSlide % slideArticles.length : 0;
+  const safeSlideRef = useRef(safeSlide);
+  const activeArticle = (slideArticles.length > 0 ? slideArticles[safeSlide] : null) || articlesPool[0] || null;
+
+  useEffect(() => {
+    safeSlideRef.current = safeSlide;
+  }, [safeSlide]);
+
+  // Keep the ref in sync with state updates from clicks/autoplay so a newer
+  // click computes its target from the slide that is actually committed.
+  const goToSlide = useCallback((index: number) => {
+    const list = slideArticlesRef.current;
+    const next = list.length > 0
+      ? ((index % list.length) + list.length) % list.length
+      : 0;
+    safeSlideRef.current = next;
+    setCurrentSlide(next);
+  }, []);
+
+  const clearPendingSwitch = useCallback(() => {
+    if (pendingSwitchTimerRef.current) {
+      clearTimeout(pendingSwitchTimerRef.current);
+      pendingSwitchTimerRef.current = null;
+    }
+    pendingSlideRef.current = null;
+  }, []);
+
+  useEffect(() => () => clearPendingSwitch(), [clearPendingSwitch]);
+
+  // Commit a pending manual navigation only while its token is still current,
+  // so a newer click always overrides an older pending switch.
+  const commitPendingSwitch = useCallback((index: number, token: number) => {
+    const pending = pendingSlideRef.current;
+    if (!pending || pending.token !== token) return;
+    clearPendingSwitch();
+    goToSlide(index);
+  }, [clearPendingSwitch, goToSlide]);
+
+  // Track every mounted cover, not only the active one, so autoplay and the
+  // manual watchdog know whether the next/target cover is ready.
+  const registerCoverLoaded = useCallback((article: { coverImage?: string } | null | undefined) => {
+    const url = getCoverUrl(article);
+    loadedCoverUrlsRef.current.add(url);
+
+    const pending = pendingSlideRef.current;
+    if (!pending) return;
+    const target = slideArticlesRef.current[pending.index];
+    if (target && getCoverUrl(target) === url) {
+      commitPendingSwitch(pending.index, pending.token);
+    }
+  }, [commitPendingSwitch]);
+
   // Auto slide starts only after the first active cover has loaded (or the
   // guard below fires), so the carousel cannot move the LCP candidate while
   // the first cover is still downloading.
+  //
+  // On every 6.5 s tick the next cover must already be in the loaded set.
+  // If it is not, that tick is skipped and re-checked every 500 ms; after
+  // 3 s of waiting the slider advances anyway so it can never get stuck.
   useEffect(() => {
     if (!autoplayReady) return;
     if (slideArticles.length <= 1) return;
-    const interval = setInterval(() => {
-      setCurrentSlide(prev => (prev + 1) % slideArticles.length);
-    }, 6500);
-    return () => clearInterval(interval);
-  }, [autoplayReady, slideArticles.length]);
 
-  const safeSlide = slideArticles.length > 0 ? currentSlide % slideArticles.length : 0;
-  const activeArticle = (slideArticles.length > 0 ? slideArticles[safeSlide] : null) || articlesPool[0] || null;
+    let waitPoll: ReturnType<typeof setInterval> | null = null;
+    let waitDeadline: ReturnType<typeof setTimeout> | null = null;
+
+    const clearWait = () => {
+      if (waitPoll) {
+        clearInterval(waitPoll);
+        waitPoll = null;
+      }
+      if (waitDeadline) {
+        clearTimeout(waitDeadline);
+        waitDeadline = null;
+      }
+    };
+
+    const isNextCoverLoaded = () => {
+      const list = slideArticlesRef.current;
+      if (list.length <= 1) return true;
+      const index = safeSlideRef.current % list.length;
+      return loadedCoverUrlsRef.current.has(getCoverUrl(list[(index + 1) % list.length]));
+    };
+
+    const advance = () => {
+      // A pending manual switch owns the next transition.
+      if (pendingSlideRef.current) return;
+      const list = slideArticlesRef.current;
+      if (list.length <= 1) return;
+      goToSlide((safeSlideRef.current + 1) % list.length);
+    };
+
+    const tick = () => {
+      if (pendingSlideRef.current) return;
+      if (isNextCoverLoaded()) {
+        advance();
+        return;
+      }
+
+      clearWait();
+      waitPoll = setInterval(() => {
+        if (pendingSlideRef.current) {
+          clearWait();
+          return;
+        }
+        if (isNextCoverLoaded()) {
+          clearWait();
+          advance();
+        }
+      }, 500);
+      waitDeadline = setTimeout(() => {
+        clearWait();
+        if (pendingSlideRef.current) return;
+        advance();
+      }, 3000);
+    };
+
+    const interval = setInterval(tick, 6500);
+    return () => {
+      clearInterval(interval);
+      clearWait();
+    };
+  }, [autoplayReady, safeSlide, slideArticles.length, goToSlide]);
 
   // If no load/error ever fires (blocked image, crawler renderer), do not block
   // the carousel forever.
@@ -298,15 +425,47 @@ export const HeroSection: React.FC = () => {
     };
   }, [activeCoverSettled, nextSlideIndex, slideArticles]);
 
-  const handlePrevSlide = () => {
+  const requestManualSlide = useCallback((direction: 'prev' | 'next') => {
+    // Mount the target cover immediately; prev/next are part of visibleSlides.
     ensureNeighborsReady();
-    setCurrentSlide(prev => (prev === 0 ? slideArticles.length - 1 : prev - 1));
-  };
 
-  const handleNextSlide = () => {
-    ensureNeighborsReady();
-    setCurrentSlide(prev => (prev + 1) % slideArticles.length);
-  };
+    const list = slideArticlesRef.current;
+    if (list.length <= 1) return;
+
+    const base = safeSlideRef.current % list.length;
+    const targetIndex = direction === 'next'
+      ? (base + 1) % list.length
+      : (base === 0 ? list.length - 1 : base - 1);
+    const targetUrl = getCoverUrl(list[targetIndex]);
+
+    // A newer click always cancels the pending switch and its watchdog.
+    if (pendingSwitchTimerRef.current) {
+      clearTimeout(pendingSwitchTimerRef.current);
+      pendingSwitchTimerRef.current = null;
+    }
+    pendingSlideRef.current = null;
+    const token = pendingTokenRef.current + 1;
+    pendingTokenRef.current = token;
+
+    if (loadedCoverUrlsRef.current.has(targetUrl)) {
+      goToSlide(targetIndex);
+      return;
+    }
+
+    // Keep the current slide visible until the target cover fires
+    // onLoad/onError, or switch after 800 ms at most. Buttons stay usable.
+    pendingSlideRef.current = { index: targetIndex, token };
+    pendingSwitchTimerRef.current = setTimeout(() => {
+      const pending = pendingSlideRef.current;
+      if (!pending || pending.token !== token) return;
+      pendingSlideRef.current = null;
+      pendingSwitchTimerRef.current = null;
+      goToSlide(targetIndex);
+    }, 800);
+  }, [ensureNeighborsReady, goToSlide]);
+
+  const handlePrevSlide = () => requestManualSlide('prev');
+  const handleNextSlide = () => requestManualSlide('next');
 
   // Hero "To Watch" tab: editorial film picks (featured first, then score)
   const heroToWatchFilms = useMemo(
@@ -423,15 +582,21 @@ export const HeroSection: React.FC = () => {
                   .map(({ article, index }) => (
                     <img
                       key={article.id || `hero-slide-${index}`}
-                      src={article.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80'}
+                      src={getCoverUrl(article)}
                       alt={index === safeSlide ? (article.title || 'Hero Article') : ''}
                       fetchPriority={index === safeSlide ? 'high' : undefined}
                       decoding="async"
                       loading={index === safeSlide ? undefined : 'eager'}
                       aria-hidden={index === safeSlide ? undefined : true}
-                      onLoad={index === safeSlide ? handleActiveCoverSettled : undefined}
-                      onError={index === safeSlide ? handleActiveCoverSettled : undefined}
-                      className={`absolute inset-0 w-full h-full object-cover object-center transition-[opacity,transform] duration-700 transform scale-100 group-hover:scale-105 ${index === safeSlide ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                      onLoad={() => {
+                        registerCoverLoaded(article);
+                        if (index === safeSlide) handleActiveCoverSettled();
+                      }}
+                      onError={() => {
+                        registerCoverLoaded(article);
+                        if (index === safeSlide) handleActiveCoverSettled();
+                      }}
+                      className={`absolute inset-0 w-full h-full object-cover object-center ease-out duration-500 ${index === safeSlide ? 'opacity-100 transition-[opacity,transform,scale] group-hover:scale-105' : 'opacity-0 pointer-events-none transition-opacity'}`}
                     />
                   ))}
 
@@ -453,7 +618,7 @@ export const HeroSection: React.FC = () => {
                     <span className="capitalize">{activeArticle.subCategory || 'Review'}</span>
                   </div>
 
-                  <div className="flex items-center gap-1.5 text-xs text-slate-300/90 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 font-mono tabular-nums">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-300/90 bg-black/60 px-3 py-1 rounded-full border border-white/10 font-mono tabular-nums">
                     <span className="text-rose-400">♥</span>
                     <span>{(activeArticle.likes || 0).toLocaleString()}</span>
                   </div>
