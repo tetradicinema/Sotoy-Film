@@ -35,6 +35,7 @@ import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
 import { SEOHead } from '../SEO/SEOHead';
 import { createMovieSchemaFromFilm, generateBreadcrumbSchema } from '../../utils/schemaHelpers';
 import { slugify } from '../../utils/slugify';
+import { buildPersonPath } from '../../utils/personHelpers';
 import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
@@ -164,8 +165,15 @@ export const FilmDetailPage: React.FC = () => {
     let isMounted = true;
     if (!film) return;
 
+    // Kredit yang tersimpan sebelum id orang disimpan tidak bisa dilink ke halaman People;
+    // ambil ulang dari TMDB bila film punya tmdbId.
+    const storedHasPersonIds =
+      (film.castDetails || []).some(c => Boolean(c.id)) ||
+      (film.crewDetails || []).some(c => Boolean(c.id));
+    const canUseStoredCredits = storedHasPersonIds || !film.tmdbId;
+
     // If film already has ample cast and crew data, synchronize immediate state
-    if (film.castDetails && film.castDetails.length >= 6 && film.crewDetails && film.crewDetails.length >= 6) {
+    if (film.castDetails && film.castDetails.length >= 6 && film.crewDetails && film.crewDetails.length >= 6 && canUseStoredCredits) {
       setLiveCredits({
         cast: film.castDetails,
         crew: film.crewDetails,
@@ -353,6 +361,18 @@ export const FilmDetailPage: React.FC = () => {
   // Subset preview lists (show top 4 on mobile, up to 8 on desktop)
   const previewCastList = allCastList.slice(0, 8);
   const previewCrewList = allCrewList.slice(0, 8);
+
+  const openPerson = (person: { id?: number; name: string }) => {
+    if (!person.id) return;
+    navigateTo('person-detail', { personId: person.id, personName: person.name });
+  };
+
+  const handlePersonLinkClick = (e: React.MouseEvent, person: { id?: number; name: string }) => {
+    e.stopPropagation();
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    e.preventDefault();
+    openPerson(person);
+  };
 
   // Stills gallery
   const stillsList = film.stills && film.stills.length > 0
@@ -909,6 +929,8 @@ export const FilmDetailPage: React.FC = () => {
                     <div
                       key={`preview-cast-${idx}`}
                       id={`cast-card-${idx}`}
+                      onClick={() => openPerson(actor)}
+                      style={actor.id ? { cursor: 'pointer' } : undefined}
                       className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FF2E7E] hover:shadow-[0_0_15px_rgba(0,240,255,0.12)] hover:scale-[1.015] transition-all duration-300 flex flex-col group shadow-md"
                     >
                       <div className="aspect-[3/4] w-full overflow-hidden bg-slate-950 relative">
@@ -916,7 +938,17 @@ export const FilmDetailPage: React.FC = () => {
                       </div>
                       <div className="p-3">
                         <h4 className="font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors truncate">
-                          {actor.name}
+                          {actor.id ? (
+<a
+href={buildPersonPath(actor.id, actor.name)}
+onClick={e => handlePersonLinkClick(e, actor)}
+className="hover:underline"
+>
+{actor.name}
+</a>
+) : (
+actor.name
+)}
                         </h4>
                         <p className="text-[11px] text-[#FF2E7E] font-semibold truncate mt-0.5">
                           {actor.character ? `sebagai ${actor.character}` : 'Pemeran Utama'}
@@ -944,6 +976,8 @@ export const FilmDetailPage: React.FC = () => {
                     <div
                       key={`preview-crew-${idx}`}
                       id={`crew-card-${idx}`}
+                      onClick={() => openPerson(crew)}
+                      style={crew.id ? { cursor: 'pointer' } : undefined}
                       className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FF2E7E] hover:shadow-[0_0_15px_rgba(255,208,0,0.12)] hover:scale-[1.015] transition-all duration-300 flex flex-col group shadow-md"
                     >
                       <div className="aspect-[3/4] w-full overflow-hidden bg-slate-950 relative">
@@ -956,7 +990,17 @@ export const FilmDetailPage: React.FC = () => {
                       </div>
                       <div className="p-3">
                         <h4 className="font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors truncate">
-                          {crew.name}
+                          {crew.id ? (
+<a
+href={buildPersonPath(crew.id, crew.name)}
+onClick={e => handlePersonLinkClick(e, crew)}
+className="hover:underline"
+>
+{crew.name}
+</a>
+) : (
+crew.name
+)}
                         </h4>
                         <p className="text-[11px] text-[#FF2E7E] font-semibold truncate mt-0.5">
                           {crew.job}

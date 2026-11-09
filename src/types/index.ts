@@ -184,12 +184,16 @@ export interface ArticleVersion {
 }
 
 export interface CastMember {
+  /** ID orang di TMDB, dipakai untuk link ke halaman People */
+  id?: number;
   name: string;
   character: string;
   photo: string;
 }
 
 export interface CrewMember {
+  /** ID orang di TMDB, dipakai untuk link ke halaman People */
+  id?: number;
   name: string;
   job: string;
   department?: string;

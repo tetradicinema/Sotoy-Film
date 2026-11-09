@@ -28,11 +28,19 @@ import {
 import { useApp } from '../../context/AppContext';
 import { FilmItem, Article, BuzzPost, User } from '../../types';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
-import { searchTmdbFilms, TmdbSearchResultItem } from '../../utils/tmdbHelper';
+import {
+  searchTmdbFilms,
+  searchTmdbPeople,
+  tmdbProfileThumbUrl,
+  TmdbSearchResultItem,
+  TmdbPersonSearchItem,
+} from '../../utils/tmdbHelper';
+import { buildPersonPath } from '../../utils/personHelpers';
+import { PersonAvatar } from '../Common/PersonAvatar';
 import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 import { resolveAuthor } from '../../utils/resolveAuthor';
 
-type SearchTab = 'all' | 'film' | 'article' | 'buzz' | 'user';
+type SearchTab = 'all' | 'film' | 'article' | 'buzz' | 'user' | 'person';
 
 const RECENT_SEARCHES_KEY = 'sotoy_search_history';
 
@@ -74,6 +82,10 @@ export const SearchPage: React.FC = () => {
   // TMDB Real-time Search States
   const [tmdbSearchResults, setTmdbSearchResults] = useState<TmdbSearchResultItem[]>([]);
   const [isSearchingTmdb, setIsSearchingTmdb] = useState<boolean>(false);
+
+  // People search states (publik, hasil live dari TMDB)
+  const [peopleResults, setPeopleResults] = useState<TmdbPersonSearchItem[]>([]);
+  const [isSearchingPeople, setIsSearchingPeople] = useState<boolean>(false);
 
   // Recent searches state
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
@@ -275,6 +287,31 @@ export const SearchPage: React.FC = () => {
     };
   }, [localQuery, isAdmin]);
 
+  // People search (publik): debounce 350 ms, minimal 2 huruf
+  useEffect(() => {
+    const q = localQuery.trim();
+    if (q.length < 2) {
+      setPeopleResults([]);
+      setIsSearchingPeople(false);
+      return;
+    }
+
+    let isCancelled = false;
+    setIsSearchingPeople(true);
+    const timer = setTimeout(async () => {
+      const results = await searchTmdbPeople(q);
+      if (!isCancelled) {
+        setPeopleResults(results.slice(0, 20));
+        setIsSearchingPeople(false);
+      }
+    }, 350);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [localQuery]);
+
   // Filter out TMDB results that already match local database films
   const filteredTmdbResults = useMemo(() => {
     if (!isAdmin || !tmdbSearchResults || tmdbSearchResults.length === 0) return [];
@@ -290,7 +327,7 @@ export const SearchPage: React.FC = () => {
   }, [isAdmin, tmdbSearchResults, films]);
 
   const totalResults =
-    matchingFilms.length + (isAdmin ? filteredTmdbResults.length : 0) + matchingArticles.length + matchingBuzz.length + matchingUsers.length;
+    matchingFilms.length + (isAdmin ? filteredTmdbResults.length : 0) + matchingArticles.length + matchingBuzz.length + matchingUsers.length + peopleResults.length;
 
   const hasQuery = localQuery.trim().length > 0;
 
@@ -405,6 +442,7 @@ export const SearchPage: React.FC = () => {
             {[
               { id: 'all', label: 'Semua Hasil', count: totalResults, icon: Filter },
               { id: 'film', label: 'Film', count: matchingFilms.length + (isAdmin ? filteredTmdbResults.length : 0), icon: Film },
+              { id: 'person', label: 'People', count: peopleResults.length, icon: Users },
               { id: 'article', label: 'Artikel & Review', count: matchingArticles.length, icon: FileText },
               { id: 'buzz', label: 'Buzz Komunitas', count: matchingBuzz.length, icon: MessageSquare },
               { id: 'user', label: 'Kritikus & Profil', count: matchingUsers.length, icon: Users },
@@ -514,7 +552,12 @@ export const SearchPage: React.FC = () => {
         {/* RESULTS CONTENT */}
         {hasQuery && (
           <div className="space-y-8">
-            {totalResults === 0 ? (
+            {totalResults === 0 && isSearchingPeople ? (
+              <div className="flex items-center justify-center gap-2 py-16 px-4 bg-[#171717] border border-slate-800 rounded-3xl shadow-xl text-sm text-slate-400">
+                <Loader2 className="w-4 h-4 animate-spin text-[#FF2E7E]" />
+                <span>Mencari...</span>
+              </div>
+            ) : totalResults === 0 ? (
               /* No Results State */
               <div className="text-center py-16 px-4 bg-[#171717] border border-slate-800 rounded-3xl shadow-xl">
                 <div className="w-16 h-16 rounded-3xl bg-slate-900 border border-slate-700 flex items-center justify-center mx-auto mb-4 text-slate-500">
@@ -602,6 +645,77 @@ export const SearchPage: React.FC = () => {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* PEOPLE (TMDB) */}
+                {activeTab === 'person' && peopleResults.length === 0 && (
+                  <div className="text-center py-10 bg-[#171717] border border-slate-800 rounded-3xl text-sm text-slate-400">
+                    {isSearchingPeople ? 'Mencari orang...' : `Tidak ada orang yang cocok dengan "${localQuery}".`}
+                  </div>
+                )}
+
+                {(activeTab === 'all' || activeTab === 'person') && peopleResults.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                      <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                        <Users className="w-5 h-5 text-[#FF2E7E]" />
+                        <span>People ({peopleResults.length})</span>
+                        {isSearchingPeople && <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />}
+                      </h2>
+                      {activeTab === 'all' && peopleResults.length > 6 && (
+                        <button
+                          onClick={() => setActiveTab('person')}
+                          className="text-xs text-[#FF2E7E] hover:underline font-bold"
+                        >
+                          Lihat Semua People ({peopleResults.length}) →
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {(activeTab === 'all' ? peopleResults.slice(0, 6) : peopleResults).map(person => {
+                        const knownForTitles = (person.known_for || [])
+                          .map(item => item.title)
+                          .filter(Boolean)
+                          .slice(0, 3);
+                        return (
+                          <a
+                            key={`person-${person.id}`}
+                            href={buildPersonPath(person.id, person.name)}
+                            onClick={e => {
+                              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                              e.preventDefault();
+                              saveToHistory(localQuery);
+                              navigateTo('person-detail', { personId: person.id, personName: person.name });
+                            }}
+                            className="group bg-[#171717] hover:bg-slate-850 border border-slate-800 hover:border-[#FF2E7E]/50 rounded-2xl p-3 sm:p-4 flex gap-3.5 cursor-pointer transition-all shadow-md hover:shadow-xl"
+                          >
+                            <div className="w-16 h-20 sm:w-20 sm:h-24 rounded-xl overflow-hidden bg-slate-950 relative ring-1 ring-white/10 shrink-0">
+                              <PersonAvatar
+                                photo={person.profile_path ? tmdbProfileThumbUrl(person.profile_path) : ''}
+                                name={person.name}
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
+                              <h3 className="font-bold text-sm sm:text-base text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-2">
+                                {person.name}
+                              </h3>
+                              {person.known_for_department && (
+                                <span className="self-start text-[10px] font-bold px-2 py-0.5 rounded bg-white/5 text-slate-300 border border-white/10">
+                                  {person.known_for_department}
+                                </span>
+                              )}
+                              {knownForTitles.length > 0 && (
+                                <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                                  {knownForTitles.join(' • ')}
+                                </p>
+                              )}
+                            </div>
+                          </a>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

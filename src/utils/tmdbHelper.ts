@@ -164,6 +164,12 @@ export const asPositiveTmdbId = (value: unknown): number | undefined => {
   return undefined;
 };
 
+/** Menghasilkan `{ id }` hanya bila id orang TMDB valid (Firestore menolak nilai undefined). */
+const personIdField = (value: unknown): { id?: number } => {
+  const id = asPositiveTmdbId(value);
+  return id !== undefined ? { id } : {};
+};
+
 /**
  * Builds the `tmdbId` portion of a film payload. Only a positive integer is
  * ever written, so undefined/0/NaN values are omitted. On edit, a missing form
@@ -378,6 +384,7 @@ export const mapTmdbDetailsToFilm = (details: any, type: 'movie' | 'tv'): Mapped
   const topCastList = (details.credits?.cast || []).slice(0, 10);
   const castDetails: CastMember[] = topCastList
     .map((c: any) => ({
+      ...personIdField(c.id),
       name: c.name || '',
       character: c.character || '',
       photo: c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : '',
@@ -424,6 +431,7 @@ export const mapTmdbDetailsToFilm = (details: any, type: 'movie' | 'tv'): Mapped
     seenCrewKeys.add(key);
 
     crewDetails.push({
+      ...personIdField(c.id),
       name: c.name,
       job: c.job || c.department || 'Crew',
       department: c.department || 'Production',
@@ -619,6 +627,7 @@ export const fetchFullTmdbCredits = async (
   const cast: CastMember[] = (data.credits.cast || [])
     .filter((c: any) => Boolean(c.name))
     .map((c: any) => ({
+      ...personIdField(c.id),
       name: c.name,
       character: c.character || 'Karakter',
       photo: c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : '',
@@ -661,6 +670,7 @@ export const fetchFullTmdbCredits = async (
     seenCrewKeys.add(key);
 
     crew.push({
+      ...personIdField(c.id),
       name: c.name,
       job: c.job || c.department || 'Crew',
       department: c.department || 'Production',
