@@ -23,6 +23,7 @@ const REST_PAGE_SIZE = 300;
 const MAX_REST_PAGES = 5;
 const REST_TIMEOUT_MS = 15000;
 const MAX_REST_ARTICLES = 50;
+const MAX_REST_FEATURED_ARTICLES = 50;
 
 /**
  * Article list projection: the fields the homepage renders, plus `slug`,
@@ -88,6 +89,32 @@ async function fetchRestPage(endpoint: string, body: unknown): Promise<any[] | n
 }
 
 /**
+ * Fetches featured articles through :runQuery. Deliberately has no orderBy so
+ * documents without publishedAtTimestamp are included and no composite index
+ * is required. Mirrors the SDK featured query in AppContext.refreshArticles().
+ */
+async function fetchFeaturedArticleDocs(endpoint: string): Promise<any[]> {
+  const results = await fetchRestPage(endpoint, {
+    structuredQuery: {
+      from: [{ collectionId: 'articles' }],
+      select: { fields: ARTICLE_LIST_FIELDS.map(fieldPath => ({ fieldPath })) },
+      where: {
+        fieldFilter: {
+          field: { fieldPath: 'featured' },
+          op: 'EQUAL',
+          value: { booleanValue: true },
+        },
+      },
+      limit: MAX_REST_FEATURED_ARTICLES,
+    },
+  });
+  if (!results) return [];
+  return results
+    .filter((entry: any) => entry && entry.document)
+    .map((entry: any) => entry.document);
+}
+
+/**
  * Fetches raw documents from the Firestore REST API through :runQuery,
  * paging with offset/limit for at most 5 pages. Documents are parsed with the
  * shared REST field parser; the document name supplies the id when the id
@@ -103,9 +130,14 @@ export async function fetchCollectionViaRest(
   // Articles ask for the newest 50 only. Firestore omits documents that lack
   // the orderBy field, so an empty/failed ordered query retries once without
   // orderBy and falls back to the legacy paging loop (mirrors the SDK path in
-  // AppContext.refreshArticles).
+  // AppContext.refreshArticles). The separate featured query runs in parallel
+  // and has no orderBy, so old featured articles are still returned.
   let orderedArticles = collection === 'articles';
   let pagesToFetch = orderedArticles ? 1 : MAX_REST_PAGES;
+  let usedLegacyArticlePaging = false;
+  const featuredDocsPromise = collection === 'articles'
+    ? fetchFeaturedArticleDocs(endpoint)
+    : Promise.resolve<any[]>([]);
 
   try {
     for (let page = 0; page < pagesToFetch; page++) {
@@ -130,6 +162,7 @@ export async function fetchCollectionViaRest(
       if (!results) {
         if (orderedArticles) {
           orderedArticles = false;
+          usedLegacyArticlePaging = true;
           pagesToFetch = MAX_REST_PAGES;
           page = -1;
           continue;
@@ -158,12 +191,41 @@ export async function fetchCollectionViaRest(
       if (orderedArticles) {
         if (pageDocs.length > 0) break;
         orderedArticles = false;
+        usedLegacyArticlePaging = true;
         pagesToFetch = MAX_REST_PAGES;
         page = -1;
         continue;
       }
 
       if (pageDocs.length < REST_PAGE_SIZE) break;
+    }
+
+    // The legacy article paging already walks the whole collection, so the
+    // featured read is redundant there. Otherwise append featured docs that
+    // fall outside the newest 50 (deduped by id).
+    if (collection === 'articles' && !usedLegacyArticlePaging) {
+      const featuredRawDocs = await featuredDocsPromise;
+      const seenIds = new Set(
+        documents
+          .map(doc => (typeof doc.id === 'string' ? doc.id : doc.id ? String(doc.id) : ''))
+          .filter(Boolean)
+      );
+
+      for (const rawDoc of featuredRawDocs) {
+        const parsed = parseFirestoreFields(rawDoc);
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) continue;
+
+        if (!parsed.id && typeof rawDoc?.name === 'string') {
+          const docId = rawDoc.name.split('/').pop();
+          if (docId) parsed.id = docId;
+        }
+
+        const id = typeof parsed.id === 'string' ? parsed.id : parsed.id ? String(parsed.id) : '';
+        if (!id || seenIds.has(id)) continue;
+
+        seenIds.add(id);
+        documents.push(parsed);
+      }
     }
   } catch {
     return [];
@@ -266,9 +328,24 @@ export function normalizeRestArticle(
       const article = normalizeRestArticleDoc(doc);
       if (article) articleMap.set(article.id, article);
     }
-    return Array.from(articleMap.values())
-      .sort((a, b) => getArticleTime(b) - getArticleTime(a))
-      .slice(0, MAX_REST_ARTICLES);
+    const sorted = Array.from(articleMap.values())
+      .sort((a, b) => getArticleTime(b) - getArticleTime(a));
+
+    if (sorted.length <= MAX_REST_ARTICLES) return sorted;
+
+    // Keep the public list capped at the newest 50, then append up to 20
+    // featured articles that fall outside that window so the homepage
+    // Featured section can still resolve old featured entries.
+    const limited = sorted.slice(0, MAX_REST_ARTICLES);
+    const seen = new Set(limited.map(article => article.id));
+    const featuredExtras: Article[] = [];
+    for (const article of sorted) {
+      if (featuredExtras.length >= MAX_REST_FEATURED_ARTICLES) break;
+      if (article.featured !== true || seen.has(article.id)) continue;
+      seen.add(article.id);
+      featuredExtras.push(article);
+    }
+    return featuredExtras.length > 0 ? [...limited, ...featuredExtras] : limited;
   }
   return normalizeRestArticleDoc(input as Record<string, any>);
 }

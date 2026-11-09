@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   FileText,
   Clock,
@@ -67,7 +67,17 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
     bulkUpdateArticles,
     bulkDeleteArticles,
     bulkReassignAuthor,
+    loadAllArticlesForCms,
+    loadMoreCmsArticles,
+    hasMoreCmsArticles,
+    isLoadingCmsArticles,
   } = useApp();
+
+  // The CMS is the only consumer allowed to page through the whole collection.
+  // Public pages keep using the capped 50-article list from AppContext.
+  useEffect(() => {
+    void loadAllArticlesForCms();
+  }, [loadAllArticlesForCms]);
 
   const isAdminView = useMemo(() => {
     if (mode === 'admin') return true;
@@ -978,6 +988,24 @@ export const CMSArticleTable: React.FC<CMSArticleTableProps> = ({ mode = 'auto' 
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Full-collection paging: only shown inside the CMS. */}
+        <div className="flex items-center justify-center gap-3 py-4 px-4 border-t border-slate-800 bg-slate-950/40">
+          {hasMoreCmsArticles ? (
+            <button
+              type="button"
+              onClick={() => void loadMoreCmsArticles()}
+              disabled={isLoadingCmsArticles}
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-60 disabled:cursor-wait text-slate-200 font-bold text-xs transition-colors cursor-pointer"
+            >
+              {isLoadingCmsArticles ? 'Memuat...' : 'Muat lebih banyak'}
+            </button>
+          ) : (
+            <span className="text-[11px] text-slate-500 font-medium">
+              Semua artikel sudah dimuat.
+            </span>
+          )}
         </div>
       </div>
 

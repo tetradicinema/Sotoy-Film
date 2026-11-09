@@ -10,6 +10,22 @@ interface FeaturedNewsCardProps {
   navigateTo: (view: any, params?: any) => void;
 }
 
+const getArticleTimestamp = (article: Article): number => {
+  if (article.publishedAtTimestamp) {
+    const t = new Date(article.publishedAtTimestamp).getTime();
+    if (!isNaN(t)) return t;
+  }
+  if (article.scheduledAt) {
+    const t = new Date(article.scheduledAt).getTime();
+    if (!isNaN(t)) return t;
+  }
+  if (article.publishedAt) {
+    const t = new Date(article.publishedAt).getTime();
+    if (!isNaN(t)) return t;
+  }
+  return 0;
+};
+
 const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo }) => {
   const author = useDynamicArticleAuthor(article.authorId, article.author);
 
@@ -98,10 +114,15 @@ const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo
 export const FeaturedNews: React.FC = () => {
   const { publishedArticles, isLoadingArticles, navigateTo } = useApp();
 
-  // Pick strictly articles flagged with featured
+  // Pick strictly articles flagged with featured, newest first, max 5.
+  // AppContext merges a dedicated featured query into the article state so
+  // older featured articles (beyond the newest 50) are available here.
   const featuredArticles = useMemo(() => {
-    const featured = publishedArticles.filter(a => a.featured === true);
-    return featured.slice(0, 5);
+    return publishedArticles
+      .filter(a => a.featured === true)
+      .slice()
+      .sort((a, b) => getArticleTimestamp(b) - getArticleTimestamp(a))
+      .slice(0, 5);
   }, [publishedArticles]);
 
   if (!isLoadingArticles && featuredArticles.length === 0) {

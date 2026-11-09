@@ -41,11 +41,11 @@ import { TERMS_VERSION } from '../utils/onboardingHelpers';
 import { normalizeFilmType } from '../utils/filmType';
 import { normalizeArticleCategory, normalizeInterestLabel, normalizeInterestProfile } from '../utils/articleCategory';
 import { getCollectionItemKey, reorderByKeys } from '../utils/collectionHelpers';
-import { useRestDataFallback } from '../hooks/useRestDataFallback';
+import { useRestDataFallback, mergeArticleCollections } from '../hooks/useRestDataFallback';
 import { readSeoLists } from '../utils/seoPrefetch';
 import type { SeoListsPayload } from '../utils/seoPrefetch';
 import { normalizeRestArticle, normalizeRestFilm } from '../utils/firestoreRestClient';
-import { shouldKeepSeoList, shouldSkipLoadingFlag } from '../lib/edge/firestoreRest';
+import { isArticlePublished, shouldKeepSeoList, shouldSkipLoadingFlag } from '../lib/edge/firestoreRest';
 import {
   DEFAULT_FALLBACK_AUTHOR,
   INITIAL_BUZZ,
@@ -296,6 +296,11 @@ interface AppContextType {
   getRatingsForUser: (userId: string) => Promise<UserRating[]>;
   refreshFilms: () => Promise<void>;
   refreshArticles: () => Promise<void>;
+  // CMS-only full-collection pagination (never called from public pages).
+  loadAllArticlesForCms: () => Promise<void>;
+  loadMoreCmsArticles: () => Promise<void>;
+  hasMoreCmsArticles: boolean;
+  isLoadingCmsArticles: boolean;
   homepageSectionsConfig: HomepageSectionsConfig | null;
   homepageConfigLoaded: boolean;
   updateHomepageSectionConfig: (sectionKey: HomepageSectionKey, config: Partial<SectionConfig>) => Promise<void>;
@@ -596,6 +601,25 @@ const buildInitialListFilms = (docs: Record<string, any>[]): FilmItem[] => {
   );
 };
 
+/** Newest-first ordering shared by the main list and the featured merge. */
+const getArticleTimestamp = (
+  article: Pick<Article, 'publishedAtTimestamp' | 'scheduledAt' | 'publishedAt'>
+): number => {
+  if (article.publishedAtTimestamp) {
+    const t = new Date(article.publishedAtTimestamp).getTime();
+    if (!isNaN(t)) return t;
+  }
+  if (article.scheduledAt) {
+    const t = new Date(article.scheduledAt).getTime();
+    if (!isNaN(t)) return t;
+  }
+  if (article.publishedAt) {
+    const t = new Date(article.publishedAt).getTime();
+    if (!isNaN(t)) return t;
+  }
+  return 0;
+};
+
 const hydrateCachedFilms = (): { films: FilmItem[]; ts: number } | null => {
   try {
     const raw = localStorage.getItem(FILMS_CACHE_KEY);
@@ -747,6 +771,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Full-body routes must never render the light REST list in editor/CMS UI.
   // Until refreshArticles() delivers full documents, those routes see an empty list.
   const [fullArticlesLoaded, setFullArticlesLoaded] = useState(false);
+  // CMS-only pagination state. The public article list stays capped at the
+  // newest 50; the CMS walks the whole collection on demand.
+  const cmsArticlesLastDocRef = useRef<QueryDocumentSnapshot | null>(null);
+  const cmsArticlesExhaustedRef = useRef(false);
+  const isFetchingCmsArticlesRef = useRef(false);
+  // Once the CMS has started paging, refreshArticles() must merge fresh data
+  // into the existing list instead of replacing it (otherwise loaded pages
+  // vanish). Public visitors never set this flag and keep replace behaviour.
+  const cmsPagingActiveRef = useRef(false);
+  const [hasMoreCmsArticles, setHasMoreCmsArticles] = useState(true);
+  const [isLoadingCmsArticles, setIsLoadingCmsArticles] = useState(false);
   // Hydrate films from localStorage cache on load so repeat visits within 10 minutes cost 0 reads
   const initialCachedFilms = useMemo(() => hydrateCachedFilms(), []);
   const [films, setFilms] = useState<FilmItem[]>(() => {
@@ -1235,12 +1270,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return fetchPromise;
   }, [initialCachedFilms]);
 
-  // Optimized fetch for articles with limit(50), ordered by publishedAtTimestamp desc
+  // Public fetch: 50 newest by publishedAtTimestamp, plus a small featured
+  // query with NO orderBy (so no composite index is needed and documents
+  // missing publishedAtTimestamp are still included).
   const refreshArticles = useCallback(async () => {
-    try {
-      if (!shouldSkipLoadingFlag(getInitialSeoLists(), 'articles')) {
-        setIsLoadingArticles(true);
-      }
+    const resetCmsArticlePagination = () => {
+      cmsArticlesLastDocRef.current = null;
+      cmsArticlesExhaustedRef.current = false;
+      setHasMoreCmsArticles(true);
+    };
+
+    const fetchMainArticles = async (): Promise<{ fetched: Article[]; keepSeo: boolean } | null> => {
       let snapshot;
       try {
         snapshot = await getDocs(query(collection(db, 'articles'), orderBy('publishedAtTimestamp', 'desc'), limit(50)));
@@ -1260,29 +1300,76 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
         }
       });
-      const getArticleTime = (art: Article): number => {
-        if (art.publishedAtTimestamp) {
-          const t = new Date(art.publishedAtTimestamp).getTime();
-          if (!isNaN(t)) return t;
-        }
-        if (art.scheduledAt) {
-          const t = new Date(art.scheduledAt).getTime();
-          if (!isNaN(t)) return t;
-        }
-        if (art.publishedAt) {
-          const t = new Date(art.publishedAt).getTime();
-          if (!isNaN(t)) return t;
-        }
-        return 0;
+      const fetched = Array.from(articleMap.values())
+        .sort((a, b) => getArticleTimestamp(b) - getArticleTimestamp(a));
+      return {
+        fetched,
+        keepSeo: shouldKeepSeoList(getInitialSeoLists(), 'articles', fetched.length),
       };
-      const fetchedArticles = Array.from(articleMap.values());
-      if (shouldKeepSeoList(getInitialSeoLists(), 'articles', fetchedArticles.length)) {
-        console.warn('[AppContext] Empty articles snapshot ignored: #seo-lists already hydrated the list.');
-        setFullArticlesLoaded(true);
-        setIsLoadingArticles(false);
-        return;
+    };
+
+    const fetchFeaturedArticles = async (): Promise<Article[]> => {
+      try {
+        const snapshot = await getDocs(query(
+          collection(db, 'articles'),
+          where('featured', '==', true),
+          limit(50)
+        ));
+        const featuredMap = new Map<string, Article>();
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data() as Article;
+          const id = data.id || docSnap.id;
+          if (!id || !isArticlePublished(data as any)) return;
+          featuredMap.set(id, {
+            ...data,
+            id,
+            category: normalizeArticleCategory(data.category) as MainCategory,
+          });
+        });
+        return Array.from(featuredMap.values())
+          .sort((a, b) => getArticleTimestamp(b) - getArticleTimestamp(a));
+      } catch (featuredErr: any) {
+        console.warn('[Firestore] Featured articles fetch notice:', featuredErr?.message || featuredErr);
+        return [];
       }
-      setArticles(fetchedArticles.sort((a, b) => getArticleTime(b) - getArticleTime(a)));
+    };
+
+    try {
+      if (!shouldSkipLoadingFlag(getInitialSeoLists(), 'articles')) {
+        setIsLoadingArticles(true);
+      }
+
+      // Both reads start together: featured must not wait on the main list.
+      const [mainResult, featuredArticles] = await Promise.all([
+        fetchMainArticles().catch((err: any) => {
+          console.warn('[Firestore] Error fetching articles from Firestore:', err?.message || err);
+          return null;
+        }),
+        fetchFeaturedArticles(),
+      ]);
+
+      if (cmsPagingActiveRef.current) {
+        // CMS pages are already in state: merge the fresh newest-50 + featured
+        // snapshot into the existing list and keep the paging cursor/flags.
+        const fresh = mainResult
+          ? mergeArticleCollections(mainResult.fetched, featuredArticles)
+          : mergeArticleCollections([], featuredArticles);
+        setArticles(prev => mergeArticleCollections(prev, fresh));
+      } else if (mainResult?.keepSeo) {
+        console.warn('[AppContext] Empty articles snapshot ignored: #seo-lists already hydrated the list.');
+        setArticles(prev => mergeArticleCollections(prev, featuredArticles));
+      } else if (mainResult) {
+        // Replace the public list with the newest 50, then merge featured
+        // documents by id so old featured entries stay resolvable.
+        setArticles(mergeArticleCollections(mainResult.fetched, featuredArticles));
+      } else {
+        setArticles(prev => mergeArticleCollections(prev, featuredArticles));
+      }
+
+      if (!cmsPagingActiveRef.current) {
+        // CMS paging never started (public visitors): keep the previous reset.
+        resetCmsArticlePagination();
+      }
       setFullArticlesLoaded(true);
       setIsLoadingArticles(false);
     } catch (err: any) {
@@ -1290,10 +1377,81 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setArticles(prev => prev);
       // Unblock body routes with whatever state already exists, matching the
       // pre-Batch-2 behaviour when the full refresh fails.
+      if (!cmsPagingActiveRef.current) {
+        resetCmsArticlePagination();
+      }
       setFullArticlesLoaded(true);
       setIsLoadingArticles(false);
     }
   }, []);
+
+  // CMS-only pagination over the entire articles collection. orderBy(documentId())
+  // includes documents without publishedAtTimestamp and needs no composite index.
+  const fetchCmsArticlePage = useCallback(async (reset: boolean): Promise<void> => {
+    if (isFetchingCmsArticlesRef.current) return;
+    isFetchingCmsArticlesRef.current = true;
+    cmsPagingActiveRef.current = true;
+    setIsLoadingCmsArticles(true);
+
+    try {
+      if (reset) {
+        cmsArticlesLastDocRef.current = null;
+        cmsArticlesExhaustedRef.current = false;
+        setHasMoreCmsArticles(true);
+      } else if (cmsArticlesExhaustedRef.current) {
+        return;
+      }
+
+      const constraints: any[] = [orderBy(documentId()), limit(50)];
+      if (cmsArticlesLastDocRef.current) {
+        constraints.push(startAfter(cmsArticlesLastDocRef.current));
+      }
+
+      const snapshot = await getDocs(query(collection(db, 'articles'), ...constraints));
+      if (snapshot.empty) {
+        cmsArticlesExhaustedRef.current = true;
+        setHasMoreCmsArticles(false);
+        return;
+      }
+
+      const pageMap = new Map<string, Article>();
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data() as Article;
+        const id = data.id || docSnap.id;
+        if (id) {
+          pageMap.set(id, {
+            ...data,
+            id,
+            category: normalizeArticleCategory(data.category) as MainCategory,
+          });
+        }
+      });
+
+      cmsArticlesLastDocRef.current = snapshot.docs[snapshot.docs.length - 1];
+      const hasMore = snapshot.docs.length >= 50;
+      cmsArticlesExhaustedRef.current = !hasMore;
+      setHasMoreCmsArticles(hasMore);
+
+      if (pageMap.size > 0) {
+        setArticles(prev => mergeArticleCollections(prev, Array.from(pageMap.values())));
+      }
+    } catch (err: any) {
+      console.warn('[Firestore] CMS article page fetch notice:', err?.message || err);
+    } finally {
+      isFetchingCmsArticlesRef.current = false;
+      setIsLoadingCmsArticles(false);
+    }
+  }, []);
+
+  const loadAllArticlesForCms = useCallback(
+    () => fetchCmsArticlePage(true),
+    [fetchCmsArticlePage]
+  );
+
+  const loadMoreCmsArticles = useCallback(
+    () => fetchCmsArticlePage(false),
+    [fetchCmsArticlePage]
+  );
 
   // In-memory ratings caches for film and user on-demand lookups
   const filmRatingsCache = useRef<Map<string, UserRating[]>>(new Map());
@@ -4981,6 +5139,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.log('[Article] Updating document:', id, sanitizedUpdates);
       await updateDoc(doc(db, 'articles', id), sanitizedUpdates);
       if (!options?.silent) {
+        setArticles(prev => prev.map(a => a.id === id ? { ...a, ...updatesToSave } : a));
         refreshArticles();
         const toastMsg = updatedFields.status === 'draft'
           ? 'Draf artikel berhasil disimpan!'
@@ -5028,6 +5187,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     try {
       await deleteDoc(doc(db, 'articles', id));
+      // Remove immediately: CMS mode merges refresh results, so a deleted doc
+      // would otherwise survive in the accumulated list.
+      setArticles(prev => prev.filter(a => a.id !== id));
       refreshArticles();
       showToast('Artikel berhasil dihapus.', 'success');
     } catch (error: any) {
@@ -7014,6 +7176,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         getRatingsForUser,
         refreshFilms,
         refreshArticles,
+        loadAllArticlesForCms,
+        loadMoreCmsArticles,
+        hasMoreCmsArticles,
+        isLoadingCmsArticles,
         homepageSectionsConfig,
         homepageConfigLoaded,
         updateHomepageSectionConfig,
