@@ -1,0 +1,77 @@
+name: TMDB Daily Import
+
+on:
+  schedule:
+    # 21:00 UTC = 04:00 WIB, one hour before the 05:00 WIB tmdb-sync
+    - cron: '0 21 * * *'
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Write new films to Firestore'
+        type: boolean
+        default: false
+      force:
+        description: 'Bypass the safety guard'
+        type: boolean
+        default: false
+      limit:
+        description: 'Max new titles (empty = default of 50)'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+# Same group as tmdb-sync.yml so the import and the sync never run at the same time.
+concurrency:
+  group: tmdb-sync
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Write service account key
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
+
+      - name: Run TMDB import
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_APPLY: ${{ github.event.inputs.apply }}
+          INPUT_FORCE: ${{ github.event.inputs.force }}
+          INPUT_LIMIT: ${{ github.event.inputs.limit }}
+          CRON_APPLY: ${{ vars.TMDB_IMPORT_APPLY }}
+        run: |
+          ARGS=()
+          if [[ "$EVENT_NAME" == "schedule" && "$CRON_APPLY" == "true" ]] || [[ "$EVENT_NAME" == "workflow_dispatch" && "$INPUT_APPLY" == "true" ]]; then
+            ARGS+=(--apply)
+          fi
+          if [[ "$INPUT_FORCE" == "true" ]]; then
+            ARGS+=(--force)
+          fi
+          if [[ -n "$INPUT_LIMIT" ]]; then
+            ARGS+=(--limit "$INPUT_LIMIT")
+          fi
+          npx tsx scripts/import-tmdb-daily.ts "${ARGS[@]}"
+
+      - name: Delete service account key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"
