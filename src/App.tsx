@@ -63,6 +63,9 @@ const FilmDetailPage = React.lazy(() =>
 const PersonPage = React.lazy(() =>
   import('./components/Pages/PersonPage').then(m => ({ default: m.PersonPage }))
 );
+const PeoplePage = React.lazy(() =>
+  import('./components/Pages/PeoplePage').then(m => ({ default: m.PeoplePage }))
+);
 const FilmSeasonsPage = React.lazy(() =>
   import('./components/Pages/FilmSeasonsPage').then(m => ({ default: m.FilmSeasonsPage }))
 );
@@ -463,6 +466,7 @@ const AppContent: React.FC = () => {
             <Route path="/film/:slug/season/:seasonNumber" element={<FilmSeasonPage />} />
             <Route path="/film/:slug" element={<FilmDetailPage />} />
             <Route path="/person/:idSlug" element={<PersonPage />} />
+            <Route path="/people" element={<PeoplePage />} />
             <Route path="/film-database" element={<FilmDatabasePage />} />
             <Route path="/rekomendasi-film" element={<FilmRecommendationsPage />} />
             <Route path="/film-recommendations" element={<FilmRecommendationsPage />} />
