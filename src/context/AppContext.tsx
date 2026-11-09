@@ -39,6 +39,7 @@ import { setCachedHomepageLayout, clearCachedHomepageLayout } from '../utils/hom
 import { validateProfileLinks, sanitizeStoredLinks } from '../utils/profileLinks';
 import { TERMS_VERSION } from '../utils/onboardingHelpers';
 import { normalizeFilmType } from '../utils/filmType';
+import { buildPersonPath } from '../utils/personHelpers';
 import { normalizeArticleCategory, normalizeInterestLabel, normalizeInterestProfile } from '../utils/articleCategory';
 import { getCollectionItemKey, reorderByKeys } from '../utils/collectionHelpers';
 import { useRestDataFallback, mergeArticleCollections } from '../hooks/useRestDataFallback';
@@ -234,6 +235,7 @@ export type AppView =
   | 'film-detail'
   | 'film-seasons'
   | 'film-season'
+  | 'person-detail'
   | 'film-recommendations'
   | 'community-feed'
   | 'buzz-detail'
@@ -381,6 +383,8 @@ interface AppContextType {
       userTab?: UserTab;
       settingsTab?: SettingsSubPage;
       userId?: string;
+      personId?: number;
+      personName?: string;
       buzzFeedTab?: 'for-you' | 'following' | 'saved' | 'liked' | 'trending';
       searchQuery?: string;
       collectionId?: string;
@@ -1049,6 +1053,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const foundFilm = films.find(f => (f.slug && f.slug === slug) || slugify(f.title) === slug || f.id === slug);
         if (foundFilm) setSelectedFilmId(foundFilm.id);
       }
+    } else if (path.startsWith('/person/')) {
+      setCurrentView('person-detail');
     } else if (path.startsWith('/artikel/') || path.startsWith('/article/')) {
       const slug = decodeURIComponent(path.replace(/^\/(artikel|article)\//, ''));
       setCurrentView('article-detail');
@@ -4854,6 +4860,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       userTab?: UserTab;
       settingsTab?: SettingsSubPage;
       userId?: string;
+      personId?: number;
+      personName?: string;
       buzzFeedTab?: 'for-you' | 'following' | 'saved' | 'liked' | 'trending';
       searchQuery?: string;
       collectionId?: string;
@@ -4914,6 +4922,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const targetFilm = films.find(f => f.id === targetFilmId);
         const slug = targetFilm?.slug || (targetFilm?.title ? slugify(targetFilm.title) : targetFilmId);
         targetPath = slug ? `/film/${encodeURIComponent(slug)}` : '/film-database';
+        break;
+      }
+      case 'person-detail': {
+        const personId = options?.personId;
+        targetPath = personId
+          ? buildPersonPath(personId, options?.personName || '')
+          : '/';
         break;
       }
       case 'article-detail': {

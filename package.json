@@ -28,6 +28,7 @@
     "test:tmdb-id": "node --import tsx scripts/test-tmdb-id-match.ts",
     "test:tmdb-media": "node --import tsx scripts/test-tmdb-media.ts",
     "test:tmdb-person": "node --import tsx scripts/test-tmdb-person.ts",
+    "test:person-helpers": "node --import tsx scripts/test-person-helpers.ts",
     "test:tmdb-seasons": "node --import tsx scripts/test-tmdb-seasons.ts",
     "test:tmdb-duplicates": "node --import tsx scripts/test-tmdb-duplicates.ts",
     "test:related-films": "node --import tsx scripts/test-related-films.ts",
