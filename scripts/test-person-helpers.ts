@@ -141,8 +141,8 @@ const actingPick = pickKnownFor(
 );
 assertEquals(
   titles(actingPick),
-  ['High Popular Cast', 'Shared Cast', 'Low Popular Cast', 'High Popular Crew'],
-  '28. Acting prefers cast, sorts by popularity, then fills from crew'
+  ['Shared Cast', 'Low Popular Cast', 'High Popular Cast', 'High Popular Crew'],
+  '28. Acting prefers cast, sorts by vote count then popularity, then fills from crew'
 );
 
 const directingPick = pickKnownFor(
@@ -161,7 +161,7 @@ assertEquals(
     'Acting',
     1
   ).map(item => item.id),
-  [2],
+  [1],
   '30. respects the max limit'
 );
 assertEquals(pickKnownFor({ cast: [], crew: [] }, 'Acting'), [], '31. returns [] for empty credits');
@@ -177,6 +177,20 @@ const dedupePick = pickKnownFor(
   8
 );
 assertEquals(titles(dedupePick), ['Duplicate Cast'], '34. dedupes by media_type:id');
+
+const selfPick = pickKnownFor(
+  {
+    cast: [
+      credit({ id: 50, title: 'Talk Show', media_type: 'tv', character: 'Self', popularity: 200, vote_count: 900 }),
+      credit({ id: 51, title: 'Real Movie', character: 'Detective', popularity: 5, vote_count: 3000 }),
+      credit({ id: 52, title: 'Old Clip', character: 'Himself (archive footage)', popularity: 300, vote_count: 10 }),
+    ],
+    crew: [],
+  },
+  'Acting',
+  2
+);
+assertEquals(titles(selfPick), ['Real Movie', 'Talk Show'], '34b. real roles first, Self/archive only fill leftover slots');
 
 // --- groupCreditsByYear ---
 console.log('\ngroupCreditsByYear:');

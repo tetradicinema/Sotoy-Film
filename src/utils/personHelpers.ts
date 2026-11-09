@@ -185,10 +185,23 @@ export const calcAge = (
   return age >= 0 ? age : null;
 };
 
+// Peran yang bukan akting sungguhan (tampil sebagai diri sendiri, arsip, tanpa kredit).
+const NON_NOTABLE_ROLE = /\b(self|himself|herself|themselves|archive|archive footage|uncredited)\b/i;
+
+const isNotableCredit = (credit: TmdbPersonCredit): boolean =>
+  !NON_NOTABLE_ROLE.test(normalizeText(credit?.character));
+
+const compareForKnownFor = (a: TmdbPersonCredit, b: TmdbPersonCredit): number =>
+  voteCount(b) - voteCount(a) ||
+  popularityScore(b) - popularityScore(a) ||
+  normalizeText(a?.title).localeCompare(normalizeText(b?.title));
+
 /**
- * Top "known for" credits, preferring the person's own department
- * (cast for Acting, crew for every other department) and filling the
- * remaining slots from the other list. Deduped by `media_type:id`.
+ * Top "known for" credits. Prefers the person's own department (cast for
+ * Acting, crew for every other department), then the other list. Real roles
+ * come first; "Self", archive footage and uncredited credits only fill
+ * leftover slots. Sorted by vote count, then popularity. Deduped by
+ * `media_type:id`.
  */
 export const pickKnownFor = (
   credits: PersonCredits | null | undefined,
@@ -212,10 +225,18 @@ export const pickKnownFor = (
   const seen = new Set<string>();
   const picked: TmdbPersonCredit[] = [];
 
-  for (const list of [preferredList, secondaryList]) {
-    const sorted = [...list].sort(compareByPopularity);
+  const passes: Array<{ list: TmdbPersonCredit[]; notable: boolean }> = [
+    { list: preferredList, notable: true },
+    { list: secondaryList, notable: true },
+    { list: preferredList, notable: false },
+    { list: secondaryList, notable: false },
+  ];
+
+  for (const { list, notable } of passes) {
+    const sorted = [...list].sort(compareForKnownFor);
     for (const credit of sorted) {
       if (!credit || typeof credit !== 'object') continue;
+      if (notable && !isNotableCredit(credit)) continue;
       const key = creditKey(credit);
       if (seen.has(key)) continue;
       seen.add(key);
