@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { X, Search, Users, Film, Clapperboard, Award, Sparkles, Filter } from 'lucide-react';
 import { CastMember, CrewMember } from '../../types';
 import { PersonAvatar } from '../Common/PersonAvatar';
+import { buildPersonPath } from '../../utils/personHelpers';
 
 interface FullCastCrewModalProps {
   isOpen: boolean;
@@ -15,6 +17,14 @@ interface FullCastCrewModalProps {
 }
 
 type TabType = 'all' | 'cast' | 'crew';
+
+// Returns the person page path when the member has a valid TMDB person id,
+// otherwise null (the card then stays a plain, non-clickable block).
+const personLink = (member: { name: string }): string | null => {
+  const id = Number((member as { id?: number }).id);
+  if (!Number.isSafeInteger(id) || id <= 0) return null;
+  return buildPersonPath(id, member.name);
+};
 
 export const FullCastCrewModal: React.FC<FullCastCrewModalProps> = ({
   isOpen,
@@ -267,24 +277,35 @@ export const FullCastCrewModal: React.FC<FullCastCrewModalProps> = ({
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
-                    {filteredCast.map((actor, idx) => (
-                      <div
-                        key={`cast-${idx}`}
-                        className="group bg-slate-900/80 border border-slate-800 hover:border-[#FF2E7E]/60 hover:shadow-[0_0_15px_rgba(0,240,255,0.12)] hover:scale-[1.02] rounded-2xl overflow-hidden transition-all duration-300 flex flex-col"
-                      >
-                        <div className="aspect-[3/4] w-full overflow-hidden bg-slate-950 relative">
-                          <PersonAvatar photo={actor.photo} name={actor.name} />
+                    {filteredCast.map((actor, idx) => {
+                      const to = personLink(actor);
+                      const cardClass =
+                        'group bg-slate-900/80 border border-slate-800 hover:border-[#FF2E7E]/60 hover:shadow-[0_0_15px_rgba(0,240,255,0.12)] hover:scale-[1.02] rounded-2xl overflow-hidden transition-all duration-300 flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF2E7E]';
+                      const content = (
+                        <>
+                          <div className="aspect-[3/4] w-full overflow-hidden bg-slate-950 relative">
+                            <PersonAvatar photo={actor.photo} name={actor.name} />
+                          </div>
+                          <div className="p-3">
+                            <h4 className="font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors truncate">
+                              {actor.name}
+                            </h4>
+                            <p className="text-[11px] text-[#FF2E7E]/90 font-medium truncate mt-0.5">
+                              {actor.character ? `sebagai ${actor.character}` : 'Pemeran'}
+                            </p>
+                          </div>
+                        </>
+                      );
+                      return to ? (
+                        <Link key={`cast-${idx}`} to={to} onClick={onClose} className={cardClass}>
+                          {content}
+                        </Link>
+                      ) : (
+                        <div key={`cast-${idx}`} className={cardClass}>
+                          {content}
                         </div>
-                        <div className="p-3">
-                          <h4 className="font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors truncate">
-                            {actor.name}
-                          </h4>
-                          <p className="text-[11px] text-[#FF2E7E]/90 font-medium truncate mt-0.5">
-                            {actor.character ? `sebagai ${actor.character}` : 'Pemeran'}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -303,29 +324,40 @@ export const FullCastCrewModal: React.FC<FullCastCrewModalProps> = ({
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
-                    {filteredCrew.map((crew, idx) => (
-                      <div
-                        key={`crew-${idx}`}
-                        className="group bg-slate-900/80 border border-slate-800 hover:border-[#FF2E7E]/60 hover:shadow-[0_0_15px_rgba(255,208,0,0.12)] hover:scale-[1.02] rounded-2xl overflow-hidden transition-all duration-300 flex flex-col"
-                      >
-                        <div className="aspect-[3/4] w-full overflow-hidden bg-slate-950 relative">
-                          <PersonAvatar photo={crew.photo} name={crew.name} />
-                          {crew.department && (
-                            <span className="absolute top-2 right-2 bg-black/70 border border-white/10 text-[9px] font-bold text-slate-300 px-1.5 py-0.5 rounded backdrop-blur">
-                              {crew.department}
-                            </span>
-                          )}
+                    {filteredCrew.map((crew, idx) => {
+                      const to = personLink(crew);
+                      const cardClass =
+                        'group bg-slate-900/80 border border-slate-800 hover:border-[#FF2E7E]/60 hover:shadow-[0_0_15px_rgba(255,208,0,0.12)] hover:scale-[1.02] rounded-2xl overflow-hidden transition-all duration-300 flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF2E7E]';
+                      const content = (
+                        <>
+                          <div className="aspect-[3/4] w-full overflow-hidden bg-slate-950 relative">
+                            <PersonAvatar photo={crew.photo} name={crew.name} />
+                            {crew.department && (
+                              <span className="absolute top-2 right-2 bg-black/70 border border-white/10 text-[9px] font-bold text-slate-300 px-1.5 py-0.5 rounded backdrop-blur">
+                                {crew.department}
+                              </span>
+                            )}
+                          </div>
+                          <div className="p-3">
+                            <h4 className="font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors truncate">
+                              {crew.name}
+                            </h4>
+                            <p className="text-[11px] text-[#FF2E7E] font-semibold truncate mt-0.5">
+                              {crew.job}
+                            </p>
+                          </div>
+                        </>
+                      );
+                      return to ? (
+                        <Link key={`crew-${idx}`} to={to} onClick={onClose} className={cardClass}>
+                          {content}
+                        </Link>
+                      ) : (
+                        <div key={`crew-${idx}`} className={cardClass}>
+                          {content}
                         </div>
-                        <div className="p-3">
-                          <h4 className="font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors truncate">
-                            {crew.name}
-                          </h4>
-                          <p className="text-[11px] text-[#FF2E7E] font-semibold truncate mt-0.5">
-                            {crew.job}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
