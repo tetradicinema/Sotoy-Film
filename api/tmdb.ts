@@ -6,6 +6,10 @@ import {
 } from '../src/utils/tmdbServerFetch.js';
 import { trimTmdbMedia } from '../src/utils/tmdbMediaTrim.js';
 import {
+  trimTmdbPersonSearch,
+  trimTmdbPersonDetails,
+} from '../src/utils/tmdbPersonTrim.js';
+import {
   trimTmdbSeasons,
   trimTmdbSeason,
   trimTmdbEpisodeImages,
@@ -450,6 +454,103 @@ export async function handleTmdbRequest(req: any, res: any) {
       return res.status(200).json(results);
     }
 
+    if (action === 'person_search') {
+      if (!query.trim()) {
+        return res.status(400).json({ error: 'Parameter "query" is required for person_search action.' });
+      }
+
+      const tmdbUrl = new URL('https://api.themoviedb.org/3/search/person');
+      if (!isBearer) {
+        tmdbUrl.searchParams.set('api_key', apiKey);
+      }
+      tmdbUrl.searchParams.set('query', query.trim());
+      tmdbUrl.searchParams.set('include_adult', 'false');
+      tmdbUrl.searchParams.set('language', 'en-US');
+      tmdbUrl.searchParams.set('page', String(pageNumber));
+
+      const response = await fetch(tmdbUrl.toString(), {
+        method: 'GET',
+        headers: authHeaders,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return res.status(response.status).json({
+          error: data.status_message || `TMDB API error (${response.status})`,
+          code: 'TMDB_API_ERROR'
+        });
+      }
+
+      res.setHeader?.('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+      return res.status(200).json(trimTmdbPersonSearch(data));
+    }
+
+    if (action === 'person_details') {
+      if (!/^\d+$/.test(id) || Number(id) <= 0) {
+        return res.status(400).json({
+          error: 'Valid numerical parameter "id" is required for person_details action.'
+        });
+      }
+
+      const tmdbUrl = new URL(`https://api.themoviedb.org/3/person/${id}`);
+      if (!isBearer) {
+        tmdbUrl.searchParams.set('api_key', apiKey);
+      }
+      tmdbUrl.searchParams.set('append_to_response', 'combined_credits,external_ids,images');
+      tmdbUrl.searchParams.set('language', 'en-US');
+
+      const response = await fetch(tmdbUrl.toString(), {
+        method: 'GET',
+        headers: authHeaders,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return res.status(response.status).json({
+          error: data.status_message || `TMDB API error (${response.status})`,
+          code: 'TMDB_API_ERROR'
+        });
+      }
+
+      res.setHeader?.('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800');
+      return res.status(200).json(trimTmdbPersonDetails(data));
+    }
+
+    if (action === 'person_list') {
+      if (list.toLowerCase().trim() !== 'popular') {
+        return res.status(400).json({
+          error: 'Invalid list parameter. Supported lists: "popular".'
+        });
+      }
+
+      const tmdbUrl = new URL('https://api.themoviedb.org/3/person/popular');
+      if (!isBearer) {
+        tmdbUrl.searchParams.set('api_key', apiKey);
+      }
+      tmdbUrl.searchParams.set('include_adult', 'false');
+      tmdbUrl.searchParams.set('language', 'en-US');
+      tmdbUrl.searchParams.set('page', String(pageNumber));
+
+      const response = await fetch(tmdbUrl.toString(), {
+        method: 'GET',
+        headers: authHeaders,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return res.status(response.status).json({
+          error: data.status_message || `TMDB API error (${response.status})`,
+          code: 'TMDB_API_ERROR'
+        });
+      }
+
+      res.setHeader?.('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800');
+      return res.status(200).json(trimTmdbPersonSearch(data));
+    }
+
     if (action === 'sync') {
       if (!/^\d+$/.test(id) || Number(id) <= 0) {
         return res.status(400).json({
@@ -487,7 +588,7 @@ export async function handleTmdbRequest(req: any, res: any) {
     }
 
     return res.status(400).json({
-      error: 'Invalid action. Supported actions: "search", "details", "media", "collection", "list", "sync", "now_playing_ids", "seasons", "season", or "episode_images".'
+      error: 'Invalid action. Supported actions: "search", "details", "media", "collection", "list", "person_search", "person_details", "person_list", "sync", "now_playing_ids", "seasons", "season", or "episode_images".'
     });
   } catch (err: any) {
     console.error('TMDB Proxy Server Error:', err);

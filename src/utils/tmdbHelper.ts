@@ -5,6 +5,13 @@ import { mapTmdbOriginCountry } from './tmdbCountry';
 import { tmdbMediaType, normalizeTitle } from './tmdbSync';
 import type { TmdbMediaData } from './tmdbMediaTrim';
 import type { TmdbSeasonData, TmdbSeasonsData, TmdbEpisodeImagesData } from './tmdbSeasonsTrim';
+import type {
+  TmdbPersonCredit,
+  TmdbPersonDetails,
+  TmdbPersonSearchItem,
+} from './tmdbPersonTrim';
+
+export type { TmdbPersonCredit, TmdbPersonDetails, TmdbPersonSearchItem };
 
 export interface MappedTmdbFilm {
   title: string;
@@ -1063,4 +1070,75 @@ export function findTmdbDuplicateGroups(films: readonly FilmItem[] | undefined |
   // Sort groups by tmdbId
   return duplicateGroups.sort((a, b) => a.tmdbId - b.tmdbId);
 }
+
+// ---------------------------------------------------------------------------
+// People (search, details, popular)
+// ---------------------------------------------------------------------------
+
+const asTmdbPersonPage = (page: number | string): number => {
+  const parsed = typeof page === 'number' ? page : parseInt(String(page), 10);
+  const safe = Number.isFinite(parsed) ? Math.trunc(parsed) : 1;
+  return Math.max(1, Math.min(500, safe || 1));
+};
+
+const fetchTmdbPeopleList = async (url: string): Promise<TmdbPersonSearchItem[]> => {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+    return data as TmdbPersonSearchItem[];
+  } catch (err) {
+    console.warn('[tmdbHelper] Fetch TMDB people error:', err);
+    return [];
+  }
+};
+
+/**
+ * Searches TMDB for people matching `query`. Any failure resolves to `[]`
+ * without throwing.
+ */
+export const searchTmdbPeople = async (
+  query: string,
+  page: number = 1
+): Promise<TmdbPersonSearchItem[]> => {
+  if (!query || !query.trim()) return [];
+  return fetchTmdbPeopleList(
+    `/api/tmdb?action=person_search&query=${encodeURIComponent(query.trim())}&page=${asTmdbPersonPage(page)}`
+  );
+};
+
+/**
+ * Fetches a trimmed TMDB person profile. Invalid ids and request failures
+ * resolve to `null` without throwing.
+ */
+export const getTmdbPerson = async (
+  id: number | string
+): Promise<TmdbPersonDetails | null> => {
+  const rawId = String(id ?? '').trim();
+  if (!/^\d+$/.test(rawId) || Number(rawId) <= 0) return null;
+
+  try {
+    const res = await fetch(`/api/tmdb?action=person_details&id=${encodeURIComponent(rawId)}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data || typeof data !== 'object' || typeof data.id !== 'number') return null;
+    return data as TmdbPersonDetails;
+  } catch (err) {
+    console.warn('[tmdbHelper] Fetch TMDB person error:', err);
+    return null;
+  }
+};
+
+/**
+ * Fetches TMDB's popular people list. Any failure resolves to `[]` without
+ * throwing.
+ */
+export const getTmdbPopularPeople = async (
+  page: number = 1
+): Promise<TmdbPersonSearchItem[]> => {
+  return fetchTmdbPeopleList(
+    `/api/tmdb?action=person_list&list=popular&page=${asTmdbPersonPage(page)}`
+  );
+};
 

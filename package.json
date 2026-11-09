@@ -27,6 +27,7 @@
     "test:tmdb-cron": "node --import tsx scripts/test-tmdb-cron.ts",
     "test:tmdb-id": "node --import tsx scripts/test-tmdb-id-match.ts",
     "test:tmdb-media": "node --import tsx scripts/test-tmdb-media.ts",
+    "test:tmdb-person": "node --import tsx scripts/test-tmdb-person.ts",
     "test:tmdb-seasons": "node --import tsx scripts/test-tmdb-seasons.ts",
     "test:tmdb-duplicates": "node --import tsx scripts/test-tmdb-duplicates.ts",
     "test:related-films": "node --import tsx scripts/test-related-films.ts",
