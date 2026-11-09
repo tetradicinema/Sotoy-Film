@@ -3,8 +3,7 @@ import {
   initializeAuth, 
   indexedDBLocalPersistence, 
   browserLocalPersistence, 
-  browserSessionPersistence,
-  browserPopupRedirectResolver
+  browserSessionPersistence
 } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
@@ -31,7 +30,6 @@ export const db = firebaseConfig.firestoreDatabaseId
   : getFirestore(app); /* CRITICAL: The app will break without this line */
 export const auth = initializeAuth(app, {
   persistence: [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence],
-  popupRedirectResolver: browserPopupRedirectResolver,
 });
 export const storage = getStorage(app);
 
@@ -94,4 +92,6 @@ async function testConnection() {
     }
   }
 }
-testConnection();
+if (import.meta.env.DEV) {
+  testConnection();
+}

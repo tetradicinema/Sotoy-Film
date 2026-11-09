@@ -4184,19 +4184,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Redirect sign-in is only needed for the iOS standalone PWA flow. Everywhere
+  // else, skip getRedirectResult so the firebaseapp.com auth iframe is not
+  // requested on normal page loads.
+  const AUTH_REDIRECT_PENDING_KEY = 'sotoy_auth_redirect_pending';
+
+  const hasAuthRedirectPending = (): boolean => {
+    try {
+      return (
+        window.sessionStorage.getItem(AUTH_REDIRECT_PENDING_KEY) === '1' ||
+        window.localStorage.getItem(AUTH_REDIRECT_PENDING_KEY) === '1'
+      );
+    } catch {
+      return false;
+    }
+  };
+
+  const setAuthRedirectPending = (pending: boolean) => {
+    try {
+      if (pending) {
+        window.sessionStorage.setItem(AUTH_REDIRECT_PENDING_KEY, '1');
+        window.localStorage.setItem(AUTH_REDIRECT_PENDING_KEY, '1');
+      } else {
+        window.sessionStorage.removeItem(AUTH_REDIRECT_PENDING_KEY);
+        window.localStorage.removeItem(AUTH_REDIRECT_PENDING_KEY);
+      }
+    } catch {
+      // Storage can be unavailable (private mode / disabled); ignore.
+    }
+  };
+
   // Check for redirect sign-in result on mount (for iOS standalone PWA)
   useEffect(() => {
+    const isIosStandalone =
+      'standalone' in window.navigator && (window.navigator as any).standalone === true;
+    if (!isIosStandalone && !hasAuthRedirectPending()) return;
+
     getRedirectResult(auth, browserPopupRedirectResolver)
       .then(async (result) => {
         if (result?.user) {
           console.log('[Auth] getRedirectResult returned authenticated user:', result.user.uid);
           await handleGoogleUserAuth(result.user);
-        } else {
-          console.warn('[Auth] getRedirectResult returned null — check persistence config');
         }
       })
       .catch((err) => {
         console.error('[Auth] Redirect sign-in result error:', err);
+      })
+      .finally(() => {
+        setAuthRedirectPending(false);
       });
   }, []);
 
@@ -4208,6 +4243,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const isIosStandalone = ('standalone' in window.navigator) && (window.navigator as any).standalone === true;
       if (isIosStandalone) {
+        setAuthRedirectPending(true);
         await signInWithRedirect(auth, provider, browserPopupRedirectResolver);
         return true;
       }
