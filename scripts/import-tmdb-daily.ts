@@ -37,10 +37,12 @@ import {
   IMPORT_CONFIG,
   backlogPage,
   buildImportFilm,
+  findCatalogDuplicate,
   importDocId,
   parseImportCliArgs,
   pickCandidates,
   recentWindow,
+  releaseYear,
   type ImportMediaType,
   type ImportSource,
 } from '../src/utils/tmdbImport';
@@ -269,6 +271,7 @@ async function main(): Promise<void> {
   const skipped: string[] = [];
   const errors: string[] = [];
   let attempts = 0;
+  let alreadyAfterDetails = 0;
 
   for (const candidate of picked.candidates) {
     if (rows.length >= options.limit) break;
@@ -279,6 +282,24 @@ async function main(): Promise<void> {
         append_to_response: 'credits,videos',
         language: 'en-US',
       });
+
+      // Second duplicate check with the exact title and year from the detail response.
+      const duplicate = findCatalogDuplicate(films, {
+        tmdbId: candidate.id,
+        mediaType: candidate.mediaType,
+        titles: [
+          details?.title || details?.name,
+          details?.original_title || details?.original_name,
+        ],
+        year: releaseYear(details?.release_date || details?.first_air_date),
+      });
+      if (duplicate) {
+        alreadyAfterDetails++;
+        skipped.push(`${candidate.title || `#${candidate.id}`}: sudah ada di katalog ("${duplicate.title}")`);
+        await delay(REQUEST_DELAY_MS);
+        continue;
+      }
+
       const built = buildImportFilm(details, candidate.mediaType, takenSlugs, now);
 
       if (built.ok) {
@@ -305,7 +326,8 @@ async function main(): Promise<void> {
   console.log('=====================================================');
   console.log(`Detail requests:                 ${attempts}`);
   console.log(`Titles to import:                ${rows.length}`);
-  console.log(`Skipped (poster/sinopsis dll):   ${skipped.length}`);
+  console.log(`Skipped (total):                 ${skipped.length}`);
+  console.log(`  of which already in catalog:   ${alreadyAfterDetails}`);
   console.log(`TMDB errors:                     ${errors.length}`);
 
   if (rows.length > 0) {

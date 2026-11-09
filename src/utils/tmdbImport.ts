@@ -15,6 +15,7 @@
 
 import type { FilmItem } from '../types';
 import { findExistingFilmByTmdb, mapTmdbDetailsToFilm } from './tmdbHelper';
+import { normalizeTitle } from './tmdbSync';
 import { slugify } from './slugify';
 
 export type ImportMediaType = 'movie' | 'tv';
@@ -87,6 +88,10 @@ export interface TmdbListItem {
   vote_count?: number;
   popularity?: number;
   genre_ids?: number[];
+  original_title?: string;
+  original_name?: string;
+  release_date?: string;
+  first_air_date?: string;
 }
 
 export interface ImportSource {
@@ -119,6 +124,60 @@ export function isQualityListItem(item: TmdbListItem): boolean {
   const votes = Number(item.vote_count) || 0;
   const popularity = Number(item.popularity) || 0;
   return votes >= IMPORT_CONFIG.minVoteCount || popularity >= IMPORT_CONFIG.minPopularity;
+}
+
+/** Four-digit year from an ISO date (or any string starting with a year). */
+export function releaseYear(value: unknown): number | undefined {
+  const year = parseInt(String(value ?? '').slice(0, 4), 10);
+  return Number.isInteger(year) && year > 0 ? year : undefined;
+}
+
+export interface CatalogProbe {
+  tmdbId: number;
+  mediaType: ImportMediaType;
+  /** Title and original title of the candidate (empty values are ignored). */
+  titles: Array<string | undefined>;
+  year?: number;
+}
+
+/**
+ * Strict "is this already in the catalog?" check. A title counts as present when:
+ * 1. the same TMDB id and media type exist (`findExistingFilmByTmdb`), or
+ * 2. the same TMDB id exists under another type AND the titles match
+ *    (covers animation, whose type does not say movie or tv), or
+ * 3. a catalog film WITHOUT a tmdbId has the same title (or original title)
+ *    and the same year, whatever its type.
+ */
+export function findCatalogDuplicate(
+  films: readonly FilmItem[],
+  probe: CatalogProbe
+): FilmItem | null {
+  const wanted = new Set(
+    probe.titles
+      .map(title => normalizeTitle(String(title ?? '')))
+      .filter(title => title.length > 0)
+  );
+  const sameTitle = (film: FilmItem): boolean =>
+    [film.title, film.originalTitle].some(
+      title => Boolean(title) && wanted.has(normalizeTitle(String(title)))
+    );
+
+  const viaHelper = findExistingFilmByTmdb(films, probe.tmdbId, probe.mediaType, {
+    title: String(probe.titles[0] ?? ''),
+    year: probe.year,
+  });
+  if (viaHelper) return viaHelper;
+
+  for (const film of films) {
+    if (!film) continue;
+    const filmTmdbId = positiveId(film.tmdbId);
+    if (filmTmdbId !== undefined) {
+      if (filmTmdbId === probe.tmdbId && sameTitle(film)) return film;
+    } else if (probe.year !== undefined && film.year === probe.year && sameTitle(film)) {
+      return film;
+    }
+  }
+  return null;
 }
 
 export interface PickResult {
@@ -165,7 +224,13 @@ export function pickCandidates(
       }
 
       const title = String(item.title || item.name || '').trim();
-      if (findExistingFilmByTmdb(films, id, source.mediaType, { title })) {
+      const duplicate = findCatalogDuplicate(films, {
+        tmdbId: id,
+        mediaType: source.mediaType,
+        titles: [title, item.original_title || item.original_name],
+        year: releaseYear(item.release_date || item.first_air_date),
+      });
+      if (duplicate) {
         result.alreadyInCatalog++;
         continue;
       }
