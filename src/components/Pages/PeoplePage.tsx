@@ -2,9 +2,11 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { PersonAvatar } from '../Common/PersonAvatar';
+import { SEOHead } from '../SEO/SEOHead';
 import { getTmdbPopularPeople } from '../../utils/tmdbHelper';
 import type { TmdbPersonSearchItem } from '../../utils/tmdbPersonTrim';
 import { buildPersonPath } from '../../utils/personHelpers';
+import { DEFAULT_BASE_URL } from '../../utils/seoMetadata';
 
 const PHOTO_BASE = 'https://image.tmdb.org/t/p/w342';
 const MAX_PAGE = 20;
@@ -74,10 +76,6 @@ export const PeoplePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const requestingRef = useRef(false);
 
-  useEffect(() => {
-    document.title = 'Orang Populer | Sotoy Film';
-  }, []);
-
   const loadPage = useCallback(async (nextPage: number) => {
     if (requestingRef.current) return;
     requestingRef.current = true;
@@ -118,6 +116,11 @@ export const PeoplePage: React.FC = () => {
 
   return (
     <main className="min-h-screen bg-[#0A0A0A] text-slate-100">
+      <SEOHead
+        title="Orang Populer - Aktor, Sutradara, dan Kru | Sotoy Film"
+        description="Daftar aktor, sutradara, dan kru film serta series yang sedang ramai dibicarakan minggu ini, lengkap dengan biografi dan filmografi."
+        canonicalUrl={`${DEFAULT_BASE_URL}/people`}
+      />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         <header className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Orang Populer</h1>

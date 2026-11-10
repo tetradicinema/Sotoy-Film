@@ -29,6 +29,8 @@ interface TmdbHandlerResponse extends ServerResponse {
 export async function handleTmdbRequest(req: any, res: any) {
   // Enable basic CORS and JSON response
   res.setHeader?.('Content-Type', 'application/json');
+  // Keep the JSON endpoint itself out of search indexes
+  res.setHeader?.('X-Robots-Tag', 'noindex');
 
   if (req.method && req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed. Only GET is supported.' });

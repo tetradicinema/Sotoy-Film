@@ -40,6 +40,7 @@ Disallow: /settings
 Disallow: /settings/*
 Disallow: /onboarding
 Disallow: /onboarding/*
+Allow: /api/tmdb
 Disallow: /api/*
 
 Sitemap: https://www.sotoyfilm.my.id/sitemap.xml
