@@ -1,3 +1,4 @@
+import { Link as PeopleLink } from 'react-router-dom';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Search,
@@ -839,6 +840,26 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                       </button>
                     ))}
                   </div>
+                </div>
+
+                {/* 2b. POPULAR PEOPLE SHORTCUT */}
+                <div className="pt-2 border-t border-slate-800/80">
+                  <PeopleLink
+                    to="/people"
+                    onClick={() => { setIsOpen(false); onItemSelect?.(); }}
+                    className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-[#FF2E7E] hover:bg-slate-800/50 flex items-center justify-between text-left transition-all group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-[#FF2E7E]/10 text-[#FF2E7E] flex items-center justify-center">
+                        <Users className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-white group-hover:text-[#FF2E7E] transition-colors">Orang Populer</div>
+                        <div className="text-[10px] text-slate-400">Aktor, sutradara, dan kru yang sedang ramai</div>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
+                  </PeopleLink>
                 </div>
 
                 {/* 3. QUICK NAVIGATION SHORTCUTS */}

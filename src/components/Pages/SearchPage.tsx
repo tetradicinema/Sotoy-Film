@@ -1,3 +1,4 @@
+import { Link as PeopleLink } from 'react-router-dom';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { LinkifiedText } from '../Common/LinkifiedText';
 import {
@@ -662,6 +663,7 @@ export const SearchPage: React.FC = () => {
                       <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
                         <Users className="w-5 h-5 text-[#FF2E7E]" />
                         <span>People ({peopleResults.length})</span>
+                        <PeopleLink to="/people" className="ml-1 text-xs font-bold text-[#FF2E7E] hover:underline">Jelajahi People</PeopleLink>
                         {isSearchingPeople && <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />}
                       </h2>
                       {activeTab === 'all' && peopleResults.length > 6 && (

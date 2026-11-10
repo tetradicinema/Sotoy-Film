@@ -1,3 +1,4 @@
+import { PopularPeopleSection } from '../Common/PopularPeopleSection';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Star,
@@ -569,6 +570,8 @@ export const FilmDatabasePage: React.FC = () => {
         {/* ========================================================================= */}
         {/* SECTION: BROWSE ALL DATABASE (SEARCH, FILTERS, RESULTS GRID) - MOVED TO BOTTOM */}
         {/* ========================================================================= */}
+        <PopularPeopleSection />
+
         <section id="database-lengkap" className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 scroll-mt-20">
           <SectionHeader
             title="Jelajahi Database Lengkap"
