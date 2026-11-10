@@ -33,6 +33,12 @@ import {
   HOMEPAGE_SECTIONS_META,
   resolveFilmDbSectionOrder,
 } from '../../utils/homepageConfigHelper';
+import {
+  filmMatchesCountry,
+  filmMatchesYear,
+  getFilmCountryOptions,
+  getFilmYearOptions,
+} from '../../utils/filmFilters';
 import { SectionHeader } from '../Common/SectionHeader';
 
 export const FilmDatabasePage: React.FC = () => {
@@ -57,6 +63,8 @@ export const FilmDatabasePage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFormat, setSelectedFormat] = useState<'all' | 'movie' | 'series' | 'animation'>('all');
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
+  const [selectedCountry, setSelectedCountry] = useState<string>('all');
+  const [selectedYear, setSelectedYear] = useState<string>('all');
   const [ratingFilter, setRatingFilter] = useState<number>(0);
   const [sortBy, setSortBy] = useState<'rating' | 'votes' | 'year' | 'title'>('rating');
   const [ratingModalFilm, setRatingModalFilm] = useState<FilmItem | null>(null);
@@ -65,10 +73,10 @@ export const FilmDatabasePage: React.FC = () => {
   // Pagination state for "Jelajahi Database Lengkap"
   const [visibleCount, setVisibleCount] = useState<number>(20);
 
-  // Reset visibleCount to 20 whenever searchQuery, selectedFormat, selectedGenre, ratingFilter or sortBy changes
+  // Reset visibleCount to 20 whenever the search query or any filter changes
   useEffect(() => {
     setVisibleCount(20);
-  }, [searchQuery, selectedFormat, selectedGenre, ratingFilter, sortBy]);
+  }, [searchQuery, selectedFormat, selectedGenre, selectedCountry, selectedYear, ratingFilter, sortBy]);
 
   // Review Filter Role State
   const [reviewsFilterRole, setReviewsFilterRole] = useState<'all' | 'critic' | 'warga'>('all');
@@ -155,9 +163,15 @@ export const FilmDatabasePage: React.FC = () => {
   // Search results with smart genre matching
   const allGenres = Array.from(new Set(films.flatMap(f => f.genres)));
 
+  // Country and year filter options derived from the full catalogue
+  const countryOptions = useMemo(() => getFilmCountryOptions(films), [films]);
+  const yearOptions = useMemo(() => getFilmYearOptions(films), [films]);
+
   const searchResults = films.filter(f => {
     if (selectedFormat !== 'all' && f.type !== selectedFormat) return false;
     if (!matchesGenre(f, selectedGenre)) return false;
+    if (!filmMatchesCountry(f, selectedCountry)) return false;
+    if (!filmMatchesYear(f, selectedYear)) return false;
     if (ratingFilter > 0 && f.skorSotoy < ratingFilter) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -672,6 +686,46 @@ export const FilmDatabasePage: React.FC = () => {
                 </select>
               </div>
 
+              {/* Country Selector */}
+              <div className="flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1">
+                <span className="text-slate-400 text-[11px] font-bold">Negara:</span>
+                <select
+                  id="country-filter-select"
+                  value={selectedCountry}
+                  onChange={e => setSelectedCountry(e.target.value)}
+                  className="bg-transparent text-slate-200 text-xs focus:outline-none focus:text-[#FF2E7E] font-medium cursor-pointer"
+                >
+                  <option value="all" className="bg-slate-900 text-slate-200">
+                    Semua Negara ({films.length})
+                  </option>
+                  {countryOptions.map(option => (
+                    <option key={option.code} value={option.code} className="bg-slate-900 text-slate-300">
+                      {option.label} ({option.count})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Year Selector */}
+              <div className="flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1">
+                <span className="text-slate-400 text-[11px] font-bold">Tahun:</span>
+                <select
+                  id="year-filter-select"
+                  value={selectedYear}
+                  onChange={e => setSelectedYear(e.target.value)}
+                  className="bg-transparent text-slate-200 text-xs focus:outline-none focus:text-[#FF2E7E] font-medium cursor-pointer"
+                >
+                  <option value="all" className="bg-slate-900 text-slate-200">
+                    Semua Tahun ({films.length})
+                  </option>
+                  {yearOptions.map(option => (
+                    <option key={option.year} value={String(option.year)} className="bg-slate-900 text-slate-300">
+                      {option.year} ({option.count})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Rating Filter */}
               <select
                 value={ratingFilter}
@@ -717,12 +771,14 @@ export const FilmDatabasePage: React.FC = () => {
                 </span>
               </div>
 
-              {(selectedGenre !== 'all' || selectedFormat !== 'all' || ratingFilter > 0 || searchQuery) && (
+              {(selectedGenre !== 'all' || selectedFormat !== 'all' || selectedCountry !== 'all' || selectedYear !== 'all' || ratingFilter > 0 || searchQuery) && (
                 <button
                   onClick={() => {
                     setSearchQuery('');
                     setSelectedFormat('all');
                     setSelectedGenre('all');
+                    setSelectedCountry('all');
+                    setSelectedYear('all');
                     setRatingFilter(0);
                   }}
                   className="text-xs font-bold text-slate-400 hover:text-[#FF2E7E] transition-colors flex items-center gap-1"
@@ -742,13 +798,19 @@ export const FilmDatabasePage: React.FC = () => {
             ) : sortedSearchResults.length === 0 ? (
               <div className="text-center py-12 bg-slate-900/50 rounded-2xl border border-slate-800">
                 <p className="text-slate-400 text-sm">
-                  Tidak ada film {selectedGenre !== 'all' ? `dengan genre "${selectedGenre}"` : ''} yang cocok dengan filter pencarian.
+                  Tidak ada film {selectedGenre !== 'all' ? `dengan genre "${selectedGenre}"` : ''}
+                  {selectedCountry !== 'all'
+                    ? ` dari ${countryOptions.find(option => option.code === selectedCountry)?.label ?? selectedCountry}`
+                    : ''}
+                  {selectedYear !== 'all' ? ` tahun ${selectedYear}` : ''} yang cocok dengan filter pencarian.
                 </p>
                 <button
                   onClick={() => {
                     setSearchQuery('');
                     setSelectedFormat('all');
                     setSelectedGenre('all');
+                    setSelectedCountry('all');
+                    setSelectedYear('all');
                     setRatingFilter(0);
                   }}
                   className="mt-3 text-xs font-bold text-[#FF2E7E] hover:underline"
