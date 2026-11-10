@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, terminate } from 'firebase/firestore';
+import { fetchPopularPeopleSitemapEntries } from './sitemap-people';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -93,6 +94,7 @@ async function run() {
     { loc: `${baseUrl}/film-database`, lastmod: STATIC_LASTMOD, changefreq: 'daily', priority: '0.9' },
     { loc: `${baseUrl}/rekomendasi-film`, lastmod: STATIC_LASTMOD, changefreq: 'weekly', priority: '0.8' },
     { loc: `${baseUrl}/komunitas`, lastmod: STATIC_LASTMOD, changefreq: 'daily', priority: '0.8' },
+    { loc: `${baseUrl}/people`, lastmod: STATIC_LASTMOD, changefreq: 'weekly', priority: '0.7' },
     { loc: `${baseUrl}/panduan-leaderboard`, lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.6' },
     { loc: `${baseUrl}/panduan`, lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.6' },
     { loc: `${baseUrl}/tentang-kami`, lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.5' },
@@ -221,7 +223,14 @@ async function run() {
     }
   }
 
-  // 5. Construct XML string with standard compliant tags & XML entity escaping
+  // 5. Popular people from TMDB (best effort). This runs outside the Firestore
+  // try/catch so a TMDB failure can never mark the build as offline fallback.
+  const peopleEntries = await fetchPopularPeopleSitemapEntries({ baseUrl });
+  entries.push(...peopleEntries);
+  const peopleCount = peopleEntries.length;
+  console.log(`[Sitemap Builder] Indexed ${peopleCount} popular people.`);
+
+  // 6. Construct XML string with standard compliant tags & XML entity escaping
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
   xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n';
   xml += '        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"\n';
@@ -239,7 +248,7 @@ async function run() {
   }
   xml += '</urlset>\n';
 
-  // 6. Write only the snapshot served by the API fallback
+  // 7. Write only the snapshot served by the API fallback
   const dataDir = path.join(rootDir, 'data');
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
@@ -253,14 +262,14 @@ async function run() {
     const existingUrlCount = (existingContent.match(/<url>/g) || []).length;
     if (existingUrlCount > totalUrls) {
       console.warn(`[Sitemap Builder] WARNING: Firestore cannot be read (offline fallback). Existing ${sitemapDest} has ${existingUrlCount} URLs which is more than fallback generated ${totalUrls} URLs. Keeping existing sitemap file.`);
-      console.log(`[Sitemap Builder] Generated fallback counts: ${articlesCount} articles, ${filmsCount} films, ${totalUrls} total URLs.`);
+      console.log(`[Sitemap Builder] Generated fallback counts: ${articlesCount} articles, ${filmsCount} films, ${peopleCount} people, ${totalUrls} total URLs.`);
       return;
     }
   }
 
   fs.writeFileSync(sitemapDest, xml, 'utf-8');
 
-  console.log(`[Sitemap Builder] Successfully wrote ${totalUrls} URLs (${articlesCount} articles, ${filmsCount} films) to ${sitemapDest}`);
+  console.log(`[Sitemap Builder] Successfully wrote ${totalUrls} URLs (${articlesCount} articles, ${filmsCount} films, ${peopleCount} people) to ${sitemapDest}`);
 
 }
 

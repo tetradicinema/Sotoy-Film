@@ -64,6 +64,12 @@ export interface SeoPopularPerson {
   profile_path: string | null;
 }
 
+/** Minimal person shape needed by the live sitemap. */
+export interface SeoPopularPersonSitemap {
+  id: number;
+  name: string;
+}
+
 export interface PersonSeoMeta {
   title: string;
   description: string;
@@ -334,6 +340,75 @@ export async function fetchPopularPeopleForSeo(): Promise<SeoPopularPerson[]> {
     people.length > 0 ? CACHE_TTL_MS : NEGATIVE_TTL_MS
   );
   return people;
+}
+
+/**
+ * Fetches TMDB `person/popular` pages 1 and 2 sequentially for the live
+ * sitemap, with its own cache key. Same auth and query parameters as
+ * `fetchPopularPeopleForSeo`, but up to `limit` deduped non-adult entries.
+ *
+ * A missing key returns [] without caching (it is a configuration problem).
+ * Any request failure also returns [] so the sitemap can keep every other
+ * entry; it never throws and never logs the key.
+ */
+export async function fetchPopularPeopleForSitemap(
+  limit = 40
+): Promise<SeoPopularPersonSitemap[]> {
+  const maxResults = Number.isFinite(limit) ? Math.max(0, Math.floor(limit)) : 0;
+  if (maxResults === 0) return [];
+
+  const cacheKey = `people:popular:sitemap:${maxResults}`;
+  const cached = cacheGet<SeoPopularPersonSitemap[]>(cacheKey);
+  if (cached.hit) return Array.isArray(cached.value) ? cached.value : [];
+
+  const apiKey = readTmdbApiKey();
+  if (!apiKey) return [];
+
+  try {
+    const auth = resolveTmdbAuth(apiKey);
+    const seen = new Set<number>();
+    const people: SeoPopularPersonSitemap[] = [];
+
+    // Pages are fetched sequentially to stay within TMDB rate limits.
+    for (const page of [1, 2]) {
+      if (people.length >= maxResults) break;
+
+      const tmdbUrl = buildTmdbUrl('person/popular', apiKey, auth.isBearer);
+      tmdbUrl.searchParams.set('include_adult', 'false');
+      tmdbUrl.searchParams.set('language', 'en-US');
+      tmdbUrl.searchParams.set('page', String(page));
+
+      const data = await fetchTmdbJson(tmdbUrl, auth.headers);
+      if (!data) {
+        cacheSet(cacheKey, [], NEGATIVE_TTL_MS);
+        return [];
+      }
+
+      const results: any[] = Array.isArray(data.results) ? data.results : [];
+      for (const item of results) {
+        if (people.length >= maxResults) break;
+        if (!item || typeof item !== 'object' || item.adult === true) continue;
+
+        const id = asNumber(item.id);
+        const name = asString(item.name);
+        if (!Number.isSafeInteger(id) || id <= 0 || name === '') continue;
+        if (seen.has(id)) continue;
+
+        seen.add(id);
+        people.push({ id, name });
+      }
+    }
+
+    cacheSet(
+      cacheKey,
+      people,
+      people.length > 0 ? CACHE_TTL_MS : NEGATIVE_TTL_MS
+    );
+    return people;
+  } catch {
+    // Never let an unexpected error break the sitemap.
+    return [];
+  }
 }
 
 /* -------------------------------------------------------------------------- */

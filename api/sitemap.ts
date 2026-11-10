@@ -9,6 +9,7 @@ import {
   isArticlePublished,
 } from '../src/lib/edge/firestoreRest.js';
 import { slugify } from '../src/utils/slugify.js';
+import { fetchPopularPeopleForSitemap } from '../src/lib/edge/personMeta.js';
 
 const BASE_URL = 'https://www.sotoyfilm.my.id';
 
@@ -95,6 +96,7 @@ function getStaticItems(): SitemapItem[] {
     { link: `${BASE_URL}/film-database`, title: 'Film Database', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'daily', priority: '0.9' },
     { link: `${BASE_URL}/rekomendasi-film`, title: 'Rekomendasi Film', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'weekly', priority: '0.8' },
     { link: `${BASE_URL}/komunitas`, title: 'Komunitas', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'daily', priority: '0.8' },
+    { link: `${BASE_URL}/people`, title: 'Orang Populer', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'weekly', priority: '0.7' },
     { link: `${BASE_URL}/panduan-leaderboard`, title: 'Panduan Leaderboard', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.6' },
     { link: `${BASE_URL}/panduan`, title: 'Panduan & FAQ', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.6' },
     { link: `${BASE_URL}/tentang-kami`, title: 'Tentang Kami', metaDescription: '', type: 'Halaman', lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.5' },
@@ -281,6 +283,33 @@ async function generateLiveSitemapItems(): Promise<SitemapItem[]> {
       lastmod,
       changefreq: 'monthly',
       priority: '0.9',
+    });
+  }
+
+  // Popular people from TMDB. Best effort: the helper returns [] on any
+  // failure, so a TMDB problem only omits person URLs and never removes or
+  // reorders the static/article/film entries above.
+  let popularPeople: Array<{ id: number; name: string }> = [];
+  try {
+    popularPeople = await fetchPopularPeopleForSitemap(40);
+  } catch {
+    popularPeople = [];
+  }
+
+  for (const person of popularPeople) {
+    // Same canonical rule as the middleware and the build-time snapshot.
+    const slug = slugify(person.name);
+    items.push({
+      link: slug
+        ? `${BASE_URL}/person/${person.id}-${slug}`
+        : `${BASE_URL}/person/${person.id}`,
+      title: person.name,
+      metaDescription: '',
+      type: 'Halaman',
+      // No real modification date is known for TMDB people.
+      lastmod: '',
+      changefreq: 'weekly',
+      priority: '0.5',
     });
   }
 
