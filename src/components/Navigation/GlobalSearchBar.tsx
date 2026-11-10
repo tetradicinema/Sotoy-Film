@@ -4,6 +4,7 @@ import {
   Search,
   X,
   Film,
+  Clapperboard,
   FileText,
   MessageSquare,
   Users,
@@ -26,7 +27,7 @@ import { getRoleBadgeStyle } from '../../utils/roleStyles';
 import { RoleBadge } from '../Common/RoleBadge';
 import { LinkifiedText } from '../Common/LinkifiedText';
 import { FilmItem, Article, BuzzPost, User } from '../../types';
-import { searchTmdbFilms, TmdbSearchResultItem } from '../../utils/tmdbHelper';
+import { searchTmdbFilms, TmdbSearchResultItem, searchTmdbPeople, TmdbPersonSearchItem } from '../../utils/tmdbHelper';
 import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 import { resolveAuthor } from '../../utils/resolveAuthor';
 
@@ -37,13 +38,27 @@ interface GlobalSearchBarProps {
   placeholder?: string;
 }
 
-export type SearchCategory = 'all' | 'film' | 'article' | 'buzz' | 'user';
+export type SearchCategory = 'all' | 'film' | 'person' | 'article' | 'buzz' | 'user';
+
+interface PersonSearchResult {
+  kind: 'person';
+  id: string;
+  tmdbId: number;
+  name: string;
+  department: string;
+  photo: string | null;
+  popularity: number;
+  knownFor: string[];
+}
 
 interface SearchResultItem {
   id: string;
-  type: 'film' | 'article' | 'buzz' | 'user';
-  data: FilmItem | Article | BuzzPost | User;
+  type: 'film' | 'person' | 'article' | 'buzz' | 'user';
+  data: FilmItem | PersonSearchResult | Article | BuzzPost | User;
 }
+
+const isPersonResult = (data: SearchResultItem['data']): data is PersonSearchResult =>
+  (data as PersonSearchResult).kind === 'person';
 
 interface FirestoreAutocompleteSuggestion {
   id: string;
@@ -52,6 +67,85 @@ interface FirestoreAutocompleteSuggestion {
   subtitle: string;
   extra?: string;
 }
+
+const PERSON_DEPARTMENT_LABELS: Record<string, string> = {
+  Acting: 'Akting',
+  Directing: 'Penyutradaraan',
+  Writing: 'Penulisan',
+  Production: 'Produksi',
+  Sound: 'Tata Suara',
+  Camera: 'Kamera',
+  Editing: 'Penyuntingan',
+  Art: 'Seni',
+  Crew: 'Kru',
+};
+
+const personDepartmentLabel = (department: string): string =>
+  PERSON_DEPARTMENT_LABELS[department] || department || '';
+
+const PEOPLE_SEARCH_CACHE_MAX = 50;
+const peopleSearchCache = new Map<string, PersonSearchResult[]>();
+
+function readPeopleSearchCache(key: string): PersonSearchResult[] | undefined {
+  if (!peopleSearchCache.has(key)) return undefined;
+  const cached = peopleSearchCache.get(key) as PersonSearchResult[];
+  // Refresh recency so the oldest untouched entry is evicted first.
+  peopleSearchCache.delete(key);
+  peopleSearchCache.set(key, cached);
+  return cached;
+}
+
+function writePeopleSearchCache(key: string, results: PersonSearchResult[]) {
+  if (results.length === 0) return;
+  peopleSearchCache.delete(key);
+  peopleSearchCache.set(key, results);
+  while (peopleSearchCache.size > PEOPLE_SEARCH_CACHE_MAX) {
+    const oldestKey = peopleSearchCache.keys().next().value;
+    if (oldestKey === undefined) break;
+    peopleSearchCache.delete(oldestKey);
+  }
+}
+
+const toPersonSearchResult = (person: TmdbPersonSearchItem): PersonSearchResult => ({
+  kind: 'person',
+  id: String(person.id),
+  tmdbId: person.id,
+  name: person.name,
+  department: personDepartmentLabel(person.known_for_department),
+  photo: person.profile_path ? `https://image.tmdb.org/t/p/w185${person.profile_path}` : null,
+  popularity: person.popularity || 0,
+  knownFor: (Array.isArray(person.known_for) ? person.known_for : [])
+    .map(item => (item?.title || '').trim())
+    .filter(Boolean)
+    .slice(0, 2),
+});
+
+// Small local avatar with a graceful fallback; not shared with PersonAvatar.
+const PersonSearchAvatar: React.FC<{ person: PersonSearchResult }> = ({ person }) => {
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setHasError(false);
+  }, [person.photo]);
+
+  if (!person.photo || hasError) {
+    return (
+      <div className="w-10 h-10 rounded-full bg-slate-800 ring-2 ring-[#FF2E7E]/20 shrink-0 flex items-center justify-center text-slate-500">
+        <Users className="w-4 h-4" />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={person.photo}
+      alt={person.name}
+      className="w-10 h-10 rounded-full object-cover ring-2 ring-[#FF2E7E]/40 shrink-0"
+      loading="lazy"
+      onError={() => setHasError(true)}
+    />
+  );
+};
 
 const RECENT_SEARCHES_KEY = 'sotoy_search_history';
 
@@ -125,6 +219,10 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
   // TMDB Real-Time Search States
   const [tmdbSearchResults, setTmdbSearchResults] = useState<TmdbSearchResultItem[]>([]);
   const [isSearchingTmdb, setIsSearchingTmdb] = useState<boolean>(false);
+
+  // TMDB People Search States (public, dropdown only)
+  const [peopleSearchResults, setPeopleSearchResults] = useState<PersonSearchResult[]>([]);
+  const [isSearchingPeople, setIsSearchingPeople] = useState<boolean>(false);
 
   // Firestore Real-time Autocomplete States
   const [firestoreSuggestions, setFirestoreSuggestions] = useState<FirestoreAutocompleteSuggestion[]>([]);
@@ -297,6 +395,51 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
     };
   }, [searchQuery, isAdmin]);
 
+  // Real-time People search from TMDB (visible to every visitor, dropdown only)
+  useEffect(() => {
+    const q = searchQuery.trim();
+    const cacheKey = q.toLowerCase();
+
+    if (!isOpen || q.length < 3) {
+      setPeopleSearchResults([]);
+      setIsSearchingPeople(false);
+      return;
+    }
+
+    const cached = readPeopleSearchCache(cacheKey);
+    if (cached) {
+      setPeopleSearchResults(cached);
+      setIsSearchingPeople(false);
+      return;
+    }
+
+    let isCancelled = false;
+    setIsSearchingPeople(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const results = await searchTmdbPeople(q);
+        if (isCancelled) return;
+        const people = results
+          .map(toPersonSearchResult)
+          .filter(person => person.photo !== null || person.popularity >= 1)
+          .slice(0, 8);
+        writePeopleSearchCache(cacheKey, people);
+        setPeopleSearchResults(people);
+      } catch (err) {
+        console.warn('[GlobalSearchBar] TMDB people search error:', err);
+        if (!isCancelled) setPeopleSearchResults([]);
+      } finally {
+        if (!isCancelled) setIsSearchingPeople(false);
+      }
+    }, 400);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [searchQuery, isOpen]);
+
   // Filter out TMDB results that already match local database films
   const filteredTmdbResults = useMemo(() => {
     if (!isAdmin || !tmdbSearchResults || tmdbSearchResults.length === 0) return [];
@@ -427,7 +570,12 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
   }, [searchQuery, films, publishedArticles, buzzList, allUsers, usersById]);
 
   const totalResultsCount =
-    matchingFilms.length + (isAdmin ? filteredTmdbResults.length : 0) + matchingArticles.length + matchingBuzz.length + matchingUsers.length;
+    matchingFilms.length +
+    (isAdmin ? filteredTmdbResults.length : 0) +
+    peopleSearchResults.length +
+    matchingArticles.length +
+    matchingBuzz.length +
+    matchingUsers.length;
 
   // Flatten currently visible results based on activeCategory for keyboard arrow navigation
   const visibleFlattenedList: SearchResultItem[] = useMemo(() => {
@@ -435,6 +583,9 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
 
     if (activeCategory === 'film') {
       return matchingFilms.map(f => ({ id: `film-${f.id}`, type: 'film' as const, data: f }));
+    }
+    if (activeCategory === 'person') {
+      return peopleSearchResults.map(p => ({ id: `person-${p.id}`, type: 'person' as const, data: p }));
     }
     if (activeCategory === 'article') {
       return matchingArticles.map(a => ({ id: `article-${a.id}`, type: 'article' as const, data: a }));
@@ -449,11 +600,13 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
     // Category === 'all': combine top results from each scope
     const combined: SearchResultItem[] = [];
     matchingFilms.slice(0, 3).forEach(f => combined.push({ id: `film-${f.id}`, type: 'film', data: f }));
+    // People follow films in 'all' to match the on-screen section order.
+    peopleSearchResults.slice(0, 3).forEach(p => combined.push({ id: `person-${p.id}`, type: 'person', data: p }));
     matchingArticles.slice(0, 3).forEach(a => combined.push({ id: `article-${a.id}`, type: 'article', data: a }));
     matchingBuzz.slice(0, 2).forEach(b => combined.push({ id: `buzz-${b.id}`, type: 'buzz', data: b }));
     matchingUsers.slice(0, 2).forEach(u => combined.push({ id: `user-${u.id}`, type: 'user', data: u }));
     return combined;
-  }, [searchQuery, activeCategory, matchingFilms, matchingArticles, matchingBuzz, matchingUsers]);
+  }, [searchQuery, activeCategory, matchingFilms, matchingArticles, matchingBuzz, matchingUsers, peopleSearchResults]);
 
   // Reset keyboard selected index when query or category changes
   useEffect(() => {
@@ -480,6 +633,10 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
 
     if (item.type === 'film') {
       navigateTo('film-detail', { filmId: item.data.id });
+    } else if (item.type === 'person') {
+      if (isPersonResult(item.data)) {
+        navigateTo('person-detail', { personId: item.data.tmdbId, personName: item.data.name });
+      }
     } else if (item.type === 'article') {
       navigateTo('article-detail', { articleId: item.data.id });
     } else if (item.type === 'buzz') {
@@ -616,7 +773,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
               : 'absolute left-0 lg:left-auto lg:right-0 top-full mt-2 w-[340px] sm:w-[460px] md:w-[540px] lg:w-[620px] max-h-[80vh] flex flex-col'
           }`}
         >
-          {/* Header Bar with Category Filters (Film, Article, Buzz, User, Semua) */}
+          {/* Header Bar with Category Filters (Film, Orang, Article, Buzz, User, Semua) */}
           <div className="p-3 bg-[#171717] border-b border-slate-800/90 space-y-2.5">
             {/* Category Filter Scope Toggles */}
             <div className="flex items-center justify-between gap-2">
@@ -657,6 +814,26 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                   {hasQuery && (
                     <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/20 text-slate-950 font-black">
                       {matchingFilms.length + (isAdmin ? filteredTmdbResults.length : 0)}
+                    </span>
+                  )}
+                </button>
+
+                {/* Orang (People) Scope */}
+                <button
+                  id="search-scope-person"
+                  onClick={() => setActiveCategory('person')}
+                  className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                    activeCategory === 'person'
+                      ? 'bg-[#FF2E7E] text-white shadow'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                  title="Filter hanya Orang (aktor, sutradara, kru)"
+                >
+                  <Clapperboard className="w-3.5 h-3.5" />
+                  <span>Orang</span>
+                  {hasQuery && (
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-white/20 text-white font-black">
+                      {peopleSearchResults.length}
                     </span>
                   )}
                 </button>
@@ -914,6 +1091,11 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                   </div>
                 </div>
               </div>
+            ) : totalResultsCount === 0 && isSearchingPeople ? (
+              /* ================= SEARCHING (NO LOCAL RESULTS YET) ================= */
+              <div className="text-center py-8 space-y-3">
+                <p className="text-xs font-bold text-slate-400 animate-pulse">Mencari...</p>
+              </div>
             ) : totalResultsCount === 0 ? (
               /* ================= NO RESULTS EMPTY STATE ================= */
               <div className="text-center py-8 space-y-3">
@@ -1099,6 +1281,70 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                             </div>
 
                             <ChevronRight className="w-4 h-4 text-cyan-400 shrink-0" />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* ORANG SECTION (TMDB People - visible to all visitors) */}
+                {(activeCategory === 'all' || activeCategory === 'person') && peopleSearchResults.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between pb-1 border-b border-slate-800">
+                      <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-[#FF2E7E]">
+                        <Clapperboard className="w-3.5 h-3.5" />
+                        <span>Orang ({peopleSearchResults.length})</span>
+                      </div>
+                      {isSearchingPeople ? (
+                        <span className="text-[10px] text-slate-400 animate-pulse">Mencari...</span>
+                      ) : activeCategory === 'all' && peopleSearchResults.length > 3 ? (
+                        <button
+                          onClick={() => setActiveCategory('person')}
+                          className="text-[11px] font-bold text-[#FF2E7E] hover:underline"
+                        >
+                          Lihat semua orang ({peopleSearchResults.length}) →
+                        </button>
+                      ) : null}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      {(activeCategory === 'all' ? peopleSearchResults.slice(0, 3) : peopleSearchResults).map(person => {
+                        const selected = visibleFlattenedList[selectedIndex];
+                        const isSelected =
+                          selected?.type === 'person' &&
+                          isPersonResult(selected.data) &&
+                          selected.data.tmdbId === person.tmdbId;
+
+                        return (
+                          <div
+                            key={`person-${person.id}`}
+                            id={`search-result-person-${person.id}`}
+                            onClick={() =>
+                              handleSelectResult({ id: `person-${person.id}`, type: 'person', data: person })
+                            }
+                            className={`p-2.5 rounded-xl flex items-center gap-3 cursor-pointer transition-all ${
+                              isSelected
+                                ? 'bg-gradient-to-r from-[#FF2E7E]/15 to-transparent border border-[#FF2E7E] shadow-md'
+                                : 'bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800/80 hover:border-slate-700'
+                            }`}
+                          >
+                            {/* Person Avatar (with fallback) */}
+                            <PersonSearchAvatar person={person} />
+
+                            {/* Person Info */}
+                            <div className="min-w-0 flex-1">
+                              <h5 className="font-display font-bold text-xs sm:text-sm text-white truncate">
+                                <HighlightText text={person.name} query={searchQuery} />
+                              </h5>
+
+                              <div className="text-[11px] text-slate-400 truncate mt-0.5">
+                                {person.department}
+                                {person.knownFor.length > 0 ? ` • ${person.knownFor.join(' • ')}` : ''}
+                              </div>
+                            </div>
+
+                            <ChevronRight className="w-4 h-4 text-slate-500 shrink-0" />
                           </div>
                         );
                       })}
