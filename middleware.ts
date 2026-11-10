@@ -12,6 +12,13 @@ import {
   fetchListCollectionDocuments,
 } from './src/lib/edge/firestoreRest.js';
 import { injectMetaTags, injectRootContent, injectPrefetchData, injectSeoLists, buildArticleBodyHtml, buildFilmBodyHtml, FALLBACK_HTML_TEMPLATE } from './src/lib/edge/metaInjection.js';
+import {
+  buildPeopleListBodyHtml,
+  buildPersonBodyHtml,
+  buildPersonMeta,
+  fetchPersonForSeo,
+  fetchPopularPeopleForSeo,
+} from './src/lib/edge/personMeta.js';
 import { buildRouteMetadata, STATIC_ROUTE_METADATA_CONFIG } from './src/utils/seoMetadata.js';
 import { pickArticleIsoDate } from './src/lib/edge/isoDate.js';
 
@@ -60,6 +67,8 @@ export const config = {
     '/koleksi/:path*',
     '/kategori/:path*',
     '/category/:path*',
+    '/person/:path*',
+    '/people',
   ],
 };
 
@@ -83,6 +92,33 @@ const LIST_ROUTE_PATHS = new Set([
   '/komunitas',
   '/community-feed',
 ]);
+
+/** Static route whose crawler body is built from TMDB, not Firestore. */
+const PEOPLE_ROUTE_PATH = '/people';
+
+/**
+ * Reads the leading numeric TMDB id from `/person/:idSlug`.
+ * Re-implemented locally because `src/utils/personHelpers.ts` cannot be
+ * imported into the middleware graph: its internal imports lack the ".js"
+ * extension. Accepts `287`, `287-brad-pitt`; rejects anything without
+ * leading digits.
+ */
+function parsePersonRouteId(param: string): number | null {
+  if (typeof param !== 'string') return null;
+
+  let value = param.trim();
+  try {
+    value = decodeURIComponent(value);
+  } catch {
+    // keep the raw value when it contains malformed escapes
+  }
+
+  const match = /^(\d+)/.exec(value);
+  if (!match) return null;
+
+  const id = Number(match[1]);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
 
 /** Every exact static route known to the central metadata config. */
 const STATIC_ROUTE_PATHS = new Set(Object.keys(STATIC_ROUTE_METADATA_CONFIG));
@@ -184,6 +220,16 @@ async function buildStaticRouteResponse(
         films: films || [],
         articles: articles || [],
       });
+    }
+  }
+
+  // /people: the crawler body lists the popular people as links to their
+  // canonical /person/<id>-<slug> pages. A TMDB failure keeps the metadata-only
+  // response instead of failing the request.
+  if (cleanPath === PEOPLE_ROUTE_PATH) {
+    const people = await fetchPopularPeopleForSeo();
+    if (people.length > 0) {
+      finalHtml = injectRootContent(finalHtml, buildPeopleListBodyHtml(people));
     }
   }
 
@@ -336,6 +382,51 @@ export default async function middleware(request: Request): Promise<Response> {
     const staticRoute = resolveStaticRoute(pathname);
     if (staticRoute.isStatic) {
       return buildStaticRouteResponse(request, staticRoute.cleanPath, staticRoute.isList);
+    }
+
+    // 3b. Person profiles (/person/:id-slug) are backed by TMDB, not Firestore.
+    // Any failure (invalid id, missing key, timeout, TMDB 404, adult entry)
+    // falls through so the SPA still renders normally.
+    const personMatch = /^\/person\/([^/]+)\/?$/.exec(pathname);
+    if (personMatch) {
+      const personId = parsePersonRouteId(personMatch[1]);
+      if (personId === null) {
+        return safeNext();
+      }
+
+      const person = await fetchPersonForSeo(personId);
+      if (!person) {
+        return safeNext();
+      }
+
+      const personMeta = buildPersonMeta(person);
+
+      let personBaseHtml = await fetchBaseHtml(request);
+      if (!personBaseHtml) {
+        personBaseHtml = FALLBACK_HTML_TEMPLATE;
+      }
+
+      const personMetaHtml = injectMetaTags(personBaseHtml, {
+        title: personMeta.title,
+        description: personMeta.description,
+        image: personMeta.image,
+        url: personMeta.canonicalUrl,
+        type: personMeta.ogType,
+        imageAlt: person.name,
+        locale: 'id_ID',
+        schemaJson: personMeta.schema,
+      });
+
+      const personHtml = injectRootContent(personMetaHtml, buildPersonBodyHtml(person));
+
+      return new Response(personHtml, {
+        status: 200,
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+          'x-robots-tag': 'all',
+          'cache-control': 'public, s-maxage=60, stale-while-revalidate=300',
+        },
+      });
     }
 
     let collection: 'films' | 'articles' | null = null;

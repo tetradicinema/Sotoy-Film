@@ -18,12 +18,208 @@ import { clearSeoListsCache } from '../src/lib/edge/firestoreRest.js';
 
 // Setup Mock Fetch for Standalone, Deterministic Test Execution (Bypasses Google API Free Quota Limitations)
 const originalFetch = globalThis.fetch;
+
+// The middleware reads the TMDB key lazily on every request. TMDB itself is
+// mocked below, so a dummy key is enough for the success paths.
+process.env.TMDB_API_KEY = 'test-tmdb-key';
+
 /** Counts per-document GETs so the first read can return meta fields only. */
 const docFetchCounts: Record<string, number> = {};
 /** Lets tests force a list REST failure for one or both collections. */
 const listFetchFailure = { films: false, articles: false };
+/** Lets tests force a TMDB failure mode for the person routes. */
+const tmdbMock: {
+  person: 'ok' | 'not-found' | 'timeout';
+  popular: 'ok' | 'not-found' | 'timeout';
+} = {
+  person: 'ok',
+  popular: 'ok',
+};
+
+/** Deterministic TMDB person payloads used by the /person route tests. */
+function tmdbPersonFixture(id: number): Record<string, any> {
+  if (id === 287) {
+    return {
+      id: 287,
+      name: 'Brad Pitt',
+      adult: false,
+      biography:
+        'William Bradley Pitt is an American actor and film producer. He has received multiple awards, including an Academy Award.',
+      known_for_department: 'Acting',
+      profile_path: '/brad-pitt.jpg',
+      birthday: '1963-12-18',
+      deathday: '',
+      place_of_birth: 'Shawnee, Oklahoma, USA',
+      combined_credits: {
+        cast: [
+          {
+            id: 550,
+            media_type: 'movie',
+            title: 'Fight Club',
+            release_date: '1999-10-15',
+            vote_count: 28000,
+            adult: false,
+          },
+          {
+            id: 680,
+            media_type: 'movie',
+            title: 'Pulp Fiction',
+            release_date: '1994-09-10',
+            vote_count: 26000,
+            adult: false,
+          },
+          {
+            id: 16869,
+            media_type: 'movie',
+            title: 'Inglourious Basterds',
+            release_date: '2009-08-19',
+            vote_count: 21000,
+            adult: false,
+          },
+          {
+            id: 4242,
+            media_type: 'movie',
+            title: 'Adult Credit',
+            release_date: '2001-01-01',
+            vote_count: 99000,
+            adult: true,
+          },
+        ],
+        crew: [
+          {
+            id: 123,
+            media_type: 'movie',
+            title: 'The Departed',
+            release_date: '2006-10-05',
+            vote_count: 15000,
+            adult: false,
+          },
+        ],
+      },
+    };
+  }
+
+  if (id === 55555) {
+    return {
+      id: 55555,
+      name: 'Adult Person',
+      adult: true,
+      biography: 'This profile must never be indexed.',
+      known_for_department: 'Acting',
+      profile_path: null,
+      birthday: '',
+      deathday: '',
+      place_of_birth: '',
+      combined_credits: { cast: [], crew: [] },
+    };
+  }
+
+  // Script-breaking text with no profile image: the JSON-LD must stay valid
+  // and must omit `image` (PersonPage.tsx parity).
+  if (id === 31337) {
+    return {
+      id: 31337,
+      name: '</script><b>x</b>',
+      adult: false,
+      biography: 'Bio </script><b>x</b> end',
+      known_for_department: 'Acting',
+      profile_path: null,
+      birthday: '',
+      deathday: '',
+      place_of_birth: '',
+      combined_credits: { cast: [], crew: [] },
+    };
+  }
+
+  return {
+    id,
+    name: `Person ${id}`,
+    adult: false,
+    biography: '',
+    known_for_department: 'Acting',
+    profile_path: null,
+    birthday: '',
+    deathday: '',
+    place_of_birth: '',
+    combined_credits: { cast: [], crew: [] },
+  };
+}
+
 const mockFetch = async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
   const urlStr = url.toString();
+
+  // 0a. Mock the TMDB API used by the bot-only person routes
+  if (urlStr.startsWith('https://api.themoviedb.org/3/')) {
+    const base = urlStr.split('?')[0];
+    const isPopularList = /\/person\/popular$/.test(base);
+    const mode = isPopularList ? tmdbMock.popular : tmdbMock.person;
+
+    if (mode === 'timeout') {
+      // Never settles on its own; fetchWithTimeout aborts it after 2000 ms.
+      const signal = init?.signal;
+      return await new Promise<Response>((_resolve, reject) => {
+        const abort = () => reject(new Error('The operation was aborted'));
+        if (!signal) return;
+        if (signal.aborted) {
+          abort();
+          return;
+        }
+        signal.addEventListener('abort', abort);
+      });
+    }
+
+    if (mode === 'not-found') {
+      return new Response(
+        JSON.stringify({ status_code: 34, status_message: 'The resource you requested could not be found.' }),
+        { status: 404, headers: { 'content-type': 'application/json' } }
+      );
+    }
+
+    if (isPopularList) {
+      return new Response(
+        JSON.stringify({
+          page: 1,
+          results: [
+            {
+              id: 287,
+              name: 'Brad Pitt',
+              known_for_department: 'Acting',
+              profile_path: '/brad-pitt.jpg',
+              adult: false,
+            },
+            {
+              id: 1245,
+              name: 'Scarlett Johansson',
+              known_for_department: 'Acting',
+              profile_path: '/scarlett-johansson.jpg',
+              adult: false,
+            },
+            {
+              id: 500,
+              name: 'Tom Cruise',
+              known_for_department: 'Acting',
+              profile_path: null,
+              adult: false,
+            },
+          ],
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      );
+    }
+
+    const personIdMatch = /\/person\/(\d+)$/.exec(base);
+    if (personIdMatch) {
+      return new Response(JSON.stringify(tmdbPersonFixture(Number(personIdMatch[1]))), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify({}), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  }
 
   // 0. Simulated list REST failures (collection queries only, not doc GETs)
   if (listFetchFailure.films && /\/documents\/films\?/.test(urlStr)) {
@@ -704,6 +900,30 @@ const TEST_CASES: TestCase[] = [
     expectedMetaPatterns: ['Scheduled Past Article Title', 'og:title'],
   },
 
+  // --- BOTS: TMDB person routes ---
+  {
+    name: 'Googlebot on /people (popular people list)',
+    userAgent: 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+    path: '/people',
+    expectedBranch: 'BOT',
+    expectedMetaPatterns: [
+      '<title>Orang Populer - Aktor, Sutradara, dan Kru | Sotoy Film</title>',
+      'rel="canonical"',
+      'href="/person/287-brad-pitt"',
+    ],
+  },
+  {
+    name: 'Googlebot on /person/287-brad-pitt (TMDB profile)',
+    userAgent: 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+    path: '/person/287-brad-pitt',
+    expectedBranch: 'BOT',
+    expectedMetaPatterns: [
+      '<title>Brad Pitt - Biografi dan Filmografi | Sotoy Film</title>',
+      'og:type" content="profile"',
+      'application/ld+json',
+    ],
+  },
+
   // --- CATEGORY TAXONOMY REDIRECTS ---
   {
     name: 'Googlebot on canonical Animation category (meta injected)',
@@ -844,6 +1064,19 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
       'bot film response uses the short HTML cache',
       (response.headers.get('cache-control') || '').includes('s-maxage=60')
     );
+
+    const filmSchemaRaw =
+      /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(html)?.[1] || '';
+    let filmSchema: any = null;
+    try {
+      filmSchema = filmSchemaRaw ? JSON.parse(filmSchemaRaw) : null;
+    } catch {
+      filmSchema = null;
+    }
+    check(
+      'bot film JSON-LD still parses as a Movie',
+      filmSchema?.['@type'] === 'Movie' && filmSchema?.name === 'Breaking Bad'
+    );
   }
 
   // Article body content for crawlers
@@ -874,6 +1107,20 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
     check(
       'bot article response uses the short HTML cache',
       (response.headers.get('cache-control') || '').includes('s-maxage=60')
+    );
+
+    const articleSchemaRaw =
+      /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(html)?.[1] || '';
+    let articleSchema: any = null;
+    try {
+      articleSchema = articleSchemaRaw ? JSON.parse(articleSchemaRaw) : null;
+    } catch {
+      articleSchema = null;
+    }
+    check(
+      'bot article JSON-LD still parses as a NewsArticle',
+      articleSchema?.['@type'] === 'NewsArticle' &&
+        articleSchema?.headline === 'Published Article Title'
     );
   }
 
@@ -1113,6 +1360,220 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
       articlePrefetch.length > 0 &&
         !articlePrefetch.includes('</script>') &&
         !articlePrefetch.includes('<script>')
+    );
+  }
+
+  // --- Person & people routes (TMDB-backed) ---
+  {
+    const canonicalBase = 'https://www.sotoyfilm.my.id';
+
+    const response = await middleware(botRequest('/person/287-brad-pitt'));
+    const html = await response.text();
+    const root = getRootContent(html);
+
+    check(
+      '/person/:id-slug returns 200 HTML for bots',
+      response.status === 200 &&
+        (response.headers.get('content-type') || '').includes('text/html')
+    );
+    check(
+      '/person title matches the PersonPage SEOHead wording',
+      html.includes('<title>Brad Pitt - Biografi dan Filmografi | Sotoy Film</title>')
+    );
+    check(
+      '/person description comes from the TMDB biography',
+      getMetaContent(html, 'description').includes('American actor and film producer')
+    );
+    check(
+      '/person canonical is the canonical id-slug form',
+      getCanonicalHref(html) === `${canonicalBase}/person/287-brad-pitt`
+    );
+    check(
+      '/person og:image uses the w500 profile path',
+      getOgContent(html, 'og:image') === 'https://image.tmdb.org/t/p/w500/brad-pitt.jpg'
+    );
+    check('/person og:type is profile', getOgContent(html, 'og:type') === 'profile');
+    check(
+      '/person sets the indexable x-robots-tag',
+      response.headers.get('x-robots-tag') === 'all'
+    );
+    check(
+      '/person uses the short HTML cache',
+      (response.headers.get('cache-control') || '').includes('s-maxage=60')
+    );
+
+    const schemaRaw =
+      /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(html)?.[1] || '';
+    let schema: any = null;
+    try {
+      schema = schemaRaw ? JSON.parse(schemaRaw) : null;
+    } catch {
+      schema = null;
+    }
+
+    check(
+      '/person JSON-LD is a Person with birth and job data',
+      schema?.['@type'] === 'Person' &&
+        schema?.name === 'Brad Pitt' &&
+        schema?.birthDate === '1963-12-18' &&
+        schema?.birthPlace?.name === 'Shawnee, Oklahoma, USA' &&
+        schema?.jobTitle === 'Acting' &&
+        schema?.url === `${canonicalBase}/person/287-brad-pitt`
+    );
+
+    check(
+      '/person body has h1, department, biography and known-for credits',
+      root.includes('<h1>Brad Pitt</h1>') &&
+        root.includes('<p>Acting</p>') &&
+        root.includes('American actor and film producer') &&
+        root.includes('Fight Club (1999)')
+    );
+    check('/person body drops adult credits', !root.includes('Adult Credit'));
+    check('/person body escapes biography text', !root.includes('<script>'));
+  }
+
+  // A mismatched requested slug never changes the canonical and never redirects
+  {
+    const response = await middleware(botRequest('/person/287-totally-wrong-slug'));
+    const html = await response.text();
+
+    check(
+      'requested slug mismatch still yields the canonical URL',
+      response.status === 200 &&
+        response.headers.get('location') === null &&
+        getCanonicalHref(html) === 'https://www.sotoyfilm.my.id/person/287-brad-pitt'
+    );
+  }
+
+  // Script-breaking TMDB text must never escape the JSON-LD script tag
+  {
+    const response = await middleware(botRequest('/person/31337-xss-person'));
+    const html = await response.text();
+
+    const ldOpenTag = '<script type="application/ld+json">';
+    const ldStart = html.indexOf(ldOpenTag);
+    const ldEnd =
+      ldStart >= 0 ? html.indexOf('</script>', ldStart + ldOpenTag.length) : -1;
+    const ldRaw =
+      ldStart >= 0 && ldEnd > ldStart
+        ? html.slice(ldStart + ldOpenTag.length, ldEnd)
+        : '';
+
+    let ldSchema: any = null;
+    try {
+      ldSchema = ldRaw ? JSON.parse(ldRaw) : null;
+    } catch {
+      ldSchema = null;
+    }
+
+    check(
+      'script-breaking person JSON-LD cannot close the script tag',
+      ldRaw !== '' && !ldRaw.includes('<') && ldRaw.includes('\\u003c')
+    );
+    check(
+      'script-breaking person JSON-LD round-trips to the original text',
+      ldSchema?.['@type'] === 'Person' &&
+        ldSchema?.name === '</script><b>x</b>' &&
+        ldSchema?.description === 'Bio </script><b>x</b> end'
+    );
+    check(
+      'person JSON-LD omits image when profile_path is empty',
+      ldSchema !== null && !('image' in ldSchema)
+    );
+  }
+
+  // /people gets its own metadata plus a linked crawler body
+  {
+    const response = await middleware(botRequest('/people'));
+    const html = await response.text();
+    const root = getRootContent(html);
+
+    check(
+      '/people returns 200 HTML for bots',
+      response.status === 200 &&
+        (response.headers.get('content-type') || '').includes('text/html')
+    );
+    check(
+      '/people title matches the PeoplePage SEOHead wording',
+      html.includes('<title>Orang Populer - Aktor, Sutradara, dan Kru | Sotoy Film</title>')
+    );
+    check(
+      '/people description matches the PeoplePage SEOHead wording',
+      getMetaContent(html, 'description') ===
+        'Daftar aktor, sutradara, dan kru film serta series yang sedang ramai dibicarakan minggu ini, lengkap dengan biografi dan filmografi.'
+    );
+    check(
+      '/people canonical points at /people',
+      getCanonicalHref(html) === 'https://www.sotoyfilm.my.id/people'
+    );
+    check(
+      '/people body lists popular people as canonical links',
+      root.includes('<h1>Orang Populer</h1>') &&
+        root.includes('<a href="/person/287-brad-pitt">Brad Pitt</a>') &&
+        root.includes('<a href="/person/1245-scarlett-johansson">Scarlett Johansson</a>')
+    );
+    check(
+      '/people does not receive the film/article list payload',
+      !html.includes('id="seo-lists"')
+    );
+  }
+
+  // Fall-through cases: the SPA must still load for every failure mode
+  {
+    const invalidId = await middleware(botRequest('/person/abc'));
+    check(
+      'invalid person id falls through to safeNext()',
+      invalidId.headers.get('x-middleware-next') === '1' && (await invalidId.text()) === ''
+    );
+
+    const adult = await middleware(botRequest('/person/55555-adult-person'));
+    check(
+      'adult person falls through to safeNext()',
+      adult.headers.get('x-middleware-next') === '1' && (await adult.text()) === ''
+    );
+
+    tmdbMock.person = 'not-found';
+    const notFound = await middleware(botRequest('/person/999999-missing-person'));
+    tmdbMock.person = 'ok';
+    check(
+      'TMDB 404 falls through to safeNext()',
+      notFound.headers.get('x-middleware-next') === '1' && (await notFound.text()) === ''
+    );
+
+    tmdbMock.person = 'timeout';
+    const timedOut = await middleware(botRequest('/person/77777-timeout-person'));
+    tmdbMock.person = 'ok';
+    check(
+      'TMDB timeout falls through to safeNext()',
+      timedOut.headers.get('x-middleware-next') === '1' && (await timedOut.text()) === ''
+    );
+
+    const previousKey = process.env.TMDB_API_KEY;
+    delete process.env.TMDB_API_KEY;
+    const missingKey = await middleware(botRequest('/person/88888-no-key-person'));
+    if (previousKey === undefined) {
+      delete process.env.TMDB_API_KEY;
+    } else {
+      process.env.TMDB_API_KEY = previousKey;
+    }
+    check(
+      'missing TMDB_API_KEY falls through to safeNext()',
+      missingKey.headers.get('x-middleware-next') === '1' && (await missingKey.text()) === ''
+    );
+
+    const humanResponse = await middleware(
+      new Request('https://www.sotoyfilm.my.id/person/287-brad-pitt', {
+        method: 'GET',
+        headers: {
+          'user-agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+        },
+      })
+    );
+    check(
+      'human UA on /person/:id passes through untouched',
+      humanResponse.headers.get('x-middleware-next') === '1' &&
+        (await humanResponse.text()) === ''
     );
   }
 

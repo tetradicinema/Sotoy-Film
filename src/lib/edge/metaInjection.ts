@@ -138,7 +138,16 @@ export function injectMetaTags(html: string, meta: MetaTagsPayload): string {
   // Schema.org JSON-LD injection
   if (meta.schemaJson) {
     const rawJson = typeof meta.schemaJson === 'string' ? meta.schemaJson : JSON.stringify(meta.schemaJson);
-    dynamicExtraTags += `\n    <script type="application/ld+json">${rawJson}</script>`;
+    // `<` is the only character that can terminate the surrounding script
+    // element (via `</script>`), and U+2028/U+2029 are invalid inside
+    // JavaScript string literals. Escaping all three keeps the payload valid
+    // JSON while making it impossible to break out of the tag. Applied once
+    // here so every caller (film, article, person) is covered.
+    const safeJson = rawJson
+      .replace(/</g, '\\u003c')
+      .replace(/\u2028/g, '\\u2028')
+      .replace(/\u2029/g, '\\u2029');
+    dynamicExtraTags += `\n    <script type="application/ld+json">${safeJson}</script>`;
   }
 
   const tags = `

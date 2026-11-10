@@ -694,6 +694,13 @@ export const STATIC_ROUTE_METADATA_CONFIG: Record<
       'Ruang diskusi santai, debat seru, dan obrolan sinema bersama para penikmat film dan kurator Sotoy Film.',
     type: 'website',
   },
+  '/people': {
+    title: 'Orang Populer - Aktor, Sutradara, dan Kru | Sotoy Film',
+    description:
+      'Daftar aktor, sutradara, dan kru film serta series yang sedang ramai dibicarakan minggu ini, lengkap dengan biografi dan filmografi.',
+    keywords: ['orang populer', 'aktor', 'sutradara', 'kru film', 'biografi', 'filmografi'],
+    type: 'website',
+  },
   '/kategori/movies': {
     title: 'Kategori Film & Sinema Dunia',
     description:
