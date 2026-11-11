@@ -18,7 +18,8 @@ import {
   RotateCcw,
   ListFilter,
   Check,
-  Info
+  Info,
+  type LucideIcon
 } from 'lucide-react';
 import { fetchTmdbDetails, mapTmdbDetailsToFilm, fetchTmdbList, MappedTmdbFilm, findExistingFilmByTmdb } from '../../utils/tmdbHelper';
 import { slugify } from '../../utils/slugify';
@@ -45,7 +46,17 @@ interface BatchItemProgress {
   error?: string;
 }
 
-type CuratedListType = 'popular' | 'top_rated' | 'trending' | 'now_playing';
+type CuratedListType = 'popular' | 'top_rated' | 'trending' | 'now_playing' | 'upcoming';
+
+interface CuratedListOption {
+  id: CuratedListType;
+  label: string;
+  desc: string;
+  icon: LucideIcon;
+  color: string;
+  /** Forwarded to TMDB only for the movie now_playing/upcoming lists. */
+  region?: string;
+}
 
 const SAMPLE_MOVIES = '872585, 693134, 155, 157336, 496243'; // Oppenheimer, Dune 2, Dark Knight, Interstellar, Parasite
 const SAMPLE_SERIES = '1396, 66732, 1399, 126308'; // Breaking Bad, Stranger Things, GOT, Shogun
@@ -296,7 +307,16 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
 
       for (let p = 1; p <= pageCount; p++) {
         if (stopRequestedRef.current) break;
-        const listResults = await fetchTmdbList(listSource, mediaType, p);
+        const selectedOption =
+          listOptions.find(option => option.id === listSource) ?? listOptions[0];
+        const listResults = await fetchTmdbList(
+          selectedOption.id,
+          mediaType,
+          p,
+          selectedOption.region
+        );
+        // A short region-specific list can run out of pages before pageCount.
+        if (listResults.length === 0) break;
         for (const resItem of listResults) {
           const idStr = String(resItem.id);
           if (!seenIds.has(idStr)) {
@@ -363,7 +383,16 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
     setErrorCount(0);
   };
 
-  const listOptions = [
+  // The "upcoming" list only exists for movies, so never keep it selected after
+  // switching the format to TV (TMDB has no TV upcoming list).
+  const handleMediaTypeChange = (nextType: 'movie' | 'tv') => {
+    setMediaType(nextType);
+    if (nextType === 'tv') {
+      setListSource(current => (current === 'upcoming' ? 'popular' : current));
+    }
+  };
+
+  const listOptions: CuratedListOption[] = [
     {
       id: 'popular' as CuratedListType,
       label: 'Populer',
@@ -387,11 +416,22 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
     },
     {
       id: 'now_playing' as CuratedListType,
-      label: mediaType === 'tv' ? 'Tayang On The Air' : 'Sedang Tayang di Bioskop',
-      desc: mediaType === 'tv' ? 'Serial yang sedang aktif tayang di saluran TV/stream' : 'Film yang sedang tayang di bioskop saat ini',
+      label: mediaType === 'tv' ? 'Tayang On The Air' : 'Sedang Tayang di Bioskop (Indonesia)',
+      desc: mediaType === 'tv' ? 'Serial yang sedang aktif tayang di saluran TV/stream' : 'Film yang sedang tayang di bioskop Indonesia saat ini',
       icon: Radio,
       color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+      ...(mediaType === 'movie' ? { region: 'ID' } : {}),
     },
+    ...(mediaType === 'movie'
+      ? [{
+          id: 'upcoming' as CuratedListType,
+          label: 'Segera Tayang di Bioskop (Indonesia)',
+          desc: 'Film yang akan segera tayang di bioskop Indonesia',
+          icon: Play,
+          color: 'text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/30',
+          region: 'ID',
+        }]
+      : []),
   ];
 
   const estimatedTitles = pageCount * 20;
@@ -471,7 +511,7 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
             <div className="flex items-center bg-slate-950 border border-slate-800 p-1 rounded-xl text-xs shrink-0">
               <button
                 type="button"
-                onClick={() => setMediaType('movie')}
+                onClick={() => handleMediaTypeChange('movie')}
                 disabled={isRunning}
                 className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
                   mediaType === 'movie'
@@ -484,7 +524,7 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => setMediaType('tv')}
+                onClick={() => handleMediaTypeChange('tv')}
                 disabled={isRunning}
                 className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
                   mediaType === 'tv'
@@ -595,7 +635,7 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
                   <button
                     type="button"
                     disabled={isRunning}
-                    onClick={() => { setMediaType('movie'); setRawInput(SAMPLE_MOVIES); }}
+                    onClick={() => { handleMediaTypeChange('movie'); setRawInput(SAMPLE_MOVIES); }}
                     className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-cyan-300 border border-slate-700 transition-colors"
                   >
                     🎬 Film Box Office (Oppenheimer, Dune 2, Dark Knight...)
@@ -603,7 +643,7 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
                   <button
                     type="button"
                     disabled={isRunning}
-                    onClick={() => { setMediaType('movie'); setRawInput(SAMPLE_INDONESIAN); }}
+                    onClick={() => { handleMediaTypeChange('movie'); setRawInput(SAMPLE_INDONESIAN); }}
                     className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-amber-300 border border-slate-700 transition-colors"
                   >
                     🇮🇩 Film Indonesia (The Raid, Pengabdi Setan)
@@ -611,7 +651,7 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
                   <button
                     type="button"
                     disabled={isRunning}
-                    onClick={() => { setMediaType('tv'); setRawInput(SAMPLE_SERIES); }}
+                    onClick={() => { handleMediaTypeChange('tv'); setRawInput(SAMPLE_SERIES); }}
                     className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-purple-300 border border-slate-700 transition-colors"
                   >
                     📺 TV Series (Breaking Bad, Stranger Things, Shogun...)

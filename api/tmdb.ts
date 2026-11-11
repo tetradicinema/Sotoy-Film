@@ -51,6 +51,7 @@ export async function handleTmdbRequest(req: any, res: any) {
   let id = '';
   let list = 'popular';
   let page = '1';
+  let region = '';
   let season = '';
   let episode = '';
 
@@ -61,6 +62,7 @@ export async function handleTmdbRequest(req: any, res: any) {
     id = String(req.query.id || '');
     list = String(req.query.list || 'popular');
     page = String(req.query.page || '1');
+    region = String(req.query.region || '');
     season = String(req.query.season || '');
     episode = String(req.query.episode || '');
   } else if (req.url) {
@@ -72,6 +74,7 @@ export async function handleTmdbRequest(req: any, res: any) {
       id = parsedUrl.searchParams.get('id') || '';
       list = parsedUrl.searchParams.get('list') || 'popular';
       page = parsedUrl.searchParams.get('page') || '1';
+      region = parsedUrl.searchParams.get('region') || '';
       season = parsedUrl.searchParams.get('season') || '';
       episode = parsedUrl.searchParams.get('episode') || '';
     } catch {
@@ -81,6 +84,10 @@ export async function handleTmdbRequest(req: any, res: any) {
 
   const normalizedType = type === 'tv' ? 'tv' : 'movie';
   const pageNumber = Math.max(1, Math.min(500, parseInt(page, 10) || 1));
+  // Optional ISO 3166-1 region for the movie list endpoints. Invalid values are
+  // silently ignored so existing callers keep their current behaviour.
+  const normalizedRegion = region.trim().toUpperCase();
+  const listRegion = /^[A-Z]{2}$/.test(normalizedRegion) ? normalizedRegion : '';
 
   // Determine headers and URL params for TMDB authentication
   // Supports both TMDB v3 API Key and v4 Read Access Token
@@ -394,9 +401,13 @@ export async function handleTmdbRequest(req: any, res: any) {
           case 'now_playing':
             endpoint = 'tv/on_the_air';
             break;
+          case 'upcoming':
+            return res.status(400).json({
+              error: 'The "upcoming" list is only available for movies; TMDB has no TV upcoming list.'
+            });
           default:
             return res.status(400).json({
-              error: 'Invalid list parameter. Supported lists: "popular", "top_rated", "trending", "now_playing".'
+              error: 'Invalid list parameter. Supported lists: "popular", "top_rated", "trending", "now_playing", "upcoming".'
             });
         }
       } else {
@@ -413,9 +424,12 @@ export async function handleTmdbRequest(req: any, res: any) {
           case 'now_playing':
             endpoint = 'movie/now_playing';
             break;
+          case 'upcoming':
+            endpoint = 'movie/upcoming';
+            break;
           default:
             return res.status(400).json({
-              error: 'Invalid list parameter. Supported lists: "popular", "top_rated", "trending", "now_playing".'
+              error: 'Invalid list parameter. Supported lists: "popular", "top_rated", "trending", "now_playing", "upcoming".'
             });
         }
       }
@@ -426,6 +440,14 @@ export async function handleTmdbRequest(req: any, res: any) {
       }
       tmdbUrl.searchParams.set('language', 'en-US');
       tmdbUrl.searchParams.set('page', String(pageNumber));
+
+      if (
+        listRegion &&
+        normalizedType === 'movie' &&
+        (normalizedList === 'now_playing' || normalizedList === 'upcoming')
+      ) {
+        tmdbUrl.searchParams.set('region', listRegion);
+      }
 
       const response = await fetch(tmdbUrl.toString(), {
         method: 'GET',

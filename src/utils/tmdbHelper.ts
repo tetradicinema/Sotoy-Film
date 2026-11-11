@@ -118,15 +118,21 @@ export const searchTmdbFilms = async (
 };
 
 /**
- * Fetches curated list items from TMDB (popular, top_rated, trending, now_playing)
+ * Fetches curated list items from TMDB (popular, top_rated, trending, now_playing, upcoming).
+ * `region` is only forwarded to TMDB for the movie now_playing/upcoming lists.
  */
 export const fetchTmdbList = async (
-  list: 'popular' | 'top_rated' | 'trending' | 'now_playing',
+  list: 'popular' | 'top_rated' | 'trending' | 'now_playing' | 'upcoming',
   type: 'movie' | 'tv' = 'movie',
-  page: number = 1
+  page: number = 1,
+  region?: string
 ): Promise<TmdbSearchResultItem[]> => {
   try {
-    const res = await fetch(`/api/tmdb?action=list&list=${encodeURIComponent(list)}&type=${encodeURIComponent(type)}&page=${page}`);
+    let url = `/api/tmdb?action=list&list=${encodeURIComponent(list)}&type=${encodeURIComponent(type)}&page=${page}`;
+    if (region) {
+      url += `&region=${encodeURIComponent(region)}`;
+    }
+    const res = await fetch(url);
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
       throw new Error(errData.error || `Gagal mengambil daftar ${list} dari TMDB (${res.status})`);
