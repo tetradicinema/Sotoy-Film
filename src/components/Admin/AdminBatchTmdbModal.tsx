@@ -86,20 +86,20 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
 
   const stopRequestedRef = useRef(false);
 
-  if (!isOpen) return null;
-
   // Extract valid numerical IDs from raw text
   const parseIds = (text: string): string[] => {
     const matches = text.match(/\d+/g) || [];
     return Array.from(new Set(matches));
   };
 
-  const parsedIds = parseIds(rawInput);
+  const parsedIds = useMemo(() => parseIds(rawInput), [rawInput]);
 
   // Exclude IDs that already exist in the catalog from the selected count
   const nonDuplicateManualIds = useMemo(() => {
     return parsedIds.filter(id => !findExistingFilmByTmdb(films, Number(id), mediaType));
   }, [parsedIds, films, mediaType]);
+
+  if (!isOpen) return null;
 
   const duplicateManualCount = parsedIds.length - nonDuplicateManualIds.length;
 
