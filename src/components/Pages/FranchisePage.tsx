@@ -219,13 +219,32 @@ export const FranchisePage: React.FC = () => {
     return (fallbackNameFilm?.collectionName || '').trim() || `Franchise #${franchiseId ?? ''}`;
   }, [collection, fallbackNameFilm, franchiseId]);
 
-  // The film catalogue loads asynchronously in AppContext: never decide
-  // "not-found" while it is still loading, because the catalog fallback
-  // (films sharing the collectionId) may still be about to arrive.
-  if (status === 'loading' || (franchiseId !== null && isLoadingFilms)) {
+  // The skeleton must never depend on the film catalogue alone: if TMDB parts
+  // already produced entries, render the content even while isLoadingFilms is
+  // still true. Googlebot can be left with the loading head forever when the
+  // Firestore SDK never settles, so the catalogue may only gate an EMPTY page.
+  const tmdbStillLoading = status === 'loading';
+  const showSkeleton =
+    tmdbStillLoading || (isLoadingFilms && entries.length === 0);
+
+  // Skeleton / neutral loading head. Never noindex: the loading state is
+  // transient and must never win over the middleware's indexable HTML. When
+  // the TMDB collection name is already known, reuse the final SEO wording;
+  // otherwise a neutral title with no robots directive and no canonical
+  // override (SEOHead falls back to the current URL).
+  if (showSkeleton) {
+    const knownName = (collection?.name || '').trim();
+
     return (
       <>
-        <SEOHead title="Memuat franchise..." noindex />
+        {knownName ? (
+          <SEOHead
+            title={`${knownName} - Semua Film Franchise | Sotoy Film`}
+            canonicalUrl={`${DEFAULT_BASE_URL}${buildFranchisePath(franchiseId!, knownName)}`}
+          />
+        ) : (
+          <SEOHead title="Franchise | Sotoy Film" />
+        )}
         <main className="min-h-screen bg-[#0A0A0A] text-slate-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
             <div className="h-8 w-64 bg-slate-800 rounded animate-pulse mb-8" />
@@ -240,6 +259,9 @@ export const FranchisePage: React.FC = () => {
     );
   }
 
+  // Not-found is only decided once the TMDB request finished AND the film
+  // catalogue is no longer loading: the catalog fallback (films sharing the
+  // collectionId) may still be about to fill an empty TMDB result.
   if (
     status === 'not-found' ||
     (status === 'ready' && !isLoadingFilms && entries.length === 0)
@@ -305,8 +327,12 @@ export const FranchisePage: React.FC = () => {
   ]);
 
   // Pages with zero catalog titles only mirror TMDB data: keep them out of
-  // the index (no canonical URL, noindex with follow).
-  const seo = catalogCount === 0
+  // the index only once the catalogue actually loaded (a blocked or still
+  // loading Firestore SDK must never flip this page to noindex). Otherwise
+  // keep the normal indexable SEO with the canonical URL.
+  const thinPage =
+    !isLoadingFilms && films.length > 0 && catalogCount === 0;
+  const seo = thinPage
     ? {
         title: seoTitle,
         description: seoDescription,
