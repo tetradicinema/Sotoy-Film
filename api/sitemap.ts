@@ -10,6 +10,7 @@ import {
 } from '../src/lib/edge/firestoreRest.js';
 import { slugify } from '../src/utils/slugify.js';
 import { fetchPopularPeopleForSitemap } from '../src/lib/edge/personMeta.js';
+import { buildFranchiseSitemapEntries } from '../src/lib/edge/franchiseMeta.js';
 
 const BASE_URL = 'https://www.sotoyfilm.my.id';
 
@@ -31,6 +32,9 @@ const SITEMAP_SELECT_FIELDS = [
   'publishedAt',
   'createdAt',
   'excerpt',
+  // TMDB collection ("franchise") grouping for /franchise/:idSlug entries.
+  'collectionId',
+  'collectionName',
 ];
 
 interface SitemapItem {
@@ -283,6 +287,33 @@ async function generateLiveSitemapItems(): Promise<SitemapItem[]> {
       lastmod,
       changefreq: 'monthly',
       priority: '0.9',
+    });
+  }
+
+  // Franchises grouped from the already-fetched films. Best effort: the
+  // helper never throws and only emits franchises with at least 2 catalog
+  // films (thin pages stay out of the sitemap), so a problem here can never
+  // remove or reorder the static/article/film/person entries above. No
+  // extra TMDB call is needed: collectionId/collectionName ship on the film
+  // documents.
+  let franchiseEntries: ReturnType<typeof buildFranchiseSitemapEntries> = [];
+  try {
+    franchiseEntries = buildFranchiseSitemapEntries(rawFilms);
+  } catch {
+    franchiseEntries = [];
+  }
+
+  for (const franchise of franchiseEntries) {
+    // Same canonical rule as the middleware and buildFranchiseCanonicalUrl.
+    items.push({
+      link: `${BASE_URL}${franchise.path}`,
+      title: franchise.name,
+      metaDescription: '',
+      type: 'Halaman',
+      // No real modification date is known for TMDB collections.
+      lastmod: '',
+      changefreq: 'weekly',
+      priority: '0.6',
     });
   }
 

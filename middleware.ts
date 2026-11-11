@@ -19,6 +19,12 @@ import {
   fetchPersonForSeo,
   fetchPopularPeopleForSeo,
 } from './src/lib/edge/personMeta.js';
+import {
+  buildFranchiseBodyHtml,
+  buildFranchiseMeta,
+  fetchFranchiseForSeo,
+  parseFranchiseRouteId,
+} from './src/lib/edge/franchiseMeta.js';
 import { buildRouteMetadata, STATIC_ROUTE_METADATA_CONFIG } from './src/utils/seoMetadata.js';
 import { pickArticleIsoDate } from './src/lib/edge/isoDate.js';
 
@@ -68,6 +74,7 @@ export const config = {
     '/kategori/:path*',
     '/category/:path*',
     '/person/:path*',
+    '/franchise/:path*',
     '/people',
   ],
 };
@@ -420,6 +427,56 @@ export default async function middleware(request: Request): Promise<Response> {
       const personHtml = injectRootContent(personMetaHtml, buildPersonBodyHtml(person));
 
       return new Response(personHtml, {
+        status: 200,
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+          'x-robots-tag': 'all',
+          'cache-control': 'public, s-maxage=60, stale-while-revalidate=300',
+        },
+      });
+    }
+
+    // 3c. Franchise pages (/franchise/:id-slug) are backed by the TMDB
+    // collection endpoint, not Firestore. Any failure (invalid id, missing
+    // key, timeout, TMDB 404, zero usable parts) falls through so the SPA
+    // still renders normally. Whether a franchise is too thin to index is
+    // decided by the sitemap and the client noindex in FranchisePage.
+    const franchiseMatch = /^\/franchise\/([^/]+)\/?$/.exec(pathname);
+    if (franchiseMatch) {
+      const franchiseId = parseFranchiseRouteId(franchiseMatch[1]);
+      if (franchiseId === null) {
+        return safeNext();
+      }
+
+      const franchise = await fetchFranchiseForSeo(franchiseId);
+      if (!franchise) {
+        return safeNext();
+      }
+
+      const franchiseMeta = buildFranchiseMeta(franchise);
+
+      let franchiseBaseHtml = await fetchBaseHtml(request);
+      if (!franchiseBaseHtml) {
+        franchiseBaseHtml = FALLBACK_HTML_TEMPLATE;
+      }
+
+      const franchiseMetaHtml = injectMetaTags(franchiseBaseHtml, {
+        title: franchiseMeta.title,
+        description: franchiseMeta.description,
+        image: franchiseMeta.image,
+        url: franchiseMeta.canonicalUrl,
+        type: franchiseMeta.ogType,
+        imageAlt: franchise.name,
+        locale: 'id_ID',
+        schemaJson: franchiseMeta.schema,
+      });
+
+      const franchiseHtml = injectRootContent(
+        franchiseMetaHtml,
+        buildFranchiseBodyHtml(franchise)
+      );
+
+      return new Response(franchiseHtml, {
         status: 200,
         headers: {
           'content-type': 'text/html; charset=utf-8',

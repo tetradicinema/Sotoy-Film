@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, terminate } from 'firebase/firestore';
 import { fetchPopularPeopleSitemapEntries } from './sitemap-people';
+import { buildFranchiseSitemapEntries } from '../src/lib/edge/franchiseMeta';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -118,6 +119,7 @@ async function run() {
 
   const seenArticleSlugs = new Set<string>();
   const seenFilmSlugs = new Set<string>();
+  const filmsForFranchises: any[] = [];
   let articlesCount = 0;
   let filmsCount = 0;
 
@@ -186,6 +188,9 @@ async function run() {
         if (!slug || seenFilmSlugs.has(slug)) return;
 
         seenFilmSlugs.add(slug);
+        // Keep the raw film data for the franchise grouping below; the
+        // client SDK returns collectionId/collectionName on the full docs.
+        filmsForFranchises.push(film);
         const lastmod = formatDateToYMD(film.updatedAt || film.createdAt, '');
         const entry: SitemapEntry = {
           loc: `${baseUrl}/film/${encodeURIComponent(slug)}`,
@@ -230,6 +235,22 @@ async function run() {
   const peopleCount = peopleEntries.length;
   console.log(`[Sitemap Builder] Indexed ${peopleCount} popular people.`);
 
+  // 5b. Franchises grouped from the fetched films. Best effort: the helper
+  // never throws and only emits franchises with at least 2 catalog films
+  // (thin pages stay out of the sitemap). No extra TMDB call is needed:
+  // collectionId/collectionName ship on the film documents. The slug must
+  // match the edge canonical (/franchise/<id>-<slug>) exactly.
+  const franchiseEntries = buildFranchiseSitemapEntries(filmsForFranchises).map(
+    franchise => ({
+      loc: `${baseUrl}${franchise.path}`,
+      changefreq: 'weekly' as const,
+      priority: '0.6',
+    })
+  );
+  entries.push(...franchiseEntries);
+  const franchisesCount = franchiseEntries.length;
+  console.log(`[Sitemap Builder] Indexed ${franchisesCount} franchises.`);
+
   // 6. Construct XML string with standard compliant tags & XML entity escaping
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
   xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n';
@@ -262,14 +283,14 @@ async function run() {
     const existingUrlCount = (existingContent.match(/<url>/g) || []).length;
     if (existingUrlCount > totalUrls) {
       console.warn(`[Sitemap Builder] WARNING: Firestore cannot be read (offline fallback). Existing ${sitemapDest} has ${existingUrlCount} URLs which is more than fallback generated ${totalUrls} URLs. Keeping existing sitemap file.`);
-      console.log(`[Sitemap Builder] Generated fallback counts: ${articlesCount} articles, ${filmsCount} films, ${peopleCount} people, ${totalUrls} total URLs.`);
+      console.log(`[Sitemap Builder] Generated fallback counts: ${articlesCount} articles, ${filmsCount} films, ${peopleCount} people, ${franchisesCount} franchises, ${totalUrls} total URLs.`);
       return;
     }
   }
 
   fs.writeFileSync(sitemapDest, xml, 'utf-8');
 
-  console.log(`[Sitemap Builder] Successfully wrote ${totalUrls} URLs (${articlesCount} articles, ${filmsCount} films, ${peopleCount} people) to ${sitemapDest}`);
+  console.log(`[Sitemap Builder] Successfully wrote ${totalUrls} URLs (${articlesCount} articles, ${filmsCount} films, ${peopleCount} people, ${franchisesCount} franchises) to ${sitemapDest}`);
 
 }
 

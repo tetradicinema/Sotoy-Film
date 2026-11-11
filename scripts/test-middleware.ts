@@ -12,7 +12,7 @@
  *   npx tsx scripts/test-middleware.ts
  */
 
-import middleware, { isBotUserAgent } from '../middleware.js';
+import middleware, { isBotUserAgent, config } from '../middleware.js';
 import { STATIC_ROUTE_METADATA_CONFIG } from '../src/utils/seoMetadata.js';
 import { clearSeoListsCache } from '../src/lib/edge/firestoreRest.js';
 
@@ -27,13 +27,15 @@ process.env.TMDB_API_KEY = 'test-tmdb-key';
 const docFetchCounts: Record<string, number> = {};
 /** Lets tests force a list REST failure for one or both collections. */
 const listFetchFailure = { films: false, articles: false };
-/** Lets tests force a TMDB failure mode for the person routes. */
+/** Lets tests force a TMDB failure mode for the person and franchise routes. */
 const tmdbMock: {
   person: 'ok' | 'not-found' | 'timeout';
   popular: 'ok' | 'not-found' | 'timeout';
+  collection: 'ok' | 'not-found' | 'timeout';
 } = {
   person: 'ok',
   popular: 'ok',
+  collection: 'ok',
 };
 
 /** Deterministic TMDB person payloads used by the /person route tests. */
@@ -145,14 +147,109 @@ function tmdbPersonFixture(id: number): Record<string, any> {
   };
 }
 
+/** Deterministic TMDB collection payloads used by the /franchise route tests. */
+function tmdbCollectionFixture(id: number): Record<string, any> {
+  if (id === 119) {
+    return {
+      id: 119,
+      name: 'The Lord of the Rings Collection',
+      parts: [
+        {
+          id: 122,
+          title: 'The Lord of the Rings: The Fellowship of the Ring',
+          release_date: '2001-12-19',
+          adult: false,
+        },
+        {
+          id: 121,
+          title: 'The Lord of the Rings: The Two Towers',
+          release_date: '2002-12-18',
+          adult: false,
+        },
+        {
+          id: 120,
+          title: 'The Lord of the Rings: The Return of the King',
+          release_date: '2003-12-01',
+          adult: false,
+        },
+        // Must be dropped from the body and never count as a usable part.
+        {
+          id: 44444,
+          title: 'Adult Part',
+          release_date: '2004-01-01',
+          adult: true,
+        },
+      ],
+    };
+  }
+
+  // Every part is adult: zero usable parts must null out the franchise.
+  if (id === 22222) {
+    return {
+      id: 22222,
+      name: 'Adult Collection',
+      parts: [
+        {
+          id: 1,
+          title: 'Adult Film',
+          release_date: '2020-01-01',
+          adult: true,
+        },
+      ],
+    };
+  }
+
+  if (id === 33333) {
+    return {
+      id: 33333,
+      name: 'Empty Collection',
+      parts: [],
+    };
+  }
+
+  // Script-breaking text must be escaped in the crawler body.
+  if (id === 31337) {
+    return {
+      id: 31337,
+      name: '</script><b>x</b> Collection',
+      parts: [
+        {
+          id: 1,
+          title: 'Title </script><b>x</b>',
+          release_date: '2020-01-01',
+          adult: false,
+        },
+      ],
+    };
+  }
+
+  return {
+    id,
+    name: `Collection ${id}`,
+    parts: [
+      {
+        id: 1,
+        title: `Part One of Collection ${id}`,
+        release_date: '2020-01-01',
+        adult: false,
+      },
+    ],
+  };
+}
+
 const mockFetch = async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
   const urlStr = url.toString();
 
-  // 0a. Mock the TMDB API used by the bot-only person routes
+  // 0a. Mock the TMDB API used by the bot-only person and franchise routes
   if (urlStr.startsWith('https://api.themoviedb.org/3/')) {
     const base = urlStr.split('?')[0];
     const isPopularList = /\/person\/popular$/.test(base);
-    const mode = isPopularList ? tmdbMock.popular : tmdbMock.person;
+    const isCollection = /\/collection\/\d+$/.test(base);
+    const mode = isCollection
+      ? tmdbMock.collection
+      : isPopularList
+        ? tmdbMock.popular
+        : tmdbMock.person;
 
     if (mode === 'timeout') {
       // Never settles on its own; fetchWithTimeout aborts it after 2000 ms.
@@ -210,6 +307,14 @@ const mockFetch = async (url: string | URL | Request, init?: RequestInit): Promi
     const personIdMatch = /\/person\/(\d+)$/.exec(base);
     if (personIdMatch) {
       return new Response(JSON.stringify(tmdbPersonFixture(Number(personIdMatch[1]))), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+
+    const collectionIdMatch = /\/collection\/(\d+)$/.exec(base);
+    if (collectionIdMatch) {
+      return new Response(JSON.stringify(tmdbCollectionFixture(Number(collectionIdMatch[1]))), {
         status: 200,
         headers: { 'content-type': 'application/json' },
       });
@@ -924,6 +1029,19 @@ const TEST_CASES: TestCase[] = [
     ],
   },
 
+  // --- BOTS: TMDB franchise routes ---
+  {
+    name: 'Googlebot on /franchise/119-the-lord-of-the-rings (TMDB collection)',
+    userAgent: 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+    path: '/franchise/119-the-lord-of-the-rings',
+    expectedBranch: 'BOT',
+    expectedMetaPatterns: [
+      '<title>The Lord of the Rings Collection - Semua Film Franchise | Sotoy Film</title>',
+      'rel="canonical"',
+      'application/ld+json',
+    ],
+  },
+
   // --- CATEGORY TAXONOMY REDIRECTS ---
   {
     name: 'Googlebot on canonical Animation category (meta injected)',
@@ -945,6 +1063,30 @@ const TEST_CASES: TestCase[] = [
     path: '/kategori/animasi/news',
     expectedStatus: 301,
     expectedLocation: '/kategori/animation/news',
+  },
+  {
+    name: 'Windows Chrome on Franchise route (Desktop Human)',
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+    path: '/franchise/119-the-lord-of-the-rings',
+    expectedBranch: 'HUMAN',
+  },
+  {
+    name: 'Bot on non-numeric franchise id (/franchise/abc) falls through',
+    userAgent: 'Googlebot/2.1',
+    path: '/franchise/abc',
+    expectedBranch: 'HUMAN',
+  },
+  {
+    name: 'Bot on adult-only collection (/franchise/22222) falls through',
+    userAgent: 'Googlebot/2.1',
+    path: '/franchise/22222-adult-collection',
+    expectedBranch: 'HUMAN',
+  },
+  {
+    name: 'Bot on empty collection (/franchise/33333) falls through',
+    userAgent: 'Googlebot/2.1',
+    path: '/franchise/33333-empty',
+    expectedBranch: 'HUMAN',
   },
 ];
 
@@ -1572,6 +1714,193 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
     );
     check(
       'human UA on /person/:id passes through untouched',
+      humanResponse.headers.get('x-middleware-next') === '1' &&
+        (await humanResponse.text()) === ''
+    );
+  }
+
+  // --- Franchise routes (TMDB collection-backed) ---
+  {
+    const canonicalBase = 'https://www.sotoyfilm.my.id';
+
+    const response = await middleware(botRequest('/franchise/119-the-lord-of-the-rings'));
+    const html = await response.text();
+    const root = getRootContent(html);
+
+    check(
+      '/franchise/:id-slug returns 200 HTML for bots',
+      response.status === 200 &&
+        (response.headers.get('content-type') || '').includes('text/html')
+    );
+    check(
+      '/franchise title matches the FranchisePage SEOHead wording',
+      html.includes('<title>The Lord of the Rings Collection - Semua Film Franchise | Sotoy Film</title>')
+    );
+    check(
+      '/franchise description matches the FranchisePage SEOHead wording',
+      getMetaContent(html, 'description') ===
+        'Daftar semua film dalam franchise The Lord of the Rings Collection di Sotoy Film, diurutkan berdasarkan tanggal rilis, lengkap dengan Skor Sotoy.'
+    );
+    check(
+      '/franchise canonical is the canonical id-slug form',
+      getCanonicalHref(html) === `${canonicalBase}/franchise/119-the-lord-of-the-rings-collection`
+    );
+    check(
+      '/franchise og:image falls back to og-default.png',
+      getOgContent(html, 'og:image') === `${canonicalBase}/og-default.png`
+    );
+    check('/franchise og:type is website', getOgContent(html, 'og:type') === 'website');
+    check(
+      '/franchise sets the indexable x-robots-tag',
+      response.headers.get('x-robots-tag') === 'all'
+    );
+    check(
+      '/franchise uses the short HTML cache',
+      (response.headers.get('cache-control') || '').includes('s-maxage=60')
+    );
+
+    const schemaRaw =
+      /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(html)?.[1] || '';
+    let schema: any = null;
+    try {
+      schema = schemaRaw ? JSON.parse(schemaRaw) : null;
+    } catch {
+      schema = null;
+    }
+
+    check(
+      '/franchise JSON-LD is a BreadcrumbList Home -> name',
+      schema?.['@type'] === 'BreadcrumbList' &&
+        schema?.itemListElement?.[0]?.name === 'Home' &&
+        schema?.itemListElement?.[1]?.name === 'The Lord of the Rings Collection' &&
+        schema?.itemListElement?.[1]?.item ===
+          `${canonicalBase}/franchise/119-the-lord-of-the-rings-collection`
+    );
+
+    check(
+      '/franchise body has h1 and an ordered list',
+      root.includes('<h1>The Lord of the Rings Collection</h1>') &&
+        root.includes('<ol>') &&
+        root.includes('</ol>')
+    );
+    check(
+      '/franchise body lists parts with titles and years',
+      root.includes('The Fellowship of the Ring (2001)') &&
+        root.includes('The Two Towers (2002)') &&
+        root.includes('The Return of the King (2003)')
+    );
+    check(
+      '/franchise body sorts parts by release date ascending',
+      root.indexOf('Fellowship of the Ring (2001)') <
+        root.indexOf('The Two Towers (2002)') &&
+        root.indexOf('The Two Towers (2002)') <
+          root.indexOf('The Return of the King (2003)')
+    );
+    check('/franchise body drops adult parts', !root.includes('Adult Part'));
+    check(
+      '/franchise body has no links to non-existent pages',
+      !root.includes('<a ')
+    );
+    check('/franchise body escapes part titles', !root.includes('<script>'));
+  }
+
+  // A mismatched requested slug never changes the canonical and never redirects
+  {
+    const response = await middleware(botRequest('/franchise/119-totally-wrong-slug'));
+    const html = await response.text();
+
+    check(
+      'requested franchise slug mismatch still yields the canonical URL',
+      response.status === 200 &&
+        response.headers.get('location') === null &&
+        getCanonicalHref(html) ===
+          'https://www.sotoyfilm.my.id/franchise/119-the-lord-of-the-rings-collection'
+    );
+  }
+
+  // Script-breaking TMDB text must stay escaped in the crawler body
+  {
+    const response = await middleware(botRequest('/franchise/31337-xss-collection'));
+    const html = await response.text();
+    const root = getRootContent(html);
+
+    check(
+      'script-breaking franchise name and part titles are escaped',
+      root.includes('&lt;/script&gt;&lt;b&gt;x&lt;/b&gt;') &&
+        !root.includes('</script><b>') &&
+        getCanonicalHref(html) ===
+          'https://www.sotoyfilm.my.id/franchise/31337-scriptbxb-collection'
+    );
+  }
+
+  // The matcher must cover /franchise/:path*
+  {
+    check(
+      "middleware matcher includes '/franchise/:path*'",
+      Array.isArray(config.matcher) && config.matcher.includes('/franchise/:path*')
+    );
+  }
+
+  // Fall-through cases: the SPA must still load for every failure mode
+  {
+    const invalidId = await middleware(botRequest('/franchise/abc'));
+    check(
+      'invalid franchise id falls through to safeNext()',
+      invalidId.headers.get('x-middleware-next') === '1' && (await invalidId.text()) === ''
+    );
+
+    const adultOnly = await middleware(botRequest('/franchise/22222-adult-collection'));
+    check(
+      'adult-only collection falls through to safeNext()',
+      adultOnly.headers.get('x-middleware-next') === '1' && (await adultOnly.text()) === ''
+    );
+
+    const empty = await middleware(botRequest('/franchise/33333-empty'));
+    check(
+      'empty collection falls through to safeNext()',
+      empty.headers.get('x-middleware-next') === '1' && (await empty.text()) === ''
+    );
+
+    tmdbMock.collection = 'not-found';
+    const notFound = await middleware(botRequest('/franchise/999999-missing-collection'));
+    tmdbMock.collection = 'ok';
+    check(
+      'TMDB 404 falls through to safeNext()',
+      notFound.headers.get('x-middleware-next') === '1' && (await notFound.text()) === ''
+    );
+
+    tmdbMock.collection = 'timeout';
+    const timedOut = await middleware(botRequest('/franchise/77777-timeout-collection'));
+    tmdbMock.collection = 'ok';
+    check(
+      'TMDB timeout falls through to safeNext()',
+      timedOut.headers.get('x-middleware-next') === '1' && (await timedOut.text()) === ''
+    );
+
+    const previousKey = process.env.TMDB_API_KEY;
+    delete process.env.TMDB_API_KEY;
+    const missingKey = await middleware(botRequest('/franchise/88888-no-key-collection'));
+    if (previousKey === undefined) {
+      delete process.env.TMDB_API_KEY;
+    } else {
+      process.env.TMDB_API_KEY = previousKey;
+    }
+    check(
+      'missing TMDB_API_KEY falls through to safeNext()',
+      missingKey.headers.get('x-middleware-next') === '1' && (await missingKey.text()) === ''
+    );
+
+    const humanResponse = await middleware(
+      new Request('https://www.sotoyfilm.my.id/franchise/119-the-lord-of-the-rings', {
+        method: 'GET',
+        headers: {
+          'user-agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+        },
+      })
+    );
+    check(
+      'human UA on /franchise/:id passes through untouched',
       humanResponse.headers.get('x-middleware-next') === '1' &&
         (await humanResponse.text()) === ''
     );
