@@ -355,6 +355,63 @@ export function parseDurationMinutes(
   return null;
 }
 
+export interface TrendingEntry {
+  id: number;
+  mediaType: 'movie' | 'tv';
+}
+
+export interface FilmDbResolveOpts {
+  now?: Date;
+  seed?: number;
+  /** TMDB weekly trending entries (movie + tv), already in TMDB rank order. */
+  trending?: TrendingEntry[];
+}
+
+export type TrendingTab = 'all' | 'movie' | 'tv';
+
+/**
+ * Maps TMDB media types a film may be matched against. Type 'series' matches
+ * the tv trending list, 'animation'/'anime' can appear in both trending lists,
+ * everything else is treated as a movie.
+ */
+export function getFilmTmdbMediaTypes(film: FilmItem): ('movie' | 'tv')[] {
+  const t = (film.type || '').toLowerCase();
+  if (t === 'series') return ['tv'];
+  if (t === 'animation' || t === 'anime') return ['movie', 'tv'];
+  return ['movie'];
+}
+
+/**
+ * Builds a rank map keyed by `${mediaType}:${id}`. The first occurrence of a
+ * key wins, so the map value is the TMDB rank (0-based index of the entry).
+ */
+function buildTrendingRankMap(entries: TrendingEntry[]): Map<string, number> {
+  const ranks = new Map<string, number>();
+  for (let index = 0; index < entries.length; index++) {
+    const entry = entries[index];
+    if (!entry || typeof entry.id !== 'number') continue;
+    const key = `${entry.mediaType}:${entry.id}`;
+    if (!ranks.has(key)) ranks.set(key, index);
+  }
+  return ranks;
+}
+
+/**
+ * Best (lowest) TMDB trending rank for a film across its possible media types.
+ * Films without a valid positive-integer tmdbId never match (Infinity).
+ */
+function getFilmTrendingRank(film: FilmItem, ranks: Map<string, number>): number {
+  const tmdbId = Number(film.tmdbId);
+  if (!Number.isInteger(tmdbId) || tmdbId <= 0) return Infinity;
+
+  let best = Infinity;
+  for (const mediaType of getFilmTmdbMediaTypes(film)) {
+    const rank = ranks.get(`${mediaType}:${tmdbId}`);
+    if (rank !== undefined && rank < best) best = rank;
+  }
+  return best;
+}
+
 /**
  * Resolves a Film Database section by section key, applying default rules,
  * optional user config filters, Bayesian ranking, and limit.
@@ -363,7 +420,7 @@ export function resolveFilmDbSection(
   key: HomepageSectionKey,
   films: FilmItem[],
   config?: SectionConfig,
-  opts?: { now?: Date; seed?: number }
+  opts?: FilmDbResolveOpts
 ): FilmItem[] {
   // If explicitly disabled, return empty list
   if (config && config.enabled === false) {
@@ -395,6 +452,9 @@ export function resolveFilmDbSection(
 
   // Pre-calculate Bayesian mean score across all films in dataset
   const meanScore = computeMeanScore(films);
+
+  // TMDB weekly trending ranks (used by the fd_trending section)
+  const trendingRanks = buildTrendingRankMap(opts?.trending ?? []);
 
   // 1. Apply section default rules
   let filtered: FilmItem[] = [];
@@ -446,6 +506,12 @@ export function resolveFilmDbSection(
     case 'fd_animation': {
       // Films with type 'animation' / 'anime' or genre containing Animation / Animasi
       filtered = films.filter(isAnimationFilm);
+      break;
+    }
+
+    case 'fd_trending': {
+      // Films that match a TMDB weekly trending entry by tmdbId + media type
+      filtered = films.filter(f => getFilmTrendingRank(f, trendingRanks) !== Infinity);
       break;
     }
 
@@ -599,6 +665,7 @@ export function resolveFilmDbSection(
     key === 'fd_editors_pick' ||
     key === 'fd_hidden_gems' ||
     key === 'fd_film_indonesia' ||
+    key === 'fd_trending' ||
     isRecSection
   ) {
     const seenIds = new Set<string>();
@@ -695,6 +762,14 @@ export function resolveFilmDbSection(
           const dateB = getFilmEffectiveReleaseDate(b)?.getTime() ?? Infinity;
           return dateA - dateB;
         });
+        break;
+      }
+
+      case 'fd_trending': {
+        // TMDB rank ascending (lower rank = more popular this week)
+        filtered.sort(
+          (a, b) => getFilmTrendingRank(a, trendingRanks) - getFilmTrendingRank(b, trendingRanks)
+        );
         break;
       }
 
@@ -853,6 +928,66 @@ export function getComingSoonTabs(
     }));
 }
 
+export interface TrendingTabInfo {
+  id: TrendingTab;
+  label: string;
+  count: number;
+}
+
+/**
+ * Resolves trending films for one trending tab. The trending entries are
+ * filtered by the tab media type first ('all' keeps every entry), then the
+ * fd_trending resolver runs with them, so a tab never returns fewer items than
+ * the limit when enough films match.
+ */
+export function resolveTrendingForTab(
+  films: FilmItem[],
+  config: SectionConfig | undefined,
+  trending: TrendingEntry[],
+  tab: TrendingTab,
+  opts?: FilmDbResolveOpts
+): FilmItem[] {
+  const tabTrending =
+    tab === 'all' ? trending : trending.filter(entry => entry.mediaType === tab);
+
+  return resolveFilmDbSection('fd_trending', films, config, { ...opts, trending: tabTrending });
+}
+
+/**
+ * Computes the non-empty Trending tabs with their counts. Disabled or manual
+ * sections have no auto tabs. Counts are computed without the section limit.
+ */
+export function getTrendingTabs(
+  films: FilmItem[],
+  config?: SectionConfig,
+  trending?: TrendingEntry[],
+  opts?: FilmDbResolveOpts
+): TrendingTabInfo[] {
+  if (config && (config.enabled === false || config.sourceType === 'manual')) return [];
+  if (!trending || trending.length === 0) return [];
+
+  const tabDefs: Array<{ id: TrendingTab; label: string }> = [
+    { id: 'all', label: 'Semua' },
+    { id: 'movie', label: 'Film' },
+    { id: 'tv', label: 'Series' },
+  ];
+
+  return tabDefs
+    .map(def => {
+      const merged: SectionConfig = {
+        sourceType: 'auto',
+        ...config,
+        limit: Number.MAX_SAFE_INTEGER,
+      };
+      return {
+        id: def.id,
+        label: def.label,
+        count: resolveTrendingForTab(films, merged, trending, def.id, opts).length,
+      };
+    })
+    .filter(tab => tab.count > 0);
+}
+
 export interface FilmDbSection {
   key: HomepageSectionKey;
   title: string;
@@ -871,7 +1006,7 @@ export interface FilmDbSection {
 export function buildFilmDbSections(
   films: FilmItem[],
   homepageConfig?: HomepageSectionsConfig | null,
-  opts?: { now?: Date; seed?: number }
+  opts?: FilmDbResolveOpts
 ): FilmDbSection[] {
   const config = homepageConfig ?? undefined;
   const order = resolveFilmDbSectionOrder(config?.filmDbSectionOrder);
@@ -885,6 +1020,9 @@ export function buildFilmDbSections(
 
     const sectionConfig: SectionConfig = config?.sections?.[key] ?? { sourceType: 'auto' };
     if (sectionConfig.enabled === false) continue;
+
+    // fd_trending is data-driven: it stays hidden without TMDB trending data
+    if (key === 'fd_trending' && !(opts?.trending && opts.trending.length > 0)) continue;
 
     const resolvedFilms = resolveFilmDbSection(key, films, sectionConfig, opts);
     if (resolvedFilms.length === 0) continue;

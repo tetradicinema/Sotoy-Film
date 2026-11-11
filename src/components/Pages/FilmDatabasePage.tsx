@@ -28,7 +28,11 @@ import {
   resolveComingSoonForTab,
   getComingSoonTabs,
   ComingSoonTab,
+  resolveTrendingForTab,
+  getTrendingTabs,
+  TrendingTab,
 } from '../../utils/filmSections';
+import { useTmdbTrending } from '../../hooks/useTmdbTrending';
 import {
   HOMEPAGE_SECTIONS_META,
   resolveFilmDbSectionOrder,
@@ -91,8 +95,18 @@ export const FilmDatabasePage: React.FC = () => {
   const [activeComingSoonTab, setActiveComingSoonTab] = useState<ComingSoonTab>('movies');
   const comingSoonCarouselRef = useRef<HTMLDivElement>(null);
 
+  // Active Trending tab state & carousel ref
+  const [activeTrendingTab, setActiveTrendingTab] = useState<TrendingTab>('all');
+  const trendingCarouselRef = useRef<HTMLDivElement>(null);
+
   const comingSoonConfig: SectionConfig =
     homepageSectionsConfig?.sections?.fd_coming_soon ?? { sourceType: 'auto' };
+
+  const trendingConfig: SectionConfig =
+    homepageSectionsConfig?.sections?.fd_trending ?? { sourceType: 'auto' };
+
+  // TMDB weekly trending data (movie + tv), only fetched when the section is enabled
+  const trending = useTmdbTrending(trendingConfig.enabled !== false);
 
   // Helper function to match genres
   const matchesGenre = (film: FilmItem, targetGenre: string): boolean => {
@@ -119,8 +133,8 @@ export const FilmDatabasePage: React.FC = () => {
 
   // Film Database sections resolved from the saved homepage configuration
   const filmDbSections = useMemo(
-    () => buildFilmDbSections(films, homepageSectionsConfig),
-    [films, homepageSectionsConfig]
+    () => buildFilmDbSections(films, homepageSectionsConfig, { trending }),
+    [films, homepageSectionsConfig, trending]
   );
 
   // First two sections get skeleton rows while the film catalogue is loading
@@ -150,6 +164,11 @@ export const FilmDatabasePage: React.FC = () => {
   const comingSoonTabs = useMemo(() => {
     return getComingSoonTabs(films, comingSoonConfig);
   }, [films, comingSoonConfig]);
+
+  // Trending tabs computed with counts
+  const trendingTabs = useMemo(() => {
+    return getTrendingTabs(films, trendingConfig, trending);
+  }, [films, trendingConfig, trending]);
 
   // Default to the first non-empty tab (Movies if it has films), and reset active tab to a valid one if data changes
   useEffect(() => {
@@ -252,6 +271,9 @@ export const FilmDatabasePage: React.FC = () => {
         ) : (
           filmDbSections.map(section => {
             let displayFilms = section.films;
+            const currentTrendingTab: TrendingTab = trendingTabs.some(t => t.id === activeTrendingTab)
+              ? activeTrendingTab
+              : 'all';
             if (section.key === 'fd_streaming' && activePlatform !== 'all') {
               displayFilms = resolveStreamingForPlatform(films, streamingConfig, activePlatform);
             } else if (section.key === 'fd_coming_soon') {
@@ -259,12 +281,17 @@ export const FilmDatabasePage: React.FC = () => {
                 ? activeComingSoonTab
                 : comingSoonTabs[0]?.id ?? 'movies';
               displayFilms = resolveComingSoonForTab(films, comingSoonConfig, currentTab);
+            } else if (section.key === 'fd_trending' && trendingTabs.length > 2) {
+              displayFilms = resolveTrendingForTab(films, trendingConfig, trending, currentTrendingTab);
             }
 
             if (displayFilms.length === 0) return null;
 
             const platforms = section.platforms ?? [];
-            const isSlider = section.key === 'fd_on_theatres' || section.key === 'fd_coming_soon';
+            const isSlider =
+              section.key === 'fd_on_theatres' ||
+              section.key === 'fd_coming_soon' ||
+              section.key === 'fd_trending';
 
             return (
               <section key={section.key} id={`film-db-${section.key}`}>
@@ -296,6 +323,41 @@ export const FilmDatabasePage: React.FC = () => {
                           onClick={() => {
                             setActiveComingSoonTab(tab.id);
                             comingSoonCarouselRef.current?.scrollTo({ left: 0, behavior: 'smooth' });
+                          }}
+                          className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-[#FF2E7E] text-slate-950 border-[#FF2E7E]'
+                              : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-white hover:border-[#FF2E7E]'
+                          }`}
+                        >
+                          <span>{tab.label}</span>
+                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-black/20">
+                            {tab.count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {section.key === 'fd_trending' && trendingTabs.length > 2 && (
+                  <div
+                    role="tablist"
+                    aria-label="Filter trending"
+                    className="flex items-center gap-2 overflow-x-auto pb-1 mb-4 scrollbar-none scroll-smooth touch-pan-x"
+                    style={{ WebkitOverflowScrolling: 'touch' }}
+                  >
+                    {trendingTabs.map(tab => {
+                      const isSelected = currentTrendingTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          role="tab"
+                          aria-selected={isSelected}
+                          onClick={() => {
+                            setActiveTrendingTab(tab.id);
+                            trendingCarouselRef.current?.scrollTo({ left: 0, behavior: 'smooth' });
                           }}
                           className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                             isSelected
@@ -363,15 +425,22 @@ export const FilmDatabasePage: React.FC = () => {
 
                 {isSlider ? (
                   <FilmDbCarousel
-                    ref={section.key === 'fd_coming_soon' ? comingSoonCarouselRef : undefined}
+                    ref={
+                      section.key === 'fd_coming_soon'
+                        ? comingSoonCarouselRef
+                        : section.key === 'fd_trending'
+                          ? trendingCarouselRef
+                          : undefined
+                    }
                     ariaLabel={section.title}
                   >
-                    {displayFilms.map(film => (
+                    {displayFilms.map((film, index) => (
                       <FilmDbCard
                         key={film.id}
                         film={film}
                         sectionKey={section.key}
                         onOpen={item => navigateTo('film-detail', { filmId: item.id })}
+                        rank={section.key === 'fd_trending' ? index + 1 : undefined}
                       />
                     ))}
                   </FilmDbCarousel>

@@ -371,6 +371,7 @@ export const DEFAULT_SECTION_ORDER: HomepageSectionKey[] = [
 
 export const DEFAULT_FILM_DB_SECTION_ORDER: HomepageSectionKey[] = [
   'fd_on_theatres',
+  'fd_trending',
   'fd_streaming',
   'fd_coming_soon',
   'fd_animation',
@@ -650,6 +651,17 @@ export const HOMEPAGE_SECTIONS_META: SectionMeta[] = [
     targetType: 'films',
     description: 'Film dan series Indonesia (otomatis dari negara asal)',
     defaultRule: 'Negara asal Indonesia atau tag Film Indonesia. Terbaru dulu',
+    allowedCategories: ALL_FILM_CATEGORIES,
+    area: 'film_database',
+  },
+  {
+    key: 'fd_trending',
+    label: 'Trending Minggu Ini',
+    defaultTitle: 'Trending Minggu Ini',
+    defaultDescription: 'Film dan series yang paling ramai dibicarakan minggu ini.',
+    targetType: 'films',
+    description: 'Judul trending mingguan TMDB yang ada di katalog Sotoy',
+    defaultRule: 'Daftar trending mingguan TMDB yang cocok dengan katalog. Urut peringkat TMDB',
     allowedCategories: ALL_FILM_CATEGORIES,
     area: 'film_database',
   },

@@ -12,6 +12,8 @@ export interface FilmDbCardProps {
   onOpen: (film: FilmItem) => void;
   /** Defer the poster download until it nears the viewport (below-the-fold rows). */
   lazyImage?: boolean;
+  /** Optional TMDB rank shown as a corner badge (Trending section only). */
+  rank?: number;
 }
 
 /**
@@ -23,6 +25,7 @@ export const FilmDbCard: React.FC<FilmDbCardProps> = ({
   sectionKey,
   onOpen,
   lazyImage = false,
+  rank,
 }) => {
   const rating = getCardRating(film);
   const genres = getCardGenres(film);
@@ -62,6 +65,15 @@ export const FilmDbCard: React.FC<FilmDbCardProps> = ({
           decoding={lazyImage ? 'async' : undefined}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 motion-reduce:transition-none motion-reduce:transform-none"
         />
+
+        {rank !== undefined && (
+          <span
+            aria-label={`Peringkat ${rank}`}
+            className="absolute top-0 left-0 z-10 min-w-[28px] h-7 rounded-br-lg bg-[#FF2E7E] text-slate-950 text-sm font-black tabular-nums inline-flex items-center justify-center px-1"
+          >
+            {rank}
+          </span>
+        )}
 
         {typeLabel && (
           <span

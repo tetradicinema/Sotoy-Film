@@ -575,6 +575,7 @@ export type HomepageSectionKey =
   | 'fd_editors_pick'
   | 'fd_hidden_gems'
   | 'fd_film_indonesia'
+  | 'fd_trending'
   | 'rec_tonight'
   | 'rec_date_night'
   | 'rec_hidden_gems'
