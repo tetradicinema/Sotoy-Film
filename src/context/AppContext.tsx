@@ -40,6 +40,7 @@ import { validateProfileLinks, sanitizeStoredLinks } from '../utils/profileLinks
 import { TERMS_VERSION } from '../utils/onboardingHelpers';
 import { normalizeFilmType } from '../utils/filmType';
 import { buildPersonPath } from '../utils/personHelpers';
+import { buildFranchisePath } from '../utils/franchiseHelpers';
 import { normalizeArticleCategory, normalizeInterestLabel, normalizeInterestProfile } from '../utils/articleCategory';
 import { getCollectionItemKey, reorderByKeys } from '../utils/collectionHelpers';
 import { useRestDataFallback, mergeArticleCollections } from '../hooks/useRestDataFallback';
@@ -236,6 +237,7 @@ export type AppView =
   | 'film-seasons'
   | 'film-season'
   | 'person-detail'
+  | 'franchise-detail'
   | 'film-recommendations'
   | 'community-feed'
   | 'buzz-detail'
@@ -385,6 +387,7 @@ interface AppContextType {
       userId?: string;
       personId?: number;
       personName?: string;
+      collectionName?: string;
       buzzFeedTab?: 'for-you' | 'following' | 'saved' | 'liked' | 'trending';
       searchQuery?: string;
       collectionId?: string;
@@ -1055,6 +1058,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     } else if (path.startsWith('/person/')) {
       setCurrentView('person-detail');
+    } else if (path.startsWith('/franchise/')) {
+      setCurrentView('franchise-detail');
     } else if (path.startsWith('/artikel/') || path.startsWith('/article/')) {
       const slug = decodeURIComponent(path.replace(/^\/(artikel|article)\//, ''));
       setCurrentView('article-detail');
@@ -4862,6 +4867,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       userId?: string;
       personId?: number;
       personName?: string;
+      collectionName?: string;
       buzzFeedTab?: 'for-you' | 'following' | 'saved' | 'liked' | 'trending';
       searchQuery?: string;
       collectionId?: string;
@@ -4929,6 +4935,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         targetPath = personId
           ? buildPersonPath(personId, options?.personName || '')
           : '/';
+        break;
+      }
+      case 'franchise-detail': {
+        const franchiseId = Number(options?.collectionId);
+        targetPath =
+          Number.isSafeInteger(franchiseId) && franchiseId > 0
+            ? buildFranchisePath(franchiseId, options?.collectionName || '')
+            : '/';
         break;
       }
       case 'article-detail': {

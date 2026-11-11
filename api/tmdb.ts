@@ -234,7 +234,11 @@ export async function handleTmdbRequest(req: any, res: any) {
       }
 
       const rawParts = Array.isArray(data.parts) ? data.parts : [];
-      const parts = rawParts.map((part: any) => ({
+      // Drop adult entries before mapping: the mapped part shape intentionally
+      // omits the raw `adult` flag, so the filter must run on the raw payload.
+      const parts = rawParts
+        .filter((part: any) => part && part.adult !== true)
+        .map((part: any) => ({
         tmdbId: Number(part.id),
         title: part.title || part.name || '',
         releaseDate: part.release_date || part.first_air_date || '',

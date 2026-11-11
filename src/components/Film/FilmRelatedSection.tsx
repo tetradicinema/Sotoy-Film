@@ -4,6 +4,7 @@ import { Layers, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import type { FilmItem } from '../../types';
 import { buildRelatedFilms, type RelatedFilmEntry } from '../../utils/relatedFilms';
 import { fetchTmdbCollection, type TmdbCollectionPart } from '../../utils/tmdbHelper';
+import { buildFranchisePath } from '../../utils/franchiseHelpers';
 import { DEFAULT_POSTER } from '../../data/mockData';
 
 interface FilmRelatedSectionProps {
@@ -121,9 +122,22 @@ export const FilmRelatedSection: React.FC<FilmRelatedSectionProps> = ({
             <span>Seri / Franchise</span>
           </h2>
           {film.collectionName ? (
-            <p className="text-slate-400 text-xs sm:text-sm mt-0.5 font-medium truncate max-w-md sm:max-w-xl">
-              {film.collectionName}
-            </p>
+            film.collectionId ? (
+              <Link
+                to={buildFranchisePath(film.collectionId, film.collectionName)}
+                title={`Lihat semua judul di ${film.collectionName}`}
+                className="group/name inline-flex items-baseline gap-2 text-slate-400 text-xs sm:text-sm mt-0.5 font-medium truncate max-w-md sm:max-w-xl hover:text-[#FF2E7E] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF2E7E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#171717] rounded"
+              >
+                <span className="truncate">{film.collectionName}</span>
+                <span className="shrink-0 text-[11px] font-bold text-[#FF2E7E] whitespace-nowrap">
+                  Lihat semua →
+                </span>
+              </Link>
+            ) : (
+              <p className="text-slate-400 text-xs sm:text-sm mt-0.5 font-medium truncate max-w-md sm:max-w-xl">
+                {film.collectionName}
+              </p>
+            )
           ) : (
             <p className="text-slate-400 text-xs mt-0.5">
               Film sekuel, prekuel, dan semesta sinematik terkait {film.title}
