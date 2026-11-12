@@ -158,7 +158,11 @@ async function startServer() {
                 director: data.director ? { "@type": "Person", name: data.director } : undefined,
                 actor: data.castDetails?.map((c: any) => ({ "@type": "Person", name: c.name })) || data.cast?.map((name: string) => ({ "@type": "Person", name })),
                 genre: data.genres,
-                aggregateRating: (data.totalVotes > 0 && data.skorSotoy > 0) ? {
+                // Only emit aggregateRating with real vote evidence: legacy/
+                // imported films were seeded with totalVotes: 1 while having
+                // no reviews, so a single vote must never produce a fabricated
+                // ratingCount. Mirrors src/utils/schemaHelpers.ts.
+                aggregateRating: (data.totalVotes > 1 && data.skorSotoy > 0) ? {
                   "@type": "AggregateRating",
                   ratingValue: Number(Number(data.skorSotoy).toFixed(1)),
                   bestRating: "10.0",

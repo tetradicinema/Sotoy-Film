@@ -528,15 +528,21 @@ export const PersonPage: React.FC = () => {
 
   const isStalePerson = Boolean(person && (personId === null || person.id !== personId));
 
+  // Skeleton / neutral loading head. Never noindex: the loading state is
+  // transient and must never win over the middleware's indexable HTML
+  // (same policy as FranchisePage in commit 31e125c).
   if (status === 'loading' || isStalePerson) {
     return (
       <>
-        <SEOHead title="Memuat profil orang..." noindex />
+        <SEOHead title="Profil Orang | Sotoy Film" />
         <PersonPageSkeleton />
       </>
     );
   }
 
+  // noindex is reserved for a genuine person-not-found. A transient TMDB
+  // error keeps the neutral, indexable head so the page is not deindexed
+  // while the request is retried.
   if (status === 'not-found' || status === 'error') {
     const notFound = status === 'not-found';
     return (
@@ -544,7 +550,7 @@ export const PersonPage: React.FC = () => {
         <SEOHead
           title={notFound ? 'Orang tidak ditemukan | Sotoy Film' : 'Gagal memuat profil | Sotoy Film'}
           description="Profil orang tidak tersedia di Sotoy Film."
-          robots="noindex, follow"
+          robots={notFound ? 'noindex, follow' : undefined}
         />
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
           <div

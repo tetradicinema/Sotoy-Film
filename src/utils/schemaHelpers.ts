@@ -121,16 +121,24 @@ export function generateMovieSchema(input: MovieSchemaInput) {
     ? input.image.filter(Boolean).map(img => resolveAbsoluteUrl(img))
     : [resolveAbsoluteUrl(input.image)];
 
-  // AggregateRating: Google requires totalVotes > 0 and ratingValue > 0
+  // AggregateRating: only emit with a real score AND real review evidence.
+  // Legacy films were seeded with totalVotes: 1 while having no reviews, so
+  // a single vote counts as no evidence; require reviews or totalVotes > 1.
+  // reviewCount is never fallen back to totalVotes: with 0 real reviews the
+  // property is omitted instead of advertising a fabricated count.
+  const hasRealReviewEvidence =
+    (input.reviews?.length ?? 0) > 0 || input.totalVotes > 1;
   const aggregateRating =
-    input.totalVotes > 0 && input.skorSotoy > 0
+    input.skorSotoy > 0 && hasRealReviewEvidence
       ? {
           '@type': 'AggregateRating',
           ratingValue: Number(input.skorSotoy.toFixed(1)),
           bestRating: '10.0',
           worstRating: '1.0',
           ratingCount: input.totalVotes,
-          reviewCount: input.reviews && input.reviews.length > 0 ? input.reviews.length : input.totalVotes,
+          ...(input.reviews && input.reviews.length > 0
+            ? { reviewCount: input.reviews.length }
+            : {}),
         }
       : undefined;
 
@@ -470,7 +478,7 @@ export function createMovieSchemaFromFilm(
     type: film.type,
     image: images.length > 0 ? images : '/og-default.png',
     description: film.synopsis || film.curatorNote || `Ulasan dan informasi film ${film.title}`,
-    director: film.director || 'Sutradara',
+    director: film.director,
     writer: film.writer,
     studio: film.studio,
     actorNames: film.cast || [],

@@ -694,9 +694,8 @@ export const AdminCatalogManager: React.FC = () => {
         genres: genresArray,
         tags: formData.tags,
         ...(formData.originCountry.length > 0 ? { originCountry: formData.originCountry } : {}),
-        skorSotoy: Number(formData.skorSotoy) || 4.0,
-        totalVotes: 1,
-        criticsSkorSotoy: Number(formData.skorSotoy) || 4.0,
+        skorSotoy: Number(formData.skorSotoy) || 0,
+        criticsSkorSotoy: Number(formData.skorSotoy) || 0,
         trailerUrl: trailerUrl || undefined,
         featuredRecommendation: formData.featuredRecommendation,
         ...(resolvedCollectionId ? { collectionId: resolvedCollectionId } : {}),
@@ -710,7 +709,10 @@ export const AdminCatalogManager: React.FC = () => {
         success = await updateFilm(editingFilmId, filmPayload);
       } else {
         // New films start with no availability data; the TMDB sync fills it.
-        success = await addFilm({ ...filmPayload, whereToWatch: [] });
+        // totalVotes seeds at 0 on create ONLY: the edit path above omits it
+        // so the real vote count accumulated from reviews is never clobbered
+        // (updateFilm is a partial updateDoc — omitted fields are preserved).
+        success = await addFilm({ ...filmPayload, whereToWatch: [], totalVotes: 0 });
       }
 
       if (success !== false) {
@@ -1082,8 +1084,14 @@ export const AdminCatalogManager: React.FC = () => {
                       {/* Skor Sotoy */}
                       <td className="p-3.5">
                         <div className="flex items-center gap-1 text-slate-200 font-semibold text-xs font-mono tabular-nums">
-                          <Star className="w-3.5 h-3.5 fill-[#FF2E7E] text-[#FF2E7E]" />
-                          <span>{(film.skorSotoy || 8.0).toFixed(1)}</span>
+                          {Number(film.skorSotoy) > 0 ? (
+                            <>
+                              <Star className="w-3.5 h-3.5 fill-[#FF2E7E] text-[#FF2E7E]" />
+                              <span>{film.skorSotoy.toFixed(1)}</span>
+                            </>
+                          ) : (
+                            <span className="text-slate-500">—</span>
+                          )}
                         </div>
                       </td>
 

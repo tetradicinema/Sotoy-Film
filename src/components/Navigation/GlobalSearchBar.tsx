@@ -339,7 +339,8 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
           title: data.title,
           type: 'film',
           subtitle: `${data.year} • Dir. ${data.director}`,
-          extra: `★ ${(data.skorSotoy || 4.0).toFixed(1)}`,
+          // Real TMDB-derived score only: never a fabricated fallback number.
+          extra: Number(data.skorSotoy) > 0 ? `★ ${Number(data.skorSotoy).toFixed(1)}` : undefined,
         });
       });
 

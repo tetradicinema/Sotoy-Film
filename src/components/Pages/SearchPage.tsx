@@ -619,11 +619,13 @@ export const SearchPage: React.FC = () => {
                             <div>
                               <div className="flex items-center justify-between gap-1">
                                 <span className="text-[11px] font-bold text-slate-400">{film.year}</span>
-                                <div className="flex items-center gap-1 bg-[#FF2E7E]/15 text-[#FF2E7E] border border-[#FF2E7E]/30 px-2 py-0.5 rounded-md font-mono text-xs font-black">
-                                  <Star className="w-3 h-3 fill-current" />
-                                  <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
-                                  <span className="text-[9px] text-slate-300 font-bold">Critics</span>
-                                </div>
+                                {(Number(film.criticsSkorSotoy) > 0 || Number(film.skorSotoy) > 0) && (
+                                  <div className="flex items-center gap-1 bg-[#FF2E7E]/15 text-[#FF2E7E] border border-[#FF2E7E]/30 px-2 py-0.5 rounded-md font-mono text-xs font-black">
+                                    <Star className="w-3 h-3 fill-current" />
+                                    <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
+                                    <span className="text-[9px] text-slate-300 font-bold">Critics</span>
+                                  </div>
+                                )}
                               </div>
                               <h3 className="font-bold text-sm sm:text-base text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-2 mt-1">
                                 {film.title}

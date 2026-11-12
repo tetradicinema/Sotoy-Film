@@ -527,7 +527,14 @@ export const mapTmdbDetailsToFilm = (details: any, type: 'movie' | 'tv'): Mapped
     genres: mappedGenres,
     tags: initialTags,
     suggestedTags,
-    skorSotoy: details.vote_average ? Math.min(10, Math.max(1, Number(details.vote_average.toFixed(1)))) : 8.0,
+    // skorSotoy mirrors the TMDB vote_average and must never be fabricated:
+    // without a vote average the score is 0 and the UI hides it until the
+    // first real review lands. Clamped to the 1.0–10.0 scale only when a
+    // genuine TMDB vote exists.
+    skorSotoy:
+      details.vote_average > 0
+        ? Math.min(10, Math.max(1, Number(details.vote_average.toFixed(1))))
+        : 0,
     trailerUrl: mappedTrailerUrl,
     featuredRecommendation: (details.vote_average || 0) >= 8.0,
     tmdbId: details.id,

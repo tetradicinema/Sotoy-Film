@@ -320,6 +320,16 @@ export const FilmDetailPage: React.FC = () => {
   const isInWatchlist = isItemInAnyCollection(film.id, 'film');
   const showSeasonSection = Boolean(film.tmdbId) && tmdbMediaType(film) === 'tv';
 
+  // The score stays visible whenever a real skorSotoy exists (TMDB
+  // vote_average); it is never gated on review count and never fabricated.
+  const hasScore = Number(film.skorSotoy) > 0;
+  // Real vote/review count for UI display: legacy films were seeded with
+  // totalVotes: 1 while having no reviews, so a single seed vote reads as 0.
+  const displayVoteCount = Math.max(
+    filmReviews.length,
+    (film.totalVotes ?? 0) > 1 ? film.totalVotes : 0
+  );
+
   // Cast with photos fallback
   const allCastList: CastMember[] = liveCredits.cast && liveCredits.cast.length > 0
     ? liveCredits.cast
@@ -400,7 +410,7 @@ export const FilmDetailPage: React.FC = () => {
       audienceCounts.critic + audienceCounts.community > 0;
 
     openShareModal({
-      title: `${film.title} (${film.year}) - Skor Sotoy: ${film.skorSotoy.toFixed(1)}/10.0`,
+      title: `${film.title} (${film.year})${hasScore ? ` - Skor Sotoy: ${film.skorSotoy.toFixed(1)}/10.0` : ''}`,
       text: film.synopsis,
       url: window.location.href,
       type: 'film',
@@ -415,7 +425,7 @@ export const FilmDetailPage: React.FC = () => {
       criticReviewCount: audienceCounts.critic,
       communityReviewCount: hasRoleBasedCounts
         ? audienceCounts.community
-        : film.totalVotes,
+        : displayVoteCount,
       meta: `${film.title} (${film.year}) • ${film.genres.slice(0, 2).join(', ')}`,
     });
   };
@@ -563,10 +573,12 @@ export const FilmDetailPage: React.FC = () => {
                 alt={film.title}
                 className="w-32 sm:w-52 md:w-60 rounded-2xl shadow-2xl border-2 border-white/20 group-hover:scale-105 transition-transform duration-300"
               />
-              <div className="absolute top-2.5 left-2.5 bg-black/85 backdrop-blur-md px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-xl border border-amber-500/60 text-amber-400 font-medium text-xs sm:text-sm flex items-center gap-1 shadow-lg">
-                <Star className="w-3.5 h-3.5 fill-current text-amber-400" />
-                <span>{film.skorSotoy.toFixed(1)}</span>
-              </div>
+              {hasScore && (
+                <div className="absolute top-2.5 left-2.5 bg-black/85 backdrop-blur-md px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-xl border border-amber-500/60 text-amber-400 font-medium text-xs sm:text-sm flex items-center gap-1 shadow-lg">
+                  <Star className="w-3.5 h-3.5 fill-current text-amber-400" />
+                  <span>{film.skorSotoy.toFixed(1)}</span>
+                </div>
+              )}
             </div>
 
             {/* Title & Metadata */}
@@ -630,7 +642,8 @@ export const FilmDetailPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Skor Sotoy Bar - Larger & Amber */}
+              {/* Skor Sotoy Bar - Larger & Amber (only with a real score) */}
+              {hasScore && (
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 sm:gap-6 bg-slate-900/95 p-5 sm:p-6 rounded-2xl border border-slate-800 max-w-2xl shadow-xl">
                 <div className="flex items-center justify-between sm:justify-start gap-5 sm:gap-8 w-full">
                   {/* 1. Si Paling Sotoy */}
@@ -668,6 +681,7 @@ export const FilmDetailPage: React.FC = () => {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5 pt-1">
@@ -1373,31 +1387,17 @@ crew.name
                   <span className="text-white font-medium mt-0.5 block">{film.year}</span>
                 </div>
 
-                <div>
-                  <span className="text-slate-400 block font-bold text-[10px] uppercase tracking-wider">Durasi Tayang:</span>
-                  <span className="text-white font-medium mt-0.5 block">{film.duration || 'Standar Bioskop'}</span>
-                </div>
-
-                <div>
-                  <span className="text-slate-400 block font-bold text-[10px] uppercase tracking-wider">Format & Aspek Rasio:</span>
-                  <span className="text-white font-medium mt-0.5 block">IMAX 1.90:1 / Panavision 2.39:1</span>
-                </div>
-
-                <div>
-                  <span className="text-slate-400 block font-bold text-[10px] uppercase tracking-wider">Format Tata Suara:</span>
-                  <span className="text-white font-medium mt-0.5 block">Dolby Atmos, 12-Track Digital Audio</span>
-                </div>
-
-                <div>
-                  <span className="text-slate-400 block font-bold text-[10px] uppercase tracking-wider">Klasifikasi Usia:</span>
-                  <span className="text-emerald-400 font-bold mt-0.5 inline-block bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded text-[11px]">
-                    13+ (Bimbingan Orang Tua)
-                  </span>
-                </div>
+                {film.duration && (
+                  <div>
+                    <span className="text-slate-400 block font-bold text-[10px] uppercase tracking-wider">Durasi Tayang:</span>
+                    <span className="text-white font-medium mt-0.5 block">{film.duration}</span>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* 3. METRIK REKOMENDASI SKOR SOTOY */}
+            {/* 3. METRIK REKOMENDASI SKOR SOTOY (only with a real score) */}
+            {hasScore && (
             <div className="bg-[#171717] border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
               <h3 className="font-display font-black text-base text-white pb-3 border-b border-slate-800 flex items-center gap-2">
                 <Award className="w-4 h-4 text-[#FF2E7E]" />
@@ -1441,6 +1441,7 @@ crew.name
                 </div>
               </div>
             </div>
+            )}
 
             {/* Infeed Sidebar Ad */}
             <AdBannerSlot variant="sidebar" />

@@ -2038,10 +2038,12 @@ export const UserPage: React.FC = () => {
                           <div className="absolute inset-0 bg-gradient-to-t from-[#171717] via-transparent to-transparent opacity-80" />
 
                           {/* Skor Sotoy Badge */}
-                          <div className="absolute top-2 left-2 bg-black/90 backdrop-blur-md px-1.5 py-0.5 rounded-lg border border-[#FFD000]/30 text-[#FFD000] text-[10px] font-black flex items-center gap-1 shadow-md">
-                            <Star className="w-3 h-3 fill-current text-[#FFD000]" />
-                            <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
-                          </div>
+                          {(Number(film.criticsSkorSotoy) > 0 || Number(film.skorSotoy) > 0) && (
+                            <div className="absolute top-2 left-2 bg-black/90 backdrop-blur-md px-1.5 py-0.5 rounded-lg border border-[#FFD000]/30 text-[#FFD000] text-[10px] font-black flex items-center gap-1 shadow-md">
+                              <Star className="w-3 h-3 fill-current text-[#FFD000]" />
+                              <span>{film.criticsSkorSotoy ? film.criticsSkorSotoy.toFixed(1) : film.skorSotoy.toFixed(1)}</span>
+                            </div>
+                          )}
 
                           {/* Selection Checkbox or Remove Button */}
                           {isFilmSelectMode ? (

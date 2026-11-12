@@ -787,12 +787,14 @@ export const HeroSection: React.FC = () => {
                                 </>
                               )}
                             </div>
-                            <div className="mt-1 flex items-center gap-1 text-[10px] text-slate-400">
-                              <Star className="w-2.5 h-2.5 fill-[#FFD000] text-[#FFD000]" />
-                              <span className="font-mono tabular-nums text-slate-300">
-                                {film.skorSotoy.toFixed(1)}
-                              </span>
-                            </div>
+                            {Number(film.skorSotoy) > 0 && (
+                              <div className="mt-1 flex items-center gap-1 text-[10px] text-slate-400">
+                                <Star className="w-2.5 h-2.5 fill-[#FFD000] text-[#FFD000]" />
+                                <span className="font-mono tabular-nums text-slate-300">
+                                  {film.skorSotoy.toFixed(1)}
+                                </span>
+                              </div>
+                            )}
                           </div>
 
                           <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-white transition-transform group-hover:translate-x-0.5 shrink-0" />

@@ -227,7 +227,7 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
           tags: mapped.tags,
           ...(mapped.originCountry.length > 0 ? { originCountry: mapped.originCountry } : {}),
           skorSotoy: mapped.skorSotoy,
-          totalVotes: 1,
+          totalVotes: 0,
           criticsSkorSotoy: mapped.skorSotoy,
           whereToWatch: [],
           trailerUrl: mapped.trailerUrl || undefined,
