@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Film, 
   Plus, 
@@ -98,7 +98,7 @@ const DEFAULT_FORM: FilmFormData = {
   tags: ['action-packed', 'drama'],
   suggestedTags: ['action-packed', 'drama', 'thriller', 'must-watch'],
   originCountry: [],
-  skorSotoy: 4.0,
+  skorSotoy: 0,
   trailerUrl: '',
   featuredRecommendation: false,
   collectionId: undefined,
@@ -133,6 +133,11 @@ export const AdminCatalogManager: React.FC = () => {
   const [editingFilmId, setEditingFilmId] = useState<string | null>(null);
   const [formData, setFormData] = useState<FilmFormData>(DEFAULT_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Score value loaded into the form when the modal opened (0 for create).
+  // The save path compares against this so an unchanged score is never
+  // rewritten — protecting real review aggregates and legacy documents
+  // from an accidental rescale.
+  const initialSkorSotoyRef = useRef(0);
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [isTmdbSyncModalOpen, setIsTmdbSyncModalOpen] = useState(false);
   const [customTagInput, setCustomTagInput] = useState('');
@@ -485,7 +490,7 @@ export const AdminCatalogManager: React.FC = () => {
         `"${(f.director || '').replace(/"/g, '""')}"`,
         `"${(f.studio || '').replace(/"/g, '""')}"`,
         `"${(f.genres || []).join('; ')}"`,
-        f.skorSotoy || 4.0,
+        f.skorSotoy || 0,
         `"${f.poster || ''}"`
       ]);
       const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
@@ -504,6 +509,7 @@ export const AdminCatalogManager: React.FC = () => {
   const handleOpenAddModal = (focusTmdb = false) => {
     setEditingFilmId(null);
     setFormData({ ...DEFAULT_FORM, tmdbId: undefined });
+    initialSkorSotoyRef.current = 0;
     setTmdbQuery('');
     setTmdbResults([]);
     setTmdbError(null);
@@ -518,13 +524,14 @@ export const AdminCatalogManager: React.FC = () => {
   // Open modal for editing existing film
   const handleOpenEditModal = (film: FilmItem) => {
     setEditingFilmId(film.id);
+    initialSkorSotoyRef.current = film.skorSotoy ?? 0;
     const existingGenres = film.genres || [];
     const suggested = generateSuggestedTags(
       film.title,
       existingGenres,
       film.year,
       film.synopsis,
-      film.skorSotoy ? film.skorSotoy * 2 : 8.0,
+      film.skorSotoy || undefined, // already 1-10; 0/undefined = no score-based suggestion
       film.director
     );
 
@@ -552,7 +559,7 @@ export const AdminCatalogManager: React.FC = () => {
       tags: film.tags || suggested.slice(0, 4),
       suggestedTags: suggested,
       originCountry: film.originCountry || [],
-      skorSotoy: film.skorSotoy || 4.0,
+      skorSotoy: film.skorSotoy ?? 0,
       trailerUrl: film.trailerUrl || '',
       featuredRecommendation: !!film.featuredRecommendation,
       collectionId: film.collectionId,
@@ -674,6 +681,19 @@ export const AdminCatalogManager: React.FC = () => {
           ? formData.collectionName.trim()
           : existingFilm?.collectionName;
 
+      // Score: the form is on the 1-10 scale; empty input means no score (0).
+      // Values above 0 are clamped to 1..10 before saving.
+      const rawSkor = Number(formData.skorSotoy) || 0;
+      const clampedSkor = rawSkor > 0 ? Math.min(10, Math.max(1, Number(rawSkor.toFixed(1)))) : 0;
+      // On create the score is always written. On edit the score fields are
+      // written ONLY when the curator actually changed the value compared
+      // with what was loaded into the form: an unchanged score must never
+      // overwrite a real review aggregate or rescale a legacy document
+      // (scoreScale 10 would retire the read-time doubling).
+      // Compared rounded to one decimal, since stored scores are 1-decimal.
+      const initialSkor = Number((initialSkorSotoyRef.current ?? 0).toFixed(1));
+      const scoreChanged = !editingFilmId || clampedSkor !== initialSkor;
+
       const filmPayload = {
         title: formData.title.trim(),
         originalTitle: formData.originalTitle.trim() || undefined,
@@ -694,8 +714,6 @@ export const AdminCatalogManager: React.FC = () => {
         genres: genresArray,
         tags: formData.tags,
         ...(formData.originCountry.length > 0 ? { originCountry: formData.originCountry } : {}),
-        skorSotoy: Number(formData.skorSotoy) || 0,
-        criticsSkorSotoy: Number(formData.skorSotoy) || 0,
         trailerUrl: trailerUrl || undefined,
         featuredRecommendation: formData.featuredRecommendation,
         ...(resolvedCollectionId ? { collectionId: resolvedCollectionId } : {}),
@@ -706,13 +724,31 @@ export const AdminCatalogManager: React.FC = () => {
       let success = false;
       if (editingFilmId) {
         // Never write whereToWatch when editing: the TMDB sync owns that field.
-        success = await updateFilm(editingFilmId, filmPayload);
+        // Score fields are included ONLY when the curator changed the score:
+        // omitted fields are preserved by the partial updateDoc, so a real
+        // review aggregate is never overwritten and a legacy document is
+        // never rescaled by accident.
+        success = await updateFilm(editingFilmId, scoreChanged ? {
+          ...filmPayload,
+          skorSotoy: clampedSkor,
+          criticsSkorSotoy: clampedSkor,
+          scoreScale: 10,
+        } : filmPayload);
       } else {
         // New films start with no availability data; the TMDB sync fills it.
         // totalVotes seeds at 0 on create ONLY: the edit path above omits it
         // so the real vote count accumulated from reviews is never clobbered
         // (updateFilm is a partial updateDoc — omitted fields are preserved).
-        success = await addFilm({ ...filmPayload, whereToWatch: [], totalVotes: 0 });
+        // The score is always written on create (0 = no score yet, never a
+        // fabricated default) and stamped scoreScale 10 (1-10 scale).
+        success = await addFilm({
+          ...filmPayload,
+          whereToWatch: [],
+          totalVotes: 0,
+          skorSotoy: clampedSkor,
+          criticsSkorSotoy: clampedSkor,
+          scoreScale: 10,
+        });
       }
 
       if (success !== false) {
@@ -1705,17 +1741,18 @@ export const AdminCatalogManager: React.FC = () => {
                 {/* Skor Sotoy */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Skor Sotoy Awal (1.0 - 5.0)
+                    Skor Sotoy Awal (1.0 - 10.0)
                   </label>
                   <input
                     type="number"
                     step="0.1"
                     min="1"
-                    max="5"
-                    value={formData.skorSotoy}
-                    onChange={e => setFormData({ ...formData, skorSotoy: parseFloat(e.target.value) })}
+                    max="10"
+                    value={formData.skorSotoy || ''}
+                    onChange={e => setFormData({ ...formData, skorSotoy: parseFloat(e.target.value) || 0 })}
                     className="w-full bg-slate-900 border border-slate-750 rounded-xl px-3 py-2 text-xs text-amber-300 font-bold focus:outline-none focus:border-[#00F0FF]"
                   />
+                  <p className="text-[9px] text-slate-500">Kosongkan jika belum ada skor. Nilai disimpan pada skala 1-10.</p>
                 </div>
 
                 {/* Auto-Tagging & Tags Management */}
