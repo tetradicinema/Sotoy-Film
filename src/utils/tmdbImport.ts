@@ -8,8 +8,8 @@
  *
  * Differences from the manual flow, on purpose:
  * - `featuredRecommendation` is always false (an editor decides what is featured).
- * - Films with fewer than `minVoteCount` TMDB votes get `unratedScore` instead of
- *   the mapper's 8.0 default for "no rating".
+ * - Films with fewer than `minVoteCount` TMDB votes get no score (skorSotoy 0)
+ *   instead of a fabricated fallback number.
  * - Slugs are made unique against the catalog (remakes share titles).
  */
 
@@ -31,8 +31,6 @@ export const IMPORT_CONFIG = {
   /** A title passes when it has at least this many votes OR enough popularity. */
   minVoteCount: 5,
   minPopularity: 20,
-  /** skorSotoy for titles with too few votes to have a meaningful rating. */
-  unratedScore: 5.0,
   /** "Recent" discover window: release date from (today - back) to (today + ahead). */
   recentDaysBack: 45,
   recentDaysAhead: 14,
@@ -356,7 +354,9 @@ export function buildImportFilm(
   if (tmdbId === undefined) return { ok: false, reason: 'id TMDB tidak valid' };
 
   const rated = (Number(details.vote_count) || 0) >= IMPORT_CONFIG.minVoteCount;
-  const score = rated ? mapped.skorSotoy : IMPORT_CONFIG.unratedScore;
+  // Real TMDB vote_average only: titles with too few votes get no score (0),
+  // never a fabricated fallback number.
+  const score = rated ? mapped.skorSotoy : 0;
 
   const film: Omit<FilmItem, 'id'> = {
     title: mapped.title,
@@ -379,8 +379,12 @@ export function buildImportFilm(
     tags: mapped.tags,
     ...(mapped.originCountry.length > 0 ? { originCountry: mapped.originCountry } : {}),
     skorSotoy: score,
-    totalVotes: 1,
+    // Only real reviews build the vote count; TMDB's vote_count is never copied.
+    totalVotes: 0,
     criticsSkorSotoy: score,
+    // Marks the doc as already on the 1-10 scale, so the legacy read-time
+    // doubling in AppContext.refreshFilms never applies to imported docs.
+    scoreScale: 10,
     whereToWatch: [],
     trailerUrl: mapped.trailerUrl || undefined,
     featuredRecommendation: false,

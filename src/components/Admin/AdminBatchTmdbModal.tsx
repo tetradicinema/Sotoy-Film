@@ -229,6 +229,10 @@ export const AdminBatchTmdbModal: React.FC<AdminBatchTmdbModalProps> = ({
           skorSotoy: mapped.skorSotoy,
           totalVotes: 0,
           criticsSkorSotoy: mapped.skorSotoy,
+          // mapped.skorSotoy is the TMDB vote_average on the 1-10 scale; stamping
+          // scoreScale 10 stops the legacy read-time doubling from treating a
+          // stored 4.5 as a 5-scale value and displaying it as 9.0.
+          scoreScale: 10,
           whereToWatch: [],
           trailerUrl: mapped.trailerUrl || undefined,
           featuredRecommendation: mapped.featuredRecommendation,

@@ -6817,8 +6817,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         id: `tmdb-${tmdbIdNum}`,
         cast: mapped.cast ? mapped.cast.split(', ').filter(Boolean) : [],
         genres: mapped.genres ? mapped.genres.split(', ').filter(Boolean) : [],
-        totalVotes: details.vote_count || 1,
+        // totalVotes starts at 0: only real reviews (addFilmRating) build the
+        // vote count. TMDB's vote_count is never copied into it.
+        totalVotes: 0,
         criticsSkorSotoy: mapped.skorSotoy,
+        // mapped.skorSotoy is the TMDB vote_average on the 1-10 scale; stamping
+        // scoreScale 10 stops the legacy read-time doubling from treating a
+        // stored 4.5 as a 5-scale value and displaying it as 9.0.
+        scoreScale: 10,
         whereToWatch: [],
         createdAt: new Date().toISOString(),
       };
