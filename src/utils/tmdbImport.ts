@@ -23,9 +23,11 @@ export type ImportMediaType = 'movie' | 'tv';
 /** Tune these to change what gets imported. Everything else follows from them. */
 export const IMPORT_CONFIG = {
   /** Max new titles written per run. */
-  dailyLimit: 50,
+  dailyLimit: 10,
   /** Hard ceiling for `--limit`. */
   maxLimit: 200,
+  /** Max titles per run from ALL "backlog*" sources combined. Never above the limit. */
+  backlogMax: 3,
   /** A title passes when it has at least this many votes OR enough popularity. */
   minVoteCount: 5,
   minPopularity: 20,
@@ -47,6 +49,7 @@ export interface ImportCliOptions {
   apply: boolean;
   force: boolean;
   limit: number;
+  backlogMax: number;
 }
 
 export function parseImportCliArgs(argv: string[]): ImportCliOptions {
@@ -54,6 +57,7 @@ export function parseImportCliArgs(argv: string[]): ImportCliOptions {
     apply: false,
     force: false,
     limit: IMPORT_CONFIG.dailyLimit,
+    backlogMax: IMPORT_CONFIG.backlogMax,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -72,8 +76,21 @@ export function parseImportCliArgs(argv: string[]): ImportCliOptions {
         throw new Error(`--limit may not exceed ${IMPORT_CONFIG.maxLimit}.`);
       }
       options.limit = parsed;
+    } else if (arg === '--backlog-max' || arg.startsWith('--backlog-max=')) {
+      const raw = arg === '--backlog-max' ? argv[++i] : arg.slice('--backlog-max='.length);
+      const parsed = Number(raw);
+      if (!raw || !Number.isInteger(parsed) || parsed < 0) {
+        throw new Error('--backlog-max requires a non-negative integer value.');
+      }
+      if (parsed > IMPORT_CONFIG.maxLimit) {
+        throw new Error(`--backlog-max may not exceed ${IMPORT_CONFIG.maxLimit}.`);
+      }
+      options.backlogMax = parsed;
     }
   }
+
+  // A backlog cap above the limit can never take effect; clamp instead of erroring.
+  options.backlogMax = Math.min(options.backlogMax, options.limit);
 
   return options;
 }
@@ -180,30 +197,54 @@ export function findCatalogDuplicate(
   return null;
 }
 
+export interface PickLimits {
+  /** Max candidates kept in total. Defaults to IMPORT_CONFIG.dailyLimit. */
+  limit?: number;
+  /** Max candidates from all "backlog*" sources combined. Clamped to `limit`. */
+  backlogMax?: number;
+}
+
 export interface PickResult {
   candidates: ImportCandidate[];
   duplicatesInLists: number;
   filteredOut: number;
   alreadyInCatalog: number;
+  /** Effective limit and backlog cap used (after clamping backlogMax to limit). */
+  limit: number;
+  backlogMax: number;
+  /** How many of the kept candidates came from "backlog*" sources. */
+  backlogCount: number;
+  /** Backlog candidates dropped only because the backlog cap was full. */
+  backlogSkipped: number;
 }
 
 /**
  * Merges the source lists in priority order (first source wins), drops
- * low-quality titles and titles already in the catalog.
+ * low-quality titles and titles already in the catalog, then enforces the
+ * run limit and the combined backlog cap ("backlog*" sources; unused backlog
+ * slots are NOT handed back — the run may simply import fewer titles).
  */
 export function pickCandidates(
   sources: readonly ImportSource[],
-  films: readonly FilmItem[]
+  films: readonly FilmItem[],
+  limits: PickLimits = {}
 ): PickResult {
+  const limit = limits.limit ?? IMPORT_CONFIG.dailyLimit;
+  const backlogMax = Math.min(limits.backlogMax ?? IMPORT_CONFIG.backlogMax, limit);
   const seen = new Set<string>();
   const result: PickResult = {
     candidates: [],
     duplicatesInLists: 0,
     filteredOut: 0,
     alreadyInCatalog: 0,
+    limit,
+    backlogMax,
+    backlogCount: 0,
+    backlogSkipped: 0,
   };
 
   for (const source of sources) {
+    const isBacklog = source.name.startsWith('backlog');
     for (const item of source.items) {
       const id = positiveId(item.id);
       if (id === undefined) {
@@ -235,7 +276,14 @@ export function pickCandidates(
         continue;
       }
 
+      if (isBacklog && result.backlogCount >= backlogMax) {
+        result.backlogSkipped++;
+        continue;
+      }
+      if (result.candidates.length >= limit) continue;
+
       result.candidates.push({ id, mediaType: source.mediaType, source: source.name, title });
+      if (isBacklog) result.backlogCount++;
     }
   }
 

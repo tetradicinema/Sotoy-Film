@@ -15,7 +15,7 @@ on:
         type: boolean
         default: false
       limit:
-        description: 'Max new titles (empty = default of 50)'
+        description: 'Max new titles (empty = default of 10)'
         type: string
         default: ''
 

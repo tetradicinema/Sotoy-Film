@@ -23,6 +23,7 @@
  *   Dry-run (default, no writes):  npx tsx scripts/import-tmdb-daily.ts
  *   Apply:                         npx tsx scripts/import-tmdb-daily.ts --apply
  *   Smaller test run:              npx tsx scripts/import-tmdb-daily.ts --limit 5
+ *   Exclude the backlog:           npx tsx scripts/import-tmdb-daily.ts --backlog-max 0
  *   Bypass the safety guard:       npx tsx scripts/import-tmdb-daily.ts --apply --force
  */
 
@@ -223,6 +224,7 @@ async function main(): Promise<void> {
   console.log('=====================================================');
   console.log(`TMDB Import ${options.apply ? '(APPLY MODE)' : '(DRY-RUN MODE)'}`);
   console.log(`Limit: ${options.limit} new titles`);
+  console.log(`Backlog cap: ${options.backlogMax} titles (all "backlog*" sources combined)`);
   if (options.force) console.log('Safety guard: BYPASSED (--force)');
   console.log('=====================================================\n');
 
@@ -262,10 +264,18 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const picked = pickCandidates(sources, films);
-  console.log(`\nAlready in catalog:     ${picked.alreadyInCatalog}`);
+  const picked = pickCandidates(sources, films, {
+    limit: options.limit,
+    backlogMax: options.backlogMax,
+  });
+  console.log(`\nEffective limit:        ${picked.limit}`);
+  console.log(`Backlog cap:            ${picked.backlogMax}`);
+  console.log(`Already in catalog:     ${picked.alreadyInCatalog}`);
   console.log(`Filtered out (quality): ${picked.filteredOut}`);
-  console.log(`New candidates:         ${picked.candidates.length}\n`);
+  console.log(`Backlog capped:         ${picked.backlogSkipped}`);
+  console.log(
+    `From backlog:           ${picked.backlogCount} of ${picked.candidates.length} candidates\n`
+  );
 
   const rows: ImportRow[] = [];
   const skipped: string[] = [];
@@ -326,6 +336,9 @@ async function main(): Promise<void> {
   console.log('=====================================================');
   console.log(`Detail requests:                 ${attempts}`);
   console.log(`Titles to import:                ${rows.length}`);
+  console.log(`Effective limit:                 ${picked.limit}`);
+  console.log(`Backlog cap:                     ${picked.backlogMax}`);
+  console.log(`From backlog:                    ${rows.filter(row => row.source.startsWith('backlog')).length}`);
   console.log(`Skipped (total):                 ${skipped.length}`);
   console.log(`  of which already in catalog:   ${alreadyAfterDetails}`);
   console.log(`TMDB errors:                     ${errors.length}`);
@@ -341,6 +354,7 @@ async function main(): Promise<void> {
         Score: row.film.skorSotoy,
         Slug: row.film.slug,
         Source: row.source,
+        Backlog: row.source.startsWith('backlog') ? 'yes' : 'no',
       }))
     );
   } else {
@@ -364,8 +378,11 @@ async function main(): Promise<void> {
   appendStepSummary([
     `## TMDB Import (${options.apply ? 'apply' : 'dry-run'})`,
     '',
+    `- Effective limit: ${picked.limit} (backlog cap: ${picked.backlogMax})`,
     `- Already in catalog: ${picked.alreadyInCatalog}`,
-    `- Titles to import: ${rows.length}`,
+    `- Titles to import: ${rows.length} (from backlog: ${
+      rows.filter(row => row.source.startsWith('backlog')).length
+    })`,
     `- Skipped: ${skipped.length}`,
     `- TMDB errors: ${errors.length}`,
     `- Guard: ${guardRejected ? 'rejected (too many TMDB errors)' : 'ok'}`,
