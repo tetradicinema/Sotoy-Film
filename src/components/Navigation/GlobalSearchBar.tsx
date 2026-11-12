@@ -471,7 +471,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
         const matchDirector = film.director.toLowerCase().includes(q);
         const matchGenres = film.genres.some(g => g.toLowerCase().includes(q));
         const matchCast = film.cast.some(c => c.toLowerCase().includes(q));
-        const matchSynopsis = film.synopsis.toLowerCase().includes(q);
+        const matchSynopsis = (film.synopsis || '').toLowerCase().includes(q);
         const matchYear = film.year.toString().includes(q);
 
         const allTerms = terms.every(

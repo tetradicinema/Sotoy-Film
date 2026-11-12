@@ -196,7 +196,7 @@ export const SearchPage: React.FC = () => {
       const matchDirector = film.director.toLowerCase().includes(q);
       const matchGenre = film.genres.some(g => g.toLowerCase().includes(q));
       const matchCast = film.cast.some(c => c.toLowerCase().includes(q));
-      const matchSynopsis = film.synopsis.toLowerCase().includes(q);
+      const matchSynopsis = (film.synopsis || '').toLowerCase().includes(q);
       const matchTerms = terms.every(
         t =>
           film.title.toLowerCase().includes(t) ||

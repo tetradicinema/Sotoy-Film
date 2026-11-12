@@ -47,6 +47,7 @@ import { useRestDataFallback, mergeArticleCollections } from '../hooks/useRestDa
 import { readSeoLists } from '../utils/seoPrefetch';
 import type { SeoListsPayload } from '../utils/seoPrefetch';
 import { normalizeRestArticle, normalizeRestFilm } from '../utils/firestoreRestClient';
+import { readFilmsCache, writeFilmsCache, FILMS_CACHE_TTL_MS } from '../utils/filmsCache';
 import { isArticlePublished, shouldKeepSeoList, shouldSkipLoadingFlag } from '../lib/edge/firestoreRest';
 import {
   DEFAULT_FALLBACK_AUTHOR,
@@ -558,10 +559,6 @@ const USERS_CACHE_KEY = 'sotoy_cached_all_users';
 const USERS_CACHE_TS_KEY = 'sotoy_cached_all_users_ts';
 const USERS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
-const FILMS_CACHE_KEY = 'sotoy_cached_films';
-const FILMS_CACHE_TS_KEY = 'sotoy_cached_films_ts';
-const FILMS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
-
 // The bot-only #seo-lists payload is parsed once per page load and reused by
 // the initial articles/films state so hydration costs a single JSON.parse.
 let initialSeoListsCache: SeoListsPayload | null | undefined;
@@ -596,6 +593,17 @@ const routeNeedsFullArticleBodies = (pathname: string): boolean => {
   );
 };
 
+/**
+ * Admin catalog surfaces (AdminCatalogManager, AdminTmdbSyncModal, batch TMDB
+ * import) read film objects from context and write fields back to Firestore.
+ * A slim cached film (detailsDeferred: true) lacks castDetails/crewDetails/
+ * stills, and the catalog form would fabricate castDetails from `cast` and
+ * overwrite the real document. Mirrors isAdminRoute() in
+ * utils/firestoreRestClient.ts so the cache never reaches these screens.
+ */
+const isFilmsAdminRoute = (pathname: string): boolean =>
+  pathname === '/admin' || pathname.startsWith('/admin/');
+
 /** Normalizes list-payload films exactly like refreshFilms(). */
 const buildInitialListFilms = (docs: Record<string, any>[]): FilmItem[] => {
   const filmMap = new Map<string, FilmItem>();
@@ -629,20 +637,13 @@ const getArticleTimestamp = (
 
 const hydrateCachedFilms = (): { films: FilmItem[]; ts: number } | null => {
   try {
-    const raw = localStorage.getItem(FILMS_CACHE_KEY);
-    const rawTs = localStorage.getItem(FILMS_CACHE_TS_KEY);
-    if (!raw || !rawTs) return null;
-    const ts = parseInt(rawTs, 10);
-    if (isNaN(ts) || Date.now() - ts > FILMS_CACHE_TTL_MS) return null; // Expired
-    const parsed = JSON.parse(raw);
-    const rawFilms = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === 'object' && Array.isArray(parsed.films)) ? parsed.films : null;
-    if (rawFilms && rawFilms.length > 0) {
-      const normalized = rawFilms.map((f: any) => ({
-        ...f,
-        type: normalizeFilmType(f?.type),
-      }));
-      return { films: normalized, ts };
-    }
+    const cached = readFilmsCache(localStorage);
+    if (!cached) return null;
+    const normalized = cached.films.map((f: any) => ({
+      ...f,
+      type: normalizeFilmType(f?.type),
+    }));
+    return { films: normalized, ts: cached.ts };
   } catch {
     // If parsing fails, ignore the cache silently
   }
@@ -739,6 +740,11 @@ const consumePostLoginRedirect = (): string | null => {
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // AppProvider renders inside <BrowserRouter>, so router state is available.
+  // The initial pathname decides whether the films cache may hydrate at all.
+  // (A second useLocation() below serves the legacy view-state machinery.)
+  const initialLocation = useLocation();
+
   // Authentication & Session States
   const [authStatus, setAuthStatus] = useState<AuthStatus>('loading');
   const [currentUser, setCurrentUser] = useState<User>(() => GUEST_USER);
@@ -789,8 +795,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const cmsPagingActiveRef = useRef(false);
   const [hasMoreCmsArticles, setHasMoreCmsArticles] = useState(true);
   const [isLoadingCmsArticles, setIsLoadingCmsArticles] = useState(false);
-  // Hydrate films from localStorage cache on load so repeat visits within 10 minutes cost 0 reads
-  const initialCachedFilms = useMemo(() => hydrateCachedFilms(), []);
+  // Hydrate films from the slim localStorage cache on load so repeat visits
+  // within 10 minutes cost 0 reads. Admin mounts skip hydration entirely (the
+  // mount gate below then cannot skip the full fetch): admin screens must
+  // never receive slim cached films — see isFilmsAdminRoute.
+  const initialCachedFilms = useMemo(
+    () => (isFilmsAdminRoute(initialLocation.pathname) ? null : hydrateCachedFilms()),
+    // Intentionally evaluated once: the cache decision belongs to the initial
+    // pathname only; later route changes are handled by the admin refresh effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
   const [films, setFilms] = useState<FilmItem[]>(() => {
     if (initialCachedFilms?.films?.length) return initialCachedFilms.films;
     const lists = getInitialSeoLists();
@@ -1252,13 +1267,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         // Update localStorage cache with TTL tracking, off the synchronous path.
         // The catalog is large, so defer serialization until the browser is idle.
+        // writeFilmsCache stores a slim projection (no castDetails/crewDetails/
+        // stills) and keeps both keys in sync: on quota or serialization failure
+        // it removes BOTH keys, so an old pair or a data-without-timestamp half
+        // state can never survive in storage.
         const persistFilmsCache = () => {
-          try {
-            localStorage.setItem(FILMS_CACHE_KEY, JSON.stringify({ films: sortedFilms }));
-            localStorage.setItem(FILMS_CACHE_TS_KEY, String(Date.now()));
-          } catch (storageErr) {
-            // If storage quota exceeded, silently skip caching
-            console.warn('[AppContext] Failed to cache films to localStorage:', storageErr);
+          const result = writeFilmsCache(localStorage, sortedFilms);
+          if (!result.ok) {
+            console.warn(
+              `[AppContext] Failed to cache films to localStorage (${(result.chars / 1024).toFixed(1)} KB): ${result.reason}`
+            );
           }
         };
         if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
@@ -1561,6 +1579,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     refreshFilms({ isInitialMount: true });
   }, [refreshFilms]);
+
+  // Admin safety (client-side navigation): entering an admin route while the
+  // in-memory films still carry detailsDeferred from the slim cache triggers a
+  // full SDK fetch (refreshFilms without the mount gate) so admin screens edit
+  // complete documents, never slim ones. Repeat runs collapse into the
+  // in-flight dedupe inside refreshFilms, and a failed fetch is retried on the
+  // next admin route change while films remain slim.
+  useEffect(() => {
+    if (!isFilmsAdminRoute(location.pathname)) return;
+    if (!films.some(film => film.detailsDeferred)) return;
+    void refreshFilms();
+  }, [location.pathname, films, refreshFilms]);
 
   // Full article documents are only loaded on editor/CMS/admin/search routes.
   // Public routes get the light REST projection through the fallback hook.
@@ -6885,7 +6915,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateFilm = async (id: string, updates: Partial<FilmItem>): Promise<boolean> => {
     try {
-      const sanitizedUpdates = JSON.parse(JSON.stringify(updates));
+      // Admin safety backstop: if the in-memory film is still the slim cached
+      // projection (detailsDeferred), its castDetails/crewDetails/stills are
+      // missing locally — writing admin-provided fields over the full Firestore
+      // document could persist fabricated/partial heavy fields (the catalog
+      // form fabricates castDetails from `cast` when they are missing). The
+      // admin refresh effect normally replaces slim films first; block here so
+      // a save racing that fetch can never damage the document.
+      const existingFilm = films.find(film => film.id === id);
+      if (existingFilm?.detailsDeferred) {
+        console.warn(
+          `[AppContext] updateFilm blocked for filmId ${id}: in-memory film is the slim cached projection (detailsDeferred). Full catalog refresh pending.`
+        );
+        showToast('Katalog belum termuat penuh, coba lagi sesaat lagi.', 'error');
+        return false;
+      }
+
+      const { detailsDeferred: _deferredMarker, ...safeUpdates } = JSON.parse(
+        JSON.stringify(updates)
+      ) as Partial<FilmItem> & { detailsDeferred?: boolean };
+      // detailsDeferred is a client-only marker; it must never reach Firestore
+      // (e.g. when a caller passes a whole slim film object as `updates`).
+      void _deferredMarker;
+      const sanitizedUpdates = safeUpdates as Record<string, any>;
       await updateDoc(doc(db, 'films', id), sanitizedUpdates);
       setFilms(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
       refreshFilms();
