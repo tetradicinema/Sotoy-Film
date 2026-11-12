@@ -27,6 +27,7 @@ import {
 } from './utils/homepageConfigHelper';
 import { EmailVerificationBanner } from './components/Common/EmailVerificationBanner';
 import { MobileBottomNav } from './components/Navigation/MobileBottomNav';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Sparkles, CheckCircle, X } from 'lucide-react';
 
 // Code-split large/rarely-visited dashboard and admin modules
@@ -459,6 +460,8 @@ const AppContent: React.FC = () => {
 
       {/* Main URL-based Route Switcher */}
       <main className="flex-1">
+        {/* Route-level safety net: a crashed page never blanks the nav/footer */}
+        <ErrorBoundary resetKey={location.pathname}>
         <React.Suspense fallback={<PageLoadingFallback />}>
           <Routes>
             <Route path="/" element={<HomeView />} />
@@ -704,6 +707,7 @@ const AppContent: React.FC = () => {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </React.Suspense>
+        </ErrorBoundary>
       </main>
 
       {/* Footer */}
