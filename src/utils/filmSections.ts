@@ -263,7 +263,10 @@ export function normalizeFilmScore(film: FilmItem): number {
 
 /**
  * Computes mean score of all films that have votes (totalVotes > 0).
- * Returns 0 if none.
+ *
+ * When no film in the list has real votes (e.g. right after the vote-count
+ * migration), the mean falls back to normalizeFilmScore over films with a
+ * positive normalized score. Returns 0 only when neither set has an entry.
  */
 export function computeMeanScore(films: FilmItem[]): number {
   let sum = 0;
@@ -274,19 +277,50 @@ export function computeMeanScore(films: FilmItem[]): number {
       count++;
     }
   }
-  return count > 0 ? sum / count : 0;
+  if (count > 0) return sum / count;
+
+  let fallbackSum = 0;
+  let fallbackCount = 0;
+  for (const f of films) {
+    const score = normalizeFilmScore(f);
+    if (score > 0) {
+      fallbackSum += score;
+      fallbackCount++;
+    }
+  }
+  return fallbackCount > 0 ? fallbackSum / fallbackCount : 0;
 }
 
 /**
  * Computes Bayesian weighted score:
  * (v / (v + m)) * R + (m / (v + m)) * C
  * where v = totalVotes, m = 3, R = normalized score, C = mean score.
+ *
+ * A film without real votes ranks by its own normalized score R (its
+ * TMDB-derived score) instead of collapsing to the mean. This keeps the
+ * catalogue ordered after vote counts are cleaned up and never zeroes a film
+ * with a positive score.
  */
 export function computeBayesianScore(film: FilmItem, meanScore: number, m = 3): number {
   const v = film.totalVotes || 0;
   const R = normalizeFilmScore(film);
+  if (v <= 0) return R;
   if (v + m <= 0) return 0;
   return (v / (v + m)) * R + (m / (v + m)) * meanScore;
+}
+
+/**
+ * Deterministic comparator for every "views"/"votes" sort: real votes first,
+ * then normalized score (descending), then title (ascending). Without real
+ * votes the normalized score still produces a meaningful, stable order instead
+ * of an arbitrary tie.
+ */
+export function compareFilmsByVotesThenScore(a: FilmItem, b: FilmItem): number {
+  const votesDiff = (b.totalVotes || 0) - (a.totalVotes || 0);
+  if (votesDiff !== 0) return votesDiff;
+  const scoreDiff = normalizeFilmScore(b) - normalizeFilmScore(a);
+  if (scoreDiff !== 0) return scoreDiff;
+  return (a.title || '').localeCompare(b.title || '');
 }
 
 /**
@@ -691,7 +725,7 @@ export function resolveFilmDbSection(
       }
       case 'views':
       case 'votes': {
-        filtered.sort((a, b) => (b.totalVotes || 0) - (a.totalVotes || 0));
+        filtered.sort(compareFilmsByVotesThenScore);
         break;
       }
       case 'release_soonest': {

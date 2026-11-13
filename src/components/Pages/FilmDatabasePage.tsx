@@ -31,6 +31,7 @@ import {
   resolveTrendingForTab,
   getTrendingTabs,
   TrendingTab,
+  compareFilmsByVotesThenScore,
 } from '../../utils/filmSections';
 import { useTmdbTrending } from '../../hooks/useTmdbTrending';
 import {
@@ -212,7 +213,7 @@ export const FilmDatabasePage: React.FC = () => {
       const bScore = b.criticsSkorSotoy || b.skorSotoy;
       return bScore - aScore;
     }
-    if (sortBy === 'votes') return b.totalVotes - a.totalVotes;
+    if (sortBy === 'votes') return compareFilmsByVotesThenScore(a, b);
     if (sortBy === 'year') return b.year - a.year;
     if (sortBy === 'title') return a.title.localeCompare(b.title);
     return 0;

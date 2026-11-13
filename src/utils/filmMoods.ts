@@ -130,9 +130,11 @@ export function filterRecommendationFilms(
 
   const meanScore = computeMeanScore(list);
 
-  return [...result].sort(
-    (a, b) => computeBayesianScore(b, meanScore) - computeBayesianScore(a, meanScore)
-  );
+  return [...result].sort((a, b) => {
+    const scoreDiff = computeBayesianScore(b, meanScore) - computeBayesianScore(a, meanScore);
+    if (scoreDiff !== 0) return scoreDiff;
+    return (a.title || '').localeCompare(b.title || '');
+  });
 }
 
 /**

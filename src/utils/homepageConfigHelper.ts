@@ -2,7 +2,7 @@ import { FilmItem, Article, SectionConfig, HomepageSectionKey, MainCategory, Hom
 import { normalizeArticleCategory } from './articleCategory';
 import { normalizeFilmType } from './filmType';
 import { filmMatchesGenre, resolveFilmSectionGenre } from './filmGenres';
-import { isAnimationFilm } from './filmSections';
+import { compareFilmsByVotesThenScore, isAnimationFilm } from './filmSections';
 import { seededShuffle, getPageLoadSeed } from './shuffle';
 
 export interface SectionMeta {
@@ -802,7 +802,7 @@ export function resolveConfigFilms(
   } else if (config.sortBy === 'rating') {
     filtered.sort((a, b) => (b.skorSotoy || 0) - (a.skorSotoy || 0));
   } else if (config.sortBy === 'views' || config.sortBy === 'votes') {
-    filtered.sort((a, b) => (b.totalVotes || 0) - (a.totalVotes || 0));
+    filtered.sort(compareFilmsByVotesThenScore);
   } else if (config.sortBy === 'release_soonest') {
     filtered.sort((a, b) => {
       const dateA = a.idReleaseDate || a.releaseDate;

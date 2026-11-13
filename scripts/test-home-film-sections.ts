@@ -227,7 +227,7 @@ const runTests = () => {
     );
     assertEquals(
       result.slice(2).map(f => f.id),
-      ['rest-a', 'rest-c', 'rest-b'],
+      ['rest-c', 'rest-a', 'rest-b'],
       'getHomeFilmRecsDefault orders the remaining films by Bayesian score'
     );
   }
