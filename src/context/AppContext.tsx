@@ -6943,9 +6943,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // detailsDeferred is a client-only marker; it must never reach Firestore
       // (e.g. when a caller passes a whole slim film object as `updates`).
       void _deferredMarker;
-      const sanitizedUpdates = safeUpdates as Record<string, any>;
+      // Always stamp the document id. updateDoc() merges `sanitizedUpdates` into
+      // the existing document, so a legacy film doc that never had an `id`
+      // field (e.g. films/film-tmdb-movie-1616419) would still lack it after
+      // the write — and firestore.rules isValidFilmItem() requires
+      // id/title/type/year/genres, so the save was rejected with
+      // "Missing or insufficient permissions". Assigned last so `id` always
+      // wins over anything a caller passed in `updates`.
+      const sanitizedUpdates = { ...safeUpdates, id } as Record<string, any>;
       await updateDoc(doc(db, 'films', id), sanitizedUpdates);
-      setFilms(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
+      // Mirror the same id stamp locally so in-memory state matches the doc.
+      setFilms(prev => prev.map(f => f.id === id ? { ...f, ...updates, id } : f));
       refreshFilms();
       showToast('Metadata film berhasil diperbarui.');
       return true;
