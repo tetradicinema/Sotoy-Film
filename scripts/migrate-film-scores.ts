@@ -27,9 +27,17 @@
  *          seed -> skorSotoy 0, criticsSkorSotoy 0, scoreScale 10.
  *       B3 stored === 8.0 exactly AND tmdb.voteAverage === 0: fabricated
  *          mapper fallback -> skorSotoy 0, criticsSkorSotoy 0, scoreScale 10.
- *       B4 anything else: "mismatch", report only.
+ *       B4 anything else: "mismatch", report only (the note mentions that
+ *          --replace-fake-eight would replace a stored 8.0).
  *       B1 wins whenever B2/B3 do not apply.
  *       tmdb 'unavailable' -> "no-tmdb-data", report only.
+ *   B5 (--replace-fake-eight, opt-in): when ratingsCount === 0,
+ *       scoreScale is undefined, the film has a tmdbId, stored skorSotoy is
+ *       exactly 8.0 and B1/B2/B3 did not match: skorSotoy becomes the TMDB
+ *       vote_average rounded to 1 decimal and clamped 1..10 (0 when
+ *       voteCount < 5 or voteAverage 0), scoreScale 10; criticsSkorSotoy
+ *       follows the new value only when it currently equals the stored
+ *       score. Category "score-replaced".
  *   C.  Films without tmdbId: scores are never changed ("manual" bucket,
  *       flagged when stored skorSotoy is exactly 4.0). Only rule A may apply.
  * - Documents with scoreScale defined are never touched by rule B.
@@ -56,7 +64,7 @@
  * Usage:
  *   npx tsx scripts/migrate-film-scores.ts [--apply]
  *   npx tsx scripts/migrate-film-scores.ts [--no-tmdb] [--include-high-votes]
- *       [--tolerance <0..2>]
+ *       [--replace-fake-eight] [--tolerance <0..2>]
  *   npx tsx scripts/migrate-film-scores.ts --restore data/film-scores-backup-<ts>.json [--apply]
  */
 
@@ -100,6 +108,8 @@ export type TmdbInput = TmdbVotes | 'unavailable' | null;
 export interface MigrateOptions {
   includeHighVotes: boolean;
   tolerance: number;
+  /** Opt-in rule B5: replace the fabricated 8.0 with the real TMDB score. */
+  replaceFakeEight: boolean;
 }
 
 export type ClassifyCategory =
@@ -108,6 +118,7 @@ export type ClassifyCategory =
   | 'vote-fix'
   | 'score-scale'
   | 'score-zero'
+  | 'score-replaced'
   | 'score-mismatch'
   | 'score-no-tmdb'
   | 'manual'
@@ -180,6 +191,7 @@ export function resolveRatingsCount(
 
 const normalizeOptions = (options?: Partial<MigrateOptions>): MigrateOptions => ({
   includeHighVotes: options?.includeHighVotes === true,
+  replaceFakeEight: options?.replaceFakeEight === true,
   tolerance:
     typeof options?.tolerance === 'number' && Number.isFinite(options.tolerance)
       ? options.tolerance
@@ -197,7 +209,7 @@ export function classifyFilm(
   tmdb: TmdbInput,
   options?: Partial<MigrateOptions>
 ): ClassifyResult {
-  const { includeHighVotes, tolerance } = normalizeOptions(options);
+  const { includeHighVotes, replaceFakeEight, tolerance } = normalizeOptions(options);
   const stored: ScoreSnapshot = {
     skorSotoy: film.skorSotoy,
     criticsSkorSotoy: film.criticsSkorSotoy,
@@ -307,12 +319,35 @@ export function classifyFilm(
       return { category: 'score-scale', changes: withVote(changes), details: details({ delta }) };
     }
 
+    // Rule B5 (opt-in via --replace-fake-eight): the stored 8.0 is the old
+    // fabricated mapper fallback that still displays on the site. Only when
+    // B1/B2/B3 did not match, replace it with the real TMDB score.
+    if (replaceFakeEight && score === 8) {
+      const usable = vc >= 5 && va > 0;
+      const newScore = usable ? Math.min(10, Math.max(1, Number(va.toFixed(1)))) : 0;
+      let note = usable
+        ? `fabricated mapper fallback 8.0 replaced with the TMDB score ${newScore} (voteAverage ${va}, voteCount ${vc})`
+        : `fabricated mapper fallback 8.0 zeroed (TMDB voteCount ${vc} < 5 or voteAverage ${va} <= 0)`;
+      const changes: ScoreChanges = { skorSotoy: newScore };
+      if (film.criticsSkorSotoy === score) {
+        // Keep critics equal to the score it mirrors.
+        changes.criticsSkorSotoy = newScore;
+      } else {
+        note += `; criticsSkorSotoy (${String(film.criticsSkorSotoy)}) differs from skorSotoy and was left unchanged`;
+      }
+      changes.scoreScale = 10;
+      return { category: 'score-replaced', changes: withVote(changes), details: details({ delta, note }) };
+    }
+
     return {
       category: 'score-mismatch',
       changes: voteChange,
       details: details({
         delta,
-        note: `stored skorSotoy does not match TMDB vote_average within tolerance ${tolerance}; needs manual review`,
+        note:
+          score === 8
+            ? `stored skorSotoy does not match TMDB vote_average within tolerance ${tolerance}; needs manual review (--replace-fake-eight would replace the fabricated 8.0 with the TMDB score)`
+            : `stored skorSotoy does not match TMDB vote_average within tolerance ${tolerance}; needs manual review`,
       }),
     };
   }
@@ -347,6 +382,7 @@ export interface CliOptions {
   restorePath?: string;
   noTmdb: boolean;
   includeHighVotes: boolean;
+  replaceFakeEight: boolean;
   tolerance: number;
 }
 
@@ -359,6 +395,7 @@ export function parseCliOptions(argv: string[]): CliOptions {
     apply: false,
     noTmdb: false,
     includeHighVotes: false,
+    replaceFakeEight: false,
     tolerance: DEFAULT_TOLERANCE,
   };
   let restorePath: string | undefined;
@@ -382,6 +419,8 @@ export function parseCliOptions(argv: string[]): CliOptions {
       options.noTmdb = true;
     } else if (arg === '--include-high-votes') {
       options.includeHighVotes = true;
+    } else if (arg === '--replace-fake-eight') {
+      options.replaceFakeEight = true;
     } else if (arg === '--tolerance' || arg.startsWith('--tolerance=')) {
       const raw = takeValue();
       const value = Number(raw);
@@ -450,7 +489,8 @@ const isFailedPrecondition = (err: unknown): boolean => {
 const printUsage = (): void => {
   console.error('Usage:');
   console.error('  npx tsx scripts/migrate-film-scores.ts [--apply]');
-  console.error('      [--no-tmdb] [--include-high-votes] [--tolerance <0..2>]');
+  console.error('      [--no-tmdb] [--include-high-votes] [--replace-fake-eight]');
+  console.error('      [--tolerance <0..2>]');
   console.error('  npx tsx scripts/migrate-film-scores.ts --restore <backup.json> [--apply]');
 };
 
@@ -601,6 +641,7 @@ const BUCKET_ORDER: ClassifyCategory[] = [
   'vote-fix',
   'score-scale',
   'score-zero',
+  'score-replaced',
   'score-mismatch',
   'score-no-tmdb',
   'manual',
@@ -625,7 +666,7 @@ interface BucketEntry {
 interface MigrationReport {
   generatedAt: string;
   mode: 'dry-run' | 'apply';
-  options: { includeHighVotes: boolean; tolerance: number; noTmdb: boolean };
+  options: { includeHighVotes: boolean; tolerance: number; noTmdb: boolean; replaceFakeEight: boolean };
   counts: Record<string, number>;
   /** filmIds of rating docs matching no film (up to 20 samples). */
   ratingsUnmatchedSamples?: string[];
@@ -986,6 +1027,7 @@ async function runMigration(cli: CliOptions): Promise<void> {
   console.log(`High votes (>1, 0 ratings):        ${counts['high-votes']}${cli.includeHighVotes ? ' (fixed via --include-high-votes)' : ' (report only)'}`);
   console.log(`Score scale fix (B1):              ${counts['score-scale']}`);
   console.log(`Fabricated score zeroed (B2/B3):   ${counts['score-zero']}`);
+  console.log(`Fake 8.0 replaced (B5):            ${counts['score-replaced']}${cli.replaceFakeEight ? ' (via --replace-fake-eight)' : ''}`);
   console.log(`TMDB mismatch (B4, RO):            ${counts['score-mismatch']}`);
   console.log(`No TMDB data (RO):                 ${counts['score-no-tmdb']}`);
   console.log(`Manual (no tmdbId / skipped):      ${counts.manual} (flagged 4.0: ${flaggedManual4})`);
@@ -1015,6 +1057,7 @@ async function runMigration(cli: CliOptions): Promise<void> {
       includeHighVotes: cli.includeHighVotes,
       tolerance: cli.tolerance,
       noTmdb: cli.noTmdb,
+      replaceFakeEight: cli.replaceFakeEight,
     },
     counts,
     tmdb: {

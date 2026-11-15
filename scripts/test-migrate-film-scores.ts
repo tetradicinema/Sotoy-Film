@@ -47,8 +47,9 @@ const createFilm = (overrides: Partial<FilmItem> = {}): FilmItem => ({
   ...overrides,
 });
 
-const opts = { includeHighVotes: false, tolerance: DEFAULT_TOLERANCE };
-const highOpts = { includeHighVotes: true, tolerance: DEFAULT_TOLERANCE };
+const opts = { includeHighVotes: false, tolerance: DEFAULT_TOLERANCE, replaceFakeEight: false };
+const highOpts = { includeHighVotes: true, tolerance: DEFAULT_TOLERANCE, replaceFakeEight: false };
+const b5Opts = { includeHighVotes: false, tolerance: DEFAULT_TOLERANCE, replaceFakeEight: true };
 
 const runTests = () => {
   console.log('Running Migrate Film Scores Tests...\n');
@@ -159,7 +160,7 @@ const runTests = () => {
     createFilm({ skorSotoy: 4.5, criticsSkorSotoy: undefined as unknown as number, tmdbId: 123 }),
     0,
     { voteAverage: 4.9, voteCount: 900 },
-    { includeHighVotes: false, tolerance: 0.1 }
+    { includeHighVotes: false, tolerance: 0.1, replaceFakeEight: false }
   );
   assertEquals(b1Tight.category, 'score-mismatch', 'B1 drift: mismatch with tolerance 0.1');
   assertEquals(b1Tight.changes, {}, 'B1 drift: no write with tolerance 0.1');
@@ -222,6 +223,150 @@ const runTests = () => {
   );
   assertEquals(b3Mismatch.category, 'score-mismatch', 'stored 8.0 with TMDB 7.1 -> mismatch');
   assertEquals(b3Mismatch.changes, {}, 'stored 8.0 with TMDB 7.1 -> no write');
+  assert(
+    Boolean(b3Mismatch.details.note?.includes('--replace-fake-eight')),
+    'stored 8.0 mismatch note mentions that --replace-fake-eight would replace it'
+  );
+
+  // ---------------------------------------------------------------------------
+  // Rule B5 (opt-in --replace-fake-eight): fabricated 8.0 -> real TMDB score
+  // ---------------------------------------------------------------------------
+  const b5Off = classifyFilm(
+    createFilm({ skorSotoy: 8, criticsSkorSotoy: undefined as unknown as number, tmdbId: 123 }),
+    0,
+    { voteAverage: 5, voteCount: 19 },
+    opts
+  );
+  assertEquals(b5Off.category, 'score-mismatch', 'B5 off: stored 8.0 with TMDB 5.0/19 stays mismatch');
+  assertEquals(b5Off.changes, {}, 'B5 off: no changes');
+
+  const b5 = classifyFilm(
+    createFilm({ skorSotoy: 8, criticsSkorSotoy: 8, tmdbId: 123 }),
+    0,
+    { voteAverage: 5, voteCount: 19 },
+    b5Opts
+  );
+  assertEquals(b5.category, 'score-replaced', 'B5: score-replaced bucket');
+  assertEquals(
+    b5.changes,
+    { skorSotoy: 5, criticsSkorSotoy: 5, scoreScale: 10 },
+    'B5: stored 8.0 with TMDB 5.0/19 -> skorSotoy 5, scale 10, critics follows'
+  );
+  assert(
+    Boolean(b5.details.note?.includes('replaced')),
+    'B5: note mentions the replacement'
+  );
+
+  const b5CriticsDiffer = classifyFilm(
+    createFilm({ skorSotoy: 8, criticsSkorSotoy: 7.1, tmdbId: 123 }),
+    0,
+    { voteAverage: 5, voteCount: 19 },
+    b5Opts
+  );
+  assertEquals(
+    b5CriticsDiffer.changes,
+    { skorSotoy: 5, scoreScale: 10 },
+    'B5 differing critics: skorSotoy and scale written, critics left alone'
+  );
+  assert(
+    Boolean(b5CriticsDiffer.details.note?.includes('criticsSkorSotoy')),
+    'B5 differing critics: left alone and noted'
+  );
+
+  const b5Zero = classifyFilm(
+    createFilm({ skorSotoy: 8, criticsSkorSotoy: 8, tmdbId: 123 }),
+    0,
+    { voteAverage: 7, voteCount: 1 },
+    b5Opts
+  );
+  assertEquals(b5Zero.category, 'score-replaced', 'B5 low votes: score-replaced bucket');
+  assertEquals(
+    b5Zero.changes,
+    { skorSotoy: 0, criticsSkorSotoy: 0, scoreScale: 10 },
+    'B5: TMDB 7.0/1 (voteCount < 5) -> skorSotoy 0'
+  );
+
+  const b5Rounded = classifyFilm(
+    createFilm({ skorSotoy: 8, criticsSkorSotoy: 8, tmdbId: 123 }),
+    0,
+    { voteAverage: 6.205, voteCount: 166 },
+    b5Opts
+  );
+  assertEquals(
+    b5Rounded.changes,
+    { skorSotoy: 6.2, criticsSkorSotoy: 6.2, scoreScale: 10 },
+    'B5: TMDB 6.205/166 -> 6.2 (one decimal)'
+  );
+
+  const b5Clamped = classifyFilm(
+    createFilm({ skorSotoy: 8, criticsSkorSotoy: undefined as unknown as number, tmdbId: 123 }),
+    0,
+    { voteAverage: 0.4, voteCount: 900 },
+    b5Opts
+  );
+  assertEquals(
+    b5Clamped.changes,
+    { skorSotoy: 1, scoreScale: 10 },
+    'B5: TMDB vote_average is clamped into 1..10'
+  );
+
+  const b5LosesToB1 = classifyFilm(
+    createFilm({ skorSotoy: 8, criticsSkorSotoy: undefined as unknown as number, tmdbId: 123 }),
+    0,
+    { voteAverage: 7.9, voteCount: 900 },
+    b5Opts
+  );
+  assertEquals(b5LosesToB1.category, 'score-scale', 'B5: stored 8.0 within tolerance of TMDB 7.9 is still B1');
+  assertEquals(b5LosesToB1.changes, { scoreScale: 10 }, 'B5: B1 wins even with the flag');
+
+  const b5ManualScore = classifyFilm(
+    createFilm({ skorSotoy: 4.3, criticsSkorSotoy: undefined as unknown as number, tmdbId: 123 }),
+    0,
+    { voteAverage: 8.7, voteCount: 900 },
+    b5Opts
+  );
+  assertEquals(
+    b5ManualScore.category,
+    'score-mismatch',
+    'B5: stored 4.3 with TMDB 8.7 is never touched even with the flag'
+  );
+  assertEquals(b5ManualScore.changes, {}, 'B5: stored 4.3 -> no write');
+
+  const b5EightPointThree = classifyFilm(
+    createFilm({ skorSotoy: 8.3, criticsSkorSotoy: undefined as unknown as number, tmdbId: 123 }),
+    0,
+    { voteAverage: 5, voteCount: 19 },
+    b5Opts
+  );
+  assertEquals(b5EightPointThree.category, 'skip', 'B5: stored 8.3 is not a score candidate');
+  assertEquals(b5EightPointThree.changes, {}, 'B5: stored 8.3 is never touched');
+
+  const b5Unavailable = classifyFilm(
+    createFilm({ skorSotoy: 8, criticsSkorSotoy: undefined as unknown as number, tmdbId: 123 }),
+    0,
+    'unavailable' as TmdbInput,
+    b5Opts
+  );
+  assertEquals(b5Unavailable.category, 'score-no-tmdb', 'B5: unavailable TMDB is never touched');
+  assertEquals(b5Unavailable.changes, {}, 'B5: unavailable TMDB -> no write');
+
+  const b5Reviewed = classifyFilm(
+    createFilm({ skorSotoy: 8, totalVotes: 3, tmdbId: 123 }),
+    2,
+    { voteAverage: 5, voteCount: 19 },
+    b5Opts
+  );
+  assertEquals(b5Reviewed.category, 'has-real-reviews', 'B5: reviewed films are never touched');
+  assertEquals(b5Reviewed.changes, {}, 'B5: reviewed films -> no changes');
+
+  const b5Scaled = classifyFilm(
+    createFilm({ skorSotoy: 8, scoreScale: 10, tmdbId: 123 }),
+    0,
+    { voteAverage: 5, voteCount: 19 },
+    b5Opts
+  );
+  assertEquals(b5Scaled.category, 'skip', 'B5: scoreScale 10 docs are never touched');
+  assertEquals(b5Scaled.changes, {}, 'B5: scoreScale 10 -> no changes');
 
   // ---------------------------------------------------------------------------
   // Non-candidates and guarded buckets
@@ -295,6 +440,13 @@ const runTests = () => {
     b2LosesToB1,
     b3,
     b3Mismatch,
+    b5,
+    b5CriticsDiffer,
+    b5Zero,
+    b5Rounded,
+    b5Clamped,
+    b5LosesToB1,
+    b5ManualScore,
     manual,
     manualWithVote,
     unavailable,
@@ -352,6 +504,32 @@ const runTests = () => {
   );
   assertEquals(idemB3.changes, {}, 'idempotency: B3 zeroed film -> no further changes');
 
+  const idemB5 = applyAndReclassify(
+    createFilm({ skorSotoy: 8, criticsSkorSotoy: 8, totalVotes: 1, tmdbId: 123 }),
+    classifyFilm(
+      createFilm({ skorSotoy: 8, criticsSkorSotoy: 8, totalVotes: 1, tmdbId: 123 }),
+      0,
+      { voteAverage: 5, voteCount: 19 },
+      b5Opts
+    ),
+    { voteAverage: 5, voteCount: 19 }
+  );
+  assertEquals(idemB5.category, 'skip', 'idempotency: B5 replaced film -> skip on reclassify');
+  assertEquals(idemB5.changes, {}, 'idempotency: B5 replaced film -> no further changes');
+
+  const idemB5Zero = applyAndReclassify(
+    createFilm({ skorSotoy: 8, criticsSkorSotoy: 8, tmdbId: 123 }),
+    classifyFilm(
+      createFilm({ skorSotoy: 8, criticsSkorSotoy: 8, tmdbId: 123 }),
+      0,
+      { voteAverage: 7, voteCount: 1 },
+      b5Opts
+    ),
+    { voteAverage: 7, voteCount: 1 }
+  );
+  assertEquals(idemB5Zero.category, 'skip', 'idempotency: B5 zeroed film -> skip on reclassify');
+  assertEquals(idemB5Zero.changes, {}, 'idempotency: B5 zeroed film -> no further changes');
+
   // ---------------------------------------------------------------------------
   // resolveRatingsCount
   // ---------------------------------------------------------------------------
@@ -408,17 +586,22 @@ const runTests = () => {
   // ---------------------------------------------------------------------------
   assertEquals(
     parseCliOptions([]),
-    { apply: false, noTmdb: false, includeHighVotes: false, tolerance: 0.5, restorePath: undefined },
+    { apply: false, noTmdb: false, includeHighVotes: false, replaceFakeEight: false, tolerance: 0.5, restorePath: undefined },
     'CLI: defaults'
   );
   assertEquals(
     parseCliOptions(['--apply', '--include-high-votes', '--tolerance', '0.3']),
-    { apply: true, noTmdb: false, includeHighVotes: true, tolerance: 0.3, restorePath: undefined },
+    { apply: true, noTmdb: false, includeHighVotes: true, replaceFakeEight: false, tolerance: 0.3, restorePath: undefined },
     'CLI: parses flags and values'
   );
   assertEquals(
+    parseCliOptions(['--replace-fake-eight', '--apply']),
+    { apply: true, noTmdb: false, includeHighVotes: false, replaceFakeEight: true, tolerance: 0.5, restorePath: undefined },
+    'CLI: --replace-fake-eight is parsed'
+  );
+  assertEquals(
     parseCliOptions(['--restore=data/film-scores-backup-x.json', '--apply']),
-    { apply: true, noTmdb: false, includeHighVotes: false, tolerance: 0.5, restorePath: 'data/film-scores-backup-x.json' },
+    { apply: true, noTmdb: false, includeHighVotes: false, replaceFakeEight: false, tolerance: 0.5, restorePath: 'data/film-scores-backup-x.json' },
     'CLI: --restore=path is parsed'
   );
 
