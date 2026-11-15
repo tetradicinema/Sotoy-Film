@@ -107,13 +107,13 @@ const runTests = () => {
   );
   assertEquals(
     getCardRating(createFilm({ skorSotoy: 8.7, totalVotes: 0 })),
-    { kind: 'none' },
-    'getCardRating: zero votes shows no score'
+    { kind: 'score', text: '8.7' },
+    'getCardRating: zero votes with a positive score still shows the score'
   );
   assertEquals(
     getCardRating(createFilm({ skorSotoy: 8.7, totalVotes: undefined as unknown as number })),
-    { kind: 'none' },
-    'getCardRating: missing votes shows no score'
+    { kind: 'score', text: '8.7' },
+    'getCardRating: missing votes with a positive score still shows the score'
   );
   assertEquals(
     getCardRating(createFilm({ skorSotoy: undefined as unknown as number })),
@@ -131,9 +131,24 @@ const runTests = () => {
     'getCardRating: non-finite score shows no score'
   );
   assertEquals(
-    getCardRating(createFilm({ totalVotes: Number.NaN })),
+    getCardRating(createFilm({ skorSotoy: 4.8, totalVotes: 0 })),
+    { kind: 'score', text: '4.8' },
+    'getCardRating: positive score with zero votes shows the score'
+  );
+  assertEquals(
+    getCardRating(createFilm({ skorSotoy: 0, totalVotes: 0 })),
     { kind: 'none' },
-    'getCardRating: non-finite votes shows no score'
+    'getCardRating: zero score with zero votes shows no score'
+  );
+  assertEquals(
+    getCardRating(createFilm({ skorSotoy: 4.25, scoreScale: 5, totalVotes: 0 })),
+    { kind: 'score', text: '8.5' },
+    'getCardRating: 5-point scale score with zero votes normalizes to 10'
+  );
+  assertEquals(
+    getCardRating(createFilm({ totalVotes: Number.NaN })),
+    { kind: 'score', text: '8.4' },
+    'getCardRating: non-finite votes does not affect the score (createFilm default skorSotoy 8.4)'
   );
 
   // ---------------------------------------------------------------------------

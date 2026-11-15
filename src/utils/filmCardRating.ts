@@ -8,13 +8,14 @@ export type CardRating =
 /**
  * Decides what the poster card's rating box should show.
  *
- * A film only gets a score when it has votes and a positive score after
- * normalization. The returned text is always a single-decimal 10-point value.
+ * A film gets a score whenever it has a positive, finite score after
+ * normalization — vote count is not required (imported films may have
+ * zero votes but a real TMDB-derived score, which is shown as-is).
+ * A zero, missing, negative or non-finite score shows nothing, and the
+ * score itself is never fabricated. The returned text is always a
+ * single-decimal 10-point value.
  */
 export function getCardRating(film: FilmItem): CardRating {
-  const votes = film.totalVotes ?? 0;
-  if (!Number.isFinite(votes) || votes <= 0) return { kind: 'none' };
-
   const score = normalizeFilmScore(film);
   if (!Number.isFinite(score) || score <= 0) return { kind: 'none' };
 
