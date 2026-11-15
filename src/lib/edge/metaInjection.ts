@@ -386,6 +386,52 @@ function displayedFilmScore(data: Record<string, any>): number | null {
   return Number.isFinite(displayed) && displayed > 0 ? displayed : null;
 }
 
+/** Maximum curatorNote length before truncation (at a word boundary). */
+const CURATOR_NOTE_MAX_LENGTH = 600;
+
+/** Maximum platform entries printed in the "Where to watch" line. */
+const WHERE_TO_WATCH_MAX = 8;
+
+/** The only whereToWatch types worth showing as a parenthetical. */
+const WHERE_TO_WATCH_TYPES = new Set(['stream', 'rent', 'buy']);
+
+/**
+ * Truncates plain text to at most `max` characters, cutting at a word
+ * boundary when one exists, and appends a plain "..." marker. Truncation
+ * happens BEFORE escaping, so it can never split an HTML entity.
+ */
+function truncateAtWord(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const slice = text.slice(0, max);
+  const cut = slice.lastIndexOf(' ');
+  const truncated = cut > 0 ? slice.slice(0, cut) : slice;
+  return `${truncated}...`;
+}
+
+/**
+ * Builds "A (stream), B (rent)" from a whereToWatch list. Entries without a
+ * platform are skipped, platform+type pairs are deduplicated, at most
+ * WHERE_TO_WATCH_MAX entries are printed, and the type is shown only for
+ * stream/rent/buy. Returns '' when nothing usable remains.
+ */
+function formatWhereToWatch(value: unknown): string {
+  if (!Array.isArray(value)) return '';
+  const seen = new Set<string>();
+  const labels: string[] = [];
+  for (const entry of value) {
+    if (!entry || typeof entry !== 'object') continue;
+    const platform = toPlainText((entry as any).platform);
+    if (!platform) continue;
+    const type = toPlainText((entry as any).type).toLowerCase();
+    const key = `${platform.toLowerCase()}|${type}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    labels.push(WHERE_TO_WATCH_TYPES.has(type) ? `${platform} (${type})` : platform);
+    if (labels.length >= WHERE_TO_WATCH_MAX) break;
+  }
+  return labels.join(', ');
+}
+
 /**
  * Builds the plain film body injected inside #root for crawlers.
  */
@@ -422,6 +468,35 @@ export function buildFilmBodyHtml(data: Record<string, any>): string {
   const duration = toPlainText(data.duration);
   if (duration) {
     parts.push(`<p>Duration: ${escapeHtml(duration)}</p>`);
+  }
+
+  // Extra real, non-fabricated fields, in a fixed order after Duration.
+  const rawTitle = toPlainText(data.title);
+  const originalTitle = toPlainText(data.originalTitle);
+  if (originalTitle && originalTitle.toLowerCase() !== rawTitle.toLowerCase()) {
+    parts.push(`<p>Original title: ${escapeHtml(originalTitle)}</p>`);
+  }
+
+  const writer = toPlainText(data.writer);
+  if (writer) {
+    parts.push(`<p>Writer: ${escapeHtml(writer)}</p>`);
+  }
+
+  const studio = toPlainText(data.studio);
+  if (studio) {
+    parts.push(`<p>Studio: ${escapeHtml(studio)}</p>`);
+  }
+
+  const whereToWatch = formatWhereToWatch(data.whereToWatch);
+  if (whereToWatch) {
+    parts.push(`<p>Where to watch: ${escapeHtml(whereToWatch)}</p>`);
+  }
+
+  const curatorNote = toPlainText(data.curatorNote);
+  if (curatorNote) {
+    parts.push(
+      `<p>${escapeHtml(truncateAtWord(curatorNote, CURATOR_NOTE_MAX_LENGTH))}</p>`
+    );
   }
 
   // Only a real, positive, app-consistent score is printed, and only with real

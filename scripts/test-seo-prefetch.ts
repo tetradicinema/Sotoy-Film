@@ -585,6 +585,231 @@ async function main(): Promise<void> {
     bodyOf({ title: 'F', skorSotoy: 4.6, totalVotes: 5 }).includes('Skor Sotoy 9.2/10 · 5 votes')
   );
 
+  // --- enriched bot film body (real, non-fabricated fields) -------------------
+  // New lines go AFTER Duration and BEFORE the Skor Sotoy line, in this exact
+  // order: Original title, Writer, Studio, Where to watch, curator note.
+  const whereEntry = (platform: string, type: string) => ({ platform, type, badgeColor: '#000', source: 'x' });
+  const richData: Record<string, any> = {
+    title: 'Rich Film',
+    year: 2024,
+    synopsis: 'A synopsis.',
+    director: 'Ada Dirigen',
+    castDetails: [{ name: 'Player One' }],
+    genres: ['Drama'],
+    duration: '120 min',
+    originalTitle: 'Original Rich Film',
+    writer: 'Penulis Satu',
+    studio: 'Studio Gambar',
+    whereToWatch: [whereEntry('Netflix', 'stream'), whereEntry('Vidio', 'rent')],
+    curatorNote: 'Catatan kurator.',
+    skorSotoy: 8,
+  };
+  const richHtml = bodyOf(richData);
+  const paragraphTexts = (html: string): string[] =>
+    [...html.matchAll(/<p>(.*?)<\/p>/g)].map(match => match[1]);
+
+  check(
+    'film body (rich): every new field is printed',
+    richHtml.includes('<p>Original title: Original Rich Film</p>') &&
+      richHtml.includes('<p>Writer: Penulis Satu</p>') &&
+      richHtml.includes('<p>Studio: Studio Gambar</p>') &&
+      richHtml.includes('<p>Where to watch: Netflix (stream), Vidio (rent)</p>') &&
+      richHtml.includes('<p>Catatan kurator.</p>')
+  );
+
+  check(
+    'film body (rich): line order is h1, synopsis, Director, Cast, Genres, Duration, Original title, Writer, Studio, Where to watch, curator note, score',
+    (() => {
+      const paragraphs = paragraphTexts(richHtml);
+      const expected = [
+        'A synopsis.',
+        'Director: Ada Dirigen',
+        'Cast: Player One',
+        'Genres: Drama',
+        'Duration: 120 min',
+        'Original title: Original Rich Film',
+        'Writer: Penulis Satu',
+        'Studio: Studio Gambar',
+        'Where to watch: Netflix (stream), Vidio (rent)',
+        'Catatan kurator.',
+        'Skor Sotoy 8.0/10',
+      ];
+      return (
+        paragraphs.length === expected.length &&
+        expected.every((text, index) => paragraphs[index] === escapeCheck(text))
+      );
+      function escapeCheck(text: string): string {
+        return text
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+    })()
+  );
+
+  // Each field missing individually -> no label, no empty <p>.
+  const base = { title: 'F', synopsis: 'S', director: 'D' };
+  check(
+    'film body: missing originalTitle prints no label',
+    !bodyOf(base).includes('Original title')
+  );
+  check(
+    'film body: originalTitle equal to title (case-insensitive) is omitted',
+    (() => {
+      const html = bodyOf({ title: 'Same Title', originalTitle: '  same title  ' });
+      return !html.includes('Original title');
+    })()
+  );
+  check(
+    'film body: originalTitle differing only in case from title is omitted, real difference is printed',
+    bodyOf({ title: 'FILM X', originalTitle: 'film x' }).includes('Original title') === false &&
+      bodyOf({ title: 'Film X', originalTitle: 'Judul Lain' }).includes('<p>Original title: Judul Lain</p>')
+  );
+  check(
+    'film body: missing writer/studio/whereToWatch/curatorNote print no labels',
+    (() => {
+      const html = bodyOf(base);
+      return (
+        !html.includes('Writer:') &&
+        !html.includes('Studio:') &&
+        !html.includes('Where to watch:') &&
+        !html.includes('Original title:')
+      );
+    })()
+  );
+
+  check(
+    'film body: empty-string writer/studio/curatorNote print nothing',
+    (() => {
+      const html = bodyOf({ title: 'F', writer: '', studio: '', curatorNote: '' });
+      return !html.includes('Writer:') && !html.includes('Studio:') && paragraphTexts(html).length === 0;
+    })()
+  );
+
+  check(
+    'film body: non-string writer/studio/curatorNote (numbers/objects) print nothing',
+    (() => {
+      const html = bodyOf({ title: 'F', writer: 42, studio: { a: 1 }, curatorNote: true });
+      return !html.includes('Writer:') && !html.includes('Studio:') && !html.includes('object Object');
+    })()
+  );
+
+  // whereToWatch: dedupe, unknown type, missing platform, > 8 entries.
+  check(
+    'film body: whereToWatch dedupes by platform+type (case-insensitive)',
+    bodyOf({
+      title: 'F',
+      whereToWatch: [
+        whereEntry('Netflix', 'stream'),
+        whereEntry('netflix', 'stream'),
+        whereEntry('Netflix', 'Stream'),
+        whereEntry('Netflix', 'rent'),
+      ],
+    }).includes('<p>Where to watch: Netflix (stream), Netflix (rent)</p>')
+  );
+  check(
+    'film body: whereToWatch unknown types show no parenthetical',
+    bodyOf({
+      title: 'F',
+      whereToWatch: [whereEntry('Cinemaxx', 'theatrical'), whereEntry('Viu', 'stream')],
+    }).includes('<p>Where to watch: Cinemaxx, Viu (stream)</p>')
+  );
+  check(
+    'film body: whereToWatch skips entries without a usable platform',
+    bodyOf({
+      title: 'F',
+      whereToWatch: [whereEntry('  ', 'stream'), { type: 'stream' }, null, 'Netflix', whereEntry('Viu', 'buy')],
+    }).includes('<p>Where to watch: Viu (buy)</p>')
+  );
+  check(
+    'film body: whereToWatch prints at most 8 unique entries',
+    (() => {
+      const platforms = Array.from({ length: 11 }, (_, i) => `Platform${i + 1}`);
+      const html = bodyOf({ title: 'F', whereToWatch: platforms.map(p => whereEntry(p, 'stream')) });
+      const text = html.match(/<p>Where to watch: (.*?)<\/p>/)?.[1] || '';
+      return text.split(', ').length === 8 && text.startsWith('Platform1 (stream)') && text.includes('Platform8') && !text.includes('Platform9');
+    })()
+  );
+  check(
+    'film body: malformed whereToWatch (not array / null) prints nothing and does not throw',
+    (() => {
+      try {
+        return (
+          !bodyOf({ title: 'F', whereToWatch: 'nope' }).includes('Where to watch') &&
+          !bodyOf({ title: 'F', whereToWatch: null }).includes('Where to watch')
+        );
+      } catch {
+        return false;
+      }
+    })()
+  );
+  check(
+    'film body: whereToWatch entries without type still print the platform name',
+    bodyOf({ title: 'F', whereToWatch: [{ platform: 'OnlyPlatform' }] }).includes(
+      '<p>Where to watch: OnlyPlatform</p>'
+    )
+  );
+
+  // curatorNote truncation at a word boundary. Words are 10 chars each, so a
+  // mid-word cut would end with a fragment that is not any complete word.
+  const noteWords = ['abcdefghij', 'klmnopqrst', 'uvwxyzabcd'];
+  const longNote = `${Array.from({ length: 20 }, () => noteWords.join(' ')).join(' ')}`;
+  check(
+    'film body: long curatorNote is truncated to <= 600 chars at a word boundary with a plain ellipsis',
+    (() => {
+      const text = paragraphTexts(bodyOf({ title: 'F', curatorNote: longNote }))[0] || '';
+      const before = text.slice(0, -3);
+      return (
+        text.endsWith('...') &&
+        before.length <= 600 &&
+        before.split(' ').every(word => (noteWords as string[]).includes(word))
+      );
+    })()
+  );
+  check(
+    'film body: curatorNote exactly at the limit is not truncated',
+    (() => {
+      const note = 'a'.repeat(600);
+      const text = paragraphTexts(bodyOf({ title: 'F', curatorNote: note }))[0] || '';
+      return text === note;
+    })()
+  );
+  check(
+    'film body: 601-char curatorNote truncates and keeps whole words',
+    (() => {
+      const note = `${'a'.repeat(598)} bcde`;
+      const text = paragraphTexts(bodyOf({ title: 'F', curatorNote: note }))[0] || '';
+      return text === `${'a'.repeat(598)}...`;
+    })()
+  );
+
+  // HTML escaping in every new field.
+  check(
+    'film body: HTML-special characters are escaped in the new fields',
+    (() => {
+      const evil = '<b>&"\'</b>';
+      const html = bodyOf({
+        title: 'F',
+        originalTitle: `Orig ${evil}`,
+        writer: `W ${evil}`,
+        studio: `S ${evil}`,
+        whereToWatch: [whereEntry(`P ${evil}`, 'stream')],
+        curatorNote: `N ${evil}`,
+      });
+      return (
+        !html.includes('<b>') &&
+        !html.includes('&"') &&
+        html.includes('<p>Original title: Orig &lt;b&gt;&amp;&quot;&#039;&lt;/b&gt;</p>') &&
+        html.includes('<p>Writer: W &lt;b&gt;&amp;&quot;&#039;&lt;/b&gt;</p>') &&
+        html.includes('<p>Studio: S &lt;b&gt;&amp;&quot;&#039;&lt;/b&gt;</p>') &&
+        html.includes('<p>Where to watch: P &lt;b&gt;&amp;&quot;&#039;&lt;/b&gt; (stream)</p>') &&
+        html.includes('<p>N &lt;b&gt;&amp;&quot;&#039;&lt;/b&gt;</p>')
+      );
+    })()
+  );
+
   await runListPageChecks();
   await runSitemapChecks();
 
