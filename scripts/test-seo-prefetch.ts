@@ -8,6 +8,7 @@
 import {
   FALLBACK_HTML_TEMPLATE,
   PREFETCH_MAX_LENGTH,
+  buildFilmBodyHtml,
   injectPrefetchData,
   injectSeoLists,
   serializePrefetchPayload,
@@ -497,6 +498,91 @@ async function main(): Promise<void> {
   check(
     'escaped serializer output parses back to the original text',
     JSON.parse(similar).data.text === '<>&\u2028\u2029'
+  );
+
+  // --- bot-facing film body (buildFilmBodyHtml) -----------------------------
+  // The raw stored skorSotoy is NOT what the app displays: legacy docs
+  // (scoreScale undefined, 0 < stored <= 5.0) are displayed doubled. The bot
+  // HTML must match the app, never print "0", and never print a vote count
+  // without real evidence (> 1).
+  const bodyOf = (data: Record<string, any>): string => buildFilmBodyHtml(data);
+  const containsScore = (html: string, expected: string): boolean =>
+    html.includes(`Skor Sotoy ${expected}/10`);
+  const scoreTexts = (html: string): string[] =>
+    [...html.matchAll(/Skor Sotoy ([0-9.]+)\/10/g)].map(match => match[1]);
+  const voteTexts = (html: string): string[] =>
+    [...html.matchAll(/(\d+) votes/g)].map(match => match[1]);
+
+  check(
+    'film body: legacy stored 4.6 (no scoreScale) is doubled to 9.2',
+    containsScore(bodyOf({ title: 'F', skorSotoy: 4.6 }), '9.2')
+  );
+  check(
+    'film body: stored 4.6 with scoreScale 10 stays 4.6',
+    containsScore(bodyOf({ title: 'F', skorSotoy: 4.6, scoreScale: 10 }), '4.6')
+  );
+  check(
+    'film body: stored 8 (legacy) is not doubled -> 8.0',
+    containsScore(bodyOf({ title: 'F', skorSotoy: 8 }), '8.0')
+  );
+  check(
+    'film body: legacy stored 5.0 boundary doubles to 10.0',
+    containsScore(bodyOf({ title: 'F', skorSotoy: 5.0 }), '10.0')
+  );
+  check(
+    'film body: legacy stored 5.1 does not double -> 5.1',
+    containsScore(bodyOf({ title: 'F', skorSotoy: 5.1 }), '5.1')
+  );
+  check(
+    'film body: stored 0 prints no score text at all',
+    bodyOf({ title: 'F', skorSotoy: 0 }).includes('Skor Sotoy') === false &&
+      bodyOf({ title: 'F', skorSotoy: 0, totalVotes: 0 }).includes('votes') === false
+  );
+  check(
+    'film body: totalVotes 0 and 1 never print a vote count',
+    bodyOf({ title: 'F', totalVotes: 0 }).includes('votes') === false &&
+      bodyOf({ title: 'F', totalVotes: 1 }).includes('votes') === false
+  );
+  check(
+    'film body: totalVotes 5 prints "5 votes"',
+    voteTexts(bodyOf({ title: 'F', totalVotes: 5 })).join(',') === '5'
+  );
+  check(
+    'film body: totalVotes 1 with a real score shows the score but no votes',
+    containsScore(bodyOf({ title: 'F', skorSotoy: 8, totalVotes: 1 }), '8.0') &&
+      bodyOf({ title: 'F', skorSotoy: 8, totalVotes: 1 }).includes('votes') === false
+  );
+  check(
+    'film body: totalVotes 3.9 is floored to 3 votes',
+    voteTexts(bodyOf({ title: 'F', totalVotes: 3.9 })).join(',') === '3'
+  );
+  check(
+    'film body: non-numeric skorSotoy and null totalVotes print nothing',
+    (() => {
+      const html = bodyOf({ skorSotoy: 'x', totalVotes: null });
+      return scoreTexts(html).length === 0 && voteTexts(html).length === 0;
+    })()
+  );
+  check(
+    'film body: missing score/vote fields do not throw and still build a body',
+    (() => {
+      let html = '';
+      try {
+        html = bodyOf({ title: 'Only Title' });
+      } catch {
+        return false;
+      }
+      return html.startsWith('<article>') &&
+        html.includes('<h1>Only Title</h1>') &&
+        scoreTexts(html).length === 0 &&
+        voteTexts(html).length === 0;
+    })()
+  );
+  check('film body: null data returns an empty string', bodyOf(null as any) === '');
+  check('film body: non-object data returns an empty string', bodyOf('nope' as any) === '');
+  check(
+    'film body: legacy score + votes renders both in one line',
+    bodyOf({ title: 'F', skorSotoy: 4.6, totalVotes: 5 }).includes('Skor Sotoy 9.2/10 · 5 votes')
   );
 
   await runListPageChecks();

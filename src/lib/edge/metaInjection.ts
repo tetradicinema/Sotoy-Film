@@ -368,6 +368,25 @@ export function buildArticleBodyHtml(data: Record<string, any>): string {
 }
 
 /**
+ * Mirrors the app's read-time score handling (AppContext.tsx ~1238-1250 and
+ * firestoreRestClient.ts ~260-278): a legacy document (scoreScale undefined)
+ * with a stored 5-scale score (0 < stored <= 5.0) is DISPLAYED doubled, rounded
+ * to one decimal; everything else is displayed as stored. Returns null when
+ * there is no positive displayed score, so the bot HTML never prints "0" or a
+ * fabricated fallback number.
+ */
+function displayedFilmScore(data: Record<string, any>): number | null {
+  const stored = Number(data.skorSotoy);
+  if (!Number.isFinite(stored)) return null;
+
+  const isLegacy = data.scoreScale === undefined;
+  const displayed =
+    isLegacy && stored > 0 && stored <= 5.0 ? Number((stored * 2).toFixed(1)) : stored;
+
+  return Number.isFinite(displayed) && displayed > 0 ? displayed : null;
+}
+
+/**
  * Builds the plain film body injected inside #root for crawlers.
  */
 export function buildFilmBodyHtml(data: Record<string, any>): string {
@@ -405,18 +424,17 @@ export function buildFilmBodyHtml(data: Record<string, any>): string {
     parts.push(`<p>Duration: ${escapeHtml(duration)}</p>`);
   }
 
-  const scoreValue = Number(data.skorSotoy);
-  const score =
-    Number.isFinite(scoreValue) && scoreValue > 0 ? scoreValue.toFixed(1) : '';
+  // Only a real, positive, app-consistent score is printed, and only with real
+  // vote evidence (> 1): legacy seeds had totalVotes 1 without reviews, and a
+  // single vote must never look like an aggregate.
+  const score = displayedFilmScore(data);
   const votesValue = Number(data.totalVotes);
   const votes =
-    Number.isFinite(votesValue) && votesValue > 0
-      ? String(Math.floor(votesValue))
-      : '';
+    Number.isFinite(votesValue) && votesValue > 1 ? String(Math.floor(votesValue)) : '';
 
-  if (score || votes) {
+  if (score !== null || votes) {
     const bits: string[] = [];
-    if (score) bits.push(`Skor Sotoy ${score}/10`);
+    if (score !== null) bits.push(`Skor Sotoy ${score.toFixed(1)}/10`);
     if (votes) bits.push(`${votes} votes`);
     parts.push(`<p>${escapeHtml(bits.join(' · '))}</p>`);
   }
