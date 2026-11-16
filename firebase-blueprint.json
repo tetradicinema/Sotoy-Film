@@ -75,7 +75,9 @@
         "genres": { "type": "array" },
         "skorSotoy": { "type": "number" },
         "totalVotes": { "type": "integer" },
-        "criticsSkorSotoy": { "type": "number" }
+        "criticsSkorSotoy": { "type": "number" },
+        "baseSkorSotoy": { "type": "number" },
+        "baseCriticsSkorSotoy": { "type": "number" }
       },
       "required": ["id", "title", "type", "year", "genres"]
     },

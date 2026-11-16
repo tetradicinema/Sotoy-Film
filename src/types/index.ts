@@ -223,9 +223,13 @@ export interface FilmItem {
   tags?: string[];
   originCountry?: string[]; // ISO 3166-1 alpha-2 codes, upper case, e.g. ["ID"]
   duration?: string; // e.g. "2h 46m" or "12 Episodes"
-  skorSotoy: number; // Average 1.0 - 10.0
-  totalVotes: number;
-  criticsSkorSotoy: number; // Average 1.0 - 10.0
+  skorSotoy: number; // Average 1.0 - 10.0 (community / non-critic ratings)
+  totalVotes: number; // Count of community ratings
+  criticsSkorSotoy: number; // Average 1.0 - 10.0 (critic ratings, or the base fallback)
+  // Starting TMDB/curator values (0..10, scale 10). The aggregate recompute
+  // restores them whenever a film has no community / critic ratings.
+  baseSkorSotoy?: number;
+  baseCriticsSkorSotoy?: number;
   whereToWatch: {
     platform: string;
     type: 'stream' | 'cinema' | 'rent';

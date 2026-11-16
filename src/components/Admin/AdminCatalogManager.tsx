@@ -107,7 +107,7 @@ const DEFAULT_FORM: FilmFormData = {
 };
 
 export const AdminCatalogManager: React.FC = () => {
-  const { films, addFilm, updateFilm, deleteFilm, bulkDeleteFilms, bulkUpdateFilms, navigateTo, showToast } = useApp();
+  const { films, addFilm, updateFilm, deleteFilm, bulkDeleteFilms, bulkUpdateFilms, navigateTo, showToast, recomputeFilmAggregate } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'movie' | 'series' | 'animation'>('all');
@@ -727,26 +727,38 @@ export const AdminCatalogManager: React.FC = () => {
         // Score fields are included ONLY when the curator changed the score:
         // omitted fields are preserved by the partial updateDoc, so a real
         // review aggregate is never overwritten and a legacy document is
-        // never rescaled by accident.
+        // never rescaled by accident. The changed score becomes the new BASE
+        // (starting) value; the effective skorSotoy/criticsSkorSotoy follow
+        // from recomputeFilmAggregate after the save.
         success = await updateFilm(editingFilmId, scoreChanged ? {
           ...filmPayload,
           skorSotoy: clampedSkor,
           criticsSkorSotoy: clampedSkor,
+          baseSkorSotoy: clampedSkor,
+          baseCriticsSkorSotoy: clampedSkor,
           scoreScale: 10,
         } : filmPayload);
+        // Restore the effective averages from the ratings collection so the
+        // new base does not leave stale computed values behind.
+        if (success !== false && scoreChanged) {
+          await recomputeFilmAggregate(editingFilmId);
+        }
       } else {
         // New films start with no availability data; the TMDB sync fills it.
         // totalVotes seeds at 0 on create ONLY: the edit path above omits it
         // so the real vote count accumulated from reviews is never clobbered
         // (updateFilm is a partial updateDoc — omitted fields are preserved).
         // The score is always written on create (0 = no score yet, never a
-        // fabricated default) and stamped scoreScale 10 (1-10 scale).
+        // fabricated default) as both the effective and the base value,
+        // stamped scoreScale 10 (1-10 scale).
         success = await addFilm({
           ...filmPayload,
           whereToWatch: [],
           totalVotes: 0,
           skorSotoy: clampedSkor,
           criticsSkorSotoy: clampedSkor,
+          baseSkorSotoy: clampedSkor,
+          baseCriticsSkorSotoy: clampedSkor,
           scoreScale: 10,
         });
       }

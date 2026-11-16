@@ -475,6 +475,8 @@ interface AppContextType {
   addFilmRating: (filmId: string, score: number, headline: string, reviewText: string) => Promise<void>;
   updateFilmRating: (ratingId: string, updates: Partial<UserRating>) => Promise<void>;
   deleteFilmRating: (ratingId: string) => Promise<void>;
+  /** Rebuilds the film aggregate from the `ratings` collection (admin flows). */
+  recomputeFilmAggregate: (filmId: string) => Promise<boolean>;
   likeArticle: (articleId: string) => Promise<void>;
   buzzFeedTab: 'for-you' | 'following' | 'saved' | 'liked' | 'trending';
   setBuzzFeedTab: (tab: 'for-you' | 'following' | 'saved' | 'liked' | 'trending') => void;
@@ -5744,7 +5746,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Rebuild the persisted film aggregate (skorSotoy / totalVotes / scoreScale)
+  // Rebuild the persisted film aggregate
+  // (skorSotoy / totalVotes / criticsSkorSotoy / bases / scoreScale)
   // from the `ratings` collection, which is the source of truth. Called after
   // every successful rating create, score-changing edit and delete, and
   // best-effort after cascade deletions.
@@ -5754,28 +5757,60 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // recomputes from the source of truth, a racing write self-heals on the
   // next recompute instead of compounding drift.
   //
-  // `criticsSkorSotoy` is never written here: it stays the TMDB/curator value.
+  // The score is split by role: `si_paling_sotoy` ratings feed
+  // `criticsSkorSotoy`, everything else feeds `skorSotoy`/`totalVotes`. When a
+  // side has no ratings, the stored base value is restored (never 0 while a
+  // curator/TMDB base exists). The base fields are lazy-initialized once from
+  // the stored starting values and are never re-derived from a computed
+  // average afterwards.
   const recomputeFilmAggregate = async (filmId: string): Promise<boolean> => {
     if (!filmId) return false;
     try {
-      const snap = await getDocs(query(collection(db, 'ratings'), where('filmId', '==', filmId)));
+      const [snap, filmSnap] = await Promise.all([
+        getDocs(query(collection(db, 'ratings'), where('filmId', '==', filmId))),
+        getDoc(doc(db, 'films', filmId)),
+      ]);
       const ratingDocs: UserRating[] = [];
       snap.forEach(docSnap => {
         ratingDocs.push(docSnap.data() as UserRating);
       });
-      const aggregate = computeFilmAggregate(ratingDocs);
-      await updateDoc(doc(db, 'films', filmId), {
+
+      // Resolve the starting (base) values. Bases are 0..10 on the 1-10
+      // scale; a legacy film (scoreScale undefined) stores 5-scale values
+      // that read-time doubling would display doubled, so the lazy init
+      // applies the same doubling. Once a base exists it is used as-is and
+      // never re-derived from an already computed average.
+      const filmData = filmSnap.exists() ? (filmSnap.data() as Partial<FilmItem>) : undefined;
+      const isLegacyFilm = filmData ? filmData.scoreScale === undefined : false;
+      const toBase = (value: unknown): number => {
+        const num = typeof value === 'number' && Number.isFinite(value) ? value : 0;
+        const doubled = isLegacyFilm && num > 0 && num <= 5.0 ? Number((num * 2).toFixed(1)) : num;
+        return Math.min(10, Math.max(0, doubled));
+      };
+      const storedSkor = toBase(filmData?.skorSotoy);
+      const storedCritics = toBase(filmData?.criticsSkorSotoy || filmData?.skorSotoy);
+      const hasBaseSkor = typeof filmData?.baseSkorSotoy === 'number';
+      const hasBaseCritics = typeof filmData?.baseCriticsSkorSotoy === 'number';
+      const baseSkorSotoy = hasBaseSkor
+        ? toBase(filmData?.baseSkorSotoy)
+        : ((filmData?.totalVotes ?? 0) > 0 ? storedCritics : storedSkor);
+      const baseCriticsSkorSotoy = hasBaseCritics ? toBase(filmData?.baseCriticsSkorSotoy) : storedCritics;
+
+      const aggregate = computeFilmAggregate(ratingDocs, { baseSkorSotoy, baseCriticsSkorSotoy });
+      const aggregateWrite = {
         skorSotoy: aggregate.skorSotoy,
         totalVotes: aggregate.totalVotes,
+        criticsSkorSotoy: aggregate.criticsSkorSotoy,
+        baseSkorSotoy,
+        baseCriticsSkorSotoy,
         scoreScale: aggregate.scoreScale,
-      });
+      };
+      await updateDoc(doc(db, 'films', filmId), aggregateWrite);
       // Mirror the recomputed aggregate into local films state.
       setFilms(prev => prev.map(f => f.id === filmId
         ? {
             ...f,
-            skorSotoy: aggregate.skorSotoy,
-            totalVotes: aggregate.totalVotes,
-            scoreScale: aggregate.scoreScale,
+            ...aggregateWrite,
           }
         : f));
       return true;
@@ -5872,6 +5907,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updated: UserRating = {
       ...rating,
       ...updates,
+      // Refresh the role snapshot whenever the score changes: a promoted or
+      // demoted user must not be blocked by the userRole == role rule, and
+      // the aggregate must classify the review by the current role.
+      ...(scoreChanged ? { userRole: currentUser.role } : {}),
       ...(scoreScaleToUse !== undefined ? { scoreScale: scoreScaleToUse } : {}),
     };
 
@@ -7414,6 +7453,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addFilmRating,
         updateFilmRating,
         deleteFilmRating,
+        recomputeFilmAggregate,
         likeArticle,
         buzzFeedTab,
         setBuzzFeedTab,

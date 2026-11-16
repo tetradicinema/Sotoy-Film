@@ -152,7 +152,18 @@ service cloud.firestore {
         data.id is string && data.id.size() <= 128 &&
         data.filmId is string && data.filmId.size() <= 128 &&
         data.userId is string && data.userId == request.auth.uid &&
-        data.score is number && data.score >= 1.0 && data.score <= 10.0;
+        data.score is number && data.score >= 1.0 && data.score <= 10.0 &&
+        // userRole is OPTIONAL for backward compatibility with legacy rating
+        // docs (and the currently deployed client bundle, which may still
+        // write docs without it). When present it must be a known role and,
+        // once the user document exists, must match the real role — this
+        // keeps a forged role from flipping a review into the critic score.
+        (!('userRole' in data) || (
+          data.userRole is string &&
+          data.userRole in ['warga_sotoy', 'si_paling_sotoy', 'penulis_sotoy', 'admin'] &&
+          (!exists(/databases/$(database)/documents/users/$(request.auth.uid)) ||
+           data.userRole == getUserData().role)
+        ));
     }
 
     // Season / episode scores. One deterministic document per user per target:
@@ -323,13 +334,35 @@ service cloud.firestore {
 
     function isValidFilmAggregateDelta() {
       let prevVotes = ('totalVotes' in existing()) ? existing().totalVotes : 0;
-      return incoming().diff(existing()).affectedKeys().hasOnly(['skorSotoy', 'totalVotes', 'scoreScale']) &&
+      return incoming().diff(existing()).affectedKeys().hasOnly(['skorSotoy', 'totalVotes', 'scoreScale', 'criticsSkorSotoy', 'baseSkorSotoy', 'baseCriticsSkorSotoy']) &&
              incoming().totalVotes is int &&
              incoming().totalVotes >= 0 &&
              incoming().totalVotes <= prevVotes + 1 &&
              (incoming().skorSotoy is number || incoming().skorSotoy is int) &&
              incoming().skorSotoy >= 0 && incoming().skorSotoy <= 10 &&
-             incoming().scoreScale == 10;
+             incoming().scoreScale == 10 &&
+             // The critic average and its base fallback, optional for backward
+             // compatibility with the currently deployed client (which writes
+             // only skorSotoy/totalVotes/scoreScale). Validated only when the
+             // write includes them.
+             (!('criticsSkorSotoy' in incoming()) ||
+              ((incoming().criticsSkorSotoy is number || incoming().criticsSkorSotoy is int) &&
+               incoming().criticsSkorSotoy >= 0 && incoming().criticsSkorSotoy <= 10)) &&
+             (!('baseSkorSotoy' in incoming()) ||
+              ((incoming().baseSkorSotoy is number || incoming().baseSkorSotoy is int) &&
+               incoming().baseSkorSotoy >= 0 && incoming().baseSkorSotoy <= 10)) &&
+             (!('baseCriticsSkorSotoy' in incoming()) ||
+              ((incoming().baseCriticsSkorSotoy is number || incoming().baseCriticsSkorSotoy is int) &&
+               incoming().baseCriticsSkorSotoy >= 0 && incoming().baseCriticsSkorSotoy <= 10)) &&
+             // A base that already exists is immutable through this branch:
+             // it can only be set the first time (or changed by an admin via
+             // the isValidFilmItem branch), never re-derived per recompute.
+             (!('baseSkorSotoy' in existing()) ||
+              !('baseSkorSotoy' in incoming()) ||
+              incoming().baseSkorSotoy == existing().baseSkorSotoy) &&
+             (!('baseCriticsSkorSotoy' in existing()) ||
+              !('baseCriticsSkorSotoy' in incoming()) ||
+              incoming().baseCriticsSkorSotoy == existing().baseCriticsSkorSotoy);
     }
 
     function isValidVotesUpdate() {
@@ -609,7 +642,9 @@ service cloud.firestore {
       allow update: if isSignedIn() && (
         (!isSuspended() && isOwner(existing().userId) && isVerifiedUser() && isValidUserRating(incoming())) ||
         (!isSuspended() && isVerifiedUser() && incoming().diff(existing()).affectedKeys().hasOnly(['likes']) && isValidLikesDelta()) ||
-        (isCritic() && isOwner(existing().userId) && !isSuspended())
+        // Critic-owner branch: previously unvalidated (any field, any value).
+        // It must now pass the same validation as every other rating update.
+        (isCritic() && isOwner(existing().userId) && !isSuspended() && isValidUserRating(incoming()))
       );
       allow delete: if isSignedIn() && (isOwner(existing().userId) || isAdmin() || (isCritic() && isOwner(existing().userId)));
 
