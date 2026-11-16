@@ -54,6 +54,7 @@ import {
   INITIAL_BUZZ,
   INITIAL_RATINGS,
 } from '../data/mockData';
+import { computeFilmAggregate } from '../utils/filmRatings';
 
 export const INITIAL_AUDIT_LOGS: AuditLog[] = [
   {
@@ -5743,6 +5744,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Rebuild the persisted film aggregate (skorSotoy / totalVotes / scoreScale)
+  // from the `ratings` collection, which is the source of truth. Called after
+  // every successful rating create, score-changing edit and delete, and
+  // best-effort after cascade deletions.
+  //
+  // Firestore web-SDK transactions cannot read queries, so this is a plain
+  // read-then-write (not a transaction over the query). Because it always
+  // recomputes from the source of truth, a racing write self-heals on the
+  // next recompute instead of compounding drift.
+  //
+  // `criticsSkorSotoy` is never written here: it stays the TMDB/curator value.
+  const recomputeFilmAggregate = async (filmId: string): Promise<boolean> => {
+    if (!filmId) return false;
+    try {
+      const snap = await getDocs(query(collection(db, 'ratings'), where('filmId', '==', filmId)));
+      const ratingDocs: UserRating[] = [];
+      snap.forEach(docSnap => {
+        ratingDocs.push(docSnap.data() as UserRating);
+      });
+      const aggregate = computeFilmAggregate(ratingDocs);
+      await updateDoc(doc(db, 'films', filmId), {
+        skorSotoy: aggregate.skorSotoy,
+        totalVotes: aggregate.totalVotes,
+        scoreScale: aggregate.scoreScale,
+      });
+      // Mirror the recomputed aggregate into local films state.
+      setFilms(prev => prev.map(f => f.id === filmId
+        ? {
+            ...f,
+            skorSotoy: aggregate.skorSotoy,
+            totalVotes: aggregate.totalVotes,
+            scoreScale: aggregate.scoreScale,
+          }
+        : f));
+      return true;
+    } catch (error: any) {
+      console.warn('[FilmRating] Failed to recompute film aggregate:', filmId, error?.code, error?.message, error);
+      return false;
+    }
+  };
+
   // Submit Rating & Review to Firestore
   const addFilmRating = async (filmId: string, score: number, headline: string, reviewText: string) => {
     if (!requireVerified()) return;
@@ -5788,57 +5830,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    // Update average film score in Firestore using transaction sending ONLY skorSotoy, totalVotes, scoreScale
-    try {
-      let updatedSkor = 0;
-      let updatedVotes = 0;
-      let transactionSuccess = false;
-
-      await runTransaction(db, async (transaction) => {
-        const filmRef = doc(db, 'films', filmId);
-        const filmSnap = await transaction.get(filmRef);
-        if (!filmSnap.exists()) return;
-
-        const data = filmSnap.data();
-        const prevVotes = data.totalVotes ?? 0;
-        let prevAvg = data.skorSotoy ?? 0;
-
-        if (data.scoreScale === undefined && prevAvg > 0 && prevAvg <= 5) {
-          prevAvg = prevAvg * 2;
-        }
-
-        const newVotes = prevVotes + 1;
-        let newAvg = Number(((prevAvg * prevVotes + clampedScore) / newVotes).toFixed(1));
-        newAvg = Math.min(10, Math.max(0, newAvg));
-
-        transaction.update(filmRef, {
-          skorSotoy: newAvg,
-          totalVotes: newVotes,
-          scoreScale: 10,
-        });
-
-        updatedSkor = newAvg;
-        updatedVotes = newVotes;
-        transactionSuccess = true;
-      });
-
-      if (transactionSuccess) {
-        setFilms(prev => prev.map(f => f.id === filmId ? {
-          ...f,
-          skorSotoy: updatedSkor,
-          totalVotes: updatedVotes,
-          scoreScale: 10,
-        } : f));
-      }
-    } catch (filmErr: any) {
-      console.warn('[FilmRating] Failed to update film aggregate:', filmErr?.code, filmErr?.message, filmErr);
+    // Rebuild the film aggregate from the ratings collection (source of truth)
+    // and mirror it into local films state. Never a transaction over the
+    // query: the rating doc is already written above, this only reads it back.
+    const interestFilm = films.find(f => f.id === filmId);
+    if (interestFilm) {
+      const rateTopics = [...(interestFilm.genres || []), interestFilm.type, interestFilm.title];
+      recordUserInterest(rateTopics, 3);
     }
 
-    // Track interest signal when rating film (+3 weight)
-    const film = films.find(f => f.id === filmId);
-    if (film) {
-      const rateTopics = [...(film.genres || []), film.type, film.title];
-      recordUserInterest(rateTopics, 3);
+    const aggregateUpdated = await recomputeFilmAggregate(filmId);
+    if (!aggregateUpdated) {
+      // The review itself is saved; only the aggregate refresh failed. Do not
+      // pretend everything succeeded: warn instead of the success toast.
+      showToast('Ulasan berhasil dikirim, namun Skor Sotoy film gagal diperbarui. Skor akan diperbaiki pada ulasan berikutnya.', 'error');
+      return;
     }
 
     showToast(`Skor Sotoy ${clampedScore.toFixed(1)}/10.0 dan ulasan kamu berhasil dikirim!`, 'success');
@@ -5855,7 +5861,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const previousRatings = [...ratings];
-    const scoreScaleToUse = updates.scoreScale ?? rating.scoreScale ?? (((updates.score ?? rating.score) > 5) ? 10 : undefined);
+    // The edit form (UserPage) inputs scores on the 1-10 scale, so whenever the
+    // score changes the rating doc is always stamped scoreScale 10: a legacy
+    // (undefined) scale must never be re-saved, otherwise read-time doubling
+    // (normalizeRating) would double the stored value.
+    const scoreChanged = updates.score !== undefined;
+    const scoreScaleToUse = scoreChanged
+      ? 10
+      : updates.scoreScale ?? rating.scoreScale ?? (((updates.score ?? rating.score) > 5) ? 10 : undefined);
     const updated: UserRating = {
       ...rating,
       ...updates,
@@ -5869,6 +5882,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     try {
       await setDoc(doc(db, 'ratings', ratingId), updated);
+
+      if (scoreChanged) {
+        // Rebuild the film aggregate from the ratings collection whenever the
+        // score changed, even if the new value equals the old one (cheap and
+        // self-healing). Non-score-only edits (e.g. the featured pin toggle)
+        // skip the recompute entirely.
+        const aggregateUpdated = await recomputeFilmAggregate(rating.filmId);
+        if (!aggregateUpdated) {
+          showToast('Ulasan berhasil diperbarui, namun Skor Sotoy film gagal diperbarui. Skor akan diperbaiki pada ulasan berikutnya.', 'error');
+          return;
+        }
+      }
+
       showToast('Ulasan film kamu berhasil diperbarui!', 'success');
     } catch (error: any) {
       setRatings(previousRatings);
@@ -5899,6 +5925,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     try {
       await deleteDoc(doc(db, 'ratings', ratingId));
+
+      // Rebuild the film aggregate from the ratings collection. When the last
+      // review is deleted this yields { skorSotoy: 0, totalVotes: 0 }.
+      const aggregateUpdated = await recomputeFilmAggregate(rating.filmId);
+      if (!aggregateUpdated) {
+        showToast('Ulasan telah dihapus, namun Skor Sotoy film gagal diperbarui. Skor akan diperbaiki pada ulasan berikutnya.', 'error');
+        return;
+      }
+
       showToast('Ulasan film kamu telah dihapus.', 'success');
     } catch (error: any) {
       setRatings(previousRatings);
@@ -6304,13 +6339,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       // 2. Cascade delete user ratings
+      const affectedFilmIds = new Set<string>();
       try {
         const ratingsQuery = query(collection(db, 'ratings'), where('userId', '==', userId));
         const ratingsSnap = await getDocs(ratingsQuery);
+        ratingsSnap.forEach(d => {
+          const fid = d.get('filmId');
+          if (typeof fid === 'string' && fid) affectedFilmIds.add(fid);
+        });
         const ratingPromises = ratingsSnap.docs.map(d => deleteDoc(d.ref));
         await Promise.all(ratingPromises);
       } catch (err) {
         console.warn('[AppContext] Cascade delete ratings notice:', err);
+      }
+
+      // 2b. Best-effort recompute of every affected film aggregate (deduplicated).
+      // Admin-only path: rules already allow the film write. Never blocks the delete.
+      for (const affectedFilmId of affectedFilmIds) {
+        try {
+          await recomputeFilmAggregate(affectedFilmId);
+        } catch (err) {
+          console.warn('[AppContext] Cascade recompute film aggregate notice:', affectedFilmId, err);
+        }
       }
 
       // 3. Cascade delete user buzz posts

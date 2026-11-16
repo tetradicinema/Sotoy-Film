@@ -324,7 +324,9 @@ service cloud.firestore {
     function isValidFilmAggregateDelta() {
       let prevVotes = ('totalVotes' in existing()) ? existing().totalVotes : 0;
       return incoming().diff(existing()).affectedKeys().hasOnly(['skorSotoy', 'totalVotes', 'scoreScale']) &&
-             incoming().totalVotes == prevVotes + 1 &&
+             incoming().totalVotes is int &&
+             incoming().totalVotes >= 0 &&
+             incoming().totalVotes <= prevVotes + 1 &&
              (incoming().skorSotoy is number || incoming().skorSotoy is int) &&
              incoming().skorSotoy >= 0 && incoming().skorSotoy <= 10 &&
              incoming().scoreScale == 10;
