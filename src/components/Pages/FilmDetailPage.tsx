@@ -1262,7 +1262,7 @@ crew.name
                       </h4>
 
                       {Boolean(rev.reviewText && rev.reviewText.trim()) && (
-                        <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                        <p className="text-slate-300 text-xs sm:text-sm leading-relaxed whitespace-pre-line">
                           <LinkifiedText content={rev.reviewText} interactive={true} />
                         </p>
                       )}

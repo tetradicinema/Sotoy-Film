@@ -416,7 +416,7 @@ export const AdminModeration: React.FC = () => {
                       </span>
                       <span className="text-[10px] text-slate-500">• Film ID: {review.filmId}</span>
                     </div>
-                    <p className="text-xs text-slate-300 mt-1">{review.reviewText || '(Hanya memberikan rating angka)'}</p>
+                    <p className="text-xs text-slate-300 mt-1 whitespace-pre-line">{review.reviewText || '(Hanya memberikan rating angka)'}</p>
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">

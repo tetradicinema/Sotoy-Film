@@ -619,7 +619,7 @@ export const FilmDatabasePage: React.FC = () => {
                       <h3 className="font-display font-black text-base text-white leading-snug">
                         "{rev.headline}"
                       </h3>
-                      <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                      <p className="text-slate-300 text-xs sm:text-sm leading-relaxed whitespace-pre-line">
                         {rev.reviewText}
                       </p>
                     </div>
