@@ -1,7 +1,7 @@
 import { next } from '@vercel/edge';
-import { isBotUserAgent } from './src/lib/edge/botDetection.js';
+import { isBotUserAgent, isSearchCrawlerUserAgent } from './src/lib/edge/botDetection.js';
 import {
-  fetchEntityData,
+  fetchEntityDataResult,
   fetchFullEntityDoc,
   getEntityDocumentId,
   isArticlePublished,
@@ -29,7 +29,7 @@ import { buildRouteMetadata, STATIC_ROUTE_METADATA_CONFIG } from './src/utils/se
 import { pickArticleIsoDate } from './src/lib/edge/isoDate.js';
 
 // Re-export for unit tests and external consumers
-export { isBotUserAgent };
+export { isBotUserAgent, isSearchCrawlerUserAgent };
 
 export const config = {
   runtime: 'nodejs',
@@ -163,8 +163,27 @@ function resolveStaticRoute(pathname: string): StaticRouteInfo {
   };
 }
 
+/**
+ * The immutable SPA shell is fetched at most once every 5 minutes per isolate.
+ * Only successful origin responses are cached; the local fallback template is
+ * never stored. An expired shell is served if a refresh fails.
+ */
+const BASE_HTML_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+let baseHtmlCache: { html: string; timestamp: number } | null = null;
+
+/** Test/maintenance helper: clears the in-memory bot response caches. */
+export function clearBotResilienceCaches(): void {
+  baseHtmlCache = null;
+  entityResponseCache.clear();
+}
+
 /** Fetches the SPA shell from origin, falling back to the local template. */
 async function fetchBaseHtml(request: Request): Promise<string> {
+  const cached = baseHtmlCache;
+  if (cached && Date.now() - cached.timestamp < BASE_HTML_CACHE_TTL_MS) {
+    return cached.html;
+  }
+
   try {
     const indexUrl = new URL('/index.html', request.url);
     const htmlRes = await fetchWithTimeout(
@@ -173,12 +192,129 @@ async function fetchBaseHtml(request: Request): Promise<string> {
       2000
     );
     if (htmlRes.ok) {
-      return await htmlRes.text();
+      const html = await htmlRes.text();
+      if (html && html.trim()) {
+        baseHtmlCache = { html, timestamp: Date.now() };
+        return html;
+      }
     }
   } catch {
-    // Fall back to the local template if the sub-request times out.
+    // Fall back to the cached shell (stale-if-error) or local template.
   }
-  return '';
+
+  return cached ? cached.html : '';
+}
+
+/**
+ * Resolved bot entity responses (meta fields plus the full document) keyed by
+ * `collection:slug`. Capped and short-lived, and never used for errors or
+ * missing slugs. An expired entry is kept as a stale-if-error fallback.
+ */
+const ENTITY_RESPONSE_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const ENTITY_RESPONSE_MAX_STALE_MS = 6 * 60 * 60 * 1000; // 6 hours
+const ENTITY_RESPONSE_CACHE_MAX_ENTRIES = 200;
+
+interface CachedEntityResponse {
+  data: Record<string, any>;
+  timestamp: number;
+}
+
+const entityResponseCache = new Map<string, CachedEntityResponse>();
+
+function writeEntityResponseCache(cacheKey: string, data: Record<string, any>): void {
+  entityResponseCache.delete(cacheKey);
+  entityResponseCache.set(cacheKey, { data, timestamp: Date.now() });
+  while (entityResponseCache.size > ENTITY_RESPONSE_CACHE_MAX_ENTRIES) {
+    const oldestKey = entityResponseCache.keys().next().value as string | undefined;
+    if (oldestKey === undefined) break;
+    entityResponseCache.delete(oldestKey);
+  }
+}
+
+interface ResolvedBotEntity {
+  status: 'ok' | 'not-found' | 'error';
+  data: Record<string, any> | null;
+  /** True when the data came from an expired cache entry (stale-if-error). */
+  stale?: boolean;
+}
+
+/**
+ * Resolves the entity for a bot request through the cached Firestore lookup,
+ * enriching it with the full document when possible. A transient failure with
+ * no cache returns `error`; a real missing slug returns `not-found`.
+ */
+async function resolveBotEntity(
+  collection: 'films' | 'articles',
+  slug: string
+): Promise<ResolvedBotEntity> {
+  const cacheKey = `${collection}:${slug}`;
+  const cached = entityResponseCache.get(cacheKey) || null;
+  const cachedAge = cached ? Date.now() - cached.timestamp : Infinity;
+  if (cached && cachedAge < ENTITY_RESPONSE_CACHE_TTL_MS) {
+    return { status: 'ok', data: cached.data };
+  }
+
+  // Expired responses are only a bounded stale-if-error fallback; beyond the
+  // 6-hour ceiling they are dropped so the SPA shell is not fed old metadata.
+  const stale = cached && cachedAge <= ENTITY_RESPONSE_MAX_STALE_MS ? cached : null;
+  if (cached && cachedAge > ENTITY_RESPONSE_MAX_STALE_MS) {
+    entityResponseCache.delete(cacheKey);
+  }
+
+  const result = await fetchEntityDataResult(collection, slug);
+
+  if (result.status === 'not-found') {
+    entityResponseCache.delete(cacheKey);
+    return result;
+  }
+
+  if (result.status === 'error' || !result.data) {
+    if (stale) return { status: 'ok', data: stale.data, stale: true };
+    return { status: 'error', data: null };
+  }
+
+  // Keep full-document fields from the last good response when the follow-up
+  // full read fails; the meta fields from the lookup still win.
+  let data: Record<string, any> = stale
+    ? { ...stale.data, ...result.data }
+    : { ...result.data };
+
+  const requestedDocId =
+    typeof data.id === 'string' && data.id.trim() ? data.id.trim() : '';
+  const docId = requestedDocId || getEntityDocumentId(data);
+  if (docId) {
+    const fullDoc = await fetchFullEntityDoc(collection, docId);
+    if (fullDoc) {
+      data = { ...data, ...fullDoc };
+    }
+  }
+
+  // Re-check publication on the merged document: never expose a draft.
+  if (collection === 'articles' && !isArticlePublished(data)) {
+    entityResponseCache.delete(cacheKey);
+    return { status: 'not-found', data: null };
+  }
+
+  // Serving stale data must not renew freshness, or an outage could pin the
+  // response for another full TTL after Firestore recovers.
+  if (result.stale) {
+    return { status: 'ok', data, stale: true };
+  }
+
+  writeEntityResponseCache(cacheKey, data);
+  return { status: 'ok', data };
+}
+
+/** 503 used only for search crawlers when Firestore is transiently unavailable. */
+function serviceUnavailableResponse(): Response {
+  return new Response('Service Unavailable', {
+    status: 503,
+    headers: {
+      'content-type': 'text/plain; charset=utf-8',
+      'retry-after': '120',
+      'cache-control': 'no-store',
+    },
+  });
 }
 
 /**
@@ -340,23 +476,10 @@ export default async function middleware(request: Request): Promise<Response> {
       );
       const collectionImage = preview.image || 'https://www.sotoyfilm.my.id/og-default.png';
 
-      // Fetch the base index.html from origin. Failures fall back to the
-      // local template, exactly like the film/article path.
-      let collectionBaseHtml = '';
-      try {
-        const indexUrl = new URL('/index.html', request.url);
-        const htmlRes = await fetchWithTimeout(
-          indexUrl.toString(),
-          { headers: { 'x-middleware-subrequest': '1' } },
-          2000
-        );
-        if (htmlRes.ok) {
-          collectionBaseHtml = await htmlRes.text();
-        }
-      } catch {
-        // Fall back to local template if sub-request times out
-      }
-
+      // Fetch the base index.html from origin (5-minute shell cache).
+      // Failures fall back to the local template, exactly like the
+      // film/article path.
+      let collectionBaseHtml = await fetchBaseHtml(request);
       if (!collectionBaseHtml) {
         collectionBaseHtml = FALLBACK_HTML_TEMPLATE;
       }
@@ -523,32 +646,25 @@ export default async function middleware(request: Request): Promise<Response> {
       return safeNext();
     }
 
-    // 2. Fetch the entity data from Firestore REST API (with 3-way slug matching)
-    let data = await fetchEntityData(collection, slug);
-    if (!data) {
-      // Fall through to normal SPA rather than returning an error
-      return safeNext();
-    }
-
-    // 2b. The entity lookup only requests meta fields, so enrich it with the
-    // full document. Crawler body content and the client prefetch payload need
-    // content, contentJson, author, publishedAt, genres, cast, scores, etc.
-    // If this extra read fails, keep the meta-fields-only data unchanged.
-    const requestedDocId =
-      typeof data.id === 'string' && data.id.trim() ? data.id.trim() : '';
-    const docId = requestedDocId || getEntityDocumentId(data);
-    if (docId) {
-      const fullDoc = await fetchFullEntityDoc(collection, docId);
-      if (fullDoc) {
-        data = { ...data, ...fullDoc };
+    // 2. Resolve the entity through the cached lookup, which distinguishes a
+    // real missing slug (pass through) from a transient Firestore failure.
+    // Search crawlers get 503 + Retry-After on a transient failure with no
+    // usable cache instead of the empty SPA shell; social crawlers keep the
+    // existing pass-through behavior.
+    const resolved = await resolveBotEntity(collection, slug);
+    if (resolved.status === 'error') {
+      if (isSearchCrawlerUserAgent(userAgent)) {
+        return serviceUnavailableResponse();
       }
-    }
-
-    // Publication status is re-checked on the merged document: the full read
-    // must never expose a draft, trashed, or not-yet-due scheduled article.
-    if (collection === 'articles' && !isArticlePublished(data)) {
       return safeNext();
     }
+    if (resolved.status === 'not-found' || !resolved.data) {
+      return safeNext();
+    }
+
+    // The resolver has already merged the full document (when available) and
+    // re-checked publication status on the merged result.
+    const data = resolved.data;
 
     // 3. Prepare metadata based on collection type
     const baseUrl = 'https://www.sotoyfilm.my.id';
@@ -600,22 +716,8 @@ export default async function middleware(request: Request): Promise<Response> {
     const publishedTime = collection === 'articles' ? pickArticleIsoDate(data, 'published') : undefined;
     const modifiedTime = collection === 'articles' ? pickArticleIsoDate(data, 'modified') : undefined;
 
-    // 4. Fetch the base index.html from origin
-    let baseHtml = '';
-    try {
-      const indexUrl = new URL('/index.html', request.url);
-      const htmlRes = await fetchWithTimeout(
-        indexUrl.toString(),
-        { headers: { 'x-middleware-subrequest': '1' } },
-        2000
-      );
-      if (htmlRes.ok) {
-        baseHtml = await htmlRes.text();
-      }
-    } catch {
-      // Fall back to local template if sub-request times out
-    }
-
+    // 4. Fetch the base index.html from origin (5-minute shell cache)
+    let baseHtml = await fetchBaseHtml(request);
     if (!baseHtml) {
       baseHtml = FALLBACK_HTML_TEMPLATE;
     }

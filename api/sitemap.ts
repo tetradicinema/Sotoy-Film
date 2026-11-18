@@ -163,6 +163,44 @@ function buildXml(items: SitemapItem[]): string {
   return xml;
 }
 
+/** A degraded response may only fall back to a snapshot that is actually useful. */
+const MIN_SNAPSHOT_LOCS = 300;
+
+function countOccurrences(value: string, pattern: RegExp): number {
+  return (value.match(pattern) || []).length;
+}
+
+function countSnapshotLocs(xml: string): number {
+  return countOccurrences(xml, /<loc>/g);
+}
+
+/**
+ * A snapshot is only usable when it is structurally complete and carries at
+ * least 300 URLs. A truncated/partial snapshot must never be cached as if it
+ * were a healthy live sitemap.
+ */
+function isValidSnapshotXml(xml: string): boolean {
+  if (!xml || !xml.includes('<urlset') || !xml.trimEnd().endsWith('</urlset>')) {
+    return false;
+  }
+
+  const urlOpen = countOccurrences(xml, /<url>/g);
+  const urlClose = countOccurrences(xml, /<\/url>/g);
+  const locOpen = countOccurrences(xml, /<loc>/g);
+  const locClose = countOccurrences(xml, /<\/loc>/g);
+
+  return (
+    urlOpen === urlClose &&
+    locOpen === locClose &&
+    locOpen === urlOpen &&
+    locOpen >= MIN_SNAPSHOT_LOCS
+  );
+}
+
+/**
+ * Returns the build-time snapshot only when it is a complete sitemap with at
+ * least 300 URLs.
+ */
 function getSnapshotXml(): string | null {
   const candidatePaths = [
     path.join(process.cwd(), 'data', 'sitemap-snapshot.xml'),
@@ -172,7 +210,7 @@ function getSnapshotXml(): string | null {
     try {
       if (fs.existsSync(p)) {
         const content = fs.readFileSync(p, 'utf-8');
-        if (content && content.includes('<urlset')) {
+        if (isValidSnapshotXml(content)) {
           return content;
         }
       }
@@ -181,6 +219,57 @@ function getSnapshotXml(): string | null {
     }
   }
   return null;
+}
+
+function decodeXmlText(value: string): string {
+  return value
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&');
+}
+
+function inferSitemapType(link: string): SitemapItem['type'] {
+  const pathName = link.startsWith(BASE_URL) ? link.slice(BASE_URL.length) : link;
+  if (pathName.startsWith('/artikel/')) return 'Artikel';
+  if (pathName.startsWith('/film/')) return 'Film/Series/Animation';
+  if (pathName.startsWith('/kategori/') || pathName.startsWith('/category/')) {
+    return 'Kategori';
+  }
+  return 'Halaman';
+}
+
+/**
+ * Builds a CSV view of the valid build-time snapshot for degraded CSV
+ * requests. The XML snapshot stays the canonical fallback and its URL rules are
+ * not changed.
+ */
+function getSnapshotCsv(): string | null {
+  const snapshotXml = getSnapshotXml();
+  if (!snapshotXml) return null;
+
+  const blocks = snapshotXml.match(/<url>[\s\S]*?<\/url>/g) || [];
+  const items: SitemapItem[] = [];
+
+  for (const block of blocks) {
+    const loc = /<loc>([\s\S]*?)<\/loc>/.exec(block)?.[1];
+    if (!loc) continue;
+    const link = decodeXmlText(loc);
+    const lastmod = /<lastmod>([\s\S]*?)<\/lastmod>/.exec(block)?.[1] || '';
+    const priority = /<priority>([\s\S]*?)<\/priority>/.exec(block)?.[1] || '';
+    items.push({
+      link,
+      title: '',
+      metaDescription: '',
+      type: inferSitemapType(link),
+      lastmod: decodeXmlText(lastmod),
+      changefreq: '',
+      priority: decodeXmlText(priority),
+    });
+  }
+
+  return items.length > 0 ? buildCsv(items) : null;
 }
 
 async function fetchAllCollectionDocs(collectionId: 'articles' | 'films'): Promise<any[]> {
@@ -211,7 +300,12 @@ async function fetchAllCollectionDocs(collectionId: 'articles' | 'films'): Promi
     }
 
     const results = await res.json();
-    if (!Array.isArray(results)) break;
+    if (!Array.isArray(results)) {
+      // An OK response without a runQuery result array cannot be trusted as a
+      // complete collection; surface it as a failed fetch so the handler uses
+      // the degraded fallback instead of caching a truncated sitemap.
+      throw new Error('Firestore REST query returned a non-array result');
+    }
 
     const docs = results
       .filter((r: any) => r && r.document)
@@ -235,7 +329,14 @@ async function fetchAllCollectionDocs(collectionId: 'articles' | 'films'): Promi
   return allDocs;
 }
 
-async function generateLiveSitemapItems(): Promise<SitemapItem[]> {
+interface LiveSitemapResult {
+  items: SitemapItem[];
+  /** Raw Firestore rows, used to detect an empty/degraded live result. */
+  rawArticles: any[];
+  rawFilms: any[];
+}
+
+async function generateLiveSitemapItems(): Promise<LiveSitemapResult> {
   const staticItems = getStaticItems();
   const items: SitemapItem[] = [...staticItems];
 
@@ -344,12 +445,21 @@ async function generateLiveSitemapItems(): Promise<SitemapItem[]> {
     });
   }
 
-  return items;
+  return { items, rawArticles, rawFilms };
 }
 
-function sendResponse(res: any, status: number, contentType: string, body: string) {
+const HEALTHY_CACHE_CONTROL = 'public, s-maxage=3600, stale-while-revalidate=86400';
+const DEGRADED_CACHE_CONTROL = 'public, s-maxage=300, stale-while-revalidate=600';
+
+function sendResponse(
+  res: any,
+  status: number,
+  contentType: string,
+  body: string,
+  cacheControl: string = HEALTHY_CACHE_CONTROL
+) {
   res.setHeader('Content-Type', contentType);
-  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', cacheControl);
   res.setHeader('X-Robots-Tag', 'all');
   if (typeof res.removeHeader === 'function') {
     res.removeHeader('Content-Disposition');
@@ -359,6 +469,53 @@ function sendResponse(res: any, status: number, contentType: string, body: strin
   } else {
     res.writeHead(status);
     return res.end(body);
+  }
+}
+
+/**
+ * Serves the validated build-time snapshot (short cache) or, when even that is
+ * unusable, 503 + Retry-After so crawlers retry later instead of caching an
+ * empty/degraded sitemap for an hour.
+ */
+function sendDegradedResponse(res: any, isCsv: boolean) {
+  if (isCsv) {
+    const snapshotCsv = getSnapshotCsv();
+    if (snapshotCsv) {
+      console.warn('[Live Sitemap] Degraded CSV result, serving snapshot CSV with short cache');
+      return sendResponse(
+        res,
+        200,
+        'text/csv; charset=utf-8',
+        snapshotCsv,
+        DEGRADED_CACHE_CONTROL
+      );
+    }
+  } else {
+    const snapshotXml = getSnapshotXml();
+    if (snapshotXml) {
+      console.warn('[Live Sitemap] Degraded XML result, serving snapshot XML with short cache');
+      return sendResponse(
+        res,
+        200,
+        'application/xml; charset=utf-8',
+        snapshotXml,
+        DEGRADED_CACHE_CONTROL
+      );
+    }
+  }
+
+  console.warn('[Live Sitemap] No valid snapshot available, responding 503');
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Retry-After', '300');
+  res.setHeader('Cache-Control', 'no-store');
+  if (typeof res.removeHeader === 'function') {
+    res.removeHeader('Content-Disposition');
+  }
+  if (typeof res.status === 'function') {
+    return res.status(503).send('Service Unavailable');
+  } else {
+    res.writeHead(503);
+    return res.end('Service Unavailable');
   }
 }
 
@@ -374,27 +531,33 @@ export async function handleSitemapRequest(req: any, res: any) {
     rawUrl.includes('/sitemap.csv');
 
   try {
-    const items = await generateLiveSitemapItems();
+    const live = await generateLiveSitemapItems();
+
+    // A live result is only healthy when both collections were read as arrays
+    // and both contain at least one row. Articles/films can legitimately be
+    // filtered down to zero URLs, but an empty Firestore collection almost
+    // always means the read was degraded, so it must not receive the 1-hour
+    // healthy cache header.
+    const degraded =
+      !Array.isArray(live.rawArticles) ||
+      !Array.isArray(live.rawFilms) ||
+      live.rawArticles.length === 0 ||
+      live.rawFilms.length === 0;
+
+    if (degraded) {
+      return sendDegradedResponse(res, isCsv);
+    }
+
     if (isCsv) {
-      const csv = buildCsv(items);
+      const csv = buildCsv(live.items);
       return sendResponse(res, 200, 'text/csv; charset=utf-8', csv);
     } else {
-      const xml = buildXml(items);
+      const xml = buildXml(live.items);
       return sendResponse(res, 200, 'application/xml; charset=utf-8', xml);
     }
   } catch (err) {
-    console.warn('[Live Sitemap] Error querying Firestore, serving fallback snapshot:', err);
-
-    if (isCsv) {
-      // Empty-safe fallback built from static pages only
-      const fallbackCsv = buildCsv(getStaticItems());
-      return sendResponse(res, 200, 'text/csv; charset=utf-8', fallbackCsv);
-    } else {
-      // Serve snapshot XML if available, otherwise static fallback XML
-      const snapshotXml = getSnapshotXml();
-      const fallbackXml = snapshotXml || buildXml(getStaticItems());
-      return sendResponse(res, 200, 'application/xml; charset=utf-8', fallbackXml);
-    }
+    console.warn('[Live Sitemap] Error querying Firestore, serving degraded fallback:', err);
+    return sendDegradedResponse(res, isCsv);
   }
 }
 

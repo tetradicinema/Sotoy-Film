@@ -12,6 +12,7 @@
     "start": "NODE_ENV=production node dist/server.cjs",
     "lint": "tsc --noEmit",
     "test:middleware": "node --import tsx scripts/test-middleware.ts",
+    "test:bot-resilience": "node --import tsx scripts/test-bot-resilience.ts",
     "test:article-slug": "node --import tsx scripts/test-article-slug.ts",
     "test:entity-paths": "node --import tsx scripts/test-entity-paths.ts",
     "test:smart-link-ssr": "node --import tsx scripts/test-smart-link-ssr.tsx",

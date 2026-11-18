@@ -110,6 +110,19 @@ const collectionCache: Record<'films' | 'articles', CachedCollection | null> = {
 };
 
 /**
+ * Stale-if-error ceiling shared by the entity, collection-scan, and raw
+ * collection caches. Data older than this is never served as stale; the lookup
+ * surfaces a transient error instead. Serving stale data also never renews the
+ * cached timestamp.
+ */
+const MAX_STALE_AGE_MS = 6 * 60 * 60 * 1000; // 6 hours
+
+/** Only 5xx, 408 and 429 are transient; other 4xx are real negatives. */
+function isTransientHttpStatus(status: number): boolean {
+  return status >= 500 || status === 408 || status === 429;
+}
+
+/**
  * Checks if an article entity is published according to status and scheduledAt rules.
  */
 export function isArticlePublished(data: Record<string, any>): boolean {
@@ -449,18 +462,94 @@ export async function fetchListCollectionDocuments(
   return docs;
 }
 
+interface CollectionFetchResult {
+  docs: any[];
+  /** False only when every strategy failed; an empty successful fetch is true. */
+  ok: boolean;
+  /** True when the docs came from an expired cache entry served as a fallback. */
+  stale?: boolean;
+}
+
 /**
- * Fetches all documents in a collection via Firestore REST API, requesting only fields needed for meta tags.
- * Supports both paginated GET /documents/{collection} and POST /documents:runQuery fallback.
+ * The collection scan fallback is the most expensive lookup, so an isolate
+ * keeps the scanned list for 5 minutes and lets only one scan per collection
+ * run at a time. Concurrent crawler requests await the same promise instead of
+ * stampeding Firestore.
  */
-export async function fetchCollectionDocuments(
+const SCAN_CACHE_TTL_MS = 5 * 60 * 1000;
+interface CachedScan {
+  docs: any[];
+  timestamp: number;
+}
+const scanCache: Record<'films' | 'articles', CachedScan | null> = {
+  films: null,
+  articles: null,
+};
+const scanInFlight: Partial<Record<'films' | 'articles', Promise<CollectionFetchResult>>> = {};
+
+async function scanCollectionCached(
   collection: 'films' | 'articles'
-): Promise<any[]> {
+): Promise<CollectionFetchResult> {
+  const cached = scanCache[collection];
+  const cachedAge = cached ? Date.now() - cached.timestamp : Infinity;
+  if (cached && cachedAge < SCAN_CACHE_TTL_MS) {
+    return { docs: cached.docs, ok: true };
+  }
+
+  // Expired scan data is only a bounded stale-if-error fallback. Beyond the
+  // ceiling it is discarded so an old collection can never masquerade as the
+  // current one.
+  const stale = cached && cachedAge <= MAX_STALE_AGE_MS ? cached : null;
+  if (cached && cachedAge > MAX_STALE_AGE_MS) {
+    scanCache[collection] = null;
+  }
+
+  const inFlight = scanInFlight[collection];
+  if (inFlight) return inFlight;
+
+  const task = (async (): Promise<CollectionFetchResult> => {
+    try {
+      const result = await fetchCollectionDocumentsResult(collection);
+      if (result.ok) {
+        // A stale collection read is passed through but never promoted to a
+        // fresh scan entry: that would renew the stale data's freshness.
+        if (!result.stale) {
+          scanCache[collection] = { docs: result.docs, timestamp: Date.now() };
+        }
+        return result;
+      }
+      if (stale) {
+        // Bounded stale-if-error: keep serving the last successful scan rather
+        // than treating a transient outage as a missing slug.
+        return { docs: stale.docs, ok: true, stale: true };
+      }
+      return result;
+    } finally {
+      delete scanInFlight[collection];
+    }
+  })();
+
+  scanInFlight[collection] = task;
+  return task;
+}
+
+/**
+ * Fetches all documents in a collection via Firestore REST API, requesting only
+ * fields needed for meta tags. This variant also reports whether the fetch
+ * actually succeeded, so callers can tell "empty collection" from "Firestore
+ * unavailable". Supports paginated GET /documents/{collection} and POST
+ * /documents:runQuery fallback.
+ */
+async function fetchCollectionDocumentsResult(
+  collection: 'films' | 'articles'
+): Promise<CollectionFetchResult> {
   const cached = collectionCache[collection];
   const now = Date.now();
   if (cached && now - cached.timestamp < COLLECTION_CACHE_TTL_MS && cached.docs.length > 0) {
-    return cached.docs;
+    return { docs: cached.docs, ok: true };
   }
+
+  let succeeded = false;
 
   // Strategy A: Paginated GET .../documents/{collection} with mask.fieldPaths
   try {
@@ -484,6 +573,7 @@ export async function fetchCollectionDocuments(
 
       const data = await res.json();
       if (Array.isArray(data.documents)) {
+        succeeded = true;
         allDocs.push(...data.documents);
       }
       pageToken = data.nextPageToken;
@@ -499,7 +589,7 @@ export async function fetchCollectionDocuments(
 
     if (finalDocs.length > 0) {
       collectionCache[collection] = { docs: finalDocs, timestamp: Date.now() };
-      return finalDocs;
+      return { docs: finalDocs, ok: true };
     }
   } catch {
     // Proceed to runQuery fallback
@@ -533,6 +623,7 @@ export async function fetchCollectionDocuments(
     }
 
     if (queryRes.ok && Array.isArray(results)) {
+      succeeded = true;
       let docs = results
         .filter((r: any) => r && r.document)
         .map((r: any) => r.document);
@@ -546,18 +637,27 @@ export async function fetchCollectionDocuments(
 
       if (docs.length > 0) {
         collectionCache[collection] = { docs, timestamp: Date.now() };
-        return docs;
+        return { docs, ok: true };
       }
     }
   } catch (err) {
     console.error('[Edge Firestore] Collection fetch error:', err);
   }
 
-  if (cached && cached.docs.length > 0) {
-    return cached.docs;
+  if (cached && cached.docs.length > 0 && now - cached.timestamp <= MAX_STALE_AGE_MS) {
+    // Bounded stale-if-error: expired successful data beats an empty result,
+    // but it is never treated as fresh again.
+    return { docs: cached.docs, ok: true, stale: true };
   }
 
-  return [];
+  return { docs: [], ok: succeeded };
+}
+
+export async function fetchCollectionDocuments(
+  collection: 'films' | 'articles'
+): Promise<any[]> {
+  const result = await fetchCollectionDocumentsResult(collection);
+  return result.docs;
 }
 
 /**
@@ -600,55 +700,116 @@ export function getEntityDocumentId(data: Record<string, any> | null | undefined
 }
 
 /**
- * Fetches content from Firestore REST API by direct ID or by searching collection with slug matching:
- * 1. Negative cache check (0 reads if known missing slug)
- * 2. Direct document GET if slug is the document ID (fast path: 1 read)
- * 3. Firestore REST runQuery with where slug == X and limit 1 (targeted query: 1 read)
- * 4. Full collection in-memory scan fallback only if runQuery returns nothing
- * 5. Negative cache recording if entity was not found
+ * Module-level cache for successfully resolved entity meta data, keyed by
+ * `collection:slug`. Expired entries are kept so a failed refresh can serve
+ * the last good value instead of the SPA shell. Errors and empty lookups are
+ * never cached here.
  */
-export async function fetchEntityData(
+const ENTITY_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const ENTITY_CACHE_MAX_ENTRIES = 200;
+
+interface CachedEntity {
+  data: Record<string, any>;
+  timestamp: number;
+}
+
+const entityCache = new Map<string, CachedEntity>();
+
+function writeCachedEntity(cacheKey: string, data: Record<string, any>): void {
+  // Delete first so the Map's insertion order tracks recency for eviction.
+  entityCache.delete(cacheKey);
+  entityCache.set(cacheKey, { data, timestamp: Date.now() });
+  while (entityCache.size > ENTITY_CACHE_MAX_ENTRIES) {
+    const oldestKey = entityCache.keys().next().value as string | undefined;
+    if (oldestKey === undefined) break;
+    entityCache.delete(oldestKey);
+  }
+}
+
+export type EntityLookupStatus = 'ok' | 'not-found' | 'error';
+
+export interface EntityLookupResult {
+  status: EntityLookupStatus;
+  data: Record<string, any> | null;
+  /** True when data came from an expired cache entry served as a fallback. */
+  stale?: boolean;
+}
+
+function buildEntityLookupResult(
+  parsed: Record<string, any>,
+  collection: 'films' | 'articles',
+  cacheKey: string,
+  docId: string | undefined,
+  now: number,
+  stale = false
+): EntityLookupResult {
+  if (collection === 'articles' && !isArticlePublished(parsed)) {
+    negativeCache.set(cacheKey, now + UNPUBLISHED_NEGATIVE_TTL_MS);
+    entityCache.delete(cacheKey);
+    return { status: 'not-found', data: null };
+  }
+
+  negativeCache.delete(cacheKey);
+  const data = attachDocumentId(parsed, docId);
+  if (stale) {
+    // Serving an expired entry must never renew its freshness.
+    return { status: 'ok', data, stale: true };
+  }
+  writeCachedEntity(cacheKey, data);
+  return { status: 'ok', data };
+}
+
+/**
+ * Resolves an entity and distinguishes all three outcomes the middleware needs:
+ * - ok: a real document (possibly served from the 10-minute cache)
+ * - not-found: the lookup completed and the slug really does not exist
+ * - error: a transient outage (5xx, 408, 429, timeout or network failure) with
+ *   no usable cache entry (the middleware can then answer crawlers with 503).
+ *   Other 4xx responses mean "this step could not answer" and fall through to
+ *   the next lookup step instead.
+ *
+ * Lookup order: targeted runQuery first; direct document GET only when the
+ * query was OK-but-empty; the collection scan only when both are empty.
+ */
+export async function fetchEntityDataResult(
   collection: 'films' | 'articles',
   slug: string
-): Promise<Record<string, any> | null> {
+): Promise<EntityLookupResult> {
   const cacheKey = `${collection}:${slug}`;
   const now = Date.now();
 
-  // 1. Negative cache check: skip immediately if recently proven not to exist
+  const cachedEntity = entityCache.get(cacheKey) || null;
+  const cachedAge = cachedEntity ? now - cachedEntity.timestamp : Infinity;
+  if (cachedEntity && cachedAge < ENTITY_CACHE_TTL_MS) {
+    return { status: 'ok', data: cachedEntity.data };
+  }
+
+  // Expired entries may only be served as a fallback up to the shared 6-hour
+  // ceiling. Older data is discarded rather than resurrected indefinitely.
+  const staleEntity = cachedEntity && cachedAge <= MAX_STALE_AGE_MS ? cachedEntity : null;
+  if (cachedEntity && cachedAge > MAX_STALE_AGE_MS) {
+    entityCache.delete(cacheKey);
+  }
+
+  // Negative cache check: skip immediately if recently proven not to exist.
   const expiresAt = negativeCache.get(cacheKey);
   if (expiresAt) {
     if (now < expiresAt) {
-      return null;
+      return { status: 'not-found', data: null };
     }
     negativeCache.delete(cacheKey);
   }
 
-  // 2. Direct document GET if slug happens to be the document ID
-  try {
-    const directRes = await fetchWithTimeout(
-      `${FIRESTORE_DOCUMENTS_URL}/${collection}/${encodeURIComponent(slug)}?key=${FIRESTORE_API_KEY}`,
-      { headers: { Accept: 'application/json' } },
-      1500
-    );
-    if (directRes.ok) {
-      const doc = await directRes.json();
-      const parsed = parseFirestoreFields(doc);
-      if (parsed && Object.keys(parsed).length > 0) {
-        if (collection === 'articles' && !isArticlePublished(parsed)) {
-          negativeCache.set(cacheKey, now + UNPUBLISHED_NEGATIVE_TTL_MS);
-          return null;
-        }
-        negativeCache.delete(cacheKey);
-        const docId =
-          typeof doc?.name === 'string' ? doc.name.split('/').pop() : undefined;
-        return attachDocumentId(parsed, docId || slug);
-      }
+  const serveStaleOrError = (): EntityLookupResult => {
+    if (staleEntity) {
+      return { status: 'ok', data: staleEntity.data, stale: true };
     }
-  } catch {
-    // Non-fatal, proceed to query search
-  }
+    return { status: 'error', data: null };
+  };
 
-  // 3. Fast targeted query: runQuery with where slug == X and limit 1 (1 read)
+  // 1. Fast targeted query: runQuery with where slug == X and limit 1 (1 read).
+  // A non-array OK body is treated as empty (and falls through to the direct
+  // GET), matching the old compatibility behavior.
   try {
     const queryRes = await fetchWithTimeout(
       `${FIRESTORE_DOCUMENTS_URL}:runQuery?key=${FIRESTORE_API_KEY}`,
@@ -675,35 +836,84 @@ export async function fetchEntityData(
       2000
     );
 
-    if (queryRes.ok) {
-      const queryResults = await queryRes.json();
+    if (!queryRes.ok) {
+      // Only a real outage is transient. A 4xx (bad request, auth, forbidden)
+      // means this step could not answer, so the next lookup step still runs.
+      if (isTransientHttpStatus(queryRes.status)) {
+        return serveStaleOrError();
+      }
+    } else {
+      let queryResults: any = null;
+      try {
+        queryResults = await queryRes.json();
+      } catch {
+        queryResults = null;
+      }
+
       if (Array.isArray(queryResults)) {
         const matchedDoc = queryResults.find((r: any) => r && r.document)?.document;
         if (matchedDoc) {
           const parsed = parseFirestoreFields(matchedDoc);
           if (parsed && Object.keys(parsed).length > 0) {
-            if (collection === 'articles' && !isArticlePublished(parsed)) {
-              negativeCache.set(cacheKey, now + UNPUBLISHED_NEGATIVE_TTL_MS);
-              return null;
-            }
-            negativeCache.delete(cacheKey);
             const docId =
               typeof matchedDoc.name === 'string'
                 ? matchedDoc.name.split('/').pop()
                 : undefined;
-            return attachDocumentId(parsed, docId || slug);
+            return buildEntityLookupResult(
+              parsed,
+              collection,
+              cacheKey,
+              docId || slug,
+              now
+            );
           }
         }
       }
     }
   } catch (queryErr) {
     console.warn('[Edge Firestore] runQuery targeted search fallback notice:', queryErr);
+    return serveStaleOrError();
   }
 
-  // 4. Full collection fetch & in-memory match (fallback only if runQuery returned nothing)
+  // 2. Direct document GET only after the query returned OK-but-empty.
   try {
-    const docs = await fetchCollectionDocuments(collection);
-    for (const doc of docs) {
+    const directRes = await fetchWithTimeout(
+      `${FIRESTORE_DOCUMENTS_URL}/${collection}/${encodeURIComponent(slug)}?key=${FIRESTORE_API_KEY}`,
+      { headers: { Accept: 'application/json' } },
+      1500
+    );
+    if (directRes.ok) {
+      const doc = await directRes.json();
+      const parsed = parseFirestoreFields(doc);
+      if (parsed && Object.keys(parsed).length > 0) {
+        const docId =
+          typeof doc?.name === 'string' ? doc.name.split('/').pop() : undefined;
+        return buildEntityLookupResult(
+          parsed,
+          collection,
+          cacheKey,
+          docId || slug,
+          now
+        );
+      }
+    } else if (isTransientHttpStatus(directRes.status)) {
+      // 5xx, 408 and 429 mean Firestore is unavailable.
+      return serveStaleOrError();
+    }
+    // Any other 4xx (400/401/403/404/...) is a real negative for the direct
+    // GET step; continue to the collection scan instead of failing the lookup.
+  } catch {
+    // Network / timeout / DNS failures are transient.
+    return serveStaleOrError();
+  }
+
+  // 3. Collection scan fallback only when both targeted lookups were empty.
+  try {
+    const scan = await scanCollectionCached(collection);
+    if (!scan.ok) {
+      return serveStaleOrError();
+    }
+    for (const doc of scan.docs) {
       const parsed = parseFirestoreFields(doc);
       const docId = doc.name ? doc.name.split('/').pop() : '';
 
@@ -715,17 +925,47 @@ export async function fetchEntityData(
         docId === slug;
 
       if (isMatch) {
-        negativeCache.delete(cacheKey);
-        return attachDocumentId(parsed, docId || slug);
+        return buildEntityLookupResult(
+          parsed,
+          collection,
+          cacheKey,
+          docId || slug,
+          now,
+          scan.stale === true
+        );
       }
     }
   } catch (err) {
     console.error('[Edge Firestore] Entity lookup error:', err);
+    return serveStaleOrError();
   }
 
-  // 5. Store in negative cache so repeated crawls of unknown URLs do not trigger scans
+  // 4. Confirmed missing: keep the existing negative-cache behavior.
   negativeCache.set(cacheKey, now + NEGATIVE_CACHE_TTL_MS);
-  return null;
+  entityCache.delete(cacheKey);
+  return { status: 'not-found', data: null };
+}
+
+/**
+ * Backwards-compatible helper used outside the middleware: returns the entity
+ * data for an ok lookup and null for both not-found and transient errors.
+ */
+export async function fetchEntityData(
+  collection: 'films' | 'articles',
+  slug: string
+): Promise<Record<string, any> | null> {
+  const result = await fetchEntityDataResult(collection, slug);
+  return result.status === 'ok' ? result.data : null;
+}
+
+/** Test/maintenance helper: clears entity, scan, collection and negative caches. */
+export function clearEntityResilienceCaches(): void {
+  entityCache.clear();
+  negativeCache.clear();
+  scanCache.films = null;
+  scanCache.articles = null;
+  collectionCache.films = null;
+  collectionCache.articles = null;
 }
 
 /**
