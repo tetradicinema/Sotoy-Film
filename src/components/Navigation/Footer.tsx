@@ -1,6 +1,8 @@
 import React from 'react';
 import { Clapperboard, Star, Info, Shield, Scale, Briefcase, HelpCircle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { SmartLink } from '../Common/SmartLink';
+import { buildCategoryPath } from '../../utils/entityPaths';
 
 export const Footer: React.FC = () => {
   const { navigateTo, currentView } = useApp();
@@ -12,8 +14,8 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Brand Col */}
           <div className="lg:col-span-2 space-y-2">
-            <div
-              onClick={() => navigateTo('home')}
+            <SmartLink
+              to="/"
               className="flex items-center cursor-pointer inline-flex group -ml-1"
             >
               <img
@@ -23,7 +25,7 @@ export const Footer: React.FC = () => {
                 height="292"
                 className="h-16 md:h-20 w-auto object-contain transition-all duration-300 group-hover:scale-[1.015] group-hover:opacity-90"
               />
-            </div>
+            </SmartLink>
 
             <p className="text-slate-400 text-xs leading-relaxed max-w-sm">
               Platform media & jejaring sosial film pop-culture independen. Mengulas film, serial, animation, cinema gear, dan studi filmmaking dengan sistem penilaian jujur <strong>Skor Sotoy (Skala 1-10)</strong>.
@@ -50,44 +52,44 @@ export const Footer: React.FC = () => {
             </h4>
             <ul className="space-y-0">
               <li>
-                <button
-                  onClick={() => navigateTo('category', { category: 'movies' })}
+                <SmartLink
+                  to={buildCategoryPath('movies')}
                   className="hover:text-white transition-colors py-2"
                 >
                   Movies (News, Lists, Reviews)
-                </button>
+                </SmartLink>
               </li>
               <li>
-                <button
-                  onClick={() => navigateTo('category', { category: 'series' })}
+                <SmartLink
+                  to={buildCategoryPath('series')}
                   className="hover:text-white transition-colors py-2"
                 >
                   Series (News, Lists, Reviews)
-                </button>
+                </SmartLink>
               </li>
               <li>
-                <button
-                  onClick={() => navigateTo('category', { category: 'animation' })}
+                <SmartLink
+                  to={buildCategoryPath('animation')}
                   className="hover:text-white transition-colors py-2"
                 >
                   Animation (News, Lists)
-                </button>
+                </SmartLink>
               </li>
               <li>
-                <button
-                  onClick={() => navigateTo('category', { category: 'cinema-gear' })}
+                <SmartLink
+                  to={buildCategoryPath('cinema-gear')}
                   className="hover:text-white transition-colors py-2"
                 >
                   Cinema Gear (News & Reviews)
-                </button>
+                </SmartLink>
               </li>
               <li>
-                <button
-                  onClick={() => navigateTo('category', { category: 'film-studies' })}
+                <SmartLink
+                  to={buildCategoryPath('film-studies')}
                   className="hover:text-white transition-colors py-2"
                 >
                   Film Studies (Producing - Post)
-                </button>
+                </SmartLink>
               </li>
             </ul>
           </div>
@@ -99,29 +101,29 @@ export const Footer: React.FC = () => {
             </h4>
             <ul className="space-y-0">
               <li>
-                <button
-                  onClick={() => navigateTo('film-database')}
+                <SmartLink
+                  to="/film-database"
                   className="hover:text-white transition-colors flex items-center gap-1.5 py-2"
                 >
                   <Star className="w-3.5 h-3.5 text-slate-400" />
                   <span>Rating Film (Skor Sotoy)</span>
-                </button>
+                </SmartLink>
               </li>
               <li>
-                <button
-                  onClick={() => navigateTo('film-recommendations')}
+                <SmartLink
+                  to="/rekomendasi-film"
                   className="hover:text-white transition-colors py-2"
                 >
                   Watch Next
-                </button>
+                </SmartLink>
               </li>
               <li>
-                <button
-                  onClick={() => navigateTo('community-feed')}
+                <SmartLink
+                  to="/komunitas"
                   className="hover:text-white transition-colors py-2"
                 >
                   Live Feed Buzz Sotoy
-                </button>
+                </SmartLink>
               </li>
               <li>
                 <button
@@ -149,59 +151,59 @@ export const Footer: React.FC = () => {
             </h4>
             <ul className="space-y-0">
               <li>
-                <button
-                  onClick={() => navigateTo('about-us')}
+                <SmartLink
+                  to="/tentang-kami"
                   className={`hover:text-white transition-colors flex items-center gap-1.5 py-2 ${
                     currentView === 'about-us' ? 'text-[#FF2E7E] font-semibold' : ''
                   }`}
                 >
                   <Info className="w-3.5 h-3.5 text-slate-400" />
                   <span>Tentang Kami (About Us)</span>
-                </button>
+                </SmartLink>
               </li>
               <li>
-                <button
-                  onClick={() => navigateTo('faq-guide')}
+                <SmartLink
+                  to="/panduan"
                   className={`hover:text-white transition-colors flex items-center gap-1.5 py-2 ${
                     currentView === 'faq-guide' ? 'text-[#FF2E7E] font-semibold' : ''
                   }`}
                 >
                   <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
                   <span>Panduan Lengkap (FAQ)</span>
-                </button>
+                </SmartLink>
               </li>
               <li>
-                <button
-                  onClick={() => navigateTo('privacy-policy')}
+                <SmartLink
+                  to="/kebijakan-privasi"
                   className={`hover:text-white transition-colors flex items-center gap-1.5 py-2 ${
                     currentView === 'privacy-policy' ? 'text-[#FF2E7E] font-semibold' : ''
                   }`}
                 >
                   <Shield className="w-3.5 h-3.5 text-slate-400" />
                   <span>Kebijakan Privasi</span>
-                </button>
+                </SmartLink>
               </li>
               <li>
-                <button
-                  onClick={() => navigateTo('terms-conditions')}
+                <SmartLink
+                  to="/syarat-ketentuan"
                   className={`hover:text-white transition-colors flex items-center gap-1.5 py-2 ${
                     currentView === 'terms-conditions' ? 'text-[#FF2E7E] font-semibold' : ''
                   }`}
                 >
                   <Scale className="w-3.5 h-3.5 text-slate-400" />
                   <span>Syarat & Ketentuan</span>
-                </button>
+                </SmartLink>
               </li>
               <li>
-                <button
-                  onClick={() => navigateTo('business-inquiries')}
+                <SmartLink
+                  to="/kontak-bisnis"
                   className={`hover:text-white transition-colors flex items-center gap-1.5 py-2 ${
                     currentView === 'business-inquiries' ? 'text-[#FF2E7E] font-semibold' : ''
                   }`}
                 >
                   <Briefcase className="w-3.5 h-3.5 text-slate-400" />
                   <span>Kemitraan & Bisnis</span>
-                </button>
+                </SmartLink>
               </li>
             </ul>
 
@@ -218,9 +220,9 @@ export const Footer: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-              <button
+              <SmartLink
                 id="bottom-menu-about"
-                onClick={() => navigateTo('about-us')}
+                to="/tentang-kami"
                 className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-xs font-semibold ${
                   currentView === 'about-us'
                     ? 'bg-[#FF2E7E] text-white shadow-sm'
@@ -229,11 +231,11 @@ export const Footer: React.FC = () => {
               >
                 <Info className="w-3.5 h-3.5" />
                 <span>About Us</span>
-              </button>
+              </SmartLink>
 
-              <button
+              <SmartLink
                 id="bottom-menu-guide"
-                onClick={() => navigateTo('faq-guide')}
+                to="/panduan"
                 className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-xs font-semibold ${
                   currentView === 'faq-guide'
                     ? 'bg-[#FF2E7E] text-white shadow-sm'
@@ -242,11 +244,11 @@ export const Footer: React.FC = () => {
               >
                 <HelpCircle className="w-3.5 h-3.5" />
                 <span>Panduan</span>
-              </button>
+              </SmartLink>
 
-              <button
+              <SmartLink
                 id="bottom-menu-privacy"
-                onClick={() => navigateTo('privacy-policy')}
+                to="/kebijakan-privasi"
                 className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-xs font-semibold ${
                   currentView === 'privacy-policy'
                     ? 'bg-[#FF2E7E] text-white shadow-sm'
@@ -255,11 +257,11 @@ export const Footer: React.FC = () => {
               >
                 <Shield className="w-3.5 h-3.5" />
                 <span>Privacy Policy</span>
-              </button>
+              </SmartLink>
 
-              <button
+              <SmartLink
                 id="bottom-menu-terms"
-                onClick={() => navigateTo('terms-conditions')}
+                to="/syarat-ketentuan"
                 className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-xs font-semibold ${
                   currentView === 'terms-conditions'
                     ? 'bg-[#FF2E7E] text-white shadow-sm'
@@ -268,11 +270,11 @@ export const Footer: React.FC = () => {
               >
                 <Scale className="w-3.5 h-3.5" />
                 <span>Terms and Conditions</span>
-              </button>
+              </SmartLink>
 
-              <button
+              <SmartLink
                 id="bottom-menu-business"
-                onClick={() => navigateTo('business-inquiries')}
+                to="/kontak-bisnis"
                 className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-xs font-semibold ${
                   currentView === 'business-inquiries'
                     ? 'bg-[#FF2E7E] text-white shadow-sm'
@@ -281,7 +283,7 @@ export const Footer: React.FC = () => {
               >
                 <Briefcase className="w-3.5 h-3.5" />
                 <span>Business Inquiries</span>
-              </button>
+              </SmartLink>
             </div>
           </div>
         </div>
@@ -292,12 +294,12 @@ export const Footer: React.FC = () => {
             © {new Date().getFullYear()} <strong className="text-slate-300 font-semibold">Sotoy Film</strong>. All rights reserved. Bebas berpendapat, tetap santun.
           </div>
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigateTo('business-inquiries')}
+            <SmartLink
+              to="/kontak-bisnis"
               className="hover:text-white transition-colors py-2"
             >
               Slot Iklan & Kemitraan: admin.sotoyfilm@gmail.com
-            </button>
+            </SmartLink>
             <span>•</span>
             <span>Jakarta, Indonesia</span>
           </div>

@@ -17,6 +17,8 @@ import {
   X,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { SmartLink } from '../Common/SmartLink';
+import { buildCategoryPath } from '../../utils/entityPaths';
 import { getRoleBadgeStyle } from '../../utils/roleStyles';
 import { RoleBadge } from '../Common/RoleBadge';
 import { MainCategory, SubCategory } from '../../types';
@@ -167,11 +169,6 @@ export const Navbar: React.FC = () => {
     },
   ];
 
-  const handleCategoryClick = (cat: MainCategory, subCat?: SubCategory) => {
-    setActiveDropdown(null);
-    navigateTo('category', { category: cat, subCategory: subCat || null });
-  };
-
   return (
     <header className="sticky top-0 z-50">
       {/* Main Navbar Bar */}
@@ -196,9 +193,9 @@ export const Navbar: React.FC = () => {
               </button>
 
               {/* Brand Logo */}
-              <div
+              <SmartLink
                 id="brand-logo"
-                onClick={() => navigateTo('home')}
+                to="/"
                 className="flex items-center cursor-pointer group shrink-0 select-none transition-transform active:scale-95 p-2 -m-2"
               >
                 <img
@@ -210,7 +207,7 @@ export const Navbar: React.FC = () => {
                   height="292"
                   className="h-14 md:h-[68px] w-auto -my-2 object-contain transition-all duration-300 group-hover:scale-[1.015] group-hover:opacity-90"
                 />
-              </div>
+              </SmartLink>
             </div>
 
             {/* Desktop Category Navigation */}
@@ -225,9 +222,10 @@ export const Navbar: React.FC = () => {
                     onMouseEnter={() => setActiveDropdown(cat.id)}
                     onMouseLeave={() => setActiveDropdown(null)}
                   >
-                    <button
+                    <SmartLink
                       id={`nav-cat-${cat.id}`}
-                      onClick={() => handleCategoryClick(cat.id)}
+                      to={buildCategoryPath(cat.id)}
+                      onClick={() => setActiveDropdown(null)}
                       className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                         isSelected
                           ? 'text-white bg-white/[0.08] border border-white/15'
@@ -236,48 +234,55 @@ export const Navbar: React.FC = () => {
                     >
                       <span>{cat.name}</span>
                       <ChevronDown className="w-3 h-3 text-slate-500 group-hover:text-slate-300 transition-transform group-hover:rotate-180" />
-                    </button>
+                    </SmartLink>
 
-                    {/* Dropdown Menu for Subcategories */}
-                    {activeDropdown === cat.id && (
-                      <div className="absolute left-0 top-full pt-1.5 w-52 z-50">
-                        <div className="bg-[#171717] border border-white/10 rounded-xl p-2 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-1 duration-150">
-                          <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 border-b border-white/[0.08]">
-                            Sub-Kategori {cat.name}
-                          </div>
-                          <div className="py-1 space-y-0.5">
-                            {cat.subCategories.map(sub => (
-                              <button
-                                key={sub.id}
-                                id={`subnav-${cat.id}-${sub.id}`}
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  handleCategoryClick(cat.id, sub.id);
-                                }}
-                                className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
-                                  activeCategory === cat.id && activeSubCategory === sub.id
-                                    ? 'bg-[#FF2E7E] text-white font-semibold'
-                                    : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
-                                }`}
-                              >
-                                <span>{sub.label}</span>
-                                <span className="text-[10px] text-slate-400 group-hover:text-slate-200">
-                                  →
-                                </span>
-                              </button>
-                            ))}
-                          </div>
-                          <div className="pt-1.5 border-t border-white/[0.08] mt-1">
-                            <button
-                              onClick={() => handleCategoryClick(cat.id)}
-                              className="w-full text-center text-xs font-semibold text-[#FF2E7E] hover:underline py-1 cursor-pointer"
+                    {/* Dropdown Menu for Subcategories.
+                        Always rendered in the DOM (Googlebot cannot hover):
+                        when closed it is hidden with CSS (invisible + opacity-0 +
+                        pointer-events-none) instead of being unmounted, so every
+                        subcategory <a href> stays crawlable. */}
+                    <div
+                      className={`absolute left-0 top-full pt-1.5 w-52 z-50 ${
+                        activeDropdown === cat.id
+                          ? 'opacity-100'
+                          : 'invisible opacity-0 pointer-events-none'
+                      }`}
+                    >
+                      <div className="bg-[#171717] border border-white/10 rounded-xl p-2 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-1 duration-150">
+                        <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 border-b border-white/[0.08]">
+                          Sub-Kategori {cat.name}
+                        </div>
+                        <div className="py-1 space-y-0.5">
+                          {cat.subCategories.map(sub => (
+                            <SmartLink
+                              key={sub.id}
+                              id={`subnav-${cat.id}-${sub.id}`}
+                              to={buildCategoryPath(cat.id, sub.id)}
+                              onClick={() => setActiveDropdown(null)}
+                              className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
+                                activeCategory === cat.id && activeSubCategory === sub.id
+                                  ? 'bg-[#FF2E7E] text-white font-semibold'
+                                  : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
+                              }`}
                             >
-                              Buka Halaman Utama {cat.name}
-                            </button>
-                          </div>
+                              <span>{sub.label}</span>
+                              <span className="text-[10px] text-slate-400 group-hover:text-slate-200">
+                                →
+                              </span>
+                            </SmartLink>
+                          ))}
+                        </div>
+                        <div className="pt-1.5 border-t border-white/[0.08] mt-1">
+                          <SmartLink
+                            to={buildCategoryPath(cat.id)}
+                            onClick={() => setActiveDropdown(null)}
+                            className="w-full text-center text-xs font-semibold text-[#FF2E7E] hover:underline py-1 cursor-pointer block"
+                          >
+                            Buka Halaman Utama {cat.name}
+                          </SmartLink>
                         </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 );
               })}
@@ -285,9 +290,9 @@ export const Navbar: React.FC = () => {
 
             {/* Direct Feature Links */}
             <div className="hidden xl:flex items-center gap-1 border-l border-white/[0.08] pl-2 xl:pl-3 shrink-0">
-              <button
+              <SmartLink
                 id="nav-film-database"
-                onClick={() => navigateTo('film-database')}
+                to="/film-database"
                 className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
                   currentView === 'film-database' || currentView === 'film-detail' || currentView === 'film-seasons' || currentView === 'film-season'
                     ? 'bg-[#FF2E7E] text-white shadow-sm'
@@ -295,11 +300,11 @@ export const Navbar: React.FC = () => {
                 }`}
               >
                 <span>{t('nav.filmDatabase', 'Film Database')}</span>
-              </button>
+              </SmartLink>
 
-              <button
+              <SmartLink
                 id="nav-buzz"
-                onClick={() => navigateTo('community-feed')}
+                to="/komunitas"
                 className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
                   currentView === 'community-feed'
                     ? 'bg-[#FF2E7E] text-white shadow-sm'
@@ -307,7 +312,7 @@ export const Navbar: React.FC = () => {
                 }`}
               >
                 <span>{t('nav.buzzFeed', 'Buzz Feed')}</span>
-              </button>
+              </SmartLink>
             </div>
 
             {/* Right Controls: Search & User Profile */}
@@ -402,11 +407,9 @@ export const Navbar: React.FC = () => {
                       Navigasi Utama
                     </div>
 
-                    <button
-                      onClick={() => {
-                        navigateTo('home');
-                        setRoleDropdownOpen(false);
-                      }}
+                    <SmartLink
+                      to="/"
+                      onClick={() => setRoleDropdownOpen(false)}
                       className={`w-full text-left p-2 rounded-lg text-xs flex items-center gap-2.5 transition-colors ${
                         currentView === 'home'
                           ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] font-semibold border border-[#FF2E7E]/30'
@@ -415,13 +418,11 @@ export const Navbar: React.FC = () => {
                     >
                       <Home className="w-4 h-4 text-slate-400" />
                       <span>Beranda</span>
-                    </button>
+                    </SmartLink>
 
-                    <button
-                      onClick={() => {
-                        navigateTo('film-database');
-                        setRoleDropdownOpen(false);
-                      }}
+                    <SmartLink
+                      to="/film-database"
+                      onClick={() => setRoleDropdownOpen(false)}
                       className={`w-full text-left p-2 rounded-lg text-xs flex items-center gap-2.5 transition-colors ${
                         currentView === 'film-database'
                           ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] font-semibold border border-[#FF2E7E]/30'
@@ -430,13 +431,11 @@ export const Navbar: React.FC = () => {
                     >
                       <Film className="w-4 h-4 text-slate-400" />
                       <span>Film Database</span>
-                    </button>
+                    </SmartLink>
 
-                    <button
-                      onClick={() => {
-                        navigateTo('community-feed');
-                        setRoleDropdownOpen(false);
-                      }}
+                    <SmartLink
+                      to="/komunitas"
+                      onClick={() => setRoleDropdownOpen(false)}
                       className={`w-full text-left p-2 rounded-lg text-xs flex items-center gap-2.5 transition-colors ${
                         currentView === 'community-feed'
                           ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] font-semibold border border-[#FF2E7E]/30'
@@ -445,13 +444,11 @@ export const Navbar: React.FC = () => {
                     >
                       <MessageSquare className="w-4 h-4 text-slate-400" />
                       <span>Komunitas</span>
-                    </button>
+                    </SmartLink>
 
-                    <button
-                      onClick={() => {
-                        navigateTo('film-recommendations');
-                        setRoleDropdownOpen(false);
-                      }}
+                    <SmartLink
+                      to="/rekomendasi-film"
+                      onClick={() => setRoleDropdownOpen(false)}
                       className={`w-full text-left p-2 rounded-lg text-xs flex items-center gap-2.5 transition-colors ${
                         currentView === 'film-recommendations'
                           ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] font-semibold border border-[#FF2E7E]/30'
@@ -460,13 +457,11 @@ export const Navbar: React.FC = () => {
                     >
                       <Sparkles className="w-4 h-4 text-slate-400" />
                       <span>Watch Next</span>
-                    </button>
+                    </SmartLink>
 
-                    <button
-                      onClick={() => {
-                        navigateTo('search');
-                        setRoleDropdownOpen(false);
-                      }}
+                    <SmartLink
+                      to="/search"
+                      onClick={() => setRoleDropdownOpen(false)}
                       className={`w-full text-left p-2 rounded-lg text-xs flex items-center gap-2.5 transition-colors ${
                         currentView === 'search'
                           ? 'bg-[#FF2E7E]/15 text-[#FF2E7E] font-semibold border border-[#FF2E7E]/30'
@@ -475,7 +470,7 @@ export const Navbar: React.FC = () => {
                     >
                       <Search className="w-4 h-4 text-slate-400" />
                       <span>Cari</span>
-                    </button>
+                    </SmartLink>
                   </div>
 
                   {/* Section 2: Menu Pengguna (Jika Logged In) */}
@@ -769,13 +764,10 @@ export const Navbar: React.FC = () => {
 
               {/* Main Feature Shortcuts (Film DB & Buzz Feed) */}
               <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
+                <SmartLink
                   id="mobile-drawer-film-db-btn"
-                  onClick={() => {
-                    navigateTo('film-database');
-                    setCategoryMenuOpen(false);
-                  }}
+                  to="/film-database"
+                  onClick={() => setCategoryMenuOpen(false)}
                   className={`py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border transition-all cursor-pointer ${
                     currentView === 'film-database' || currentView === 'film-detail' || currentView === 'film-seasons' || currentView === 'film-season'
                       ? 'bg-[#FF2E7E] text-white border-[#FF2E7E] shadow-md shadow-[#FF2E7E]/20'
@@ -784,14 +776,11 @@ export const Navbar: React.FC = () => {
                 >
                   <Film className="w-4 h-4 text-[#FF2E7E]" />
                   <span>Film DB</span>
-                </button>
-                <button
-                  type="button"
+                </SmartLink>
+                <SmartLink
                   id="mobile-drawer-buzz-btn"
-                  onClick={() => {
-                    navigateTo('community-feed');
-                    setCategoryMenuOpen(false);
-                  }}
+                  to="/komunitas"
+                  onClick={() => setCategoryMenuOpen(false)}
                   className={`py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border transition-all cursor-pointer ${
                     currentView === 'community-feed'
                       ? 'bg-[#FF2E7E] text-white border-[#FF2E7E] shadow-md shadow-[#FF2E7E]/20'
@@ -800,7 +789,7 @@ export const Navbar: React.FC = () => {
                 >
                   <MessageSquare className="w-4 h-4 text-[#FF2E7E]" />
                   <span>Buzz Feed</span>
-                </button>
+                </SmartLink>
               </div>
             </div>
 
@@ -828,13 +817,10 @@ export const Navbar: React.FC = () => {
                     {/* Category Header Row */}
                     <div className="flex items-center justify-between p-1 gap-1">
                       {/* Tapping category name navigates directly to main category page */}
-                      <button
-                        type="button"
+                      <SmartLink
                         id={`mobile-drawer-cat-${cat.id}`}
-                        onClick={() => {
-                          handleCategoryClick(cat.id);
-                          setCategoryMenuOpen(false);
-                        }}
+                        to={buildCategoryPath(cat.id)}
+                        onClick={() => setCategoryMenuOpen(false)}
                         className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-colors min-h-[42px] cursor-pointer ${
                           isCategorySelected
                             ? 'text-[#FF2E7E] font-bold'
@@ -843,7 +829,7 @@ export const Navbar: React.FC = () => {
                       >
                         <CatIcon className={`w-4 h-4 shrink-0 ${isCategorySelected ? 'text-[#FF2E7E]' : 'text-slate-400'}`} />
                         <span className="text-xs font-semibold">{cat.name}</span>
-                      </button>
+                      </SmartLink>
 
                       {/* Separate chevron/caret button toggles subcategories accordion */}
                       {cat.subCategories && cat.subCategories.length > 0 && (
@@ -880,14 +866,11 @@ export const Navbar: React.FC = () => {
                             currentView === 'category';
 
                           return (
-                            <button
+                            <SmartLink
                               key={sub.id}
-                              type="button"
                               id={`mobile-drawer-subnav-${cat.id}-${sub.id}`}
-                              onClick={() => {
-                                handleCategoryClick(cat.id, sub.id);
-                                setCategoryMenuOpen(false);
-                              }}
+                              to={buildCategoryPath(cat.id, sub.id)}
+                              onClick={() => setCategoryMenuOpen(false)}
                               className={`w-full text-left pl-4 pr-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition-colors min-h-[36px] cursor-pointer ${
                                 isSubSelected
                                   ? 'bg-[#FF2E7E] text-white font-semibold shadow-sm'
@@ -899,21 +882,18 @@ export const Navbar: React.FC = () => {
                                 <span>{sub.label}</span>
                               </span>
                               <span className="text-[10px] text-slate-400">→</span>
-                            </button>
+                            </SmartLink>
                           );
                         })}
 
                         {/* View all in this category shortcut */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleCategoryClick(cat.id);
-                            setCategoryMenuOpen(false);
-                          }}
+                        <SmartLink
+                          to={buildCategoryPath(cat.id)}
+                          onClick={() => setCategoryMenuOpen(false)}
                           className="w-full text-left pl-4 pr-3 py-1.5 rounded-lg text-[11px] font-semibold text-[#FF2E7E] hover:underline"
                         >
                           Buka Semua {cat.name} →
-                        </button>
+                        </SmartLink>
                       </div>
                     )}
                   </div>

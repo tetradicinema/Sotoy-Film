@@ -1,6 +1,7 @@
 import React from 'react';
 import { Home, Film, MessageSquare, LogIn, Plus } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { SmartLink } from '../Common/SmartLink';
 import { DEFAULT_AVATAR } from '../../data/mockData';
 
 // The animated dot (and therefore motion/react) is loaded on demand.
@@ -72,9 +73,9 @@ export const MobileBottomNav: React.FC = () => {
     >
       <div className="flex items-center justify-around min-w-max sm:min-w-full w-full max-w-md md:max-w-2xl mx-auto gap-1 md:gap-4 px-0.5">
         {/* 1. Beranda */}
-        <button
+        <SmartLink
           id="mobile-bottom-nav-home"
-          onClick={() => navigateTo('home')}
+          to="/"
           className={`flex flex-col items-center justify-center flex-1 min-w-[56px] md:min-w-[80px] shrink-0 py-1 px-1 rounded-lg transition-all duration-200 min-h-[44px] md:min-h-[52px] ${
             isHomeActive
               ? 'text-[#FF2E7E]'
@@ -90,12 +91,12 @@ export const MobileBottomNav: React.FC = () => {
           <span className={`text-[10px] md:text-xs mt-1 md:mt-1.5 tracking-tight font-semibold ${isHomeActive ? 'text-white' : 'text-slate-400'}`}>
             Beranda
           </span>
-        </button>
+        </SmartLink>
 
         {/* 2. Film Database */}
-        <button
+        <SmartLink
           id="mobile-bottom-nav-films"
-          onClick={() => navigateTo('film-database')}
+          to="/film-database"
           className={`flex flex-col items-center justify-center flex-1 min-w-[56px] md:min-w-[80px] shrink-0 py-1 px-1 rounded-lg transition-all duration-200 min-h-[44px] md:min-h-[52px] ${
             isFilmActive
               ? 'text-[#FF2E7E]'
@@ -111,7 +112,7 @@ export const MobileBottomNav: React.FC = () => {
           <span className={`text-[10px] md:text-xs mt-1 md:mt-1.5 tracking-tight font-semibold ${isFilmActive ? 'text-white' : 'text-slate-400'}`}>
             Film
           </span>
-        </button>
+        </SmartLink>
 
         {/* 3. Tulis Buzz (Action Button) */}
         <button
@@ -136,9 +137,9 @@ export const MobileBottomNav: React.FC = () => {
         </button>
 
         {/* 4. Buzz Community Feed */}
-        <button
+        <SmartLink
           id="mobile-bottom-nav-buzz"
-          onClick={() => navigateTo('community-feed')}
+          to="/komunitas"
           className={`flex flex-col items-center justify-center flex-1 min-w-[56px] md:min-w-[80px] shrink-0 py-1 px-1 rounded-lg transition-all duration-200 min-h-[44px] md:min-h-[52px] ${
             isBuzzActive
               ? 'text-[#FF2E7E]'
@@ -154,7 +155,7 @@ export const MobileBottomNav: React.FC = () => {
           <span className={`text-[10px] md:text-xs mt-1 md:mt-1.5 tracking-tight font-semibold ${isBuzzActive ? 'text-white' : 'text-slate-400'}`}>
             Buzz
           </span>
-        </button>
+        </SmartLink>
 
 
         {/* 5. Profil / Masuk */}
