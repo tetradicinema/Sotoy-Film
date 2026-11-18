@@ -1,3 +1,4 @@
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import React, { useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { HelmetProvider } from '@dr.pogodin/react-helmet';
@@ -724,6 +725,7 @@ export default function App() {
           <AppContent />
         </AppProvider>
       </BrowserRouter>
+      <SpeedInsights />
     </HelmetProvider>
   );
 }
