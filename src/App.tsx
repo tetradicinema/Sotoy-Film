@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import React, { useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
@@ -726,6 +727,7 @@ export default function App() {
         </AppProvider>
       </BrowserRouter>
       <SpeedInsights />
+      <Analytics />
     </HelmetProvider>
   );
 }
