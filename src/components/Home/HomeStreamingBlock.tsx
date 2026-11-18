@@ -5,6 +5,7 @@ import { HOMEPAGE_SECTIONS_META } from '../../utils/homepageConfigHelper';
 import { getStreamingPlatforms, resolveHomeStreaming } from '../../utils/filmSections';
 import { HOME_FILM_GRID_CLASS, getResponsiveCardVisibilityClass } from '../../utils/filmGrid';
 import { FilmDbCard } from '../Film/FilmDbCard';
+import { SmartLink } from '../Common/SmartLink';
 
 /**
  * Homepage wide block: "Explore What's Streaming".
@@ -56,14 +57,14 @@ export const HomeStreamingBlock: React.FC = () => {
             )}
           </div>
 
-          <button
+          <SmartLink
             id="home-streaming-see-all-btn"
-            onClick={() => navigateTo('film-database')}
+            to="/film-database"
             className="self-start sm:self-auto text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1 transition-colors"
           >
             <span>Lihat di Film Database</span>
             <ChevronRight className="w-3.5 h-3.5 text-[#FF2E7E]" />
-          </button>
+          </SmartLink>
         </div>
 
         {/* Platform Tabs */}
@@ -120,7 +121,6 @@ export const HomeStreamingBlock: React.FC = () => {
                 film={film}
                 sectionKey="fd_streaming"
                 lazyImage
-                onOpen={item => navigateTo('film-detail', { filmId: item.id })}
               />
             </div>
           ))}

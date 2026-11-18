@@ -2,6 +2,8 @@ import React, { useMemo } from 'react';
 import { BookOpen, ArrowRight } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { resolveConfigArticles } from '../../utils/homepageConfigHelper';
+import { buildArticlePath } from '../../utils/entityPaths';
+import { SmartLink } from '../Common/SmartLink';
 import { SectionEmptyState } from './HomeSectionCommon';
 
 const Section5Skeleton: React.FC = () => (
@@ -81,10 +83,11 @@ export const HomeFilmStudiesBlock: React.FC = () => {
         <div className="space-y-4">
           {/* Primary Editorial Long-form Lead with Article Cover Image */}
           {filmStudiesArticles[0] && (
-            <article
-              onClick={() => navigateTo('article-detail', { articleId: filmStudiesArticles[0].id })}
-              className="group p-5 sm:p-7 rounded-3xl bg-[#171717] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer shadow-lg hover:shadow-2xl relative overflow-hidden"
-            >
+            <article>
+              <SmartLink
+                to={buildArticlePath(filmStudiesArticles[0])}
+                className="group block p-5 sm:p-7 rounded-3xl bg-[#171717] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer shadow-lg hover:shadow-2xl relative overflow-hidden"
+              >
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 {/* Article Image */}
                 <div className="md:col-span-5 aspect-[16/10] rounded-2xl overflow-hidden bg-slate-900 border border-white/[0.08]">
@@ -135,6 +138,7 @@ export const HomeFilmStudiesBlock: React.FC = () => {
                   </div>
                 </div>
               </div>
+              </SmartLink>
             </article>
           )}
 
@@ -142,11 +146,11 @@ export const HomeFilmStudiesBlock: React.FC = () => {
           {filmStudiesArticles.length > 1 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {filmStudiesArticles.slice(1).map((article) => (
-                <article
-                  key={article.id}
-                  onClick={() => navigateTo('article-detail', { articleId: article.id })}
-                  className="group p-4 sm:p-5 rounded-2xl bg-[#171717] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer flex flex-col justify-between"
-                >
+                <article key={article.id}>
+                  <SmartLink
+                    to={buildArticlePath(article)}
+                    className="group block p-4 sm:p-5 rounded-2xl bg-[#171717] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer flex flex-col justify-between"
+                  >
                   <div>
                     {/* Article Image */}
                     <div className="aspect-[16/10] rounded-xl overflow-hidden bg-slate-900 border border-white/[0.08] mb-3">
@@ -182,6 +186,7 @@ export const HomeFilmStudiesBlock: React.FC = () => {
                       <ArrowRight className="w-3 h-3" />
                     </span>
                   </div>
+                  </SmartLink>
                 </article>
               ))}
             </div>

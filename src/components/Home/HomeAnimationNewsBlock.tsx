@@ -2,6 +2,8 @@ import React, { useMemo } from 'react';
 import { Sparkles, ChevronRight } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { resolveConfigArticles } from '../../utils/homepageConfigHelper';
+import { buildArticlePath } from '../../utils/entityPaths';
+import { SmartLink } from '../Common/SmartLink';
 import { SectionEmptyState } from './HomeSectionCommon';
 
 const Section4Skeleton: React.FC = () => (
@@ -71,11 +73,11 @@ export const HomeAnimationNewsBlock: React.FC = () => {
       ) : (
         <div className="bg-[#171717] rounded-3xl border border-white/[0.08] divide-y divide-white/[0.06] overflow-hidden">
           {animationNews.map((article) => (
-            <div
-              key={article.id}
-              onClick={() => navigateTo('article-detail', { articleId: article.id })}
-              className="p-3 sm:p-3.5 flex items-center justify-between gap-4 hover:bg-white/[0.04] transition-colors cursor-pointer group"
-            >
+            <article key={article.id}>
+              <SmartLink
+                to={buildArticlePath(article)}
+                className="flex p-3 sm:p-3.5 items-center justify-between gap-4 hover:bg-white/[0.04] transition-colors cursor-pointer group"
+              >
               <div className="flex items-center gap-3 sm:gap-3.5 min-w-0">
                 {/* Article Thumbnail */}
                 <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-slate-900 border border-white/[0.08]">
@@ -112,7 +114,8 @@ export const HomeAnimationNewsBlock: React.FC = () => {
                 </span>
                 <ChevronRight className="w-4 h-4" />
               </div>
-            </div>
+              </SmartLink>
+            </article>
           ))}
         </div>
       )}

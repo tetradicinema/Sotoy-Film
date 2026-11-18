@@ -13,6 +13,8 @@ import { useApp } from '../../context/AppContext';
 import { RoleBadge } from '../Common/RoleBadge';
 import { FilmItem, SectionConfig } from '../../types';
 import { FilmDbCard } from '../Film/FilmDbCard';
+import { buildFilmPath } from '../../utils/entityPaths';
+import { SmartLink } from '../Common/SmartLink';
 import { FilmDbCarousel } from '../Film/FilmDbCarousel';
 import { CollectionPickerPopover } from '../Common/CollectionPickerPopover';
 import { RateFilmModal } from '../Modals/RateFilmModal';
@@ -440,7 +442,6 @@ export const FilmDatabasePage: React.FC = () => {
                         key={film.id}
                         film={film}
                         sectionKey={section.key}
-                        onOpen={item => navigateTo('film-detail', { filmId: item.id })}
                         rank={section.key === 'fd_trending' ? index + 1 : undefined}
                       />
                     ))}
@@ -452,7 +453,6 @@ export const FilmDatabasePage: React.FC = () => {
                         key={film.id}
                         film={film}
                         sectionKey={section.key}
-                        onOpen={item => navigateTo('film-detail', { filmId: item.id })}
                       />
                     ))}
                   </div>
@@ -895,16 +895,13 @@ export const FilmDatabasePage: React.FC = () => {
                     const inWatchlist = isItemInAnyCollection(film.id, 'film');
 
                     return (
-                      <div
+                      <article
                         key={film.id}
                         id={`search-film-card-${film.id}`}
-                        className="bg-[#171717] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FF2E7E] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group"
+                        className="relative bg-[#171717] border border-slate-800 rounded-2xl overflow-hidden hover:border-[#FF2E7E] hover:-translate-y-1 hover:scale-[1.015] transition-all duration-300 flex flex-col group"
                       >
                         {/* Movie Poster */}
-                        <div
-                          onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                          className="relative aspect-[2/3] w-full overflow-hidden cursor-pointer bg-[#0A0A0A]"
-                        >
+                        <div className="relative aspect-[2/3] w-full overflow-hidden cursor-pointer bg-[#0A0A0A]">
                           <img
                             src={film.poster || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=300&q=80'}
                             alt={film.title}
@@ -921,7 +918,10 @@ export const FilmDatabasePage: React.FC = () => {
 
                           {/* Watchlist / Collection Picker Popover */}
                           <div
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
                             className="absolute top-2 right-2 z-10"
                           >
                             <CollectionPickerPopover
@@ -945,11 +945,16 @@ export const FilmDatabasePage: React.FC = () => {
                         <div className="p-3 flex-1 flex flex-col justify-between">
                           <div>
                             <h3
-                              onClick={() => navigateTo('film-detail', { filmId: film.id })}
                               className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors line-clamp-1 cursor-pointer mb-1"
                               title={film.title}
                             >
-                              {film.title}
+                              <SmartLink
+                                to={buildFilmPath(film)}
+                                aria-label={`Buka detail film ${film.title}`}
+                                className="after:absolute after:inset-0 focus-visible:outline-none"
+                              >
+                                {film.title}
+                              </SmartLink>
                             </h3>
                             <div className="text-[10px] text-slate-400 line-clamp-1 mb-1.5">
                               {film.director}
@@ -963,10 +968,11 @@ export const FilmDatabasePage: React.FC = () => {
                                   <button
                                     key={g}
                                     onClick={e => {
+                                      e.preventDefault();
                                       e.stopPropagation();
                                       setSelectedGenre(isTagActive ? 'all' : g);
                                     }}
-                                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded transition-colors ${
+                                    className={`relative z-10 text-[9px] font-bold px-1.5 py-0.5 rounded transition-colors ${
                                       isTagActive
                                         ? 'bg-[#FF2E7E] text-slate-950 font-black'
                                         : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
@@ -980,15 +986,21 @@ export const FilmDatabasePage: React.FC = () => {
                             </div>
                           </div>
 
-                          <div className="pt-2 border-t border-slate-800/80 flex items-center gap-1.5">
+                          <div className="relative z-10 pt-2 border-t border-slate-800/80 flex items-center gap-1.5">
                             <button
-                              onClick={() => navigateTo('film-detail', { filmId: film.id })}
+                              onClick={e => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                navigateTo('film-detail', { filmId: film.id });
+                              }}
                               className="flex-1 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-bold text-center transition-colors"
                             >
                               Detail
                             </button>
                             <button
-                              onClick={() => {
+                              onClick={e => {
+                                e.preventDefault();
+                                e.stopPropagation();
                                 if (!isLoggedIn) setLoginModalOpen(true);
                                 else setRatingModalFilm(film);
                               }}
@@ -998,7 +1010,7 @@ export const FilmDatabasePage: React.FC = () => {
                             </button>
                           </div>
                         </div>
-                      </div>
+                      </article>
                     );
                   })}
                 </div>

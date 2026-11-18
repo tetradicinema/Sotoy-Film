@@ -390,7 +390,6 @@ export const FranchisePage: React.FC = () => {
                     key={entry.key}
                     film={entry.film}
                     sectionKey="fd_editors_pick"
-                    onOpen={item => navigateTo('film-detail', { filmId: item.id })}
                   />
                 );
               }

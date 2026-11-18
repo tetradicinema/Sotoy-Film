@@ -3,6 +3,8 @@ import { Clock, Film } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Article } from '../../types';
 import { resolveConfigArticles } from '../../utils/homepageConfigHelper';
+import { buildArticlePath } from '../../utils/entityPaths';
+import { SmartLink } from '../Common/SmartLink';
 import { SectionEmptyState } from './HomeSectionCommon';
 
 const Section1Skeleton: React.FC = () => (
@@ -111,11 +113,11 @@ export const HomeWatchlistsBlock: React.FC = () => {
     return (
       <div className="space-y-2">
         {items.map((article, index) => (
-          <article
-            key={article.id}
-            onClick={() => navigateTo('article-detail', { articleId: article.id })}
-            className="group flex items-center gap-3 p-2.5 rounded-2xl bg-[#171717] hover:bg-white/[0.04] border border-white/[0.06] hover:border-white/20 transition-all cursor-pointer"
-          >
+          <article key={article.id}>
+            <SmartLink
+              to={buildArticlePath(article)}
+              className="group flex items-center gap-3 p-2.5 rounded-2xl bg-[#171717] hover:bg-white/[0.04] border border-white/[0.06] hover:border-white/20 transition-all cursor-pointer"
+            >
             {/* Rank Number */}
             <span className="w-5 text-center font-mono font-bold text-xs text-slate-400 group-hover:text-[#FF2E7E] transition-colors shrink-0">
               0{index + 1}
@@ -144,6 +146,7 @@ export const HomeWatchlistsBlock: React.FC = () => {
                 </span>
               </div>
             </div>
+            </SmartLink>
           </article>
         ))}
       </div>

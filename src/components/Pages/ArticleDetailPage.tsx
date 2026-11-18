@@ -46,6 +46,8 @@ import { RateFilmModal } from '../Modals/RateFilmModal';
 import { ArticleDetailSkeleton } from '../Skeletons';
 import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
 import { slugify } from '../../utils/slugify';
+import { buildArticlePath, buildFilmPath } from '../../utils/entityPaths';
+import { SmartLink } from '../Common/SmartLink';
 
 // Code-split the Tiptap content renderer so readers don't download the editor runtime
 const TiptapContentRenderer = React.lazy(() =>
@@ -608,13 +610,13 @@ export const ArticleDetailPage: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2">
-                <button
+                <SmartLink
                   id="view-full-film-btn"
-                  onClick={() => navigateTo('film-detail', { filmId: discussedFilm.id })}
+                  to={buildFilmPath(discussedFilm)}
                   className="px-3.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-xs font-bold text-white border border-slate-700 transition-colors"
                 >
                   Buka Halaman Film Lengkap →
-                </button>
+                </SmartLink>
               </div>
             </div>
 
@@ -841,11 +843,11 @@ export const ArticleDetailPage: React.FC = () => {
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {relatedArticles.map(rel => (
-                <div
-                  key={rel.id}
-                  onClick={() => navigateTo('article-detail', { articleId: rel.id })}
-                  className="bg-[#171717] border border-slate-800 rounded-2xl overflow-hidden p-3 hover:border-[#FF2E7E] cursor-pointer group transition-all"
-                >
+                <article key={rel.id} className="group">
+                  <SmartLink
+                    to={buildArticlePath(rel)}
+                    className="block bg-[#171717] border border-slate-800 rounded-2xl overflow-hidden p-3 hover:border-[#FF2E7E] cursor-pointer transition-all"
+                  >
                   {rel.coverImage?.trim() ? (
                     <img
                       src={rel.coverImage.trim()}
@@ -860,7 +862,8 @@ export const ArticleDetailPage: React.FC = () => {
                   <h4 className="font-bold text-xs text-white group-hover:text-[#FF2E7E] line-clamp-2">
                     {rel.title}
                   </h4>
-                </div>
+                  </SmartLink>
+                </article>
               ))}
             </div>
           </div>

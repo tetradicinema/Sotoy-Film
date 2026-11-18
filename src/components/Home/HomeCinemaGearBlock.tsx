@@ -2,6 +2,8 @@ import React, { useMemo, useRef } from 'react';
 import { Camera, ChevronLeft, ChevronRight, Clock, ArrowRight } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { resolveConfigArticles } from '../../utils/homepageConfigHelper';
+import { buildArticlePath } from '../../utils/entityPaths';
+import { SmartLink } from '../Common/SmartLink';
 import { SectionEmptyState } from './HomeSectionCommon';
 
 const Section2Skeleton: React.FC = () => (
@@ -93,10 +95,11 @@ export const HomeCinemaGearBlock: React.FC = () => {
         <div className="space-y-4">
           {/* Featured Large Asymmetric Card */}
           {gearArticles[0] && (
-            <article
-              onClick={() => navigateTo('article-detail', { articleId: gearArticles[0].id })}
-              className="group relative rounded-3xl bg-[#171717] border border-white/[0.08] hover:border-white/20 p-5 sm:p-6 overflow-hidden cursor-pointer transition-all shadow-lg hover:shadow-2xl"
-            >
+            <article>
+              <SmartLink
+                to={buildArticlePath(gearArticles[0])}
+                className="group relative block rounded-3xl bg-[#171717] border border-white/[0.08] hover:border-white/20 p-5 sm:p-6 overflow-hidden cursor-pointer transition-all shadow-lg hover:shadow-2xl"
+              >
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center">
                 <div className="sm:col-span-5 aspect-[16/10] sm:aspect-[4/3] rounded-2xl overflow-hidden bg-slate-900 relative">
                   <img
@@ -140,6 +143,7 @@ export const HomeCinemaGearBlock: React.FC = () => {
                   </div>
                 </div>
               </div>
+              </SmartLink>
             </article>
           )}
 
@@ -150,11 +154,11 @@ export const HomeCinemaGearBlock: React.FC = () => {
               className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 pt-1 scrollbar-none"
             >
               {gearArticles.slice(1).map((article) => (
-                <div
-                  key={article.id}
-                  onClick={() => navigateTo('article-detail', { articleId: article.id })}
-                  className="snap-start min-w-[240px] sm:min-w-[270px] max-w-[270px] p-4 rounded-2xl bg-[#171717] border border-white/[0.08] hover:border-white/20 group cursor-pointer transition-all flex flex-col justify-between"
-                >
+                <article key={article.id} className="snap-start">
+                  <SmartLink
+                    to={buildArticlePath(article)}
+                    className="block min-w-[240px] sm:min-w-[270px] max-w-[270px] p-4 rounded-2xl bg-[#171717] border border-white/[0.08] hover:border-white/20 group cursor-pointer transition-all flex flex-col justify-between"
+                  >
                   <div>
                     <div className="aspect-[16/10] rounded-xl overflow-hidden bg-slate-900 mb-3 relative">
                       <img
@@ -181,7 +185,8 @@ export const HomeCinemaGearBlock: React.FC = () => {
                       <ArrowRight className="w-3 h-3" />
                     </span>
                   </div>
-                </div>
+                  </SmartLink>
+                </article>
               ))}
             </div>
           )}

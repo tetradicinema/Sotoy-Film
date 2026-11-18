@@ -5,6 +5,7 @@ import type { FilmItem } from '../../types';
 import { buildRelatedFilms, type RelatedFilmEntry } from '../../utils/relatedFilms';
 import { fetchTmdbCollection, type TmdbCollectionPart } from '../../utils/tmdbHelper';
 import { buildFranchisePath } from '../../utils/franchiseHelpers';
+import { buildFilmPath } from '../../utils/entityPaths';
 import { DEFAULT_POSTER } from '../../data/mockData';
 
 interface FilmRelatedSectionProps {
@@ -210,12 +211,11 @@ export const FilmRelatedSection: React.FC<FilmRelatedSectionProps> = ({
 
           // Case 2: In-Catalog Film (links via react-router Link with real anchor to /film/{slug})
           if (item.inCatalog && item.film) {
-            const filmSlug = item.film.slug || item.film.id;
             return (
               <Link
                 key={item.key}
                 id={`related-card-${item.key}`}
-                to={`/film/${filmSlug}`}
+                to={buildFilmPath(item.film)}
                 className="w-32 sm:w-36 shrink-0 flex flex-col group cursor-pointer focus:outline-none"
                 title={`Buka detail film ${item.title}`}
               >

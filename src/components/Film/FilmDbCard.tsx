@@ -4,12 +4,13 @@ import { FilmItem, HomepageSectionKey } from '../../types';
 import { getCardRating } from '../../utils/filmCardRating';
 import { getCardGenres } from '../../utils/filmGenres';
 import { tmdbPosterSized } from '../../utils/tmdbImage';
+import { buildFilmPath } from '../../utils/entityPaths';
+import { SmartLink } from '../Common/SmartLink';
 import { CollectionPickerPopover } from '../Common/CollectionPickerPopover';
 
 export interface FilmDbCardProps {
   film: FilmItem;
   sectionKey: HomepageSectionKey;
-  onOpen: (film: FilmItem) => void;
   /** Defer the poster download until it nears the viewport (below-the-fold rows). */
   lazyImage?: boolean;
   /** Optional TMDB rank shown as a corner badge (Trending section only). */
@@ -19,11 +20,14 @@ export interface FilmDbCardProps {
 /**
  * Shared poster card used by the Film Database sections and the homepage
  * film rows.
+ *
+ * The film title is a real SmartLink stretched over the whole card with an
+ * `after` pseudo-element, so the poster is clickable/crawlable while the
+ * watchlist popover stays a separate control above the overlay (z-10).
  */
 export const FilmDbCard: React.FC<FilmDbCardProps> = ({
   film,
   sectionKey,
-  onOpen,
   lazyImage = false,
   rank,
 }) => {
@@ -39,23 +43,10 @@ export const FilmDbCard: React.FC<FilmDbCardProps> = ({
           : ''
       : '';
 
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.target !== event.currentTarget) return;
-    if (event.key !== 'Enter') return;
-
-    event.preventDefault();
-    onOpen(film);
-  };
-
   return (
-    <div
+    <article
       id={`film-db-card-${sectionKey}-${film.id}`}
-      role="button"
-      tabIndex={0}
-      aria-label={`Buka detail film ${film.title}`}
-      onClick={() => onOpen(film)}
-      onKeyDown={handleKeyDown}
-      className="bg-[#171717] border border-slate-800 rounded-lg overflow-hidden hover:border-[#FF2E7E] hover:-translate-y-1 hover:shadow-lg hover:shadow-black/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF2E7E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#171717] transition-all duration-300 motion-reduce:transition-none motion-reduce:transform-none flex flex-col group cursor-pointer"
+      className="relative bg-[#171717] border border-slate-800 rounded-lg overflow-hidden hover:border-[#FF2E7E] hover:-translate-y-1 hover:shadow-lg hover:shadow-black/40 transition-all duration-300 motion-reduce:transition-none motion-reduce:transform-none flex flex-col group"
     >
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-900">
         <img
@@ -88,7 +79,10 @@ export const FilmDbCard: React.FC<FilmDbCardProps> = ({
         )}
 
         <div
-          onClick={e => e.stopPropagation()}
+          onClick={e => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
           className="absolute top-2 right-2 z-20"
         >
           <CollectionPickerPopover
@@ -125,11 +119,15 @@ export const FilmDbCard: React.FC<FilmDbCardProps> = ({
       </div>
 
       <div className="bg-black px-2.5 py-2">
-        <h3
-          className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors motion-reduce:transition-none truncate"
-          title={film.title}
-        >
-          {film.title}
+        <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-[#FF2E7E] transition-colors motion-reduce:transition-none truncate">
+          <SmartLink
+            to={buildFilmPath(film)}
+            aria-label={`Buka detail film ${film.title}`}
+            title={film.title}
+            className="after:absolute after:inset-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF2E7E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#171717]"
+          >
+            {film.title}
+          </SmartLink>
         </h3>
         {genres && (
           <p className="mt-0.5 text-[10px] text-slate-400 truncate" title={genres}>
@@ -137,6 +135,6 @@ export const FilmDbCard: React.FC<FilmDbCardProps> = ({
           </p>
         )}
       </div>
-    </div>
+    </article>
   );
 };

@@ -3,6 +3,8 @@ import { Shuffle } from 'lucide-react';
 import { DEFAULT_POSTER } from '../../data/mockData';
 import { FilmItem } from '../../types';
 import { getFilmGenreList } from '../../utils/filmGenres';
+import { buildFilmPath } from '../../utils/entityPaths';
+import { SmartLink } from '../Common/SmartLink';
 
 interface WatchNextFeaturedPickProps {
   film: FilmItem;
@@ -49,7 +51,7 @@ export const WatchNextFeaturedPick: React.FC<WatchNextFeaturedPickProps> = ({
     <section
       id="random-film-result"
       aria-live="polite"
-      className="rounded-lg border border-slate-800 bg-surface p-5 sm:p-6 md:p-8"
+      className="relative rounded-lg border border-slate-800 bg-surface p-5 sm:p-6 md:p-8"
     >
       <div className="grid grid-cols-[112px_minmax(0,1fr)] gap-4 sm:grid-cols-[160px_minmax(0,1fr)] sm:gap-6 md:gap-8">
         <img
@@ -66,7 +68,13 @@ export const WatchNextFeaturedPick: React.FC<WatchNextFeaturedPickProps> = ({
         <div className="min-w-0">
           <p className="text-sm font-medium text-accent">Tonight, watch this</p>
           <h2 className="mt-2 font-display text-2xl font-black leading-tight tracking-tight text-white sm:text-4xl">
-            {film.title || 'Untitled'}
+            <SmartLink
+              to={buildFilmPath(film)}
+              className="after:absolute after:inset-0 focus-visible:outline-none"
+              aria-label={`Lihat detail film ${film.title || 'Untitled'}`}
+            >
+              {film.title || 'Untitled'}
+            </SmartLink>
           </h2>
 
           {details.length > 0 && (
@@ -94,17 +102,25 @@ export const WatchNextFeaturedPick: React.FC<WatchNextFeaturedPickProps> = ({
             </p>
           )}
 
-          <div className="mt-6 flex flex-wrap items-center gap-3">
+          <div className="relative z-10 mt-6 flex flex-wrap items-center gap-3">
             <button
               type="button"
-              onClick={() => onView(film)}
+              onClick={e => {
+                e.preventDefault();
+                e.stopPropagation();
+                onView(film);
+              }}
               className="inline-flex min-h-11 items-center rounded-lg bg-accent px-5 text-sm font-semibold text-background transition-colors hover:bg-accent-hover motion-reduce:transition-none"
             >
               View film
             </button>
             <button
               type="button"
-              onClick={onAnother}
+              onClick={e => {
+                e.preventDefault();
+                e.stopPropagation();
+                onAnother();
+              }}
               className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-700 px-5 text-sm font-medium text-slate-200 transition-colors hover:border-slate-500 hover:text-slate-50 motion-reduce:transition-none"
             >
               <Shuffle className="h-4 w-4" aria-hidden="true" />

@@ -265,7 +265,6 @@ export const FilmRecommendationsPage: React.FC = () => {
                       key={film.id}
                       film={film}
                       sectionKey={FILTERED_RESULTS_SECTION_KEY}
-                      onOpen={openFilm}
                     />
                   ))}
                 </div>
@@ -300,7 +299,6 @@ export const FilmRecommendationsPage: React.FC = () => {
                         key={film.id}
                         film={film}
                         sectionKey={row.key}
-                        onOpen={openFilm}
                       />
                     ))}
                   </div>

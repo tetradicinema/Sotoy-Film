@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, ChevronRight, Clapperboard, Layers, Star } from 'lucide-react';
 import type { FilmItem } from '../../types';
-import { slugify } from '../../utils/slugify';
+import { buildFilmPath } from '../../utils/entityPaths';
 import { tmdbMediaType } from '../../utils/tmdbSync';
 import {
   pickLastSeason,
@@ -114,8 +114,7 @@ export const FilmLastSeasonCard: React.FC<{ film: FilmItem }> = ({ film }) => {
   if (status === 'error') return null;
   if (status === 'ready' && !season) return null;
 
-  const filmSlug = film.slug || slugify(film.title) || film.id;
-  const seasonsPath = `/film/${encodeURIComponent(filmSlug)}/seasons`;
+  const seasonsPath = `${buildFilmPath(film)}/seasons`;
   const seasonAggregate = season
     ? aggregates[seasonRatingKey(season.seasonNumber)]
     : undefined;

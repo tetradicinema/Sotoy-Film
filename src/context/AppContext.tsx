@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { slugify } from '../utils/slugify';
+import { buildArticlePath, buildFilmPath, buildCategoryPath } from '../utils/entityPaths';
 import { normalizeHandle, validateHandle } from '../utils/handleHelpers';
 import {
   User,
@@ -1025,8 +1026,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const location = useLocation();
 
   const [currentView, setCurrentView] = useState<AppView>('home');
-  const [viewHistory, setViewHistory] = useState<AppView[]>(['home']);
-  const [buzzFeedTab, setBuzzFeedTab] = useState<'for-you' | 'following' | 'saved' | 'liked' | 'trending'>('for-you');
+  const [viewHistory, setViewHistory] = useState<AppView[]>(['home']);  const [buzzFeedTab, setBuzzFeedTab] = useState<'for-you' | 'following' | 'saved' | 'liked' | 'trending'>('for-you');
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [selectedFilmId, setSelectedFilmId] = useState<string | null>(null);
   const [selectedBuzzId, setSelectedBuzzId] = useState<string | null>(null);
@@ -1171,6 +1171,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
   }, [location.pathname, films, articles, currentUser.id, currentUser.hasFinishedOnboarding]);
+
+  // Record the visited view for every currentView change, so goBack()/
+  // viewHistory stay accurate even when a navigation happens through a real
+  // <a> (SmartLink) or browser back/forward instead of navigateTo().
+  // navigateTo() already pushes the same view itself; the dedupe checks below
+  // (in navigateTo and here) prevent duplicate entries.
+  const viewHistoryRecordRef = useRef(currentView);
+  useEffect(() => {
+    if (viewHistoryRecordRef.current === currentView) return;
+    viewHistoryRecordRef.current = currentView;
+    setViewHistory(prev =>
+      prev[prev.length - 1] === currentView ? prev : [...prev, currentView]
+    );
+  }, [currentView]);
 
   // Sync basic preferences to local storage
   useEffect(() => {
@@ -4959,8 +4973,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       case 'film-detail': {
         const targetFilmId = options?.filmId || selectedFilmId;
         const targetFilm = films.find(f => f.id === targetFilmId);
-        const slug = targetFilm?.slug || (targetFilm?.title ? slugify(targetFilm.title) : targetFilmId);
-        targetPath = slug ? `/film/${encodeURIComponent(slug)}` : '/film-database';
+        // buildFilmPath encodes the slug segment exactly like the sitemap
+        // does; fall back to '/film-database' only when there is nothing to
+        // build a path from.
+        targetPath = targetFilmId
+          ? buildFilmPath(targetFilm || { id: targetFilmId })
+          : '/film-database';
         break;
       }
       case 'person-detail': {
@@ -4981,15 +4999,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       case 'article-detail': {
         const targetArticleId = options?.articleId || selectedArticleId;
         const targetArticle = resolvedArticles.find(a => a.id === targetArticleId);
-        const slug = targetArticle?.slug || targetArticleId;
-        targetPath = slug ? `/artikel/${encodeURIComponent(slug)}` : '/';
+        targetPath = targetArticleId
+          ? buildArticlePath(targetArticle || { id: targetArticleId })
+          : '/';
         break;
       }
       case 'category': {
         const rawCat = options?.category || activeCategory || 'movies';
         const cat = normalizeArticleCategory(rawCat) || rawCat;
         const sub = options?.subCategory !== undefined ? options.subCategory : activeSubCategory;
-        targetPath = sub ? `/kategori/${cat}/${sub}` : `/kategori/${cat}`;
+        targetPath = buildCategoryPath(cat, sub);
         break;
       }
       case 'film-database':

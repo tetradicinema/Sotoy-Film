@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { MainCategory, SubCategory } from '../../types';
+import { buildArticlePath, buildCategoryPath } from '../../utils/entityPaths';
+import { SmartLink } from '../Common/SmartLink';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { SEOHead } from '../SEO/SEOHead';
 import { generateBreadcrumbSchema } from '../../utils/schemaHelpers';
@@ -172,9 +174,9 @@ export const CategoryPage: React.FC = () => {
 
           {/* Subcategories Filter Pills */}
           <div className="flex items-center gap-2 flex-wrap relative z-10">
-            <button
+            <SmartLink
               id="cat-subcat-all"
-              onClick={() => navigateTo('category', { category: currentCategory, subCategory: null })}
+              to={buildCategoryPath(currentCategory)}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 !activeSubCategory
                   ? 'bg-white text-slate-950 shadow-md font-black'
@@ -182,7 +184,7 @@ export const CategoryPage: React.FC = () => {
               }`}
             >
               Semua ({publishedArticles.filter(a => normalizeArticleCategory(a.category) === currentCategory).length})
-            </button>
+            </SmartLink>
 
             {meta.allSubCategories.map(sub => {
               const isCurrent = activeSubCategory === sub.id;
@@ -191,10 +193,10 @@ export const CategoryPage: React.FC = () => {
               ).length;
 
               return (
-                <button
+                <SmartLink
                   key={sub.id}
                   id={`cat-subcat-${sub.id}`}
-                  onClick={() => navigateTo('category', { category: currentCategory, subCategory: sub.id })}
+                  to={buildCategoryPath(currentCategory, sub.id)}
                   className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                     isCurrent
                       ? 'text-white shadow-md'
@@ -207,7 +209,7 @@ export const CategoryPage: React.FC = () => {
                 >
                   <span>{sub.label}</span>
                   <span className="opacity-70 text-[10px]">({count})</span>
-                </button>
+                </SmartLink>
               );
             })}
           </div>
@@ -229,9 +231,12 @@ export const CategoryPage: React.FC = () => {
               <article
                 key={article.id}
                 id={`category-article-${article.id}`}
-                onClick={() => navigateTo('article-detail', { articleId: article.id })}
-                className="bg-[#171717] border border-slate-800 rounded-3xl overflow-hidden hover:border-[#FF2E7E]/60 transition-all duration-300 flex flex-col cursor-pointer group shadow-lg"
+                className="group"
               >
+                <SmartLink
+                  to={buildArticlePath(article)}
+                  className="bg-[#171717] border border-slate-800 rounded-3xl overflow-hidden hover:border-[#FF2E7E]/60 transition-all duration-300 flex flex-col cursor-pointer shadow-lg"
+                >
                 <div className="relative h-48 w-full overflow-hidden">
                   <img
                     src={article.coverImage || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80'}
@@ -273,6 +278,7 @@ export const CategoryPage: React.FC = () => {
                     </span>
                   </div>
                 </div>
+                </SmartLink>
               </article>
             ))}
           </div>

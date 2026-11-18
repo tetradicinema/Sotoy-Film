@@ -13,6 +13,8 @@ import { useApp } from '../../context/AppContext';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
 import { DEFAULT_POSTER } from '../../data/mockData';
 import { tmdbPosterSized } from '../../utils/tmdbImage';
+import { buildArticlePath, buildCategoryPath, buildFilmPath } from '../../utils/entityPaths';
+import { SmartLink } from '../Common/SmartLink';
 import { resolveConfigArticles } from '../../utils/homepageConfigHelper';
 import { getHeroToWatch } from '../../utils/filmSections';
 import { markHeroImageSettled } from '../../utils/heroImageSignal';
@@ -45,10 +47,11 @@ const HeroActiveAuthorBadge: React.FC<{ authorId?: string; defaultAuthor?: any }
   return (
     <div
       onClick={(e) => {
+        e.preventDefault();
         e.stopPropagation();
         navigateTo('user-profile', { userId: author.id });
       }}
-      className="flex items-center gap-2.5 group/author cursor-pointer"
+      className="relative z-10 flex items-center gap-2.5 group/author cursor-pointer"
       title={`Kunjungi profil ${author.displayName || author.name}`}
     >
       <img
@@ -627,7 +630,7 @@ export const HeroSection: React.FC = () => {
                 {/* Bottom Editorial Presentation (Compact & clean layout) */}
                 <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 lg:p-7 z-10 flex flex-col justify-end">
                   {/* Author attribution & Read time */}
-                  <div className="flex items-center flex-wrap gap-2 mb-2 text-xs text-slate-300">
+                  <div className="relative z-10 flex items-center flex-wrap gap-2 mb-2 text-xs text-slate-300">
                     <HeroActiveAuthorBadge authorId={activeArticle.authorId} defaultAuthor={activeArticle.author} />
                     <span className="text-slate-500" aria-hidden="true">·</span>
                     <span className="flex items-center gap-1 text-slate-300 text-[11px]">
@@ -639,11 +642,14 @@ export const HeroSection: React.FC = () => {
                   </div>
 
                   {/* Primary Headline */}
-                  <h1
-                    onClick={() => activeArticle.id && navigateTo('article-detail', { articleId: activeArticle.id })}
-                    className="font-display font-black text-xl sm:text-2xl lg:text-3xl text-white leading-snug mb-2 cursor-pointer hover:text-[#FF2E7E] transition-colors line-clamp-2 text-balance drop-shadow-md"
-                  >
-                    {activeArticle.title}
+                  <h1 className="font-display font-black text-xl sm:text-2xl lg:text-3xl text-white leading-snug mb-2 hover:text-[#FF2E7E] transition-colors line-clamp-2 text-balance drop-shadow-md">
+                    <SmartLink
+                      to={buildArticlePath(activeArticle)}
+                      title={activeArticle.title}
+                      className="after:absolute after:inset-0 focus-visible:outline-none"
+                    >
+                      {activeArticle.title}
+                    </SmartLink>
                   </h1>
 
                   {/* Excerpt */}
@@ -652,15 +658,15 @@ export const HeroSection: React.FC = () => {
                   </p>
 
                   {/* Footer Controls & Slider Navigation */}
-                  <div className="flex items-center justify-between gap-4 pt-3 border-t border-white/10">
-                    <button
+                  <div className="relative z-10 flex items-center justify-between gap-4 pt-3 border-t border-white/10">
+                    <SmartLink
                       id="hero-read-article-btn"
-                      onClick={() => activeArticle.id && navigateTo('article-detail', { articleId: activeArticle.id })}
+                      to={buildArticlePath(activeArticle)}
                       className="bg-[#D81B60] hover:bg-[#B5174F] text-white font-semibold text-xs sm:text-sm px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-[#FF2E7E]/25 cursor-pointer"
                     >
                       <span>Baca Ulasan Lengkap</span>
                       <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    </button>
+                    </SmartLink>
 
                     {/* Minimalist Slide Progress & Controls */}
                     <div className="flex items-center gap-2.5 sm:gap-3">
@@ -751,12 +757,14 @@ export const HeroSection: React.FC = () => {
                       </div>
                     ) : (
                       heroToWatchFilms.map((film, index) => (
-                        <div
+                        <article
                           key={film.id}
                           id={`towatch-film-item-${film.id}`}
-                          onClick={() => navigateTo('film-detail', { filmId: film.id })}
-                          className="group flex items-center gap-3 py-2 px-1.5 rounded-xl hover:bg-white/[0.04] transition-colors cursor-pointer"
                         >
+                          <SmartLink
+                            to={buildFilmPath(film)}
+                            className="flex items-center gap-3 py-2 px-1.5 rounded-xl hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                          >
                           {/* Tabular Index Number */}
                           <span className={`w-4 font-mono tabular-nums text-xs font-bold text-center shrink-0 ${
                             index === 0 ? 'text-[#FF2E7E]' : 'text-slate-400'
@@ -798,19 +806,20 @@ export const HeroSection: React.FC = () => {
                           </div>
 
                           <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-white transition-transform group-hover:translate-x-0.5 shrink-0" />
-                        </div>
+                          </SmartLink>
+                        </article>
                       ))
                     )}
                   </div>
 
-                  <button
+                  <SmartLink
                     id="see-all-towatch-btn"
-                    onClick={() => navigateTo('film-database')}
+                    to="/film-database"
                     className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 hover:bg-white/[0.04] text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer mt-3 shrink-0"
                   >
                     <span>Jelajahi Film Database</span>
                     <ArrowRight className="w-3.5 h-3.5 text-[#FF2E7E]" />
-                  </button>
+                  </SmartLink>
                 </div>
               )}
 
@@ -824,12 +833,14 @@ export const HeroSection: React.FC = () => {
                       </div>
                     ) : (
                       recentArticles.map((art, index) => (
-                        <div
+                        <article
                           key={art.id}
                           id={`recent-article-item-${art.id}`}
-                          onClick={() => navigateTo('article-detail', { articleId: art.id })}
-                          className="group flex items-center gap-3 py-2 px-1.5 rounded-xl hover:bg-white/[0.04] transition-colors cursor-pointer"
                         >
+                          <SmartLink
+                            to={buildArticlePath(art)}
+                            className="flex items-center gap-3 py-2 px-1.5 rounded-xl hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                          >
                           {/* Tabular Index Number */}
                           <span className={`w-4 font-mono tabular-nums text-xs font-bold text-center shrink-0 ${
                             index === 0 ? 'text-[#FF2E7E]' : 'text-slate-400'
@@ -863,19 +874,20 @@ export const HeroSection: React.FC = () => {
                           </div>
 
                           <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-white transition-transform group-hover:translate-x-0.5 shrink-0" />
-                        </div>
+                          </SmartLink>
+                        </article>
                       ))
                     )}
                   </div>
 
-                  <button
+                  <SmartLink
                     id="see-all-trending-btn"
-                    onClick={() => navigateTo('category', { category: 'movies' })}
+                    to={buildCategoryPath('movies')}
                     className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 hover:bg-white/[0.04] text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer mt-3 shrink-0"
                   >
                     <span>Jelajahi Semua Artikel Terbaru</span>
                     <ArrowRight className="w-3.5 h-3.5 text-[#FF2E7E]" />
-                  </button>
+                  </SmartLink>
                 </div>
               )}
 
@@ -889,12 +901,14 @@ export const HeroSection: React.FC = () => {
                       </div>
                     ) : (
                       filmStudiesArticles.map((art, index) => (
-                        <div
+                        <article
                           key={art.id}
                           id={`filmstudies-article-item-${art.id}`}
-                          onClick={() => navigateTo('article-detail', { articleId: art.id })}
-                          className="group flex items-center gap-3 py-2 px-1.5 rounded-xl hover:bg-white/[0.04] transition-colors cursor-pointer"
                         >
+                          <SmartLink
+                            to={buildArticlePath(art)}
+                            className="flex items-center gap-3 py-2 px-1.5 rounded-xl hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                          >
                           {/* Tabular Index Number */}
                           <span className={`w-4 font-mono tabular-nums text-xs font-bold text-center shrink-0 ${
                             index === 0 ? 'text-[#FF2E7E]' : 'text-slate-400'
@@ -928,19 +942,20 @@ export const HeroSection: React.FC = () => {
                           </div>
 
                           <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-white transition-transform group-hover:translate-x-0.5 shrink-0" />
-                        </div>
+                          </SmartLink>
+                        </article>
                       ))
                     )}
                   </div>
 
-                  <button
+                  <SmartLink
                     id="see-all-filmstudies-btn"
-                    onClick={() => navigateTo('category', { category: 'film-studies' })}
+                    to={buildCategoryPath('film-studies')}
                     className="w-full py-2.5 rounded-xl border border-white/[0.08] hover:border-white/20 hover:bg-white/[0.04] text-slate-300 hover:text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer mt-3 shrink-0"
                   >
                     <span>Jelajahi Film Studies</span>
                     <ArrowRight className="w-3.5 h-3.5 text-[#FF2E7E]" />
-                  </button>
+                  </SmartLink>
                 </div>
               )}
             </div>

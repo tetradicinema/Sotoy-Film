@@ -6,6 +6,7 @@ import { SEOHead } from '../SEO/SEOHead';
 import { FilmDetailSkeleton } from '../Skeletons';
 import type { FilmItem } from '../../types';
 import { slugify } from '../../utils/slugify';
+import { buildFilmPath } from '../../utils/entityPaths';
 import { tmdbMediaType } from '../../utils/tmdbSync';
 import type { TmdbSeasonsData } from '../../utils/tmdbSeasonsTrim';
 import {
@@ -99,10 +100,7 @@ export const useResolvedFilm = (
   return { film, isResolving };
 };
 
-export const filmPathFor = (film: FilmItem): string => {
-  const filmSlug = film.slug || slugify(film.title) || film.id;
-  return `/film/${encodeURIComponent(filmSlug)}`;
-};
+export const filmPathFor = (film: FilmItem): string => buildFilmPath(film);
 
 export const seasonLabel = (seasonNumber: number): string =>
   seasonNumber === 0 ? 'Specials' : `Season ${seasonNumber}`;

@@ -20,6 +20,8 @@ import { getRoleBadgeStyle } from '../../utils/roleStyles';
 import { RoleBadge } from './RoleBadge';
 import { AdBannerSlot } from './AdBannerSlot';
 import { QuickReactionBar } from './QuickReactionBar';
+import { buildArticlePath } from '../../utils/entityPaths';
+import { SmartLink } from './SmartLink';
 import { formatRelativeTime, formatFullDateTime } from '../../utils/formatRelativeTime';
 import { getCombinedLeaderboard, LeaderboardPeriod } from '../../utils/leaderboard';
 import { DEFAULT_AVATAR, DEFAULT_COVER } from '../../data/mockData';
@@ -481,10 +483,9 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
 
             <div className="space-y-3">
               {recommendedArticles.map((rec, i) => (
-                <div
+                <article
                   key={rec.id}
-                  onClick={() => navigateTo('article-detail', { articleId: rec.id })}
-                  className="flex items-center gap-3 p-2 rounded-2xl hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                  className="relative flex items-center gap-3 p-2 rounded-2xl hover:bg-white/[0.04] transition-colors cursor-pointer group"
                 >
                   <span className="font-mono tabular-nums font-bold text-xs text-slate-400 group-hover:text-slate-300 transition-colors w-5 text-center">
                     {String(i + 1).padStart(2, '0')}
@@ -498,7 +499,12 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                   />
                   <div className="flex-1 min-w-0">
                     <h3 className="text-xs font-semibold text-white group-hover:text-slate-200 transition-colors line-clamp-2 leading-snug">
-                      {rec.title}
+                      <SmartLink
+                        to={buildArticlePath(rec)}
+                        className="after:absolute after:inset-0 focus-visible:outline-none"
+                      >
+                        {rec.title}
+                      </SmartLink>
                     </h3>
                     <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
                       <span className="text-[#FF2E7E] font-medium">{rec.category}</span>
@@ -508,6 +514,7 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                   <button
                     id={`sidebar-share-rec-btn-${rec.id}`}
                     onClick={(e) => {
+                      e.preventDefault();
                       e.stopPropagation();
                       openShareModal({
                         title: rec.title,
@@ -523,12 +530,12 @@ export const EditorialSidebar: React.FC<EditorialSidebarProps> = ({ currentArtic
                         meta: `${rec.category.toUpperCase()} • ${rec.author.name} (${rec.readTime})`,
                       });
                     }}
-                    className="p-1.5 rounded-lg hover:bg-white/10 text-slate-500 hover:text-white transition-colors shrink-0"
+                    className="relative z-10 p-1.5 rounded-lg hover:bg-white/10 text-slate-500 hover:text-white transition-colors shrink-0"
                     title="Bagikan Artikel"
                   >
                     <Share2 className="w-3.5 h-3.5" />
                   </button>
-                </div>
+                </article>
               ))}
             </div>
           </div>

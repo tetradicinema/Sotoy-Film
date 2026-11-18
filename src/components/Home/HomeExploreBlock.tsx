@@ -3,6 +3,8 @@ import { Clock, Share2, ArrowRight, ChevronRight, ChevronDown } from 'lucide-rea
 import { useApp } from '../../context/AppContext';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
 import { MainCategory, Article } from '../../types';
+import { buildArticlePath, buildCategoryPath } from '../../utils/entityPaths';
+import { SmartLink } from '../Common/SmartLink';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import {
   ContentCategoryMobileMenu,
@@ -21,8 +23,7 @@ const HomeCategoryArticleItem: React.FC<HomeCategoryArticleItemProps> = ({ artic
   return (
     <article
       id={`cat-article-item-${article.id}`}
-      onClick={() => navigateTo('article-detail', { articleId: article.id })}
-      className="bg-[#171717] border border-white/[0.08] hover:border-white/20 rounded-3xl p-5 flex flex-col sm:flex-row gap-5 group cursor-pointer transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-black/50"
+      className="relative bg-[#171717] border border-white/[0.08] hover:border-white/20 rounded-3xl p-5 flex flex-col sm:flex-row gap-5 group cursor-pointer transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-black/50"
     >
       {/* Article Thumbnail */}
       <div className="sm:w-56 h-44 sm:h-auto rounded-2xl overflow-hidden shrink-0 relative bg-slate-900">
@@ -53,7 +54,12 @@ const HomeCategoryArticleItem: React.FC<HomeCategoryArticleItemProps> = ({ artic
           </div>
 
           <h3 className="font-display font-bold text-base sm:text-lg text-white group-hover:text-white transition-colors leading-snug mb-2">
-            {article.title}
+            <SmartLink
+              to={buildArticlePath(article)}
+              className="after:absolute after:inset-0 focus-visible:outline-none"
+            >
+              {article.title}
+            </SmartLink>
           </h3>
 
           <p className="text-slate-400 text-xs sm:text-[13px] line-clamp-2 leading-relaxed">
@@ -61,7 +67,7 @@ const HomeCategoryArticleItem: React.FC<HomeCategoryArticleItemProps> = ({ artic
           </p>
         </div>
 
-        <div className="flex items-center justify-between pt-4 mt-4 border-t border-white/[0.08] text-xs text-slate-400">
+        <div className="relative z-10 flex items-center justify-between pt-4 mt-4 border-t border-white/[0.08] text-xs text-slate-400">
           {author.loading ? (
             <div className="flex items-center gap-2 animate-pulse">
               <div className="w-6 h-6 rounded-full bg-slate-800" />
@@ -70,6 +76,7 @@ const HomeCategoryArticleItem: React.FC<HomeCategoryArticleItemProps> = ({ artic
           ) : (
             <div
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 navigateTo('user-profile', { userId: author.id });
               }}
@@ -91,6 +98,7 @@ const HomeCategoryArticleItem: React.FC<HomeCategoryArticleItemProps> = ({ artic
             <button
               id={`share-article-btn-${article.id}`}
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 openShareModal({
                   title: article.title,
@@ -176,13 +184,13 @@ export const HomeExploreBlock: React.FC = () => {
           </div>
 
           {selectedCategoryTab !== 'all' && (
-            <button
-              onClick={() => navigateTo('category', { category: selectedCategoryTab })}
+            <SmartLink
+              to={buildCategoryPath(selectedCategoryTab)}
               className="text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
             >
               <span>Arsip Lengkap {selectedCategoryTab}</span>
               <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+            </SmartLink>
           )}
         </div>
 

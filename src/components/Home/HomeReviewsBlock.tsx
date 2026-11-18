@@ -2,6 +2,8 @@ import React, { useMemo } from 'react';
 import { Film, Tv, ArrowRight } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { resolveConfigArticles } from '../../utils/homepageConfigHelper';
+import { buildArticlePath } from '../../utils/entityPaths';
+import { SmartLink } from '../Common/SmartLink';
 import { SectionEmptyState } from './HomeSectionCommon';
 
 const Section3Skeleton: React.FC = () => (
@@ -99,11 +101,11 @@ export const HomeReviewsBlock: React.FC = () => {
           ) : (
             <div className="space-y-3">
               {movieReviews.map((article) => (
-                <article
-                  key={article.id}
-                  onClick={() => navigateTo('article-detail', { articleId: article.id })}
-                  className="p-3.5 sm:p-4 rounded-2xl bg-[#171717] hover:bg-white/[0.04] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer group flex flex-col sm:flex-row gap-3.5"
-                >
+                <article key={article.id}>
+                  <SmartLink
+                    to={buildArticlePath(article)}
+                    className="p-3.5 sm:p-4 rounded-2xl bg-[#171717] hover:bg-white/[0.04] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer group flex flex-col sm:flex-row gap-3.5"
+                  >
                   {/* Article Thumbnail */}
                   <div className="w-full sm:w-24 sm:h-24 aspect-[16/10] sm:aspect-square rounded-xl overflow-hidden shrink-0 bg-slate-900 border border-white/[0.08]">
                     <img
@@ -139,6 +141,7 @@ export const HomeReviewsBlock: React.FC = () => {
                       </span>
                     </div>
                   </div>
+                  </SmartLink>
                 </article>
               ))}
             </div>
@@ -162,11 +165,11 @@ export const HomeReviewsBlock: React.FC = () => {
           ) : (
             <div className="space-y-3">
               {seriesReviews.map((article) => (
-                <article
-                  key={article.id}
-                  onClick={() => navigateTo('article-detail', { articleId: article.id })}
-                  className="p-3.5 sm:p-4 rounded-2xl bg-[#171717] hover:bg-white/[0.04] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer group flex flex-col sm:flex-row gap-3.5"
-                >
+                <article key={article.id}>
+                  <SmartLink
+                    to={buildArticlePath(article)}
+                    className="p-3.5 sm:p-4 rounded-2xl bg-[#171717] hover:bg-white/[0.04] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer group flex flex-col sm:flex-row gap-3.5"
+                  >
                   {/* Article Thumbnail */}
                   <div className="w-full sm:w-24 sm:h-24 aspect-[16/10] sm:aspect-square rounded-xl overflow-hidden shrink-0 bg-slate-900 border border-white/[0.08]">
                     <img
@@ -202,6 +205,7 @@ export const HomeReviewsBlock: React.FC = () => {
                       </span>
                     </div>
                   </div>
+                  </SmartLink>
                 </article>
               ))}
             </div>

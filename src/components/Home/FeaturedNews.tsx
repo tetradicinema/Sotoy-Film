@@ -3,6 +3,8 @@ import { Clock, ArrowUpRight, Eye } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { ArticleCardSkeleton } from '../Skeletons';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
+import { buildArticlePath, buildCategoryPath } from '../../utils/entityPaths';
+import { SmartLink } from '../Common/SmartLink';
 import { Article } from '../../types';
 
 interface FeaturedNewsCardProps {
@@ -32,8 +34,7 @@ const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo
   return (
     <article
       id={`featured-news-card-${article.id}`}
-      onClick={() => navigateTo('article-detail', { articleId: article.id })}
-      className="bg-[#171717] border border-white/[0.08] hover:border-white/20 rounded-2xl overflow-hidden group transition-all duration-300 flex flex-col cursor-pointer shadow-md hover:shadow-xl hover:shadow-black/50"
+      className="relative bg-[#171717] border border-white/[0.08] hover:border-white/20 rounded-2xl overflow-hidden group transition-all duration-300 flex flex-col cursor-pointer shadow-md hover:shadow-xl hover:shadow-black/50"
     >
       {/* Editorial Card Cover Image */}
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-900">
@@ -61,9 +62,14 @@ const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo
             </span>
           </div>
 
-          {/* Card Title */}
+          {/* Card Title (real link stretched over the card) */}
           <h3 className="font-display font-bold text-xs sm:text-sm text-white group-hover:text-white transition-colors line-clamp-2 leading-snug mb-1.5">
-            {article.title}
+            <SmartLink
+              to={buildArticlePath(article)}
+              className="after:absolute after:inset-0 focus-visible:outline-none"
+            >
+              {article.title}
+            </SmartLink>
           </h3>
 
           {/* Excerpt */}
@@ -73,7 +79,7 @@ const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo
         </div>
 
         {/* Card Footer */}
-        <div className="pt-2.5 border-t border-white/[0.06] flex items-center justify-between text-[11px] text-slate-400">
+        <div className="relative z-10 pt-2.5 border-t border-white/[0.06] flex items-center justify-between text-[11px] text-slate-400">
           {author.loading ? (
             <div className="flex items-center gap-1.5 animate-pulse">
               <div className="w-5 h-5 rounded-full bg-slate-800" />
@@ -82,6 +88,7 @@ const FeaturedNewsCard: React.FC<FeaturedNewsCardProps> = ({ article, navigateTo
           ) : (
             <div
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 navigateTo('user-profile', { userId: author.id });
               }}
@@ -146,14 +153,14 @@ export const FeaturedNews: React.FC = () => {
             </p>
           </div>
 
-          <button
+          <SmartLink
             id="see-all-news-btn"
-            onClick={() => navigateTo('category', { category: 'movies', subCategory: 'news' })}
+            to={buildCategoryPath('movies', 'news')}
             className="self-start sm:self-auto text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1 transition-colors"
           >
             <span>Semua Berita</span>
             <ArrowUpRight className="w-3.5 h-3.5 text-[#FF2E7E]" />
-          </button>
+          </SmartLink>
         </div>
 
         {/* 5-Column Grid for Compact Featured Stories */}
