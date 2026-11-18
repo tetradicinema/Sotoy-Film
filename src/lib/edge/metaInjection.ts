@@ -4,6 +4,16 @@
  * Lightweight, pure string operations (zero DOM parser dependencies).
  */
 
+import { TWITTER_CREATOR } from '../../utils/seoMetadata.js';
+
+/**
+ * Attribute React Helmet uses to recognise the tags it owns. Marking the
+ * server-injected tags with it lets Helmet replace them during hydration
+ * instead of leaving a second, conflicting copy in the document head.
+ */
+export const HELMET_OWNED_ATTRIBUTE = 'data-rh';
+const HELMET_OWNED = ` ${HELMET_OWNED_ATTRIBUTE}="true"`;
+
 export interface MetaTagsPayload {
   title: string;
   description: string;
@@ -32,6 +42,12 @@ export interface MetaTagsPayload {
   robots?: string;
   // Schema.org JSON-LD
   schemaJson?: Record<string, any> | Record<string, any>[] | string;
+  /**
+   * Keep the JSON-LD block out of Helmet's ownership so it survives
+   * hydration. Used by routes whose client renderer does not emit an
+   * equivalent schema (e.g. film season subpages).
+   */
+  preserveSchemaOnHydration?: boolean;
 }
 
 /**
@@ -58,7 +74,7 @@ export function injectMetaTags(html: string, meta: MetaTagsPayload): string {
   const safeImageAlt = escapeHtml(meta.imageAlt || meta.title);
   const safeLocale = escapeHtml(meta.locale || 'id_ID');
   const safeCard = escapeHtml(meta.twitterCard || 'summary_large_image');
-  const safeSite = escapeHtml(meta.twitterSite || '@sotoyfilm');
+  const safeSite = escapeHtml(meta.twitterSite || TWITTER_CREATOR);
   const safeCreator = escapeHtml(meta.twitterCreator || safeSite);
 
   // Replace <title>
@@ -72,42 +88,51 @@ export function injectMetaTags(html: string, meta: MetaTagsPayload): string {
   // Remove existing static tags that we will replace
   modified = modified.replace(/<meta\s+name=["']description["'][^>]*>/gi, '');
   modified = modified.replace(/<meta\s+name=["']keywords["'][^>]*>/gi, '');
+  modified = modified.replace(/<meta\s+name=["']robots["'][^>]*>/gi, '');
   modified = modified.replace(/<meta\s+property=["']og:[^"']*["'][^>]*>/gi, '');
   modified = modified.replace(/<meta\s+property=["']video:[^"']*["'][^>]*>/gi, '');
   modified = modified.replace(/<meta\s+property=["']article:[^"']*["'][^>]*>/gi, '');
   modified = modified.replace(/<meta\s+name=["']twitter:[^"']*["'][^>]*>/gi, '');
   modified = modified.replace(/<link\s+rel=["']canonical["'][^>]*>/gi, '');
+  // JSON-LD only: never touch unrelated script tags.
+  modified = modified.replace(
+    /<script\b[^>]*\btype\s*=\s*["']?application\/ld\+json["']?[^>]*>[\s\S]*?<\/script>/gi,
+    ''
+  );
 
   let dynamicExtraTags = '';
 
   // Keywords
   if (meta.keywords) {
     const kwStr = Array.isArray(meta.keywords) ? meta.keywords.join(', ') : meta.keywords;
-    dynamicExtraTags += `\n    <meta name="keywords" content="${escapeHtml(kwStr)}" />`;
+    dynamicExtraTags += `\n    <meta name="keywords" content="${escapeHtml(kwStr)}"${HELMET_OWNED} />`;
   }
 
   // Search engine directives
   if (meta.robots) {
+    // Deliberately not Helmet-owned: on routes whose client SEOHead emits no
+    // robots tag (film season subpages) Helmet would otherwise delete the
+    // bot noindex during hydration.
     dynamicExtraTags += `\n    <meta name="robots" content="${escapeHtml(meta.robots)}" />`;
   }
 
   // Article Specific Tags
   if (meta.type === 'article') {
     if (meta.publishedTime) {
-      dynamicExtraTags += `\n    <meta property="article:published_time" content="${escapeHtml(meta.publishedTime)}" />`;
+      dynamicExtraTags += `\n    <meta property="article:published_time" content="${escapeHtml(meta.publishedTime)}"${HELMET_OWNED} />`;
     }
     if (meta.modifiedTime) {
-      dynamicExtraTags += `\n    <meta property="article:modified_time" content="${escapeHtml(meta.modifiedTime)}" />`;
+      dynamicExtraTags += `\n    <meta property="article:modified_time" content="${escapeHtml(meta.modifiedTime)}"${HELMET_OWNED} />`;
     }
     if (meta.authorName) {
-      dynamicExtraTags += `\n    <meta property="article:author" content="${escapeHtml(meta.authorName)}" />`;
+      dynamicExtraTags += `\n    <meta property="article:author" content="${escapeHtml(meta.authorName)}"${HELMET_OWNED} />`;
     }
     if (meta.section) {
-      dynamicExtraTags += `\n    <meta property="article:section" content="${escapeHtml(meta.section)}" />`;
+      dynamicExtraTags += `\n    <meta property="article:section" content="${escapeHtml(meta.section)}"${HELMET_OWNED} />`;
     }
     if (meta.tags && Array.isArray(meta.tags)) {
       meta.tags.forEach(tag => {
-        dynamicExtraTags += `\n    <meta property="article:tag" content="${escapeHtml(tag)}" />`;
+        dynamicExtraTags += `\n    <meta property="article:tag" content="${escapeHtml(tag)}"${HELMET_OWNED} />`;
       });
     }
   }
@@ -115,22 +140,22 @@ export function injectMetaTags(html: string, meta: MetaTagsPayload): string {
   // Video / Movie Specific Tags
   if (meta.type === 'video.movie') {
     if (meta.videoDirector) {
-      dynamicExtraTags += `\n    <meta property="video:director" content="${escapeHtml(meta.videoDirector)}" />`;
+      dynamicExtraTags += `\n    <meta property="video:director" content="${escapeHtml(meta.videoDirector)}"${HELMET_OWNED} />`;
     }
     if (meta.videoReleaseDate) {
-      dynamicExtraTags += `\n    <meta property="video:release_date" content="${escapeHtml(meta.videoReleaseDate)}" />`;
+      dynamicExtraTags += `\n    <meta property="video:release_date" content="${escapeHtml(meta.videoReleaseDate)}"${HELMET_OWNED} />`;
     }
     if (meta.videoDuration) {
-      dynamicExtraTags += `\n    <meta property="video:duration" content="${escapeHtml(String(meta.videoDuration))}" />`;
+      dynamicExtraTags += `\n    <meta property="video:duration" content="${escapeHtml(String(meta.videoDuration))}"${HELMET_OWNED} />`;
     }
     if (meta.videoTags && Array.isArray(meta.videoTags)) {
       meta.videoTags.forEach(tag => {
-        dynamicExtraTags += `\n    <meta property="video:tag" content="${escapeHtml(tag)}" />`;
+        dynamicExtraTags += `\n    <meta property="video:tag" content="${escapeHtml(tag)}"${HELMET_OWNED} />`;
       });
     }
     if (meta.videoActors && Array.isArray(meta.videoActors)) {
       meta.videoActors.slice(0, 5).forEach(actor => {
-        dynamicExtraTags += `\n    <meta property="video:actor" content="${escapeHtml(actor)}" />`;
+        dynamicExtraTags += `\n    <meta property="video:actor" content="${escapeHtml(actor)}"${HELMET_OWNED} />`;
       });
     }
   }
@@ -147,29 +172,30 @@ export function injectMetaTags(html: string, meta: MetaTagsPayload): string {
       .replace(/</g, '\\u003c')
       .replace(/\u2028/g, '\\u2028')
       .replace(/\u2029/g, '\\u2029');
-    dynamicExtraTags += `\n    <script type="application/ld+json">${safeJson}</script>`;
+    const schemaOwnership = meta.preserveSchemaOnHydration ? '' : HELMET_OWNED;
+    dynamicExtraTags += `\n    <script type="application/ld+json"${schemaOwnership}>${safeJson}</script>`;
   }
 
   const tags = `
-    <meta name="description" content="${safeDesc}" />
-    <link rel="canonical" href="${safeUrl}" />
-    <meta property="og:type" content="${meta.type}" />
-    <meta property="og:title" content="${safeTitle}" />
-    <meta property="og:description" content="${safeDesc}" />
-    <meta property="og:image" content="${safeImage}" />
-    <meta property="og:image:secure_url" content="${safeImage}" />
-    <meta property="og:image:alt" content="${safeImageAlt}" />
-    <meta property="og:locale" content="${safeLocale}" />
-    <meta property="og:url" content="${safeUrl}" />
-    <meta property="og:site_name" content="Sotoy Film" />
-    <meta name="twitter:card" content="${safeCard}" />
-    <meta name="twitter:site" content="${safeSite}" />
-    <meta name="twitter:creator" content="${safeCreator}" />
-    <meta name="twitter:title" content="${safeTitle}" />
-    <meta name="twitter:description" content="${safeDesc}" />
-    <meta name="twitter:image" content="${safeImage}" />
-    <meta name="twitter:image:alt" content="${safeImageAlt}" />
-    <meta name="twitter:url" content="${safeUrl}" />${dynamicExtraTags}
+    <meta name="description" content="${safeDesc}"${HELMET_OWNED} />
+    <link rel="canonical" href="${safeUrl}"${HELMET_OWNED} />
+    <meta property="og:type" content="${meta.type}"${HELMET_OWNED} />
+    <meta property="og:title" content="${safeTitle}"${HELMET_OWNED} />
+    <meta property="og:description" content="${safeDesc}"${HELMET_OWNED} />
+    <meta property="og:image" content="${safeImage}"${HELMET_OWNED} />
+    <meta property="og:image:secure_url" content="${safeImage}"${HELMET_OWNED} />
+    <meta property="og:image:alt" content="${safeImageAlt}"${HELMET_OWNED} />
+    <meta property="og:locale" content="${safeLocale}"${HELMET_OWNED} />
+    <meta property="og:url" content="${safeUrl}"${HELMET_OWNED} />
+    <meta property="og:site_name" content="Sotoy Film"${HELMET_OWNED} />
+    <meta name="twitter:card" content="${safeCard}"${HELMET_OWNED} />
+    <meta name="twitter:site" content="${safeSite}"${HELMET_OWNED} />
+    <meta name="twitter:creator" content="${safeCreator}"${HELMET_OWNED} />
+    <meta name="twitter:title" content="${safeTitle}"${HELMET_OWNED} />
+    <meta name="twitter:description" content="${safeDesc}"${HELMET_OWNED} />
+    <meta name="twitter:image" content="${safeImage}"${HELMET_OWNED} />
+    <meta name="twitter:image:alt" content="${safeImageAlt}"${HELMET_OWNED} />
+    <meta name="twitter:url" content="${safeUrl}"${HELMET_OWNED} />${dynamicExtraTags}
   `;
 
   return modified.replace('</head>', `${tags}\n  </head>`);

@@ -686,7 +686,10 @@ export default async function middleware(request: Request): Promise<Response> {
         title = `${data.title || 'Film'} – Season ${filmSubpath.season} – Daftar Episode & Rating`;
       }
     } else {
-      title = `${data.seoTitle || data.title || 'Artikel'} — Sotoy Film`;
+      const articleTitle = data.seoTitle || data.title || 'Artikel';
+      title = articleTitle.includes('Sotoy Film')
+        ? articleTitle
+        : `${articleTitle} — Sotoy Film`;
       rawDescription = data.metaDescription || data.excerpt || (typeof data.content === 'string' ? data.content.slice(0, 160) : rawDescription);
       rawImage = data.ogImage || data.coverImage || '';
     }
@@ -778,6 +781,9 @@ export default async function middleware(request: Request): Promise<Response> {
       videoTags: collection === 'films' ? data.genres : undefined,
       videoActors: collection === 'films' && data.castDetails ? data.castDetails.map((c: any) => c.name) : data.cast,
       schemaJson,
+      // Season subpages render no Movie/TVSeries JSON-LD on the client, so
+      // keep the bot block out of Helmet's ownership instead of losing it.
+      preserveSchemaOnHydration: Boolean(filmSubpath),
       robots: filmSubpath ? 'noindex, follow' : undefined,
     });
 

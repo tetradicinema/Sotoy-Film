@@ -13,8 +13,9 @@
  */
 
 import middleware, { isBotUserAgent, config } from '../middleware.js';
-import { STATIC_ROUTE_METADATA_CONFIG } from '../src/utils/seoMetadata.js';
+import { STATIC_ROUTE_METADATA_CONFIG, TWITTER_CREATOR, buildArticleMetadata } from '../src/utils/seoMetadata.js';
 import { clearSeoListsCache } from '../src/lib/edge/firestoreRest.js';
+import { injectMetaTags } from '../src/lib/edge/metaInjection.js';
 
 // Setup Mock Fetch for Standalone, Deterministic Test Execution (Bypasses Google API Free Quota Limitations)
 const originalFetch = globalThis.fetch;
@@ -433,6 +434,32 @@ const mockFetch = async (url: string | URL | Request, init?: RequestInit): Promi
             fields: {
               name: { stringValue: 'Raka Pratama' },
               email: { stringValue: 'private-author@example.com' }
+            }
+          }
+        }
+      }
+    }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' }
+    });
+  }
+
+  if (urlStr.includes('/documents/articles/branded-article')) {
+    return new Response(JSON.stringify({
+      name: 'projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents/articles/branded-article',
+      fields: {
+        id: { stringValue: 'branded-article' },
+        title: { stringValue: 'Branded Article Title' },
+        seoTitle: { stringValue: 'Branded Article Title | Sotoy Film' },
+        status: { stringValue: 'published' },
+        slug: { stringValue: 'branded-article' },
+        excerpt: { stringValue: 'A branded article excerpt.' },
+        publishedAt: { stringValue: '2026-10-21T09:30:00.000Z' },
+        content: { stringValue: 'Branded article body about cinema.' },
+        author: {
+          mapValue: {
+            fields: {
+              name: { stringValue: 'Raka Pratama' }
             }
           }
         }
@@ -1125,6 +1152,21 @@ function countMatches(html: string, pattern: RegExp): number {
   return (html.match(pattern) || []).length;
 }
 
+function countLdJson(html: string): number {
+  return countMatches(html, /<script\b[^>]*\btype=["']application\/ld\+json["'][^>]*>/gi);
+}
+
+function getLdJsonRaw(html: string): string {
+  return (
+    /<script\b[^>]*\btype=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/i.exec(html)?.[1] ||
+    ''
+  );
+}
+
+function countHelmetOwned(html: string): number {
+  return countMatches(html, /data-rh="true"/g);
+}
+
 function extractSeoLists(html: string): { films: any[]; articles: any[] } | null {
   const raw = /<script id="seo-lists" type="application\/json">([\s\S]*?)<\/script>/.exec(html)?.[1];
   if (!raw) return null;
@@ -1207,8 +1249,7 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
       (response.headers.get('cache-control') || '').includes('s-maxage=60')
     );
 
-    const filmSchemaRaw =
-      /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(html)?.[1] || '';
+    const filmSchemaRaw = getLdJsonRaw(html);
     let filmSchema: any = null;
     try {
       filmSchema = filmSchemaRaw ? JSON.parse(filmSchemaRaw) : null;
@@ -1251,8 +1292,7 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
       (response.headers.get('cache-control') || '').includes('s-maxage=60')
     );
 
-    const articleSchemaRaw =
-      /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(html)?.[1] || '';
+    const articleSchemaRaw = getLdJsonRaw(html);
     let articleSchema: any = null;
     try {
       articleSchema = articleSchemaRaw ? JSON.parse(articleSchemaRaw) : null;
@@ -1544,8 +1584,7 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
       (response.headers.get('cache-control') || '').includes('s-maxage=60')
     );
 
-    const schemaRaw =
-      /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(html)?.[1] || '';
+    const schemaRaw = getLdJsonRaw(html);
     let schema: any = null;
     try {
       schema = schemaRaw ? JSON.parse(schemaRaw) : null;
@@ -1592,14 +1631,7 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
     const response = await middleware(botRequest('/person/31337-xss-person'));
     const html = await response.text();
 
-    const ldOpenTag = '<script type="application/ld+json">';
-    const ldStart = html.indexOf(ldOpenTag);
-    const ldEnd =
-      ldStart >= 0 ? html.indexOf('</script>', ldStart + ldOpenTag.length) : -1;
-    const ldRaw =
-      ldStart >= 0 && ldEnd > ldStart
-        ? html.slice(ldStart + ldOpenTag.length, ldEnd)
-        : '';
+    const ldRaw = getLdJsonRaw(html);
 
     let ldSchema: any = null;
     try {
@@ -1759,8 +1791,7 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
       (response.headers.get('cache-control') || '').includes('s-maxage=60')
     );
 
-    const schemaRaw =
-      /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(html)?.[1] || '';
+    const schemaRaw = getLdJsonRaw(html);
     let schema: any = null;
     try {
       schema = schemaRaw ? JSON.parse(schemaRaw) : null;
@@ -2101,6 +2132,141 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
     check(
       'article detail keeps #seo-prefetch and never gets #seo-lists',
       articleHtml.includes('id="seo-prefetch"') && !articleHtml.includes('id="seo-lists"')
+    );
+  }
+
+  // Head tag dedupe: one tag set per bot response, Helmet-owned markers
+  {
+    const entityPaths = [
+      '/film/breaking-bad',
+      '/artikel/published-article',
+      '/person/287-brad-pitt',
+      '/franchise/119-the-lord-of-the-rings',
+    ];
+
+    for (const path of entityPaths) {
+      const html = await (await middleware(botRequest(path))).text();
+      expectSingleSeoTagSet(path, html, check);
+      check(`${path} emits exactly one ld+json block`, countLdJson(html) === 1);
+      check(
+        `${path} injects Helmet-owned tags`,
+        countHelmetOwned(html) > 0 &&
+          /<meta\s+name=["']description["'][^>]*data-rh="true"/i.test(html) &&
+          /<link\s+rel=["']canonical["'][^>]*data-rh="true"/i.test(html)
+      );
+      check(
+        `${path} never marks a robots tag as Helmet-owned`,
+        !/<meta\s+name=["']robots["'][^>]*data-rh/i.test(html)
+      );
+    }
+
+    for (const path of ['/film/breaking-bad/seasons', '/film/breaking-bad/season/2']) {
+      const html = await (await middleware(botRequest(path))).text();
+      const ldTag =
+        /<script\b[^>]*\btype=["']application\/ld\+json["'][^>]*>/i.exec(html)?.[0] || '';
+      const robotsTag = /<meta\s+name=["']robots["'][^>]*>/i.exec(html)?.[0] || '';
+      check(`${path} still emits exactly one ld+json block`, countLdJson(html) === 1);
+      check(
+        `${path} keeps its Movie JSON-LD through hydration`,
+        ldTag.length > 0 && !ldTag.includes('data-rh')
+      );
+      check(
+        `${path} still marks meta tags as Helmet-owned`,
+        /<meta\s+name=["']description["'][^>]*data-rh="true"/i.test(html)
+      );
+      check(
+        `${path} has exactly one robots meta`,
+        countMatches(html, /<meta\s+name=["']robots["']/gi) === 1
+      );
+      check(
+        `${path} keeps its noindex robots meta out of Helmet's ownership`,
+        getMetaContent(html, 'robots') === 'noindex, follow' &&
+          robotsTag.length > 0 &&
+          !robotsTag.includes('data-rh')
+      );
+    }
+  }
+
+  // injectMetaTags replaces a pre-existing tag set and is idempotent
+  {
+    const baseHtml = `<!doctype html><html><head>
+      <title>Sotoy Film</title>
+      <meta name="description" content="old description" />
+      <meta name="robots" content="index, follow" />
+      <link rel="canonical" href="https://www.sotoyfilm.my.id/" />
+      <meta property="og:title" content="old og title" />
+      <meta name="twitter:title" content="old twitter title" />
+      <script type="application/ld+json">{"@type":"Thing","name":"old"}</script>
+    </head><body><div id="root"></div></body></html>`;
+    const payload = {
+      title: 'Idempotent Article | Sotoy Film',
+      description: 'Idempotent description.',
+      image: 'https://www.sotoyfilm.my.id/og-default.png',
+      url: 'https://www.sotoyfilm.my.id/artikel/idempotent',
+      type: 'article',
+      robots: 'noindex, follow',
+      schemaJson: {
+        '@context': 'https://schema.org',
+        '@type': 'NewsArticle',
+        headline: 'Idempotent Article',
+      },
+    };
+
+    const once = injectMetaTags(baseHtml, payload);
+    const twice = injectMetaTags(once, payload);
+
+    check(
+      'injectMetaTags replaces the shell tag set',
+      countMatches(once, /<meta\s+name=["']description["']/gi) === 1 &&
+        countMatches(once, /<link\s+rel=["']canonical["']/gi) === 1 &&
+        !once.includes('old description')
+    );
+    check(
+      'injectMetaTags writes exactly one non-Helmet robots meta',
+      countMatches(once, /<meta\s+name=["']robots["']/gi) === 1 &&
+        getMetaContent(once, 'robots') === 'noindex, follow' &&
+        !/<meta\s+name=["']robots["'][^>]*data-rh/i.test(once)
+    );
+    check(
+      'injectMetaTags twice stays idempotent',
+      countMatches(twice, /<meta\s+name=["']description["']/gi) === 1 &&
+        countMatches(twice, /<link\s+rel=["']canonical["']/gi) === 1 &&
+        countMatches(twice, /<meta\s+property=["']og:title["']/gi) === 1 &&
+        countMatches(twice, /<meta\s+name=["']twitter:title["']/gi) === 1 &&
+        countMatches(twice, /<meta\s+name=["']robots["']/gi) === 1 &&
+        !/<meta\s+name=["']robots["'][^>]*data-rh/i.test(twice) &&
+        countLdJson(twice) === 1 &&
+        !twice.includes('"Thing"')
+    );
+  }
+
+  // Article titles never double-brand, and twitter:creator is the site handle
+  {
+    const brandedHtml = await (await middleware(botRequest('/artikel/branded-article'))).text();
+    const plainHtml = await (await middleware(botRequest('/artikel/published-article'))).text();
+
+    check(
+      'article seoTitle that already includes the brand is not double-branded',
+      brandedHtml.includes('<title>Branded Article Title | Sotoy Film</title>') &&
+        !brandedHtml.includes('Sotoy Film — Sotoy Film')
+    );
+    check(
+      'article without its own brand keeps the — Sotoy Film suffix',
+      plainHtml.includes('<title>Published Article Title — Sotoy Film</title>')
+    );
+    check(
+      'bot twitter:creator is the site handle',
+      getMetaContent(plainHtml, 'twitter:creator') === TWITTER_CREATOR
+    );
+
+    const clientMeta = buildArticleMetadata({
+      title: 'Creator Check',
+      slug: 'creator-check',
+      author: { name: 'Raka Pratama' },
+    } as any);
+    check(
+      'client article metadata twitter:creator is the site handle',
+      clientMeta.twitter['twitter:creator'] === TWITTER_CREATOR
     );
   }
 

@@ -12,6 +12,7 @@ import {
   parseDurationInSeconds,
   DEFAULT_BASE_URL,
   DEFAULT_TWITTER_SITE,
+  TWITTER_CREATOR,
 } from '../../utils/seoMetadata';
 import {
   BreadcrumbItem,
@@ -187,7 +188,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
   const effectiveTwitterCreator =
     twitterCreator ||
     metadata.twitter['twitter:creator'] ||
-    (author?.name ? `@${author.name.replace(/\s+/g, '')}` : DEFAULT_TWITTER_SITE);
+    TWITTER_CREATOR;
   const effectivePublishedTime = publishedTime || metadata.publishedTime;
   const effectiveModifiedTime = modifiedTime || metadata.modifiedTime || effectivePublishedTime;
   const effectiveSection = section || metadata.section;

@@ -103,7 +103,9 @@ export const DEFAULT_KEYWORDS = [
   'cinema gear',
   'pop culture',
 ];
-export const DEFAULT_TWITTER_SITE = '@sotoyfilm';
+/** Single X/Twitter creator handle used by both the edge middleware and the client. */
+export const TWITTER_CREATOR = '@sotoyfilm';
+export const DEFAULT_TWITTER_SITE = TWITTER_CREATOR;
 export const DEFAULT_LOCALE = 'id_ID';
 
 /**
@@ -335,7 +337,7 @@ export function buildArticleMetadata(
 
   const authorName = options.author?.name || article.author?.name || 'Redaksi Sotoy Film';
   const authorAvatar = options.author?.avatar || article.author?.avatar;
-  const twitterCreator = authorName ? `@${authorName.replace(/\s+/g, '')}` : DEFAULT_TWITTER_SITE;
+  const twitterCreator = TWITTER_CREATOR;
 
   const publishedTime = pickArticleIsoDate(article, 'published');
   const modifiedTime = pickArticleIsoDate(article, 'modified');
