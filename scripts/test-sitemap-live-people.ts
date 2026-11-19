@@ -144,6 +144,8 @@ const FILM_DOCS = [
       slug: 'live-film-one',
       title: 'Live Film One',
       updatedAt: '2026-10-23T00:00:00.000Z',
+      collectionId: '500',
+      collectionName: 'Live Collection',
     },
   },
   {
@@ -153,21 +155,26 @@ const FILM_DOCS = [
       slug: 'live-film-two',
       title: 'Live Film Two',
       updatedAt: '2026-10-24T00:00:00.000Z',
+      collectionId: '500',
+      collectionName: 'Live Collection',
     },
   },
 ];
+
+const FRANCHISE_LOC = `${BASE_URL}/franchise/500-live-collection`;
 
 const expectedContentLocs = [
   `${BASE_URL}/artikel/live-article-one`,
   `${BASE_URL}/artikel/live-article-two`,
   `${BASE_URL}/film/live-film-one`,
   `${BASE_URL}/film/live-film-two`,
+  FRANCHISE_LOC,
 ];
 
 /** 13 base static routes (incl. /people) + 5 categories = 18. */
 const STATIC_COUNT = 18;
-const BASELINE_COUNT = STATIC_COUNT + expectedContentLocs.length; // 22
-const SUCCESS_COUNT = BASELINE_COUNT + expectedPeopleLocs.length; // 62
+const BASELINE_COUNT = STATIC_COUNT + expectedContentLocs.length; // 23
+const SUCCESS_COUNT = BASELINE_COUNT + expectedPeopleLocs.length; // 63
 
 const encodeFields = (fields: Record<string, string>) =>
   Object.fromEntries(
@@ -481,7 +488,7 @@ const runTests = async () => {
       .length === 1,
     'success: duplicate person ids are emitted once'
   );
-  assertEquals(successLocs.length, SUCCESS_COUNT, 'success: total URL count is 62');
+  assertEquals(successLocs.length, SUCCESS_COUNT, 'success: total URL count is 63');
 
   for (const loc of expectedContentLocs) {
     assert(successLocs.includes(loc), `success: keeps ${loc}`);
@@ -511,6 +518,17 @@ const runTests = async () => {
         firstPersonBlock.includes('<priority>0.5</priority>')
     ),
     'success: person entries use weekly and 0.5 with no lastmod'
+  );
+
+  const franchiseBlock = urlBlock(success.xml, FRANCHISE_LOC);
+  assert(
+    Boolean(
+      franchiseBlock &&
+        !franchiseBlock.includes('<lastmod>') &&
+        franchiseBlock.includes('<changefreq>weekly</changefreq>') &&
+        franchiseBlock.includes('<priority>0.6</priority>')
+    ),
+    'success: franchise entries use weekly and 0.6 with no lastmod'
   );
 
   const tmdbRequests = success.requests.filter(url =>
@@ -575,7 +593,7 @@ const runTests = async () => {
       locs.filter(loc => loc.startsWith(`${BASE_URL}/person/`)).length === 0,
       `${name}: includes no /person/ URLs`
     );
-    assertEquals(locs.length, BASELINE_COUNT, `${name}: keeps all 22 baseline URLs`);
+    assertEquals(locs.length, BASELINE_COUNT, `${name}: keeps all 23 baseline URLs`);
     for (const loc of expectedContentLocs) {
       assert(locs.includes(loc), `${name}: keeps ${loc}`);
     }

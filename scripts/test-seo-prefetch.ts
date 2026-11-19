@@ -1110,10 +1110,16 @@ async function runSitemapChecks(): Promise<void> {
   const capturedQueries: any[] = [];
   const realFetch = globalThis.fetch;
 
-  const typedDoc = (collection: string, id: string, fields: Record<string, any>) => ({
+  const typedDoc = (
+    collection: string,
+    id: string,
+    fields: Record<string, any>,
+    docMeta: Record<string, any> = {}
+  ) => ({
     document: {
       name: `projects/test/databases/test/documents/${collection}/${id}`,
       fields,
+      ...docMeta,
     },
   });
 
@@ -1131,6 +1137,15 @@ async function runSitemapChecks(): Promise<void> {
         status: { stringValue: 'published' },
         updatedAt: { stringValue: '2026-10-21T08:00:00.000Z' },
       }),
+      typedDoc('articles', 'article-iso-timestamp', {
+        slug: { stringValue: 'article-iso-timestamp' },
+        title: { stringValue: 'ISO Timestamp Article' },
+        status: { stringValue: 'published' },
+        // Localized text cannot be parsed by `new Date()`; the ISO companion
+        // field must supply the real lastmod instead.
+        publishedAt: { stringValue: '6 Okt 2026' },
+        publishedAtTimestamp: { stringValue: '2026-10-06T06:34:45.769Z' },
+      }),
       typedDoc('articles', 'draft-article', {
         slug: { stringValue: 'draft-article' },
         title: { stringValue: 'Draft Article' },
@@ -1147,6 +1162,17 @@ async function runSitemapChecks(): Promise<void> {
         title: { stringValue: 'Dated Film' },
         updatedAt: { stringValue: '2026-10-22T08:00:00.000Z' },
       }),
+      typedDoc(
+        'films',
+        'film-create-time',
+        {
+          slug: { stringValue: 'film-create-time' },
+          title: { stringValue: 'Create Time Film' },
+        },
+        // No createdAt field: the document-level REST createTime is the only
+        // real date available and must be used as the fallback.
+        { createTime: '2026-09-15T10:20:30.000Z' }
+      ),
     ],
   };
 
@@ -1225,8 +1251,11 @@ async function runSitemapChecks(): Promise<void> {
       'scheduledAt',
       'updatedAt',
       'publishedAt',
+      'publishedAtTimestamp',
       'createdAt',
       'excerpt',
+      'collectionId',
+      'collectionName',
     ];
     const selectedFieldSets = capturedQueries.map(query =>
       (query?.structuredQuery?.select?.fields || []).map((field: any) => field.fieldPath)
@@ -1240,6 +1269,11 @@ async function runSitemapChecks(): Promise<void> {
             fields.length === expectedFields.length &&
             expectedFields.every(field => fields.includes(field))
         )
+    );
+    check(
+      'sitemap selects publishedAtTimestamp for real article dates',
+      selectedFieldSets.length > 0 &&
+        selectedFieldSets.every((fields: string[]) => fields.includes('publishedAtTimestamp'))
     );
     check(
       'sitemap select omits content, comments, author, email and token fields',
@@ -1290,6 +1324,19 @@ async function runSitemapChecks(): Promise<void> {
       'film with updatedAt keeps the real date',
       findUrlBlock(xml, 'https://www.sotoyfilm.my.id/film/film-dated').includes(
         '<lastmod>2026-10-22</lastmod>'
+      )
+    );
+    check(
+      'article with localized publishedAt uses the ISO publishedAtTimestamp',
+      findUrlBlock(
+        xml,
+        'https://www.sotoyfilm.my.id/artikel/article-iso-timestamp'
+      ).includes('<lastmod>2026-10-06</lastmod>')
+    );
+    check(
+      'film without createdAt falls back to the document createTime',
+      findUrlBlock(xml, 'https://www.sotoyfilm.my.id/film/film-create-time').includes(
+        '<lastmod>2026-09-15</lastmod>'
       )
     );
     check('draft articles stay out of the sitemap', !xml.includes('/artikel/draft-article'));

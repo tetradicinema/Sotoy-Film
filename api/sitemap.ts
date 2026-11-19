@@ -30,6 +30,7 @@ const SITEMAP_SELECT_FIELDS = [
   'scheduledAt',
   'updatedAt',
   'publishedAt',
+  'publishedAtTimestamp',
   'createdAt',
   'excerpt',
   // TMDB collection ("franchise") grouping for /franchise/:idSlug entries.
@@ -314,6 +315,13 @@ async function fetchAllCollectionDocs(collectionId: 'articles' | 'films'): Promi
         if (r.document.name && !parsed.id) {
           parsed.id = r.document.name.split('/').pop();
         }
+        // Firestore REST returns the server-side creation time as document
+        // metadata, not as a field. Keep it only as a last-resort date fallback
+        // for films. Never use updateTime: any write (votes, likes, scores)
+        // bumps it, so it is not a real content-change signal.
+        if (r.document.createTime && !parsed.createTime) {
+          parsed.createTime = r.document.createTime;
+        }
         return parsed;
       });
 
@@ -358,8 +366,13 @@ async function generateLiveSitemapItems(): Promise<LiveSitemapResult> {
     seenArticleSlugs.add(slug);
 
     // Never fall back to "today": omit <lastmod> when the document has no
-    // valid updatedAt/publishedAt/createdAt value.
-    const lastmod = formatDateToYMD(art.updatedAt || art.publishedAt || art.createdAt, '');
+    // valid updatedAt/publishedAtTimestamp/publishedAt/createdAt value.
+    // publishedAt is stored as localized text (e.g. "6 Okt 2026") that the
+    // date parser cannot read, so prefer the ISO publishedAtTimestamp.
+    const lastmod = formatDateToYMD(
+      art.updatedAt || art.publishedAtTimestamp || art.publishedAt || art.createdAt,
+      ''
+    );
     items.push({
       link: `${BASE_URL}/artikel/${encodeURIComponent(slug)}`,
       title: art.title || 'Artikel',
@@ -379,7 +392,7 @@ async function generateLiveSitemapItems(): Promise<LiveSitemapResult> {
     if (!slug || seenFilmSlugs.has(slug)) continue;
     seenFilmSlugs.add(slug);
 
-    const lastmod = formatDateToYMD(film.updatedAt || film.createdAt, '');
+    const lastmod = formatDateToYMD(film.updatedAt || film.createdAt || film.createTime, '');
     items.push({
       link: `${BASE_URL}/film/${encodeURIComponent(slug)}`,
       title: film.title || 'Film',
