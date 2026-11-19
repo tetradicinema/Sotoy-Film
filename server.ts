@@ -8,6 +8,7 @@ import { isBotUserAgent } from "./src/lib/edge/botDetection";
 import { injectMetaTags, FALLBACK_HTML_TEMPLATE } from "./src/lib/edge/metaInjection";
 import { buildRouteMetadata } from "./src/utils/seoMetadata";
 import { fetchEntityData } from "./src/lib/edge/firestoreRest";
+import { resolveAggregateRating } from "./src/utils/aggregateRating.js";
 import { isArticleUnpublished } from "./src/utils/articleHelpers";
 
 // Safely load .env if it exists
@@ -158,17 +159,12 @@ async function startServer() {
                 director: data.director ? { "@type": "Person", name: data.director } : undefined,
                 actor: data.castDetails?.map((c: any) => ({ "@type": "Person", name: c.name })) || data.cast?.map((name: string) => ({ "@type": "Person", name })),
                 genre: data.genres,
-                // Only emit aggregateRating with real vote evidence: legacy/
-                // imported films were seeded with totalVotes: 1 while having
-                // no reviews, so a single vote must never produce a fabricated
-                // ratingCount. Mirrors src/utils/schemaHelpers.ts.
-                aggregateRating: (data.totalVotes > 1 && data.skorSotoy > 0) ? {
-                  "@type": "AggregateRating",
-                  ratingValue: Number(Number(data.skorSotoy).toFixed(1)),
-                  bestRating: "10.0",
-                  worstRating: "1.0",
-                  ratingCount: Number(data.totalVotes),
-                } : undefined,
+                // Shared guard: normalized 1-10 score plus a real vote count.
+                aggregateRating: resolveAggregateRating({
+                  skorSotoy: data.skorSotoy,
+                  scoreScale: data.scoreScale,
+                  totalVotes: data.totalVotes,
+                }) ?? undefined,
               };
             }
           } else if (pathname.startsWith("/artikel/") || pathname.startsWith("/article/")) {

@@ -26,6 +26,7 @@ import {
   parseFranchiseRouteId,
 } from './src/lib/edge/franchiseMeta.js';
 import { buildRouteMetadata, STATIC_ROUTE_METADATA_CONFIG } from './src/utils/seoMetadata.js';
+import { resolveAggregateRating } from './src/utils/aggregateRating.js';
 import { pickArticleIsoDate } from './src/lib/edge/isoDate.js';
 
 // Re-export for unit tests and external consumers
@@ -736,17 +737,13 @@ export default async function middleware(request: Request): Promise<Response> {
       director: data.director ? { '@type': 'Person', name: data.director } : undefined,
       actor: (data.castDetails?.map((c: any) => ({ '@type': 'Person', name: c.name })) || data.cast?.map((name: string) => ({ '@type': 'Person', name }))),
       genre: data.genres,
-      // Only emit aggregateRating with real vote evidence: legacy/imported
-      // films were seeded with totalVotes: 1 while having no reviews, so a
-      // single vote must never produce a fabricated ratingCount. This mirrors
-      // the guard in src/utils/schemaHelpers.ts (no review docs on this path).
-      aggregateRating: (data.totalVotes > 1 && data.skorSotoy > 0) ? {
-        '@type': 'AggregateRating',
-        ratingValue: Number(Number(data.skorSotoy).toFixed(1)),
-        bestRating: '10.0',
-        worstRating: '1.0',
-        ratingCount: Number(data.totalVotes),
-      } : undefined,
+      // Shared guard: normalized 1-10 score plus a real vote count. No review
+      // documents are loaded on this path, so reviewCount is intentionally omitted.
+      aggregateRating: resolveAggregateRating({
+        skorSotoy: data.skorSotoy,
+        scoreScale: data.scoreScale,
+        totalVotes: data.totalVotes,
+      }) ?? undefined,
     } : {
       '@context': 'https://schema.org',
       '@type': 'NewsArticle',

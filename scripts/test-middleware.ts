@@ -238,6 +238,28 @@ function tmdbCollectionFixture(id: number): Record<string, any> {
   };
 }
 
+const RATING_GUARD_DOC_PREFIX =
+  'projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents/films';
+
+function ratingGuardFilmDoc(
+  slug: string,
+  title: string,
+  skorSotoy: number,
+  totalVotes: number,
+  legacy = false
+): Record<string, any> {
+  const fields: Record<string, any> = {
+    title: { stringValue: title },
+    slug: { stringValue: slug },
+    year: { integerValue: '2026' },
+    synopsis: { stringValue: `${title} synopsis.` },
+    skorSotoy: { doubleValue: skorSotoy },
+    totalVotes: { integerValue: String(totalVotes) },
+  };
+  if (!legacy) fields.scoreScale = { integerValue: '10' };
+  return { name: `${RATING_GUARD_DOC_PREFIX}/${slug}`, fields };
+}
+
 const mockFetch = async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
   const urlStr = url.toString();
 
@@ -400,6 +422,25 @@ const mockFetch = async (url: string | URL | Request, init?: RequestInit): Promi
         director: { stringValue: 'Richard Linklater' }
       }
     }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' }
+    });
+  }
+
+  // aggregateRating guard fixtures: one legacy doubled score and the
+  // insufficient-evidence cases that must never receive rich-result markup.
+  const ratingGuardDocs = [
+    { slug: 'legacy-rating-film', doc: ratingGuardFilmDoc('legacy-rating-film', 'Legacy Rating Film', 4.6, 3, true) },
+    { slug: 'votes-zero-film', doc: ratingGuardFilmDoc('votes-zero-film', 'Votes Zero Film', 8, 0) },
+    { slug: 'votes-one-film', doc: ratingGuardFilmDoc('votes-one-film', 'Votes One Film', 8, 1) },
+    { slug: 'votes-two-film', doc: ratingGuardFilmDoc('votes-two-film', 'Votes Two Film', 8, 2) },
+    { slug: 'zero-score-film', doc: ratingGuardFilmDoc('zero-score-film', 'Zero Score Film', 0, 3) },
+  ];
+  const ratingGuardDoc = ratingGuardDocs.find(item =>
+    urlStr.includes(`/documents/films/${item.slug}`)
+  )?.doc;
+  if (ratingGuardDoc) {
+    return new Response(JSON.stringify(ratingGuardDoc), {
       status: 200,
       headers: { 'content-type': 'application/json' }
     });
@@ -1260,6 +1301,53 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
       'bot film JSON-LD still parses as a Movie',
       filmSchema?.['@type'] === 'Movie' && filmSchema?.name === 'Breaking Bad'
     );
+  }
+
+  // aggregateRating guard: the bot-visible score and JSON-LD must agree.
+  {
+    const response = await middleware(botRequest('/film/legacy-rating-film'));
+    const html = await response.text();
+    const root = getRootContent(html);
+    const rawSchema = getLdJsonRaw(html);
+    let schema: any = null;
+    try {
+      schema = rawSchema ? JSON.parse(rawSchema) : null;
+    } catch {
+      schema = null;
+    }
+
+    check(
+      'legacy film body prints the doubled Skor Sotoy 9.2/10',
+      root.includes('Skor Sotoy 9.2/10') && root.includes('3 votes')
+    );
+    check(
+      'legacy film JSON-LD ratingValue equals the body score',
+      schema?.aggregateRating?.ratingValue === 9.2
+    );
+    check(
+      'legacy film JSON-LD uses numeric bounds and the real ratingCount',
+      schema?.aggregateRating?.bestRating === 10 &&
+        schema?.aggregateRating?.worstRating === 1 &&
+        schema?.aggregateRating?.ratingCount === 3
+    );
+  }
+
+  for (const slug of [
+    'votes-zero-film',
+    'votes-one-film',
+    'votes-two-film',
+    'zero-score-film',
+  ]) {
+    const response = await middleware(botRequest(`/film/${slug}`));
+    const html = await response.text();
+    const rawSchema = getLdJsonRaw(html);
+    let schema: any = null;
+    try {
+      schema = rawSchema ? JSON.parse(rawSchema) : null;
+    } catch {
+      schema = null;
+    }
+    check(`${slug}: no aggregateRating is emitted`, schema?.aggregateRating === undefined);
   }
 
   // Article body content for crawlers

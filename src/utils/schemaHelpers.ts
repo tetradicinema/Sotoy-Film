@@ -8,6 +8,7 @@
 
 import { FilmItem, Article } from '../types';
 import { resolveAbsoluteUrl, DEFAULT_BASE_URL } from './seoMetadata';
+import { resolveAggregateRating } from './aggregateRating';
 import { toIsoWithTimezone, pickArticleIsoDate } from '../lib/edge/isoDate';
 
 export interface BreadcrumbItem {
@@ -97,6 +98,7 @@ export interface MovieSchemaInput {
   trailerTitle?: string;
   whereToWatch?: { platform: string; type: string }[];
   skorSotoy: number;
+  scoreScale?: unknown;
   totalVotes: number;
   url?: string;
   reviews?: {
@@ -121,26 +123,16 @@ export function generateMovieSchema(input: MovieSchemaInput) {
     ? input.image.filter(Boolean).map(img => resolveAbsoluteUrl(img))
     : [resolveAbsoluteUrl(input.image)];
 
-  // AggregateRating: only emit with a real score AND real review evidence.
-  // Legacy films were seeded with totalVotes: 1 while having no reviews, so
-  // a single vote counts as no evidence; require reviews or totalVotes > 1.
-  // reviewCount is never fallen back to totalVotes: with 0 real reviews the
-  // property is omitted instead of advertising a fabricated count.
-  const hasRealReviewEvidence =
-    (input.reviews?.length ?? 0) > 0 || input.totalVotes > 1;
+  // AggregateRating uses the shared edge/client guard: normalized 1-10 score,
+  // finite integer vote count >= 3, and reviewCount only from real review docs.
   const aggregateRating =
-    input.skorSotoy > 0 && hasRealReviewEvidence
-      ? {
-          '@type': 'AggregateRating',
-          ratingValue: Number(input.skorSotoy.toFixed(1)),
-          bestRating: '10.0',
-          worstRating: '1.0',
-          ratingCount: input.totalVotes,
-          ...(input.reviews && input.reviews.length > 0
-            ? { reviewCount: input.reviews.length }
-            : {}),
-        }
-      : undefined;
+    resolveAggregateRating({
+      skorSotoy: input.skorSotoy,
+      scoreScale: input.scoreScale,
+      totalVotes: input.totalVotes,
+      reviewCount:
+        input.reviews && input.reviews.length > 0 ? input.reviews.length : undefined,
+    }) ?? undefined;
 
   // Format user/critic reviews
   const movieReviews = input.reviews?.map(rev => ({
@@ -491,7 +483,8 @@ export function createMovieSchemaFromFilm(
     trailerTitle: film.trailerTitle,
     whereToWatch: film.whereToWatch,
     skorSotoy: Number(film.skorSotoy || 0),
-    totalVotes: Number(film.totalVotes || (filmReviews ? filmReviews.length : 0)),
+    scoreScale: film.scoreScale,
+    totalVotes: Number(film.totalVotes ?? 0),
     url: canonicalUrl,
     reviews: filmReviews,
   });
