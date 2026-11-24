@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { ChevronRight, Home } from 'lucide-react';
-import { generateBreadcrumbSchema } from '../../utils/schemaHelpers';
 import { slugify } from '../../utils/slugify';
 
 export interface BreadcrumbStep {
@@ -11,8 +10,12 @@ export interface BreadcrumbStep {
 
 export interface BreadcrumbNavigationProps {
   /**
-   * Optional explicit breadcrumb steps to display.
-   * When omitted or empty, steps are dynamically derived from useLocation().pathname segments!
+   * Explicit breadcrumb steps to display, including the leading Home step.
+   * Build these with `src/utils/breadcrumbs.ts` so the visible trail and the
+   * page's BreadcrumbList JSON-LD are generated from the same array.
+   *
+   * When omitted or empty, steps are derived from `useLocation().pathname`
+   * as a visual-only fallback.
    */
   items?: BreadcrumbStep[];
   /**
@@ -106,13 +109,11 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
     }
   };
 
-  // Derive steps either from explicit items prop or from useLocation().pathname
+  // Derive steps either from the explicit items prop (the full trail,
+  // including Home) or from useLocation().pathname as a visual fallback.
   const effectiveSteps = useMemo<BreadcrumbStep[]>(() => {
     if (items && items.length > 0) {
-      return [
-        { label: 'Home', path: '/' },
-        ...items,
-      ];
+      return items;
     }
 
     // Auto-generate from location.pathname
@@ -127,21 +128,21 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
     rawSegments.forEach((segment, index) => {
       const isLast = index === rawSegments.length - 1;
       cumulativePath += `/${segment}`;
+      const lower = segment.toLowerCase();
+
+      // The taxonomy prefix is a path segment, not a crumb: show
+      // "Home > Movies", never "Home > Kategori > Movies".
+      if (lower === 'kategori' || lower === 'category') return;
 
       let label = formatSegmentLabel(segment);
       if (isLast && currentTitle) {
         label = currentTitle;
       }
 
-      // Smart target paths for top-level category prefixes
+      // Smart target paths for top-level prefixes
       let targetPath: string | undefined = isLast ? undefined : cumulativePath;
-      const lower = segment.toLowerCase();
       if (lower === 'film') {
-        targetPath = '/database-film';
-      } else if (lower === 'artikel') {
-        targetPath = '/kategori/movies';
-      } else if (lower === 'kategori' && !isLast) {
-        targetPath = '/kategori/movies';
+        targetPath = '/film-database';
       }
 
       steps.push({
@@ -153,23 +154,10 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
     return steps;
   }, [items, location.pathname, currentTitle, customLabels]);
 
-  // Generate the Schema.org JSON-LD BreadcrumbList dynamically
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://www.sotoyfilm.my.id';
-  const schemaItems = effectiveSteps.map((step) => {
-    const itemUrl = step.path
-      ? step.path.startsWith('http')
-        ? step.path
-        : `${origin}${step.path}`
-      : typeof window !== 'undefined'
-      ? window.location.href
-      : `${origin}${location.pathname}`;
-    return {
-      name: step.label,
-      item: itemUrl,
-    };
-  });
-
-  const breadcrumbSchema = generateBreadcrumbSchema(schemaItems);
+  // BreadcrumbList JSON-LD is emitted once per page by `SEOHead`, built from
+  // the same trail (`src/utils/breadcrumbs.ts` + `generateBreadcrumbSchema`).
+  // This component is visual-only: rendering a second, non-Helmet schema here
+  // duplicated the BreadcrumbList and could not use canonical URLs.
 
   return (
     <nav
@@ -217,13 +205,6 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
           );
         })}
       </ol>
-
-      {/* Render JSON-LD schema dynamically for Google Search crawler indexing */}
-      <script
-        id="breadcrumb-json-ld"
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
-      />
     </nav>
   );
 };

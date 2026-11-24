@@ -20,6 +20,7 @@ import { SmartLink } from '../Common/SmartLink';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
 import { SEOHead } from '../SEO/SEOHead';
 import { generateBreadcrumbSchema } from '../../utils/schemaHelpers';
+import { buildCategoryBreadcrumbs, toSchemaItems } from '../../utils/breadcrumbs';
 import { normalizeArticleCategory } from '../../utils/articleCategory';
 import { BreadcrumbNavigation } from '../Navigation/BreadcrumbNavigation';
 import { ArticleListSkeleton } from '../Skeletons';
@@ -124,17 +125,8 @@ export const CategoryPage: React.FC = () => {
     ? `https://www.sotoyfilm.my.id/kategori/${currentCategory}/${currentSubCategory}`
     : `https://www.sotoyfilm.my.id/kategori/${currentCategory}`;
 
-  const breadcrumbsList = [
-    { name: 'Home', item: 'https://www.sotoyfilm.my.id' },
-    { name: meta.title, item: `https://www.sotoyfilm.my.id/kategori/${currentCategory}` },
-  ];
-  if (currentSubCategory) {
-    breadcrumbsList.push({
-      name: currentSubCategory.toUpperCase(),
-      item: seoUrl,
-    });
-  }
-  const breadcrumbSchema = generateBreadcrumbSchema(breadcrumbsList);
+  const breadcrumbItems = buildCategoryBreadcrumbs(currentCategory, currentSubCategory);
+  const breadcrumbSchema = generateBreadcrumbSchema(toSchemaItems(breadcrumbItems));
 
   return (
     <div className="min-h-screen py-8">
@@ -149,9 +141,7 @@ export const CategoryPage: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         
         {/* Breadcrumb Navigation */}
-        <BreadcrumbNavigation
-          currentTitle={currentSubCategory ? currentSubCategory.toUpperCase() : meta.title}
-        />
+        <BreadcrumbNavigation items={breadcrumbItems} />
 
         {/* Category Hero Banner */}
         <div

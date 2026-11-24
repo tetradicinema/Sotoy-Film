@@ -36,6 +36,7 @@ import { fetchArticleBySlugRest, mapArticleData, readSeoPrefetch } from '../../u
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
 import { SEOHead } from '../SEO/SEOHead';
 import { createArticleSchemaFromArticle, generateBreadcrumbSchema } from '../../utils/schemaHelpers';
+import { buildArticleBreadcrumbs, toSchemaItems } from '../../utils/breadcrumbs';
 import { StarRating } from '../Common/StarRating';
 import { AddToCollectionModal } from '../Modals/AddToCollectionModal';
 import { CollectionPickerPopover } from '../Common/CollectionPickerPopover';
@@ -326,11 +327,8 @@ export const ArticleDetailPage: React.FC = () => {
   // Prepare SEO Metadata & Structured Schemas
   const articleSlug = article.slug || article.id;
   const seoUrl = `https://www.sotoyfilm.my.id/artikel/${articleSlug}`;
-  const breadcrumbSchema = generateBreadcrumbSchema([
-    { name: 'Home', item: 'https://www.sotoyfilm.my.id' },
-    { name: article.category.toUpperCase(), item: `https://www.sotoyfilm.my.id/kategori/${article.category}` },
-    { name: article.title, item: seoUrl },
-  ]);
+  const breadcrumbItems = buildArticleBreadcrumbs(article);
+  const breadcrumbSchema = generateBreadcrumbSchema(toSchemaItems(breadcrumbItems));
 
   const articleSchema = createArticleSchemaFromArticle(article, {
     currentUrl: seoUrl,
@@ -367,14 +365,7 @@ export const ArticleDetailPage: React.FC = () => {
           </button>
 
           <div className="flex-1 min-w-0 md:flex md:justify-end">
-            <BreadcrumbNavigation
-              currentTitle={article.title}
-              items={[
-                { label: article.category === 'movies' ? 'Movies' : article.category === 'series' ? 'Series' : article.category.toUpperCase(), path: `/kategori/${article.category}` },
-                ...(article.subCategory ? [{ label: article.subCategory, path: `/kategori/${article.category}/${article.subCategory}` }] : []),
-                { label: article.title }
-              ]}
-            />
+            <BreadcrumbNavigation items={breadcrumbItems} />
           </div>
         </div>
 

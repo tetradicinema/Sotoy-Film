@@ -1204,6 +1204,36 @@ function getLdJsonRaw(html: string): string {
   );
 }
 
+/**
+ * Counts BreadcrumbList entities across every ld+json block in the response.
+ * Parses JSON instead of grepping for the type name so a block that merely
+ * mentions "BreadcrumbList" in a description cannot produce a false positive.
+ */
+function countBreadcrumbLists(html: string): number {
+  const pattern =
+    /<script\b[^>]*\btype=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let count = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(html)) !== null) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      const nodes = Array.isArray(parsed)
+        ? parsed
+        : Array.isArray(parsed?.['@graph'])
+          ? parsed['@graph']
+          : [parsed];
+      if (nodes.some((node: any) => node && node['@type'] === 'BreadcrumbList')) {
+        count++;
+      }
+    } catch {
+      // Non-JSON payloads are covered by the surrounding ld+json tests.
+    }
+  }
+
+  return count;
+}
+
 function countHelmetOwned(html: string): number {
   return countMatches(html, /data-rh="true"/g);
 }
@@ -2271,6 +2301,28 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
         getMetaContent(html, 'robots') === 'noindex, follow' &&
           robotsTag.length > 0 &&
           !robotsTag.includes('data-rh')
+      );
+    }
+  }
+
+  // BreadcrumbList parity: P0 keeps breadcrumbs client-rendered only. Bot HTML
+  // must not regress into emitting a second block: franchise keeps its single
+  // entity, and every other route family stays at zero.
+  {
+    const expectations: Array<[string, number]> = [
+      ['/franchise/119-the-lord-of-the-rings', 1],
+      ['/person/287-brad-pitt', 0],
+      ['/people', 0],
+      ['/', 0],
+      ['/film/breaking-bad', 0],
+      ['/artikel/published-article', 0],
+    ];
+
+    for (const [path, expected] of expectations) {
+      const html = await (await middleware(botRequest(path))).text();
+      check(
+        `${path} emits ${expected} BreadcrumbList block(s)`,
+        countBreadcrumbLists(html) === expected
       );
     }
   }

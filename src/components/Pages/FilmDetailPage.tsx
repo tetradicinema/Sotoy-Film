@@ -34,6 +34,7 @@ import { useApp } from '../../context/AppContext';
 import { useDynamicArticleAuthor } from '../../hooks/useDynamicArticleAuthor';
 import { SEOHead } from '../SEO/SEOHead';
 import { createMovieSchemaFromFilm, generateBreadcrumbSchema } from '../../utils/schemaHelpers';
+import { buildFilmBreadcrumbs, toSchemaItems } from '../../utils/breadcrumbs';
 import { slugify } from '../../utils/slugify';
 import { buildPersonPath } from '../../utils/personHelpers';
 import { DEFAULT_AVATAR, DEFAULT_POSTER, DEFAULT_COVER } from '../../data/mockData';
@@ -472,11 +473,8 @@ export const FilmDetailPage: React.FC = () => {
   // Prepare SEO Metadata & Structured Schemas
   const filmSlug = film.slug || slugify(film.title) || film.id;
   const seoUrl = `https://www.sotoyfilm.my.id/film/${filmSlug}`;
-  const breadcrumbSchema = generateBreadcrumbSchema([
-    { name: 'Home', item: 'https://www.sotoyfilm.my.id' },
-    { name: 'Film Database', item: 'https://www.sotoyfilm.my.id/film-database' },
-    { name: film.title, item: seoUrl },
-  ]);
+  const breadcrumbItems = buildFilmBreadcrumbs(film);
+  const breadcrumbSchema = generateBreadcrumbSchema(toSchemaItems(breadcrumbItems));
 
   const movieSchema = createMovieSchemaFromFilm(film, {
     reviews: filmReviews.slice(0, 5).map(r => ({
@@ -503,10 +501,7 @@ export const FilmDetailPage: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         
         {/* Breadcrumb Navigation */}
-        <BreadcrumbNavigation
-          currentTitle={film.title}
-          customLabels={{ film: film.type === 'series' ? 'Series' : 'Film' }}
-        />
+        <BreadcrumbNavigation items={breadcrumbItems} />
 
         {/* ========================================================================= */}
         {/* TOP BAR: NAVIGATION & ACTIONS */}

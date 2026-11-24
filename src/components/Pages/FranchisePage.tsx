@@ -11,6 +11,7 @@ import {
   parseFranchiseRouteParam,
 } from '../../utils/franchiseHelpers';
 import { generateBreadcrumbSchema } from '../../utils/schemaHelpers';
+import { buildFranchiseBreadcrumbs, toSchemaItems } from '../../utils/breadcrumbs';
 import { tmdbMediaType } from '../../utils/tmdbSync';
 import { DEFAULT_BASE_URL } from '../../utils/seoMetadata';
 import { DEFAULT_POSTER } from '../../data/mockData';
@@ -321,10 +322,9 @@ export const FranchisePage: React.FC = () => {
   const seoTitle = `${displayName} - Semua Film Franchise | Sotoy Film`;
   const seoDescription = `Daftar semua film dalam franchise ${displayName} di Sotoy Film, diurutkan berdasarkan tanggal rilis, lengkap dengan Skor Sotoy.`;
   const catalogCount = entries.filter(entry => entry.inCatalog).length;
-  const breadcrumbSchema = generateBreadcrumbSchema([
-    { name: 'Home', item: DEFAULT_BASE_URL },
-    { name: displayName, item: canonicalUrl },
-  ]);
+  const breadcrumbSchema = generateBreadcrumbSchema(
+    toSchemaItems(buildFranchiseBreadcrumbs(franchiseId!, displayName))
+  );
 
   // Pages with zero catalog titles only mirror TMDB data: keep them out of
   // the index only once the catalogue actually loaded (a blocked or still

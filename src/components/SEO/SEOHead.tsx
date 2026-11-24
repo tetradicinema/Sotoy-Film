@@ -15,8 +15,6 @@ import {
   TWITTER_CREATOR,
 } from '../../utils/seoMetadata';
 import {
-  BreadcrumbItem,
-  generateBreadcrumbSchema,
   generateArticleSchema,
   generateWebSiteSchema,
   generateOrganizationSchema,
@@ -56,7 +54,6 @@ export interface SEOHeadProps {
     score: number;
     createdAt?: string;
   }[];
-  breadcrumbs?: BreadcrumbItem[];
 
   // Dynamic Social Meta Props
   twitterCard?: 'summary' | 'summary_large_image' | 'player' | 'app';
@@ -87,7 +84,6 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
   article,
   author,
   reviews,
-  breadcrumbs,
   twitterCard = 'summary_large_image',
   twitterSite = DEFAULT_TWITTER_SITE,
   twitterCreator,
@@ -259,12 +255,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
       }
     }
 
-    // 3. Dynamic BreadcrumbList Schema
-    if (breadcrumbs && breadcrumbs.length > 0 && !hasExplicitType('BreadcrumbList')) {
-      list.push(generateBreadcrumbSchema(breadcrumbs));
-    }
-
-    // 4. Dynamic WebSite & Organization Schemas
+    // 3. Dynamic WebSite & Organization Schemas
     if (
       effectiveType === 'website' ||
       (!film && !article && effectiveType !== 'video.movie' && effectiveType !== 'article')
@@ -277,7 +268,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
       }
     }
 
-    // 5. Append explicitly passed custom schemas
+    // 4. Append explicitly passed custom schemas
     list.push(...explicitSchemas.filter(Boolean));
 
     return list;
@@ -287,7 +278,6 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
     article,
     author,
     reviews,
-    breadcrumbs,
     effectiveType,
     title,
     finalDescription,
