@@ -11,6 +11,7 @@ import {
 import { slugify } from '../src/utils/slugify.js';
 import { fetchPopularPeopleForSitemap } from '../src/lib/edge/personMeta.js';
 import { buildFranchiseSitemapEntries } from '../src/lib/edge/franchiseMeta.js';
+import { buildAuthorSitemapEntries } from '../src/lib/edge/authorSitemap.js';
 
 const BASE_URL = 'https://www.sotoyfilm.my.id';
 
@@ -26,6 +27,7 @@ const SITEMAP_SELECT_FIELDS = [
   'id',
   'slug',
   'title',
+  'authorId',
   'status',
   'scheduledAt',
   'updatedAt',
@@ -357,9 +359,13 @@ async function generateLiveSitemapItems(): Promise<LiveSitemapResult> {
 
   // Articles
   const seenArticleSlugs = new Set<string>();
+  const publishedArticlesForAuthors: any[] = [];
 
   for (const art of rawArticles) {
     if (!isArticlePublished(art)) continue;
+    // Derive author URLs from the published articles themselves: no user
+    // document is fetched and draft-only authors never enter the sitemap.
+    publishedArticlesForAuthors.push(art);
 
     const slug = art.slug || art.id;
     if (!slug || seenArticleSlugs.has(slug)) continue;
@@ -381,6 +387,23 @@ async function generateLiveSitemapItems(): Promise<LiveSitemapResult> {
       lastmod,
       changefreq: 'weekly',
       priority: '0.8',
+    });
+  }
+
+  // Public author profiles, one per distinct published article author.
+  for (const author of buildAuthorSitemapEntries(
+    publishedArticlesForAuthors,
+    BASE_URL,
+    formatDateToYMD
+  )) {
+    items.push({
+      link: author.loc,
+      title: 'Penulis Sotoy Film',
+      metaDescription: '',
+      type: 'Halaman',
+      lastmod: author.lastmod,
+      changefreq: 'weekly',
+      priority: '0.6',
     });
   }
 

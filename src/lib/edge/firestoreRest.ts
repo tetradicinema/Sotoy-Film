@@ -1005,6 +1005,158 @@ export async function fetchFullEntityDoc(
 }
 
 /* -------------------------------------------------------------------------- */
+/* Public author profiles (/user/:id) — bot-only, allowlisted fields          */
+/* -------------------------------------------------------------------------- */
+
+/** The only user fields a crawler is ever allowed to see. */
+const AUTHOR_PROFILE_FIELD_PATHS = ['name', 'bio', 'avatar'];
+
+/** The only article fields needed for an author profile's crawler body. */
+const AUTHOR_ARTICLE_FIELD_PATHS = ['id', 'slug', 'title', 'status', 'publishedAtTimestamp'];
+
+export interface AuthorProfileForSeo {
+  id: string;
+  name: string;
+  bio: string;
+  avatar: string;
+}
+
+export type AuthorProfileLookupResult = {
+  status: 'ok' | 'not-found' | 'error';
+  data: AuthorProfileForSeo | null;
+};
+
+function readAllowlistedString(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+/**
+ * Reads a user document with an explicit field mask and maps it to a fresh
+ * object. Email, phone, handle, roles, auth identifiers and every other field
+ * are structurally unreachable from the bot response.
+ */
+export async function fetchAuthorProfileForSeo(
+  userId: string
+): Promise<AuthorProfileLookupResult> {
+  const safeId = typeof userId === 'string' ? userId.trim() : '';
+  if (!safeId || safeId.includes('/')) return { status: 'not-found', data: null };
+
+  try {
+    const mask = AUTHOR_PROFILE_FIELD_PATHS
+      .map(field => `mask.fieldPaths=${encodeURIComponent(field)}`)
+      .join('&');
+    const res = await fetchWithTimeout(
+      `${FIRESTORE_DOCUMENTS_URL}/users/${encodeURIComponent(safeId)}?key=${FIRESTORE_API_KEY}&${mask}`,
+      { headers: { Accept: 'application/json' } },
+      2000
+    );
+
+    if (res.status === 404) return { status: 'not-found', data: null };
+    if (!res.ok) return { status: 'error', data: null };
+
+    const doc = await res.json();
+    const fields = parseFirestoreFields(doc);
+    const name = readAllowlistedString(fields.name);
+    if (!name) return { status: 'not-found', data: null };
+
+    return {
+      status: 'ok',
+      data: {
+        id: safeId,
+        name,
+        bio: readAllowlistedString(fields.bio),
+        avatar: readAllowlistedString(fields.avatar),
+      },
+    };
+  } catch {
+    return { status: 'error', data: null };
+  }
+}
+
+export interface AuthorPublishedArticle {
+  id: string;
+  slug?: string;
+  title?: string;
+}
+
+/**
+ * One projected runQuery for the user's newest published articles. Missing or
+ * failing results simply make the profile non-indexable; they never produce a
+ * 404 (that is reserved for a genuinely missing user document).
+ */
+export async function fetchAuthorPublishedArticles(
+  userId: string,
+  limit = 30
+): Promise<AuthorPublishedArticle[]> {
+  const safeId = typeof userId === 'string' ? userId.trim() : '';
+  if (!safeId) return [];
+
+  try {
+    const res = await fetchWithTimeout(
+      `${FIRESTORE_DOCUMENTS_URL}:runQuery?key=${FIRESTORE_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          structuredQuery: {
+            from: [{ collectionId: 'articles' }],
+            select: {
+              fields: AUTHOR_ARTICLE_FIELD_PATHS.map(fieldPath => ({ fieldPath })),
+            },
+            where: {
+              compositeFilter: {
+                op: 'AND',
+                filters: [
+                  {
+                    fieldFilter: {
+                      field: { fieldPath: 'authorId' },
+                      op: 'EQUAL',
+                      value: { stringValue: safeId },
+                    },
+                  },
+                  {
+                    fieldFilter: {
+                      field: { fieldPath: 'status' },
+                      op: 'EQUAL',
+                      value: { stringValue: 'published' },
+                    },
+                  },
+                ],
+              },
+            },
+            orderBy: [{ field: { fieldPath: 'publishedAtTimestamp' }, direction: 'DESCENDING' }],
+            limit,
+          },
+        }),
+      },
+      2500
+    );
+
+    if (!res.ok) return [];
+    const results = await res.json();
+    if (!Array.isArray(results)) return [];
+
+    return results
+      .filter((row: any) => row && row.document)
+      .map((row: any) => {
+        const fields = parseFirestoreFields(row.document);
+        const id =
+          readAllowlistedString(fields.id) ||
+          (typeof row.document.name === 'string' ? row.document.name.split('/').pop() : '');
+        return {
+          id,
+          slug: readAllowlistedString(fields.slug) || undefined,
+          title: readAllowlistedString(fields.title) || undefined,
+        };
+      })
+      .filter((article: AuthorPublishedArticle) => article.id)
+      .slice(0, limit);
+  } catch {
+    return [];
+  }
+}
+
+/* -------------------------------------------------------------------------- */
 /* Collection link previews (/koleksi/:userId/:collectionId)                  */
 /* -------------------------------------------------------------------------- */
 

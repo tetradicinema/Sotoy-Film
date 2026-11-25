@@ -363,11 +363,100 @@ const mockFetch = async (url: string | URL | Request, init?: RequestInit): Promi
     });
   }
 
+  // 0b. One projected runQuery for public author profiles. The entity lookups
+  // also use runQuery, but only this branch filters on authorId.
+  let authorQueryBody: any = null;
+  if (urlStr.includes('/documents:runQuery') && init?.body) {
+    try {
+      authorQueryBody = JSON.parse(String(init.body));
+    } catch {
+      authorQueryBody = null;
+    }
+  }
+  if (
+    authorQueryBody?.structuredQuery?.from?.[0]?.collectionId === 'articles' &&
+    /authorId/.test(JSON.stringify(authorQueryBody.structuredQuery.where || ''))
+  ) {
+    const whereText = JSON.stringify(authorQueryBody.structuredQuery.where);
+    const authorDocs =
+      /"stringValue":"author-1"/.test(whereText)
+        ? [
+            {
+              name: 'projects/test/databases/(default)/documents/articles/published-article',
+              fields: {
+                id: { stringValue: 'published-article' },
+                slug: { stringValue: 'published-article' },
+                title: { stringValue: 'Published Article Title' },
+                status: { stringValue: 'published' },
+                publishedAtTimestamp: { stringValue: '2026-10-20T09:30:00.000Z' },
+              },
+            },
+            {
+              name: 'projects/test/databases/(default)/documents/articles/author-1-second',
+              fields: {
+                id: { stringValue: 'author-1-second' },
+                slug: { stringValue: 'author-1-second' },
+                title: { stringValue: 'Second Author Article' },
+                status: { stringValue: 'published' },
+                publishedAtTimestamp: { stringValue: '2026-11-02T09:30:00.000Z' },
+              },
+            },
+          ]
+        : [];
+    return new Response(JSON.stringify(authorDocs.map(document => ({ document }))), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  }
+
   // 1. Mock index.html subrequest
   if (urlStr.includes('/index.html')) {
     return new Response(`<!doctype html><html><head><title>Sotoy Film</title></head><body><div id="root"></div></body></html>`, {
       status: 200,
       headers: { 'content-type': 'text/html' }
+    });
+  }
+
+  // 2a. Mock user documents. Private fields are present in the response on
+  // purpose: the middleware must drop them via its explicit allowlist.
+  const userDocMatch = /\/documents\/users\/([^/?]+)/.exec(urlStr);
+  if (userDocMatch) {
+    const userId = decodeURIComponent(userDocMatch[1]);
+    const users: Record<string, any> = {
+      'author-1': {
+        name: 'projects/test/databases/(default)/documents/users/author-1',
+        fields: {
+          name: { stringValue: 'Raka Pratama' },
+          bio: { stringValue: 'Penulis sinema dan budaya populer.' },
+          avatar: { stringValue: '/raka.jpg' },
+          email: { stringValue: 'private-author@example.com' },
+          phone: { stringValue: '+62-812-3456-7890' },
+          handle: { stringValue: '@raka-privat' },
+          role: { stringValue: 'admin' },
+          uid: { stringValue: 'auth-uid-abc' },
+        },
+      },
+      'author-empty': {
+        name: 'projects/test/databases/(default)/documents/users/author-empty',
+        fields: {
+          name: { stringValue: 'Tanpa Artikel' },
+          bio: { stringValue: 'Belum pernah menulis artikel.' },
+          avatar: { stringValue: '/kosong.jpg' },
+          email: { stringValue: 'empty-author@example.com' },
+          role: { stringValue: 'admin' },
+        },
+      },
+    };
+    const doc = users[userId];
+    if (!doc) {
+      return new Response(JSON.stringify({ error: { code: 404, message: 'Not found' } }), {
+        status: 404,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+    return new Response(JSON.stringify(doc), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
     });
   }
 
@@ -505,6 +594,7 @@ const mockFetch = async (url: string | URL | Request, init?: RequestInit): Promi
         status: { stringValue: 'published' },
         slug: { stringValue: 'published-article' },
         excerpt: { stringValue: 'This is a published article excerpt.' },
+        authorId: { stringValue: 'author-1' },
         publishedAt: { stringValue: '2026-10-20T09:30:00.000Z' },
         content: { stringValue: 'Dune is a sweeping epic. <script>alert("xss")</script> The spice must flow & the sandworm rises.' },
         author: {
@@ -1583,7 +1673,10 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
       'bot article body contains the h1 title',
       root.includes('<h1>Published Article Title</h1>')
     );
-    check('bot article byline uses the Indonesian label', root.includes('<p>Oleh Raka Pratama</p>'));
+    check(
+      'bot article byline links to the author profile when authorId exists',
+      root.includes('<p>Oleh <a href="/user/author-1">Raka Pratama</a></p>')
+    );
     check(
       'bot article body does not leak the author email',
       !root.includes('private-author@example.com')
@@ -1625,6 +1718,116 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
       'bot JSON-LD dateModified falls back to datePublished when updatedAt is absent',
       articleSchema?.dateModified === articleSchema?.datePublished &&
         articleSchema?.datePublished === '2026-10-20T09:30:00.000Z'
+    );
+    check(
+      'bot JSON-LD author.url points to the author profile',
+      articleSchema?.author?.url === 'https://www.sotoyfilm.my.id/user/author-1'
+    );
+  }
+
+  // Articles without an authorId keep a plain byline and no author URL
+  {
+    const html = await (await middleware(botRequest('/artikel/canonical-article-slug'))).text();
+    const root = getRootContent(html);
+    const schema = JSON.parse(getLdJsonRaw(html));
+
+    check(
+      'article without authorId keeps a plain Oleh byline',
+      root.includes('<p>Oleh Raka Pratama</p>') && !root.includes('/user/')
+    );
+    check('article without authorId has no author.url in JSON-LD', schema?.author?.url === undefined);
+  }
+
+  // Public author profiles (/user/:id)
+  {
+    check('middleware matcher includes the author profile route', config.matcher.includes('/user/:path*'));
+
+    const response = await middleware(botRequest('/user/author-1'));
+    const html = await response.text();
+    const root = getRootContent(html);
+    const schema = JSON.parse(getLdJsonRaw(html));
+
+    check('bot author profile returns 200', response.status === 200);
+    check('bot author profile title is the author byline title', html.includes('<title>Raka Pratama - Penulis di Sotoy Film</title>'));
+    check(
+      'bot author profile canonical is the real /user/<id> path',
+      getCanonicalHref(html) === 'https://www.sotoyfilm.my.id/user/author-1'
+    );
+    check(
+      'bot author profile keeps standard OpenGraph tags',
+      getOgContent(html, 'og:title') === 'Raka Pratama - Penulis di Sotoy Film' &&
+        getOgContent(html, 'og:url') === 'https://www.sotoyfilm.my.id/user/author-1' &&
+        getOgContent(html, 'og:description') === 'Penulis sinema dan budaya populer.' &&
+        getOgContent(html, 'og:type') === 'profile'
+    );
+    check(
+      'bot author profile JSON-LD is a ProfilePage with the Person mainEntity',
+      schema?.['@type'] === 'ProfilePage' &&
+        schema?.mainEntity?.['@type'] === 'Person' &&
+        schema?.mainEntity?.name === 'Raka Pratama' &&
+        schema?.mainEntity?.url === 'https://www.sotoyfilm.my.id/user/author-1' &&
+        schema?.mainEntity?.description === 'Penulis sinema dan budaya populer.' &&
+        typeof schema?.mainEntity?.image === 'string'
+    );
+    check(
+      'bot author profile body lists published articles by title with site paths',
+      root.includes('<h1>Raka Pratama</h1>') &&
+        root.includes('Penulis sinema dan budaya populer.') &&
+        root.includes('<a href="/artikel/published-article">Published Article Title</a>') &&
+        root.includes('<a href="/artikel/author-1-second">Second Author Article</a>')
+    );
+    check(
+      'bot author profile emits at most 30 article links',
+      countMatches(root, /<a href="\/artikel\//g) <= 30
+    );
+    check('bot author profile is indexable', response.headers.get('x-robots-tag') === 'all');
+    check(
+      'bot author profile never exposes private user fields',
+      ![
+        'private-author@example.com',
+        '+62-812-3456-7890',
+        '@raka-privat',
+        'auth-uid-abc',
+        'admin',
+      ].some(secret => html.includes(secret))
+    );
+  }
+
+  {
+    const response = await middleware(botRequest('/user/author-empty'));
+    const html = await response.text();
+    const root = getRootContent(html);
+
+    check('author without published articles stays a 200 page', response.status === 200);
+    check(
+      'author without published articles is noindex',
+      getMetaContent(html, 'robots') === 'noindex, follow' &&
+        response.headers.get('x-robots-tag') === 'noindex, follow'
+    );
+    check('author without published articles has no article list', !root.includes('/artikel/'));
+  }
+
+  {
+    const response = await middleware(botRequest('/user/author-missing'));
+    const html = await response.text();
+
+    check('missing author returns 404', response.status === 404);
+    check(
+      'missing author is noindex with no article list',
+      getMetaContent(html, 'robots') === 'noindex, follow' &&
+        !getRootContent(html).includes('/artikel/')
+    );
+  }
+
+  {
+    const humanResponse = await middleware(
+      new Request('https://www.sotoyfilm.my.id/user/author-1', {
+        headers: { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0' },
+      })
+    );
+    check(
+      'human visitor on /user/:id still passes through',
+      humanResponse.headers.get('x-middleware-next') === '1' && (await humanResponse.text()) === ''
     );
   }
 

@@ -5,6 +5,7 @@ import { initializeApp, deleteApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, terminate } from 'firebase/firestore';
 import { fetchPopularPeopleSitemapEntries } from './sitemap-people';
 import { buildFranchiseSitemapEntries } from '../src/lib/edge/franchiseMeta';
+import { buildAuthorSitemapEntries } from '../src/lib/edge/authorSitemap';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -120,6 +121,7 @@ async function run() {
   const seenArticleSlugs = new Set<string>();
   const seenFilmSlugs = new Set<string>();
   const filmsForFranchises: any[] = [];
+  const publishedArticlesForAuthors: any[] = [];
   let articlesCount = 0;
   let filmsCount = 0;
 
@@ -154,6 +156,10 @@ async function run() {
           if (isNaN(schedTime) || schedTime > nowMs) return;
         }
 
+        // One entry per distinct author among published articles; no user
+        // documents are fetched, matching api/sitemap.ts exactly.
+        publishedArticlesForAuthors.push(article);
+
         const slug = article.slug || article.id || docSnap.id;
         if (!slug || seenArticleSlugs.has(slug)) return;
 
@@ -173,6 +179,19 @@ async function run() {
     }
 
     console.log(`[Sitemap Builder] Indexed ${articlesCount} published articles.`);
+
+    const authorEntries = buildAuthorSitemapEntries(
+      publishedArticlesForAuthors,
+      baseUrl,
+      formatDateToYMD
+    ).map(author => ({
+      loc: author.loc,
+      lastmod: author.lastmod,
+      changefreq: 'weekly' as const,
+      priority: '0.6',
+    }));
+    entries.push(...authorEntries);
+    console.log(`[Sitemap Builder] Indexed ${authorEntries.length} public authors.`);
 
     if (db) {
       // 4. Fetch Films Catalog from Firestore
