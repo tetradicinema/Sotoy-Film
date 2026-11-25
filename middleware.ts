@@ -10,8 +10,10 @@ import {
   buildCollectionTitle,
   buildCollectionDescription,
   fetchListCollectionDocuments,
+  fetchAuthorProfileForSeo,
+  fetchAuthorPublishedArticles,
 } from './src/lib/edge/firestoreRest.js';
-import { injectMetaTags, injectRootContent, injectPrefetchData, injectSeoLists, buildArticleBodyHtml, buildFilmBodyHtml, FALLBACK_HTML_TEMPLATE } from './src/lib/edge/metaInjection.js';
+import { injectMetaTags, injectRootContent, injectPrefetchData, injectSeoLists, buildArticleBodyHtml, buildAuthorBodyHtml, buildFilmBodyHtml, FALLBACK_HTML_TEMPLATE } from './src/lib/edge/metaInjection.js';
 import {
   buildPeopleListBodyHtml,
   buildPersonBodyHtml,
@@ -25,7 +27,8 @@ import {
   fetchFranchiseForSeo,
   parseFranchiseRouteId,
 } from './src/lib/edge/franchiseMeta.js';
-import { buildRouteMetadata, STATIC_ROUTE_METADATA_CONFIG } from './src/utils/seoMetadata.js';
+import { buildRouteMetadata, buildUserMetadata, STATIC_ROUTE_METADATA_CONFIG } from './src/utils/seoMetadata.js';
+import type { User } from './src/types/index.js';
 import { resolveAggregateRating } from './src/utils/aggregateRating.js';
 import { pickArticleIsoDate } from './src/lib/edge/isoDate.js';
 
@@ -69,6 +72,7 @@ export const config = {
     '/onboarding',
     '/profil',
     '/profile',
+    '/user/:path*',
     '/film/:path*',
     '/artikel/:path*',
     '/article/:path*',
@@ -80,6 +84,8 @@ export const config = {
     '/people',
   ],
 };
+
+const AUTHOR_PROFILE_BASE_URL = 'https://www.sotoyfilm.my.id';
 
 const LEGACY_CATEGORY_PATH = /^\/(?:kategori|category)\/(?:anime|animasi)(?=\/|$)/i;
 
@@ -392,6 +398,48 @@ async function buildStaticRouteResponse(
 }
 
 /**
+ * Non-indexable author fallback: missing user (404) or a user with no
+ * published articles (200). No article list, no user document fields beyond
+ * the optional allowlisted name/bio supplied by the caller.
+ */
+async function buildNonIndexableAuthorResponse(
+  request: Request,
+  userId: string,
+  status: number,
+  profile?: { name: string; bio: string }
+): Promise<Response> {
+  const canonicalUrl = `${AUTHOR_PROFILE_BASE_URL}/user/${encodeURIComponent(userId)}`;
+  let baseHtml = await fetchBaseHtml(request);
+  if (!baseHtml) baseHtml = FALLBACK_HTML_TEMPLATE;
+
+  let html = injectMetaTags(baseHtml, {
+    title: status === 404 ? 'Penulis tidak ditemukan — Sotoy Film' : 'Penulis di Sotoy Film',
+    description:
+      status === 404
+        ? 'Profil penulis ini tidak ditemukan di Sotoy Film.'
+        : 'Profil penulis ini belum memiliki artikel terbit di Sotoy Film.',
+    image: `${AUTHOR_PROFILE_BASE_URL}/og-default.png`,
+    url: canonicalUrl,
+    type: 'website',
+    locale: 'id_ID',
+    robots: 'noindex, follow',
+  });
+
+  if (profile) {
+    html = injectRootContent(html, buildAuthorBodyHtml(profile, []));
+  }
+
+  return new Response(html, {
+    status,
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      'x-robots-tag': 'noindex, follow',
+      'cache-control': 'no-store',
+    },
+  });
+}
+
+/**
  * Safely invokes Vercel next() with fallback to raw x-middleware-next header
  * if helper throws an unexpected runtime error.
  */
@@ -530,6 +578,87 @@ export default async function middleware(request: Request): Promise<Response> {
     const staticRoute = resolveStaticRoute(pathname);
     if (staticRoute.isStatic) {
       return buildStaticRouteResponse(request, staticRoute.cleanPath, staticRoute.isList);
+    }
+
+    // 3a. Public author profiles (/user/:id). Humans already passed through
+    // above; crawlers only see a page when the user exists and has at least
+    // one published article. No new fields are read beyond the allowlisted
+    // name/bio/avatar and the projected article title/slug.
+    const userMatch = /^\/user\/([^/]+)\/?$/.exec(pathname);
+    if (userMatch) {
+      let userId = '';
+      try {
+        userId = decodeURIComponent(userMatch[1]);
+      } catch {
+        return safeNext();
+      }
+      if (!userId) return safeNext();
+
+      const profileResult = await fetchAuthorProfileForSeo(userId);
+      if (profileResult.status === 'error') return safeNext();
+      if (profileResult.status === 'not-found' || !profileResult.data) {
+        return buildNonIndexableAuthorResponse(request, userId, 404);
+      }
+
+      const profile = profileResult.data;
+      const articles = await fetchAuthorPublishedArticles(userId, 30);
+      if (articles.length === 0) {
+        return buildNonIndexableAuthorResponse(request, userId, 200, {
+          name: profile.name,
+          bio: profile.bio,
+        });
+      }
+
+      const canonicalUrl = `${AUTHOR_PROFILE_BASE_URL}/user/${encodeURIComponent(userId)}`;
+      const metadata = buildUserMetadata(profile as Partial<User>, {
+        currentUrl: canonicalUrl,
+        canonicalUrl,
+        overrides: {
+          title: `${profile.name} - Penulis di Sotoy Film`,
+          description: truncateDescription(
+            profile.bio || `${profile.name} telah menulis ${articles.length} artikel di Sotoy Film.`,
+            200
+          ),
+        },
+      });
+
+      const schemaJson = {
+        '@context': 'https://schema.org',
+        '@type': 'ProfilePage',
+        url: canonicalUrl,
+        mainEntity: {
+          '@type': 'Person',
+          name: profile.name,
+          url: canonicalUrl,
+          image: metadata.primaryImage || undefined,
+          description: metadata.description,
+        },
+      };
+
+      let authorBaseHtml = await fetchBaseHtml(request);
+      if (!authorBaseHtml) authorBaseHtml = FALLBACK_HTML_TEMPLATE;
+
+      const authorMetaHtml = injectMetaTags(authorBaseHtml, {
+        title: metadata.title,
+        description: metadata.description,
+        image: metadata.primaryImage,
+        url: metadata.canonicalUrl || canonicalUrl,
+        type: metadata.type || 'profile',
+        imageAlt: metadata.imageAlt,
+        locale: 'id_ID',
+        keywords: metadata.keywords,
+        schemaJson,
+      });
+
+      const authorHtml = injectRootContent(authorMetaHtml, buildAuthorBodyHtml(profile, articles));
+      return new Response(authorHtml, {
+        status: 200,
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+          'x-robots-tag': 'all',
+          'cache-control': 'public, s-maxage=60, stale-while-revalidate=300',
+        },
+      });
     }
 
     // 3b. Person profiles (/person/:id-slug) are backed by TMDB, not Firestore.
@@ -757,6 +886,12 @@ export default async function middleware(request: Request): Promise<Response> {
 
     const publishedTime = collection === 'articles' ? pickArticleIsoDate(data, 'published') : undefined;
     const modifiedTime = collection === 'articles' ? pickArticleIsoDate(data, 'modified') : undefined;
+    const authorId =
+      typeof data.authorId === 'string' && data.authorId.trim()
+        ? data.authorId.trim()
+        : data.author && typeof data.author === 'object' && typeof data.author.id === 'string'
+          ? data.author.id.trim()
+          : '';
 
     // 4. Fetch the base index.html from origin (5-minute shell cache)
     let baseHtml = await fetchBaseHtml(request);
@@ -790,7 +925,13 @@ export default async function middleware(request: Request): Promise<Response> {
       image: [image],
       datePublished: publishedTime,
       dateModified: modifiedTime,
-      author: data.author?.name ? { '@type': 'Person', name: data.author.name } : undefined,
+      author: data.author?.name
+        ? {
+            '@type': 'Person',
+            name: data.author.name,
+            url: authorId ? `${baseUrl}/user/${encodeURIComponent(authorId)}` : undefined,
+          }
+        : undefined,
       publisher: {
         '@type': 'Organization',
         name: 'Sotoy Film',

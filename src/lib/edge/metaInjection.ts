@@ -943,8 +943,14 @@ export function buildArticleBodyHtml(data: Record<string, any>): string {
   const authorName =
     toPlainText(data.author?.name) ||
     (typeof data.author === 'string' ? toPlainText(data.author) : '');
+  const authorId =
+    toPlainText(data.authorId) ||
+    (typeof data.author === 'object' && data.author ? toPlainText(data.author.id) : '');
   if (authorName) {
-    parts.push(`<p>Oleh ${escapeHtml(authorName)}</p>`);
+    const byline = authorId
+      ? `<a href="${escapeHtml(`/user/${encodeURIComponent(authorId)}`)}">${escapeHtml(authorName)}</a>`
+      : escapeHtml(authorName);
+    parts.push(`<p>Oleh ${byline}</p>`);
   }
 
   const publishedIso = pickArticleIsoDate(data, 'published');
@@ -979,6 +985,56 @@ export function buildArticleBodyHtml(data: Record<string, any>): string {
   parts.push(capStructuredHtml(renderArticleContentHtml(data), budget));
 
   return `<article>${parts.join('')}${related}</article>`;
+}
+
+export interface AuthorBodyProfile {
+  name: string;
+  bio: string;
+}
+
+export interface AuthorBodyArticle {
+  id: string;
+  slug?: string;
+  title?: string;
+}
+
+/**
+ * Crawler body for a public author profile. Only allowlisted profile/article
+ * fields reach this function; every value is escaped before rendering.
+ */
+export function buildAuthorBodyHtml(
+  profile: AuthorBodyProfile,
+  articles: AuthorBodyArticle[]
+): string {
+  if (!profile || typeof profile !== 'object') return '';
+
+  const parts: string[] = [
+    `<h1>${escapeHtml(toPlainText(profile.name))}</h1>`,
+    '<p>Penulis di Sotoy Film</p>',
+  ];
+  const bio = toPlainText(profile.bio);
+  if (bio) parts.push(`<p>${escapeHtml(bio)}</p>`);
+
+  const links = (Array.isArray(articles) ? articles : [])
+    .slice(0, 30)
+    .map(article => {
+      if (!article || typeof article !== 'object') return '';
+      const id = toPlainText(article.id);
+      const slug = toPlainText(article.slug);
+      if (!id && !slug) return '';
+      const href = buildArticlePath({ id, slug });
+      const label =
+        toPlainText(article.title) || toPlainText(article.slug) || toPlainText(article.id);
+      return `<li><a href="${escapeHtml(href)}">${escapeHtml(label)}</a></li>`;
+    })
+    .filter(Boolean);
+
+  if (links.length) {
+    parts.push(`<p>Artikel karya ${escapeHtml(toPlainText(profile.name))}:</p>`);
+    parts.push(`<ul>${links.join('')}</ul>`);
+  }
+
+  return `<article>${parts.join('')}</article>`;
 }
 
 /**

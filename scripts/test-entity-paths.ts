@@ -6,6 +6,7 @@ import {
   type EntityPathFilm,
 } from '../src/utils/entityPaths';
 import { handleSitemapRequest } from '../api/sitemap.js';
+import { buildAuthorSitemapEntries } from '../src/lib/edge/authorSitemap.js';
 
 const SITE_BASE_URL = 'https://www.sotoyfilm.my.id';
 
@@ -60,18 +61,39 @@ function slugifyCopy(text: string): string {
 /* -------------------------------------------------------------------------- */
 
 const SITEMAP_ARTICLES = [
-  { id: 'art-with-slug', slug: 'review-dune-2', title: 'Review Dune 2', status: 'published' },
-  { id: 'art-no-slug', title: 'Judul Tanpa Slug', status: 'published' },
-  { id: 'art special/:id', title: 'Special Chars', status: 'published' },
+  {
+    id: 'art-with-slug',
+    slug: 'review-dune-2',
+    title: 'Review Dune 2',
+    status: 'published',
+    authorId: 'author-a',
+    publishedAtTimestamp: '2026-10-05T00:00:00.000Z',
+    updatedAt: '2026-11-10T00:00:00.000Z',
+  },
+  {
+    id: 'art-no-slug',
+    title: 'Judul Tanpa Slug',
+    status: 'published',
+    authorId: 'author-a',
+    publishedAtTimestamp: '2026-09-01T00:00:00.000Z',
+  },
+  {
+    id: 'art special/:id',
+    title: 'Special Chars',
+    status: 'published',
+    authorId: 'author-b',
+    publishedAtTimestamp: '2026-10-05T00:00:00.000Z',
+  },
   {
     id: 'art-edited',
     slug: 'artikel-diedit',
     title: 'Artikel Diedit',
     status: 'published',
+    authorId: 'author-b',
     publishedAtTimestamp: '2026-10-01T00:00:00.000Z',
     updatedAt: '2026-11-20T00:00:00.000Z',
   },
-  { id: 'art-draft', title: 'Draft Article', status: 'draft' },
+  { id: 'art-draft', title: 'Draft Article', status: 'draft', authorId: 'draft-only-author' },
 ];
 
 const SITEMAP_FILMS = [
@@ -168,6 +190,20 @@ async function fetchLiveSitemap(): Promise<{ articleLocs: string[]; xml: string 
   };
 }
 
+/** Extracts /user/<id> URLs and their lastmod values from a sitemap XML. */
+function getSitemapUserEntries(xml: string): Array<{ loc: string; lastmod: string }> {
+  return (xml.match(/<url>[\s\S]*?<\/url>/g) || [])
+    .map(block => {
+      const loc = /<loc>([^<]*)<\/loc>/.exec(block)?.[1] || '';
+      if (!loc.startsWith(`${SITE_BASE_URL}/user/`)) return null;
+      return {
+        loc,
+        lastmod: /<lastmod>([^<]*)<\/lastmod>/.exec(block)?.[1] || '',
+      };
+    })
+    .filter((entry): entry is { loc: string; lastmod: string } => entry !== null);
+}
+
 const runTests = async () => {
   console.log('Running Entity Paths Tests...\n');
 
@@ -242,6 +278,38 @@ const runTests = async () => {
   assert(
     !editedBlock.includes('<lastmod>2026-10-01</lastmod>'),
     'sitemap lastmod never falls back to the immutable publish date'
+  );
+
+  // ---- public author sitemap entries ------------------------------------
+  const userEntries = getSitemapUserEntries(sitemap.xml);
+  const publishedArticles = SITEMAP_ARTICLES.filter(article => article.status === 'published');
+  const ymd = (value: any) =>
+    typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : '';
+  const expectedAuthorEntries = buildAuthorSitemapEntries(publishedArticles, SITE_BASE_URL, ymd)
+    .map(entry => `${entry.loc}|${entry.lastmod}`)
+    .sort();
+
+  assertEquals(
+    userEntries.map(entry => `${entry.loc}|${entry.lastmod}`).sort(),
+    expectedAuthorEntries,
+    'live sitemap author URLs/lastmod match the shared helper used by both sitemaps'
+  );
+  assertEquals(
+    userEntries.map(entry => entry.loc).sort(),
+    [`${SITE_BASE_URL}/user/author-a`, `${SITE_BASE_URL}/user/author-b`].sort(),
+    'sitemap has exactly one /user/<id> per distinct published article author'
+  );
+  assert(
+    !sitemap.xml.includes(`${SITE_BASE_URL}/user/draft-only-author`),
+    'draft-only authors never enter the sitemap'
+  );
+  assert(
+    userEntries.find(entry => entry.loc.endsWith('/user/author-a'))?.lastmod === '2026-11-10',
+    'author lastmod uses the newest article updatedAt'
+  );
+  assert(
+    userEntries.find(entry => entry.loc.endsWith('/user/author-b'))?.lastmod === '2026-11-20',
+    'author lastmod ignores the older article of the same author'
   );
 
   // ---- buildFilmPath ----------------------------------------------------

@@ -1247,6 +1247,9 @@ async function runSitemapChecks(): Promise<void> {
       'id',
       'slug',
       'title',
+      // Author profiles are derived from published articles, so the sitemap
+      // needs the authorId already present on those documents.
+      'authorId',
       'status',
       'scheduledAt',
       'updatedAt',
