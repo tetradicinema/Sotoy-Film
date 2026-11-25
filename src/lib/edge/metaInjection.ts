@@ -6,6 +6,7 @@
 
 import { TWITTER_CREATOR } from '../../utils/seoMetadata.js';
 import { buildArticlePath, buildFilmPath, buildCategoryPath } from '../../utils/entityPaths.js';
+import { pickArticleIsoDate } from './isoDate.js';
 
 /**
  * Attribute React Helmet uses to recognise the tags it owns. Marking the
@@ -858,25 +859,38 @@ function relatedEntityRefs(value: unknown): Array<{ id: string; slug?: string; t
   for (const item of rawList) {
     if (typeof item === 'string') {
       const id = item.trim();
-      if (id) refs.push({ id, slug: id });
+      // An ID alone is not a link target: never turn it into a path or a label.
+      if (id) refs.push({ id });
       continue;
     }
     if (!item || typeof item !== 'object') continue;
     const record = item as Record<string, any>;
-    const id = toPlainText(record.id) || toPlainText(record.slug) || toPlainText(record.name);
-    if (!id) continue;
-    refs.push({
-      id,
-      slug: toPlainText(record.slug) || id,
-      title: toPlainText(record.title) || toPlainText(record.name),
-    });
+    const id = toPlainText(record.id) || toPlainText(record.slug);
+    const slug = toPlainText(record.slug);
+    const title = toPlainText(record.title) || toPlainText(record.name);
+    if (!id && !slug) continue;
+    refs.push({ id: id || slug, slug, title });
   }
   return refs;
 }
 
+function readableCategoryLabel(category: string): string {
+  return category
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, char => char.toUpperCase())
+    .trim();
+}
+
+function formatIndonesianDate(iso: string): string {
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return iso;
+  return parsed.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
 /**
  * Small related block built exclusively from fields already present on the
- * article document. No extra reads, no fabricated URLs.
+ * article document. No extra reads, no fabricated URLs: an ID-only reference
+ * is dropped because its real slug/title cannot be resolved here.
  */
 function buildArticleRelatedHtml(data: Record<string, any>): string {
   const links: string[] = [];
@@ -886,27 +900,31 @@ function buildArticleRelatedHtml(data: Record<string, any>): string {
     seen.add(href);
     links.push(articleAnchor(href, false, escapeHtml(label)));
   };
+  const addResolved = (
+    refs: Array<{ id: string; slug?: string; title?: string }>,
+    buildPath: (ref: { id: string; slug?: string; title?: string }) => string
+  ) => {
+    for (const ref of refs) {
+      // Both values must come from the document: no ID-based path, no ID label.
+      if (!ref.slug || !ref.title) continue;
+      add(buildPath(ref), ref.title);
+    }
+  };
 
   const category = toPlainText(data.category);
   if (category && sanitizeArticleHref(buildCategoryPath(category))) {
-    add(buildCategoryPath(category), `Kategori: ${category}`);
+    add(buildCategoryPath(category), `Kategori ${readableCategoryLabel(category)}`);
   }
 
-  for (const ref of relatedEntityRefs(data.relatedFilmId)) {
-    const href = buildFilmPath(ref);
-    add(href, ref.title || ref.slug || ref.id);
+  // Only embedded film details carry a real slug and human title. Bare
+  // relatedFilmId(s) are intentionally ignored: resolving them needs a fetch.
+  for (const field of ['relatedFilms', 'linkedFilms', 'relatedFilmId', 'relatedFilmIds']) {
+    addResolved(relatedEntityRefs(data[field]), ref => buildFilmPath(ref));
   }
-  for (const ref of relatedEntityRefs(data.relatedFilmIds)) {
-    const href = buildFilmPath(ref);
-    add(href, ref.title || ref.slug || ref.id);
-  }
-  // Article documents currently have no related-article field, but honour one
-  // if a document already carries it (the film collection has relatedArticleIds).
-  for (const field of ['relatedArticleIds', 'relatedArticles']) {
-    for (const ref of relatedEntityRefs(data[field])) {
-      const href = buildArticlePath(ref);
-      add(href, ref.title || ref.slug || ref.id);
-    }
+  // Article documents do not normally carry related-article details; honour
+  // them when present, but never fall back to a bare ID.
+  for (const field of ['relatedArticles', 'relatedArticleIds', 'relatedArticleDetails']) {
+    addResolved(relatedEntityRefs(data[field]), ref => buildArticlePath(ref));
   }
 
   return links.length ? `<p>Related: ${links.join(' ')}</p>` : '';
@@ -926,17 +944,27 @@ export function buildArticleBodyHtml(data: Record<string, any>): string {
     toPlainText(data.author?.name) ||
     (typeof data.author === 'string' ? toPlainText(data.author) : '');
   if (authorName) {
-    parts.push(`<p>By ${escapeHtml(authorName)}</p>`);
+    parts.push(`<p>Oleh ${escapeHtml(authorName)}</p>`);
   }
 
-  const publishedAt = toPlainText(data.publishedAt);
-  if (publishedAt) {
-    const parsedDate = new Date(publishedAt);
-    const dateLabel = isNaN(parsedDate.getTime())
-      ? publishedAt
-      : parsedDate.toISOString().split('T')[0];
+  const publishedIso = pickArticleIsoDate(data, 'published');
+  if (publishedIso) {
     parts.push(
-      `<p><time datetime="${escapeHtml(publishedAt)}">${escapeHtml(dateLabel)}</time></p>`
+      `<p><time datetime="${escapeHtml(publishedIso)}">${escapeHtml(formatIndonesianDate(publishedIso))}</time></p>`
+    );
+  }
+
+  // Only surface an edit date when it is meaningfully later than publication.
+  // With no updatedAt, pickArticleIsoDate falls back to the publish date, so
+  // this comparison also preserves the old "no separate modified date" behavior.
+  const modifiedIso = pickArticleIsoDate(data, 'modified');
+  if (
+    modifiedIso &&
+    publishedIso &&
+    new Date(modifiedIso).getTime() - new Date(publishedIso).getTime() > 24 * 60 * 60 * 1000
+  ) {
+    parts.push(
+      `<p><time datetime="${escapeHtml(modifiedIso)}">Diperbarui: ${escapeHtml(formatIndonesianDate(modifiedIso))}</time></p>`
     );
   }
 
