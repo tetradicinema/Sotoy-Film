@@ -71,6 +71,7 @@ export const config = {
     '/profile',
     '/film/:path*',
     '/artikel/:path*',
+    '/article/:path*',
     '/koleksi/:path*',
     '/kategori/:path*',
     '/category/:path*',
@@ -81,6 +82,9 @@ export const config = {
 };
 
 const LEGACY_CATEGORY_PATH = /^\/(?:kategori|category)\/(?:anime|animasi)(?=\/|$)/i;
+
+/** English article alias. The article route only has one canonical prefix. */
+const ARTICLE_ALIAS_PATH = /^\/article(?=\/|$)/i;
 
 /** Category routes whose metadata comes from seoMetadata.ts. */
 const KNOWN_CATEGORY_NAMES = new Set([
@@ -440,6 +444,19 @@ export default async function middleware(request: Request): Promise<Response> {
       });
     }
 
+    // 0b. The legacy English article prefix is an alias, not a second page.
+    // Redirect before bot detection so humans and crawlers consolidate on the
+    // same URL in a single hop.
+    if (ARTICLE_ALIAS_PATH.test(pathname)) {
+      const canonicalPath = pathname.replace(ARTICLE_ALIAS_PATH, '/artikel');
+      return new Response(null, {
+        status: 301,
+        headers: {
+          location: `${canonicalPath}${url.search}`,
+        },
+      });
+    }
+
     const userAgent = request.headers.get('user-agent');
 
     // 1. Pass through immediately for normal human visitors with zero latency penalty
@@ -666,6 +683,27 @@ export default async function middleware(request: Request): Promise<Response> {
     // The resolver has already merged the full document (when available) and
     // re-checked publication status on the merged result.
     const data = resolved.data;
+
+    // Articles have exactly one canonical path segment: the document slug, or
+    // the document id when no slug exists (the same rule as
+    // entityPaths.buildArticlePath and the client). A request that arrives via
+    // the doc id, a slugified title, or a slugified seoTitle must not render a
+    // second self-canonical page, so collapse it with a single 301 hop.
+    if (collection === 'articles') {
+      const documentSlug =
+        (typeof data.slug === 'string' && data.slug.trim()) ||
+        (typeof data.id === 'string' && data.id.trim()) ||
+        slug;
+
+      if (documentSlug !== slug) {
+        return new Response(null, {
+          status: 301,
+          headers: {
+            location: `/artikel/${encodeURIComponent(documentSlug)}`,
+          },
+        });
+      }
+    }
 
     // 3. Prepare metadata based on collection type
     const baseUrl = 'https://www.sotoyfilm.my.id';
