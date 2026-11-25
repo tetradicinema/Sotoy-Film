@@ -619,6 +619,33 @@ const mockFetch = async (url: string | URL | Request, init?: RequestInit): Promi
         relatedArticleIds: {
           arrayValue: { values: [{ stringValue: 'published-article' }] }
         },
+        // Only these embedded details carry a real slug + human title.
+        relatedFilms: {
+          arrayValue: {
+            values: [{
+              mapValue: {
+                fields: {
+                  id: { stringValue: 'film-doc-boyhood' },
+                  slug: { stringValue: 'boyhood' },
+                  title: { stringValue: 'Boyhood' }
+                }
+              }
+            }]
+          }
+        },
+        relatedArticles: {
+          arrayValue: {
+            values: [{
+              mapValue: {
+                fields: {
+                  id: { stringValue: 'article-doc-published' },
+                  slug: { stringValue: 'published-article' },
+                  title: { stringValue: 'Published Article Title' }
+                }
+              }
+            }]
+          }
+        },
         content: { stringValue: markdown }
       }
     }), {
@@ -650,6 +677,26 @@ const mockFetch = async (url: string | URL | Request, init?: RequestInit): Promi
         excerpt: { stringValue: 'Legacy HTML article excerpt.' },
         publishedAt: { stringValue: '2026-10-24T09:30:00.000Z' },
         content: { stringValue: html }
+      }
+    }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' }
+    });
+  }
+
+  if (urlStr.includes('/documents/articles/updated-article')) {
+    return new Response(JSON.stringify({
+      name: 'projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents/articles/updated-article',
+      fields: {
+        id: { stringValue: 'updated-article' },
+        title: { stringValue: 'Updated Article Title' },
+        status: { stringValue: 'published' },
+        slug: { stringValue: 'updated-article' },
+        excerpt: { stringValue: 'An edited article excerpt.' },
+        publishedAt: { stringValue: '2026-10-21T09:30:00.000Z' },
+        publishedAtTimestamp: { stringValue: '2026-10-21T09:30:00.000Z' },
+        updatedAt: { stringValue: '2026-11-21T09:30:00.000Z' },
+        content: { stringValue: 'Article body updated long after publication.' }
       }
     }), {
       status: 200,
@@ -1536,12 +1583,19 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
       'bot article body contains the h1 title',
       root.includes('<h1>Published Article Title</h1>')
     );
-    check('bot article body contains the author name', root.includes('Raka Pratama'));
+    check('bot article byline uses the Indonesian label', root.includes('<p>Oleh Raka Pratama</p>'));
     check(
       'bot article body does not leak the author email',
       !root.includes('private-author@example.com')
     );
-    check('bot article body contains the publish date', root.includes('2026-10-20'));
+    check(
+      'bot article body uses an ISO datetime and a readable Indonesian date',
+      /<time datetime="2026-10-20T[^"]+">20 Oktober 2026<\/time>/.test(root)
+    );
+    check(
+      'bot article emits article:modified_time',
+      getOgContent(html, 'article:modified_time') === '2026-10-20T09:30:00.000Z'
+    );
     check(
       'bot article body contains the excerpt and article text',
       root.includes('This is a published article excerpt.') && root.includes('sweeping epic')
@@ -1567,6 +1621,58 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
       articleSchema?.['@type'] === 'NewsArticle' &&
         articleSchema?.headline === 'Published Article Title'
     );
+    check(
+      'bot JSON-LD dateModified falls back to datePublished when updatedAt is absent',
+      articleSchema?.dateModified === articleSchema?.datePublished &&
+        articleSchema?.datePublished === '2026-10-20T09:30:00.000Z'
+    );
+  }
+
+  // Modified dates: only a meaningful gap produces a second <time>
+  {
+    const response = await middleware(botRequest('/artikel/updated-article'));
+    const html = await response.text();
+    const root = getRootContent(html);
+
+    check(
+      'edited article keeps the original publish date',
+      /<time datetime="2026-10-21T[^"]+">21 Oktober 2026<\/time>/.test(root)
+    );
+    check(
+      'edited article shows Diperbarui when modified is over a day later',
+      /<time datetime="2026-11-21T[^"]+">Diperbarui: 21 November 2026<\/time>/.test(root)
+    );
+    check(
+      'edited article emits article:modified_time',
+      getOgContent(html, 'article:modified_time') === '2026-11-21T09:30:00.000Z'
+    );
+
+    const rawSchema = getLdJsonRaw(html);
+    let schema: any = null;
+    try {
+      schema = rawSchema ? JSON.parse(rawSchema) : null;
+    } catch {
+      schema = null;
+    }
+    check(
+      'bot JSON-LD dateModified uses pickArticleIsoDate(modified)',
+      schema?.datePublished === '2026-10-21T09:30:00.000Z' &&
+        schema?.dateModified === '2026-11-21T09:30:00.000Z'
+    );
+
+    const noUpdate = buildArticleBodyHtml({
+      title: 'No Updated At',
+      publishedAtTimestamp: '2026-10-21T09:30:00.000Z',
+      publishedAt: '21 Okt 2026',
+    });
+    check('missing updatedAt does not add a Diperbarui line', !noUpdate.includes('Diperbarui'));
+
+    const smallGap = buildArticleBodyHtml({
+      title: 'Small Gap',
+      publishedAtTimestamp: '2026-10-21T09:30:00.000Z',
+      updatedAt: '2026-10-22T00:30:00.000Z',
+    });
+    check('a modification within one day does not add Diperbarui', !smallGap.includes('Diperbarui'));
   }
 
   // Article canonicalization: every alias ends at the document slug in one hop.
@@ -1649,10 +1755,16 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
       /<a href="https:\/\/example\.com\/review" rel="noopener">ulasan luar<\/a>/.test(root)
     );
     check(
-      'structured markdown: related block links only to existing document fields',
-      root.includes('<a href="/kategori/movies">Kategori: movies</a>') &&
-        root.includes('<a href="/film/breaking-bad">breaking-bad</a>') &&
-        root.includes('<a href="/artikel/published-article">published-article</a>')
+      'structured markdown: related block uses real slugs and readable labels',
+      root.includes('<a href="/kategori/movies">Kategori Movies</a>') &&
+        root.includes('<a href="/film/boyhood">Boyhood</a>') &&
+        root.includes('<a href="/artikel/published-article">Published Article Title</a>')
+    );
+    check(
+      'structured markdown: ID-only related references are dropped',
+      !root.includes('/film/breaking-bad') &&
+        !root.includes('>breaking-bad<') &&
+        !root.includes('>published-article<')
     );
     check('structured markdown: raw script markup is never a live tag', !root.includes('<script') && !root.includes('alert('));
     check('structured markdown: all tags are balanced', hasBalancedTags(root));
