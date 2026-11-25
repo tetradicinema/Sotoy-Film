@@ -43,6 +43,7 @@ import { normalizeFilmType } from '../utils/filmType';
 import { buildPersonPath } from '../utils/personHelpers';
 import { buildFranchisePath } from '../utils/franchiseHelpers';
 import { normalizeArticleCategory, normalizeInterestLabel, normalizeInterestProfile } from '../utils/articleCategory';
+import { resolveArticleDates } from '../utils/articleDates';
 import { getCollectionItemKey, reorderByKeys } from '../utils/collectionHelpers';
 import { useRestDataFallback, mergeArticleCollections } from '../hooks/useRestDataFallback';
 import { readSeoLists } from '../utils/seoPrefetch';
@@ -5138,21 +5139,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const now = new Date();
-    const publishedAtTimestamp = (newArticle as any).publishedAtTimestamp || (
-      status === 'scheduled' && (newArticle as any).scheduledAt
-        ? new Date((newArticle as any).scheduledAt).toISOString()
-        : now.toISOString()
-    );
-    const created: Article = {
-      ...newArticle,
+    const dates = resolveArticleDates({
+      existing: null,
+      status,
+      scheduledAt: (newArticle as any).scheduledAt,
+      now,
+      isNew: true,
+    });
+    const {
+      publishedAt: _incomingPublishedAt,
+      publishedAtTimestamp: _incomingPublishedAtTimestamp,
+      createdAt: _incomingCreatedAt,
+      updatedAt: _incomingUpdatedAt,
+      ...articleFields
+    } = newArticle as any;
+    const created = {
+      ...articleFields,
       id: articleId,
       status,
-      publishedAt: (newArticle as any).publishedAt || now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
-      publishedAtTimestamp,
+      createdAt: dates.createdAt,
+      updatedAt: dates.updatedAt,
+      ...(dates.firstPublish
+        ? {
+            publishedAt: dates.publishedAt,
+            publishedAtTimestamp: dates.publishedAtTimestamp,
+          }
+        : {}),
       views: 1,
       likes: 0,
       commentsCount: 0,
-    };
+    } as Article;
 
     try {
       // Remove any undefined properties which crash Firestore setDoc
@@ -5210,10 +5226,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     try {
       const updatesToSave: Partial<Article> = { ...updatedFields };
-      if (updatesToSave.status === 'published' && !updatesToSave.publishedAtTimestamp) {
-        updatesToSave.publishedAtTimestamp = targetArticle?.publishedAtTimestamp || new Date().toISOString();
-      } else if (updatesToSave.status === 'scheduled' && updatesToSave.scheduledAt) {
-        updatesToSave.publishedAtTimestamp = new Date(updatesToSave.scheduledAt).toISOString();
+      const targetStatus = updatesToSave.status || targetArticle?.status;
+      const dates = targetStatus
+        ? resolveArticleDates({
+            existing: targetArticle,
+            status: targetStatus,
+            scheduledAt: updatesToSave.scheduledAt ?? targetArticle?.scheduledAt,
+            now: new Date(),
+          })
+        : null;
+      updatesToSave.updatedAt = dates?.updatedAt ?? new Date().toISOString();
+      if (dates?.firstPublish) {
+        updatesToSave.publishedAt = dates.publishedAt;
+        updatesToSave.publishedAtTimestamp = dates.publishedAtTimestamp;
+      } else {
+        // The article is already live (or not live yet): never let a content
+        // edit move the publish date, even if the caller sent one.
+        delete updatesToSave.publishedAt;
+        delete updatesToSave.publishedAtTimestamp;
       }
       // Remove any undefined properties which crash Firestore updateDoc
       const sanitizedUpdates = JSON.parse(JSON.stringify(updatesToSave));
@@ -6775,17 +6805,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const bulkUpdateArticles = async (articleIds: string[], updates: Partial<Article>): Promise<boolean> => {
     try {
-      const updatesToApply: Partial<Article> = { ...updates };
-      if (updatesToApply.status === 'published' && !updatesToApply.publishedAtTimestamp) {
-        updatesToApply.publishedAtTimestamp = new Date().toISOString();
-      } else if (updatesToApply.status === 'scheduled' && updatesToApply.scheduledAt) {
-        updatesToApply.publishedAtTimestamp = new Date(updatesToApply.scheduledAt).toISOString();
-      }
-      const sanitizedUpdates = JSON.parse(JSON.stringify(updatesToApply));
+      const now = new Date();
+      const baseUpdates: Partial<Article> = {
+        ...updates,
+        updatedAt: now.toISOString(),
+      };
+      const patches = articleIds.map(id => {
+        const existing = resolvedArticles.find(a => a.id === id);
+        const targetStatus = baseUpdates.status || existing?.status;
+        const dates = targetStatus
+          ? resolveArticleDates({
+              existing,
+              status: targetStatus,
+              scheduledAt: baseUpdates.scheduledAt ?? existing?.scheduledAt,
+              now,
+            })
+          : null;
+        const patch: Partial<Article> = { ...baseUpdates };
+        if (dates?.firstPublish) {
+          // Publishing a draft/trash document for the first time: stamp both
+          // the machine timestamp and the display date once.
+          patch.publishedAt = dates.publishedAt;
+          patch.publishedAtTimestamp = dates.publishedAtTimestamp;
+        } else {
+          // Already live (or a non-status bulk edit): keep the stored date.
+          delete patch.publishedAt;
+          delete patch.publishedAtTimestamp;
+        }
+        return { id, patch };
+      });
       await Promise.all(
-        articleIds.map(id => updateDoc(doc(db, 'articles', id), sanitizedUpdates))
+        patches.map(({ id, patch }) =>
+          updateDoc(doc(db, 'articles', id), JSON.parse(JSON.stringify(patch)))
+        )
       );
-      setArticles(prev => prev.map(a => articleIds.includes(a.id) ? { ...a, ...updatesToApply } : a));
+      const patchById = new Map(patches.map(entry => [entry.id, entry.patch]));
+      setArticles(prev => prev.map(a => {
+        const patch = patchById.get(a.id);
+        return patch ? { ...a, ...patch } : a;
+      }));
       refreshArticles();
       showToast(`${articleIds.length} artikel berhasil diperbarui secara massal.`);
       return true;

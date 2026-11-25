@@ -63,6 +63,14 @@ const SITEMAP_ARTICLES = [
   { id: 'art-with-slug', slug: 'review-dune-2', title: 'Review Dune 2', status: 'published' },
   { id: 'art-no-slug', title: 'Judul Tanpa Slug', status: 'published' },
   { id: 'art special/:id', title: 'Special Chars', status: 'published' },
+  {
+    id: 'art-edited',
+    slug: 'artikel-diedit',
+    title: 'Artikel Diedit',
+    status: 'published',
+    publishedAtTimestamp: '2026-10-01T00:00:00.000Z',
+    updatedAt: '2026-11-20T00:00:00.000Z',
+  },
   { id: 'art-draft', title: 'Draft Article', status: 'draft' },
 ];
 
@@ -86,7 +94,7 @@ function toFirestoreRestDoc(collection: string, doc: Record<string, unknown>) {
  * and returns only the `/artikel/` locs, so the sitemap rule is asserted on
  * actual output instead of a local copy of it.
  */
-async function fetchLiveSitemapArticleUrls(): Promise<string[]> {
+async function fetchLiveSitemap(): Promise<{ articleLocs: string[]; xml: string }> {
   const realFetch = globalThis.fetch;
   const previousKey = process.env.TMDB_API_KEY;
   process.env.TMDB_API_KEY = 'test-sitemap-key';
@@ -154,7 +162,10 @@ async function fetchLiveSitemapArticleUrls(): Promise<string[]> {
   while ((match = pattern.exec(body)) !== null) {
     locs.push(match[1]);
   }
-  return locs.filter(loc => loc.startsWith(`${SITE_BASE_URL}/artikel/`));
+  return {
+    articleLocs: locs.filter(loc => loc.startsWith(`${SITE_BASE_URL}/artikel/`)),
+    xml: body,
+  };
 }
 
 const runTests = async () => {
@@ -201,7 +212,8 @@ const runTests = async () => {
   );
 
   // ---- live sitemap parity ----------------------------------------------
-  const sitemapArticleLocs = (await fetchLiveSitemapArticleUrls()).sort();
+  const sitemap = await fetchLiveSitemap();
+  const sitemapArticleLocs = sitemap.articleLocs.sort();
   const publishedSitemapArticles = SITEMAP_ARTICLES.filter(article => article.status === 'published');
   assertEquals(
     sitemapArticleLocs,
@@ -217,6 +229,19 @@ const runTests = async () => {
   assert(
     !sitemapArticleLocs.includes(`${SITE_BASE_URL}/artikel/judul-tanpa-slug`),
     'a slugless article is not listed under a slugified title'
+  );
+
+  const editedBlock =
+    /<url>[\s\S]*?<loc>https:\/\/www\.sotoyfilm\.my\.id\/artikel\/artikel-diedit<\/loc>[\s\S]*?<\/url>/.exec(
+      sitemap.xml
+    )?.[0] || '';
+  assert(
+    editedBlock.includes('<lastmod>2026-11-20</lastmod>'),
+    'sitemap lastmod uses updatedAt when it differs from publishedAtTimestamp'
+  );
+  assert(
+    !editedBlock.includes('<lastmod>2026-10-01</lastmod>'),
+    'sitemap lastmod never falls back to the immutable publish date'
   );
 
   // ---- buildFilmPath ----------------------------------------------------

@@ -1,4 +1,6 @@
 import { shouldSyncEditorContent, canAutosave } from '../src/utils/articleFlow';
+import { resolveConfigArticles } from '../src/utils/homepageConfigHelper';
+import type { Article, SectionConfig } from '../src/types';
 import {
   splitProfileArticles,
   getDefaultEditorialSubTab,
@@ -427,6 +429,62 @@ const runTests = () => {
     getArticleSizeIssues({ content: undefined, contentJson: undefined }),
     { contentTooLarge: false, contentJsonTooLarge: false },
     'getArticleSizeIssues: undefined values are treated as empty'
+  );
+
+  // ---------------------------------------------------------------------------
+  // Homepage order: an edit must not move an article
+  // ---------------------------------------------------------------------------
+  const homepageArticle = (id: string, publishedAtTimestamp: string, updatedAt?: string) =>
+    ({
+      id,
+      slug: id,
+      title: id,
+      excerpt: '',
+      content: '',
+      coverImage: '',
+      category: 'movies',
+      subCategory: 'news',
+      status: 'published',
+      publishedAtTimestamp,
+      publishedAt: new Date(publishedAtTimestamp).toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      }),
+      ...(updatedAt ? { updatedAt } : {}),
+    }) as unknown as Article;
+
+  const newest = homepageArticle('newest', '2026-01-03T00:00:00.000Z');
+  const edited = homepageArticle('edited', '2026-01-02T00:00:00.000Z', '2026-06-01T00:00:00.000Z');
+  const oldest = homepageArticle('oldest', '2026-01-01T00:00:00.000Z');
+  const homepageArticles = [newest, edited, oldest];
+
+  // Mirrors the inline Recent comparator in HeroSection.tsx:105-117.
+  const recentComparator = (a: Article, b: Article) => {
+    const timeA = a.publishedAtTimestamp
+      ? new Date(a.publishedAtTimestamp).getTime()
+      : new Date(a.publishedAt || 0).getTime();
+    const timeB = b.publishedAtTimestamp
+      ? new Date(b.publishedAtTimestamp).getTime()
+      : new Date(b.publishedAt || 0).getTime();
+    return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
+  };
+
+  assertEquals(
+    ids(homepageArticles.slice().sort(recentComparator) as TestArticle[]),
+    ['newest', 'edited', 'oldest'],
+    'Recent comparator: newer updatedAt does not move the edited article'
+  );
+
+  const resolvedHomepage = resolveConfigArticles(
+    homepageArticles,
+    { sourceType: 'auto', limit: 5 } as SectionConfig,
+    []
+  );
+  assertEquals(
+    ids(resolvedHomepage as TestArticle[]),
+    ['newest', 'edited', 'oldest'],
+    'resolveConfigArticles (newest): an edit keeps the article in place'
   );
 
   console.log(`\nSummary: ${passed} passed, ${failed} failed`);

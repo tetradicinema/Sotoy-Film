@@ -261,7 +261,15 @@ export function clearSeoListsCache(): void {
 }
 
 function getListArticleTime(data: Record<string, any>): number {
-  for (const field of ['publishedAtTimestamp', 'scheduledAt', 'publishedAt', 'updatedAt', 'createdAt']) {
+  // Publish fields decide list order. `updatedAt` must never move an already
+  // published article, so it is only consulted when no publish field parses.
+  for (const field of ['publishedAtTimestamp', 'scheduledAt', 'publishedAt']) {
+    const raw = data[field];
+    if (typeof raw !== 'string' || !raw.trim()) continue;
+    const parsed = new Date(raw).getTime();
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+  for (const field of ['updatedAt', 'createdAt']) {
     const raw = data[field];
     if (typeof raw !== 'string' || !raw.trim()) continue;
     const parsed = new Date(raw).getTime();
