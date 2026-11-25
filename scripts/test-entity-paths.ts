@@ -5,6 +5,9 @@ import {
   type EntityPathArticle,
   type EntityPathFilm,
 } from '../src/utils/entityPaths';
+import { handleSitemapRequest } from '../api/sitemap.js';
+
+const SITE_BASE_URL = 'https://www.sotoyfilm.my.id';
 
 let passed = 0;
 let failed = 0;
@@ -25,11 +28,11 @@ const assertEquals = (actual: any, expected: any, message: string) => {
 };
 
 /**
- * Replicates the slug/URL logic of src/utils/generateSitemap.ts exactly,
- * so the builders can be compared against it for sample data.
+ * Replicates the article URL rule of api/sitemap.ts and generate-sitemap.ts:
+ * `data.slug || data.id` (article paths never slugify the title).
  */
 const sitemapArticleUrl = (data: { id: string; slug?: string; title?: string }): string => {
-  const slug = data.slug || (data.title ? slugifyCopy(data.title) : data.id);
+  const slug = data.slug || data.id;
   return `/artikel/${encodeURIComponent(slug)}`;
 };
 
@@ -52,7 +55,109 @@ function slugifyCopy(text: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-const runTests = () => {
+/* -------------------------------------------------------------------------- */
+/* Live sitemap parity                                                        */
+/* -------------------------------------------------------------------------- */
+
+const SITEMAP_ARTICLES = [
+  { id: 'art-with-slug', slug: 'review-dune-2', title: 'Review Dune 2', status: 'published' },
+  { id: 'art-no-slug', title: 'Judul Tanpa Slug', status: 'published' },
+  { id: 'art special/:id', title: 'Special Chars', status: 'published' },
+  { id: 'art-draft', title: 'Draft Article', status: 'draft' },
+];
+
+const SITEMAP_FILMS = [
+  { id: 'film-dune-2', slug: 'dune-part-two', title: 'Dune Part Two' },
+];
+
+function toFirestoreRestDoc(collection: string, doc: Record<string, unknown>) {
+  return {
+    document: {
+      name: `projects/test/databases/(default)/documents/${collection}/${doc.id}`,
+      fields: Object.fromEntries(
+        Object.entries(doc).map(([key, value]) => [key, { stringValue: String(value) }])
+      ),
+    },
+  };
+}
+
+/**
+ * Runs the real `/sitemap.xml` handler against a deterministic Firestore mock
+ * and returns only the `/artikel/` locs, so the sitemap rule is asserted on
+ * actual output instead of a local copy of it.
+ */
+async function fetchLiveSitemapArticleUrls(): Promise<string[]> {
+  const realFetch = globalThis.fetch;
+  const previousKey = process.env.TMDB_API_KEY;
+  process.env.TMDB_API_KEY = 'test-sitemap-key';
+
+  globalThis.fetch = (async (input: any, init?: RequestInit) => {
+    const url = String(input);
+
+    if (url.includes('firestore.googleapis.com')) {
+      const body = init?.body ? JSON.parse(String(init.body)) : {};
+      const collection = body?.structuredQuery?.from?.[0]?.collectionId;
+      const docs =
+        collection === 'articles'
+          ? SITEMAP_ARTICLES
+          : collection === 'films'
+            ? SITEMAP_FILMS
+            : [];
+
+      return {
+        ok: true,
+        status: 200,
+        json: async () => docs.map(doc => toFirestoreRestDoc(collection, doc)),
+      } as unknown as Response;
+    }
+
+    // TMDB people are out of scope here; an empty page keeps the live
+    // article/film result healthy without extra fixtures.
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({ page: 1, results: [] }),
+    } as unknown as Response;
+  }) as typeof fetch;
+
+  let body = '';
+  const res: any = {
+    setHeader() {},
+    removeHeader() {},
+    status() {
+      return res;
+    },
+    send(payload: string) {
+      body = String(payload);
+      return res;
+    },
+    writeHead() {},
+    end(payload?: string) {
+      if (payload !== undefined) body = String(payload);
+    },
+  };
+
+  try {
+    await handleSitemapRequest({ url: '/sitemap.xml', query: {} }, res);
+  } finally {
+    globalThis.fetch = realFetch;
+    if (previousKey === undefined) {
+      delete process.env.TMDB_API_KEY;
+    } else {
+      process.env.TMDB_API_KEY = previousKey;
+    }
+  }
+
+  const locs: string[] = [];
+  const pattern = /<loc>([^<]*)<\/loc>/g;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(body)) !== null) {
+    locs.push(match[1]);
+  }
+  return locs.filter(loc => loc.startsWith(`${SITE_BASE_URL}/artikel/`));
+}
+
+const runTests = async () => {
   console.log('Running Entity Paths Tests...\n');
 
   // ---- buildArticlePath -------------------------------------------------
@@ -93,6 +198,25 @@ const runTests = () => {
     buildArticlePath({ id: 'art spesial/:x' }),
     '/artikel/art%20spesial%2F%3Ax',
     'buildArticlePath encodes unsafe characters'
+  );
+
+  // ---- live sitemap parity ----------------------------------------------
+  const sitemapArticleLocs = (await fetchLiveSitemapArticleUrls()).sort();
+  const publishedSitemapArticles = SITEMAP_ARTICLES.filter(article => article.status === 'published');
+  assertEquals(
+    sitemapArticleLocs,
+    publishedSitemapArticles
+      .map(article => `${SITE_BASE_URL}${buildArticlePath(article)}`)
+      .sort(),
+    'every sitemap article URL equals buildArticlePath(doc)'
+  );
+  assert(
+    sitemapArticleLocs.includes(`${SITE_BASE_URL}/artikel/art-no-slug`),
+    'a slugless article is listed by its raw id'
+  );
+  assert(
+    !sitemapArticleLocs.includes(`${SITE_BASE_URL}/artikel/judul-tanpa-slug`),
+    'a slugless article is not listed under a slugified title'
   );
 
   // ---- buildFilmPath ----------------------------------------------------

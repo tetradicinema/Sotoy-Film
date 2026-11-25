@@ -51,6 +51,7 @@
     }
   ],
   "redirects": [
+    { "source": "/article/:path*", "destination": "/artikel/:path*", "permanent": true },
     { "source": "/film", "destination": "/film-database", "permanent": true },
     { "source": "/kategori/anime", "destination": "/kategori/animation", "permanent": true },
     { "source": "/kategori/anime/:path*", "destination": "/kategori/animation/:path*", "permanent": true },

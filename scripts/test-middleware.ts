@@ -460,6 +460,43 @@ const mockFetch = async (url: string | URL | Request, init?: RequestInit): Promi
     });
   }
 
+  // Canonical article fixture: doc id, slug, seoTitle and title all differ so
+  // the redirect tests can prove the document slug wins and the variants fold.
+  const canonicalArticleDoc = {
+    name: 'projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents/articles/article-doc-id-1',
+    fields: {
+      id: { stringValue: 'article-doc-id-1' },
+      slug: { stringValue: 'canonical-article-slug' },
+      title: { stringValue: 'Canonical Article Title' },
+      seoTitle: { stringValue: 'Canonical Article SEO Title' },
+      status: { stringValue: 'published' },
+      excerpt: { stringValue: 'Canonical article excerpt.' },
+      publishedAt: { stringValue: '2026-10-23T09:30:00.000Z' },
+      content: { stringValue: 'Canonical article body about a heist.' },
+      author: {
+        mapValue: {
+          fields: {
+            name: { stringValue: 'Raka Pratama' }
+          }
+        }
+      }
+    }
+  };
+
+  for (const articleSegment of [
+    'article-doc-id-1',
+    'canonical-article-slug',
+    'canonical-article-title',
+    'canonical-article-seo-title'
+  ]) {
+    if (urlStr.includes(`/documents/articles/${articleSegment}`)) {
+      return new Response(JSON.stringify(canonicalArticleDoc), {
+        status: 200,
+        headers: { 'content-type': 'application/json' }
+      });
+    }
+  }
+
   if (urlStr.includes('/documents/articles/published-article')) {
     return new Response(JSON.stringify({
       name: 'projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents/articles/published-article',
@@ -1133,6 +1170,20 @@ const TEST_CASES: TestCase[] = [
     expectedLocation: '/kategori/animation/news',
   },
   {
+    name: 'Googlebot on /article/:slug alias (301 to /artikel/:slug)',
+    userAgent: 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+    path: '/article/published-article',
+    expectedStatus: 301,
+    expectedLocation: '/artikel/published-article',
+  },
+  {
+    name: 'Human on /article/:slug alias (301 to /artikel/:slug)',
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+    path: '/article/canonical-article-slug',
+    expectedStatus: 301,
+    expectedLocation: '/artikel/canonical-article-slug',
+  },
+  {
     name: 'Windows Chrome on Franchise route (Desktop Human)',
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
     path: '/franchise/119-the-lord-of-the-rings',
@@ -1421,6 +1472,46 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
       'bot article JSON-LD still parses as a NewsArticle',
       articleSchema?.['@type'] === 'NewsArticle' &&
         articleSchema?.headline === 'Published Article Title'
+    );
+  }
+
+  // Article canonicalization: every alias ends at the document slug in one hop.
+  {
+    const canonicalPath = '/artikel/canonical-article-slug';
+    const canonicalBase = 'https://www.sotoyfilm.my.id';
+
+    const slugResponse = await middleware(botRequest(canonicalPath));
+    const slugHtml = await slugResponse.text();
+
+    check('canonical article slug returns 200', slugResponse.status === 200);
+    check(
+      'canonical article slug emits exactly one canonical tag',
+      countMatches(slugHtml, /<link\s+rel=["']canonical["']/gi) === 1
+    );
+    check(
+      'canonical article slug canonical is the document slug',
+      getCanonicalHref(slugHtml) === `${canonicalBase}${canonicalPath}`
+    );
+
+    for (const aliasPath of [
+      '/artikel/canonical-article-title',
+      '/artikel/canonical-article-seo-title',
+      '/artikel/article-doc-id-1',
+    ]) {
+      const aliasResponse = await middleware(botRequest(aliasPath));
+
+      check(
+        `${aliasPath} 301s to the canonical slug in one hop`,
+        aliasResponse.status === 301 &&
+          aliasResponse.headers.get('location') === canonicalPath
+      );
+    }
+
+    const aliasResponse = await middleware(botRequest('/article/canonical-article-slug'));
+    check(
+      '/article/:slug 301s to /artikel/:slug in one hop',
+      aliasResponse.status === 301 &&
+        aliasResponse.headers.get('location') === canonicalPath
     );
   }
 

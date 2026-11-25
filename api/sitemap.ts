@@ -361,7 +361,7 @@ async function generateLiveSitemapItems(): Promise<LiveSitemapResult> {
   for (const art of rawArticles) {
     if (!isArticlePublished(art)) continue;
 
-    const slug = art.slug || (art.title ? slugify(art.title) : art.id);
+    const slug = art.slug || art.id;
     if (!slug || seenArticleSlugs.has(slug)) continue;
     seenArticleSlugs.add(slug);
 

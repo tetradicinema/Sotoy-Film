@@ -154,7 +154,7 @@ async function run() {
           if (isNaN(schedTime) || schedTime > nowMs) return;
         }
 
-        const slug = article.slug || slugify(article.title) || docSnap.id;
+        const slug = article.slug || article.id || docSnap.id;
         if (!slug || seenArticleSlugs.has(slug)) return;
 
         seenArticleSlugs.add(slug);
