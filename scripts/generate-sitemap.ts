@@ -158,7 +158,7 @@ async function run() {
         if (!slug || seenArticleSlugs.has(slug)) return;
 
         seenArticleSlugs.add(slug);
-        const lastmod = formatDateToYMD(article.updatedAt || article.publishedAt || article.createdAt, '');
+        const lastmod = formatDateToYMD(article.updatedAt || article.publishedAtTimestamp || article.publishedAt || article.createdAt, '');
         const entry: SitemapEntry = {
           loc: `${baseUrl}/artikel/${encodeURIComponent(slug)}`,
           changefreq: 'weekly',

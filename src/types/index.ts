@@ -141,6 +141,8 @@ export interface Article {
   };
   publishedAt: string;
   publishedAtTimestamp?: string;
+  updatedAt?: string;
+  createdAt?: string;
   readTime: string;
   skorSotoy?: number; // legacy/optional, but articles do not show rating stars
   featured?: boolean;

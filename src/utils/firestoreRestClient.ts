@@ -280,16 +280,18 @@ export function normalizeRestFilm(
 }
 
 function getArticleTime(article: Article): number {
-  if (article.publishedAtTimestamp) {
-    const t = new Date(article.publishedAtTimestamp).getTime();
+  // Publish fields decide list order. `updatedAt` must never move an already
+  // published article, so it is only consulted when no publish field parses.
+  for (const field of ['publishedAtTimestamp', 'scheduledAt', 'publishedAt'] as const) {
+    const raw = article[field];
+    if (typeof raw !== 'string' || !raw.trim()) continue;
+    const t = new Date(raw).getTime();
     if (!isNaN(t)) return t;
   }
-  if (article.scheduledAt) {
-    const t = new Date(article.scheduledAt).getTime();
-    if (!isNaN(t)) return t;
-  }
-  if (article.publishedAt) {
-    const t = new Date(article.publishedAt).getTime();
+  for (const field of ['updatedAt', 'createdAt'] as const) {
+    const raw = article[field];
+    if (typeof raw !== 'string' || !raw.trim()) continue;
+    const t = new Date(raw).getTime();
     if (!isNaN(t)) return t;
   }
   return 0;

@@ -122,6 +122,23 @@ const runTests = () => {
   );
   assertEquals(pickArticleIsoDate(undefined, 'published'), undefined, 'missing article -> undefined');
 
+  // A content edit only bumps updatedAt: the publication date must not move.
+  const editedArticle = {
+    publishedAtTimestamp: '2026-11-06T04:16:48.704Z',
+    publishedAt: '6 Nov 2026',
+    updatedAt: '2026-11-20T09:00:00+07:00',
+  };
+  assertEquals(
+    pickArticleIsoDate(editedArticle, 'published'),
+    '2026-11-06T04:16:48.704Z',
+    'edited article: datePublished stays the original publish date'
+  );
+  assertEquals(
+    pickArticleIsoDate(editedArticle, 'modified'),
+    '2026-11-20T09:00:00+07:00',
+    'edited article: dateModified follows updatedAt'
+  );
+
   console.log(`\n${passed} passed, ${failed} failed`);
   if (failed > 0) process.exit(1);
 };

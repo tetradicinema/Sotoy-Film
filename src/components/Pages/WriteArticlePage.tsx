@@ -616,8 +616,6 @@ export const WriteArticlePage: React.FC = () => {
           readTime: form.readTime,
           tags: cleanTags.length > 0 ? cleanTags : ['SotoyFilm'],
           status: 'draft',
-          publishedAt: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
-          publishedAtTimestamp: new Date().toISOString(),
           seoTitle: form.seoTitle.trim() || form.title.trim(),
           metaDescription: form.metaDescription.trim() || form.excerpt,
           ogImage: form.ogImage.trim() || form.coverImage,
@@ -1334,22 +1332,8 @@ export const WriteArticlePage: React.FC = () => {
         await savingPromiseRef.current.catch(() => {});
       }
 
-      let customPublishedAt: string | undefined = undefined;
-      let publishedAtTimestamp: string | undefined = undefined;
-      const now = new Date();
-
-      if (targetStatus === 'scheduled' && scheduledAtDate) {
-        const d = new Date(scheduledAtDate);
-        customPublishedAt = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-        publishedAtTimestamp = d.toISOString();
-      } else if (targetStatus === 'published') {
-        customPublishedAt = now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-        publishedAtTimestamp = now.toISOString();
-      } else {
-        customPublishedAt = now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-        publishedAtTimestamp = now.toISOString();
-      }
-
+      // Publish dates are owned by updateArticle (first publish only); the
+      // editor must never send them on an edit.
       const payload: Record<string, any> = {
         title,
         slug: finalSlug,
@@ -1366,8 +1350,6 @@ export const WriteArticlePage: React.FC = () => {
         readTime,
         tags: cleanTags.length > 0 ? cleanTags : ['SotoyFilm'],
         status: targetStatus,
-        publishedAt: customPublishedAt,
-        publishedAtTimestamp,
         seoTitle: seoTitle.trim() || title,
         metaDescription: metaDescription.trim() || excerpt || title,
         ogImage: ogImage.trim() || coverImage,
