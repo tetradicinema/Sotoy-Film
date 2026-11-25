@@ -15,7 +15,7 @@
 import middleware, { isBotUserAgent, config } from '../middleware.js';
 import { STATIC_ROUTE_METADATA_CONFIG, TWITTER_CREATOR, buildArticleMetadata } from '../src/utils/seoMetadata.js';
 import { clearSeoListsCache } from '../src/lib/edge/firestoreRest.js';
-import { injectMetaTags } from '../src/lib/edge/metaInjection.js';
+import { injectMetaTags, buildArticleBodyHtml } from '../src/lib/edge/metaInjection.js';
 
 // Setup Mock Fetch for Standalone, Deterministic Test Execution (Bypasses Google API Free Quota Limitations)
 const originalFetch = globalThis.fetch;
@@ -573,6 +573,83 @@ const mockFetch = async (url: string | URL | Request, init?: RequestInit): Promi
             ]
           })
         }
+      }
+    }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' }
+    });
+  }
+
+  if (urlStr.includes('/documents/articles/structured-article')) {
+    const markdown = [
+      '## Mengapa sinema penting',
+      '',
+      'Baca [panduan film](/artikel/panduan-film) dan [ulasan luar](https://example.com/review).',
+      '',
+      '- Pendekatan pertama',
+      '- Pendekatan kedua',
+      '',
+      '1. Langkah pertama',
+      '2. Langkah kedua',
+      '',
+      '| Film | Skor |',
+      '| --- | --- |',
+      '| Dune | 9.2 |',
+      '',
+      '### Catatan editor',
+      '',
+      '> Kutipan penting dengan **tebal** dan *miring*.',
+      '',
+      '<script>alert("xss")</script><div onclick="alert(1)">Teks biasa</div>',
+    ].join('\n');
+    return new Response(JSON.stringify({
+      name: 'projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents/articles/structured-article',
+      fields: {
+        id: { stringValue: 'structured-article' },
+        title: { stringValue: 'Structured Article Title' },
+        status: { stringValue: 'published' },
+        slug: { stringValue: 'structured-article' },
+        excerpt: { stringValue: 'Structured article excerpt.' },
+        publishedAt: { stringValue: '2026-10-22T09:30:00.000Z' },
+        category: { stringValue: 'movies' },
+        relatedFilmId: { stringValue: 'breaking-bad' },
+        relatedFilmIds: {
+          arrayValue: { values: [{ stringValue: 'boyhood' }] }
+        },
+        relatedArticleIds: {
+          arrayValue: { values: [{ stringValue: 'published-article' }] }
+        },
+        content: { stringValue: markdown }
+      }
+    }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' }
+    });
+  }
+
+  if (urlStr.includes('/documents/articles/unsafe-html-article')) {
+    const html = [
+      '<h2>Judul bagian</h2>',
+      '<p>Taut <a href="/film/breaking-bad" onclick="alert(1)">film</a> dan <a href="https://example.com/ulasan">luar</a>.</p>',
+      '<h3>Subbagian</h3>',
+      '<ul><li>Satu</li><li>Dua</li></ul>',
+      '<ol><li>Pertama</li><li>Kedua</li></ol>',
+      '<table><thead><tr><th>Film</th></tr></thead><tbody><tr><td>Dune</td></tr></tbody></table>',
+      '<div class="widget" data-x="1">Teks dari div</div>',
+      '<img src="https://example.com/pixel.gif" onerror="alert(1)">',
+      '<script>alert("xss")</script>',
+      '<p><a href="javascript:alert(1)">taut berbahaya</a> tetap menjadi teks.</p>',
+    ].join('');
+    return new Response(JSON.stringify({
+      name: 'projects/gen-lang-client-0523736875/databases/ai-studio-sotoyfilm-256095db-0c8b-47c2-a6bf-e7c4f8d7cfd3/documents/articles/unsafe-html-article',
+      fields: {
+        id: { stringValue: 'unsafe-html-article' },
+        title: { stringValue: 'Unsafe HTML Article Title' },
+        status: { stringValue: 'published' },
+        slug: { stringValue: 'unsafe-html-article' },
+        excerpt: { stringValue: 'Legacy HTML article excerpt.' },
+        publishedAt: { stringValue: '2026-10-24T09:30:00.000Z' },
+        content: { stringValue: html }
       }
     }), {
       status: 200,
@@ -1244,6 +1321,23 @@ function countMatches(html: string, pattern: RegExp): number {
   return (html.match(pattern) || []).length;
 }
 
+/** True when every tag in a rendered bot body has a matching closing tag. */
+function hasBalancedTags(html: string): boolean {
+  const voids = new Set(['br', 'hr', 'img', 'input', 'meta', 'link']);
+  const stack: string[] = [];
+  for (const match of html.matchAll(/<\/?([a-zA-Z][\w-]*)\b[^>]*>/g)) {
+    const token = match[0];
+    const name = match[1].toLowerCase();
+    if (voids.has(name) || /\/\s*>$/.test(token)) continue;
+    if (token.startsWith('</')) {
+      if (stack.pop() !== name) return false;
+    } else {
+      stack.push(name);
+    }
+  }
+  return stack.length === 0;
+}
+
 function countLdJson(html: string): number {
   return countMatches(html, /<script\b[^>]*\btype=["']application\/ld\+json["'][^>]*>/gi);
 }
@@ -1453,8 +1547,8 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
       root.includes('This is a published article excerpt.') && root.includes('sweeping epic')
     );
     check(
-      'bot article body escapes special characters like <script>',
-      root.includes('&lt;script&gt;') && !root.includes('<script>')
+      'bot article body strips injected <script> markup',
+      !root.includes('<script>') && !root.includes('alert(') && root.includes('sweeping epic')
     );
     check(
       'bot article response uses the short HTML cache',
@@ -1515,16 +1609,108 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
     );
   }
 
-  // Tiptap JSON content is flattened to plain paragraphs
+  // Tiptap JSON keeps its heading structure
   {
     const response = await middleware(botRequest('/artikel/tiptap-article'));
     const root = getRootContent(await response.text());
 
     check(
-      'bot article body extracts Tiptap text nodes as paragraphs',
+      'bot article body renders Tiptap paragraphs and headings structurally',
       root.includes('<p>First Tiptap paragraph about cinema.</p>') &&
-        root.includes('<p>Second Tiptap heading</p>')
+        root.includes('<h2>Second Tiptap heading</h2>')
     );
+  }
+
+  // Structured markdown body: headings, lists, table and links survive
+  {
+    const response = await middleware(botRequest('/artikel/structured-article'));
+    const root = getRootContent(await response.text());
+
+    check('structured markdown: h2 and h3 are preserved', root.includes('<h2>Mengapa sinema penting</h2>') && root.includes('<h3>Catatan editor</h3>'));
+    check(
+      'structured markdown: unordered and ordered lists are preserved',
+      root.includes('<ul><li>Pendekatan pertama</li><li>Pendekatan kedua</li></ul>') &&
+        root.includes('<ol><li>Langkah pertama</li><li>Langkah kedua</li></ol>')
+    );
+    check(
+      'structured markdown: table with thead/tbody/th/td is preserved',
+      root.includes('<table><thead><tr><th>Film</th><th>Skor</th></tr></thead><tbody><tr><td>Dune</td><td>9.2</td></tr></tbody></table>')
+    );
+    check(
+      'structured markdown: blockquote, strong and em are preserved',
+      root.includes('<blockquote><p>Kutipan penting dengan <strong>tebal</strong> dan <em>miring</em>.</p></blockquote>')
+    );
+    check(
+      'structured markdown: internal link keeps its site path and has no rel',
+      /<a href="\/artikel\/panduan-film">panduan film<\/a>/.test(root)
+    );
+    check(
+      'structured markdown: external link gets rel="noopener"',
+      /<a href="https:\/\/example\.com\/review" rel="noopener">ulasan luar<\/a>/.test(root)
+    );
+    check(
+      'structured markdown: related block links only to existing document fields',
+      root.includes('<a href="/kategori/movies">Kategori: movies</a>') &&
+        root.includes('<a href="/film/breaking-bad">breaking-bad</a>') &&
+        root.includes('<a href="/artikel/published-article">published-article</a>')
+    );
+    check('structured markdown: raw script markup is never a live tag', !root.includes('<script') && !root.includes('alert('));
+    check('structured markdown: all tags are balanced', hasBalancedTags(root));
+  }
+
+  // Legacy HTML body is sanitized against the same allowlist
+  {
+    const response = await middleware(botRequest('/artikel/unsafe-html-article'));
+    const root = getRootContent(await response.text());
+
+    check(
+      'legacy HTML: structural tags survive sanitization',
+      root.includes('<h2>Judul bagian</h2>') &&
+        root.includes('<h3>Subbagian</h3>') &&
+        root.includes('<ul><li>Satu</li><li>Dua</li></ul>') &&
+        root.includes('<ol><li>Pertama</li><li>Kedua</li></ol>') &&
+        root.includes('<table><thead><tr><th>Film</th></tr></thead><tbody><tr><td>Dune</td></tr></tbody></table>')
+    );
+    check(
+      'legacy HTML: script/style/iframe/unknown tags are stripped',
+      !root.includes('<script') &&
+        !root.includes('alert(') &&
+        !root.includes('<div') &&
+        !root.includes('<img') &&
+        root.includes('Teks dari div')
+    );
+    check(
+      'legacy HTML: on* attributes never survive',
+      !/\son[a-z]+\s*=/i.test(root) && !root.includes('data-x=') && !root.includes('class=')
+    );
+    check(
+      'legacy HTML: internal link is plain, external link has rel="noopener"',
+      /<a href="\/film\/breaking-bad">film<\/a>/.test(root) &&
+        /<a href="https:\/\/example\.com\/ulasan" rel="noopener">luar<\/a>/.test(root)
+    );
+    check(
+      'legacy HTML: javascript: link becomes plain text',
+      !root.includes('<a href="javascript:') && root.includes('taut berbahaya')
+    );
+    check('legacy HTML: all tags are balanced', hasBalancedTags(root));
+  }
+
+  // The cap is applied to complete elements, with every tag closed
+  {
+    const root = getRootContent(
+      await (await middleware(botRequest('/artikel/structured-article'))).text()
+    );
+    check('bot article body stays below the 20,000 character cap', root.length <= 20000);
+
+    const oversized = buildArticleBodyHtml({
+      title: 'Oversized Structured Article',
+      excerpt: 'A long article.',
+      content: `## Bagian besar\n\n${Array(5000).fill('kata').join(' ')}\n\n- item\n\n| A | B |\n| --- | --- |\n| 1 | 2 |`,
+    });
+    check('oversized bot body never exceeds the cap', oversized.length <= 20000);
+    check('oversized bot body closes every tag', hasBalancedTags(oversized));
+    check('oversized bot body ends with </article>', oversized.endsWith('</article>'));
+    check('oversized bot body never contains a cut tag', !/<[^>]*$/.test(oversized.slice(0, -10)));
   }
 
   // Meta-only lookup is enriched with the full article document

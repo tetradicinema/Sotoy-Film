@@ -5,6 +5,7 @@
  */
 
 import { TWITTER_CREATOR } from '../../utils/seoMetadata.js';
+import { buildArticlePath, buildFilmPath, buildCategoryPath } from '../../utils/entityPaths.js';
 
 /**
  * Attribute React Helmet uses to recognise the tags it owns. Marking the
@@ -353,8 +354,566 @@ function extractArticleParagraphs(data: Record<string, any>): string[] {
   return [];
 }
 
+/* -------------------------------------------------------------------------- */
+/* Structured crawler body                                                    */
+/* -------------------------------------------------------------------------- */
+
+/** Tags kept in the crawler-visible article body. Everything else becomes text. */
+const ARTICLE_BODY_TAGS = new Set([
+  'h2', 'h3', 'h4', 'p', 'ul', 'ol', 'li', 'table', 'thead', 'tbody',
+  'tr', 'th', 'td', 'blockquote', 'a', 'strong', 'em', 'br',
+]);
+const ARTICLE_VOID_TAGS = new Set(['br']);
+/** Tags whose contents must never reach the bot HTML at all. */
+const ARTICLE_DROP_TAGS = new Set([
+  'script', 'style', 'iframe', 'noscript', 'template', 'object', 'embed',
+  'form', 'input', 'svg', 'canvas', 'video', 'audio',
+]);
+
+interface ArticleHref {
+  href: string;
+  external: boolean;
+}
+
 /**
- * Builds the plain article body injected inside #root for crawlers.
+ * Only http(s) URLs and relative paths may become links. Schemes such as
+ * `javascript:` and protocol-relative `//host` are rejected (the label text is
+ * still kept). Internal links are emitted verbatim — never rewritten.
+ */
+function sanitizeArticleHref(raw: unknown): ArticleHref | null {
+  if (typeof raw !== 'string') return null;
+  const href = raw.trim();
+  if (!href || /[\u0000-\u001F\u007F\s]/.test(href)) return null;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(href)) {
+    return /^https?:\/\//i.test(href) ? { href, external: true } : null;
+  }
+  if (href.startsWith('//')) return null;
+  return { href, external: false };
+}
+
+function articleAnchor(href: string, external: boolean, label: string): string {
+  return `<a href="${escapeHtml(href)}"${external ? ' rel="noopener"' : ''}>${label}</a>`;
+}
+
+function readHtmlAttribute(attrs: string, name: string): string {
+  const quoted = new RegExp(`\\b${name}\\s*=\\s*(["'])(.*?)\\1`, 'i').exec(attrs);
+  if (quoted) return quoted[2];
+  const bare = new RegExp(`\\b${name}\\s*=\\s*([^\\s>]+)`, 'i').exec(attrs);
+  return bare ? bare[1] : '';
+}
+
+/**
+ * Allowlist sanitizer for legacy HTML bodies. Unknown tags are discarded but
+ * their text survives; script/style/iframe blocks are dropped entirely. All
+ * attributes except a safe `href` are ignored, so no on* handler can pass.
+ */
+function sanitizeArticleHtml(html: string): string {
+  const tokens = html.match(/<!--[\s\S]*?-->|<[^>]*>|[^<]+/g);
+  if (!tokens) return '';
+
+  const out: string[] = [];
+  const open: string[] = [];
+  let dropUntil: string | null = null;
+
+  for (const token of tokens) {
+    if (dropUntil) {
+      const close = new RegExp(`^<\\/\\s*${dropUntil}\\s*>$`, 'i');
+      if (close.test(token)) dropUntil = null;
+      continue;
+    }
+    if (token.startsWith('<!--')) continue;
+
+    if (!token.startsWith('<')) {
+      out.push(escapeHtml(decodeHtmlEntities(token)));
+      continue;
+    }
+
+    const match = /^<\s*(\/)?\s*([a-zA-Z][\w-]*)\b([^>]*)>$/.exec(token);
+    if (!match) {
+      out.push(escapeHtml(token));
+      continue;
+    }
+    const closing = Boolean(match[1]);
+    const name = match[2].toLowerCase();
+
+    if (ARTICLE_DROP_TAGS.has(name)) {
+      if (!closing) dropUntil = name;
+      continue;
+    }
+    if (!ARTICLE_BODY_TAGS.has(name)) continue;
+
+    if (closing) {
+      if (!open.includes(name)) continue;
+      while (open.length) {
+        const tag = open.pop()!;
+        out.push(`</${tag}>`);
+        if (tag === name) break;
+      }
+      continue;
+    }
+
+    const attrs = match[3] || '';
+    if (name === 'a') {
+      const href = sanitizeArticleHref(readHtmlAttribute(attrs, 'href'));
+      if (!href) continue; // unsafe link: keep the text, drop the anchor
+      out.push(`<a href="${escapeHtml(href.href)}"${href.external ? ' rel="noopener"' : ''}>`);
+      open.push('a');
+      continue;
+    }
+    if (ARTICLE_VOID_TAGS.has(name)) {
+      out.push('<br>');
+      continue;
+    }
+    out.push(`<${name}>`);
+    open.push(name);
+  }
+
+  while (open.length) out.push(`</${open.pop()!}>`);
+  return out.join('');
+}
+
+/** Markdown link/image syntax is turned into allowlisted HTML only. */
+function renderMarkdownInline(raw: string): string {
+  let out = '';
+  let text = '';
+  const flush = () => {
+    if (text) {
+      out += escapeHtml(text);
+      text = '';
+    }
+  };
+
+  let i = 0;
+  while (i < raw.length) {
+    const rest = raw.slice(i);
+    let match: RegExpMatchArray | null;
+
+    // Images are not allowed; keep their alt text.
+    if ((match = rest.match(/^!\[([^\]]*)\]\(([^)\s]+)(?:\s+(?:"[^"]*"|'[^']*'))?\)/))) {
+      flush();
+      out += escapeHtml(match[1]);
+      i += match[0].length;
+      continue;
+    }
+    if ((match = rest.match(/^\[([^\]]+)\]\(([^)\s]+)(?:\s+(?:"[^"]*"|'[^']*'))?\)/))) {
+      flush();
+      const label = renderMarkdownInline(match[1]);
+      const href = sanitizeArticleHref(match[2]);
+      out += href ? articleAnchor(href.href, href.external, label) : label;
+      i += match[0].length;
+      continue;
+    }
+    if ((match = rest.match(/^\*\*([^*]+)\*\*/)) || (match = rest.match(/^__([^_]+)__/))) {
+      flush();
+      out += `<strong>${renderMarkdownInline(match[1])}</strong>`;
+      i += match[0].length;
+      continue;
+    }
+    if ((match = rest.match(/^\*([^*\n]+)\*/)) || (match = rest.match(/^_([^_\n]+)_/))) {
+      flush();
+      out += `<em>${renderMarkdownInline(match[1])}</em>`;
+      i += match[0].length;
+      continue;
+    }
+    if ((match = rest.match(/^`([^`]+)`/))) {
+      flush();
+      out += escapeHtml(match[1]);
+      i += match[0].length;
+      continue;
+    }
+    // Raw HTML is not part of the markdown format: drop the tag so no on*
+    // attribute or remote handler can reach the bot HTML, but keep its text.
+    if ((match = rest.match(/^<\/?[a-zA-Z][\w-]*(?:\s[^><]*)?\/?>/))) {
+      i += match[0].length;
+      continue;
+    }
+    text += raw[i++];
+  }
+  flush();
+  return out;
+}
+
+function markdownListPattern(line: string): { indent: number; ordered: boolean; text: string } | null {
+  const match = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/.exec(line);
+  if (!match) return null;
+  return { indent: match[1].length, ordered: /\d/.test(match[2]), text: match[3] };
+}
+
+function isMarkdownTableSeparator(line: string): boolean {
+  return /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);
+}
+
+function splitMarkdownTableRow(line: string): string[] {
+  return line
+    .replace(/^\s*\|/, '')
+    .replace(/\|\s*$/, '')
+    .split('|')
+    .map(cell => cell.trim());
+}
+
+function renderMarkdownList(lines: string[], start: number, indent: number): { html: string; next: number } {
+  const items: string[] = [];
+  let ordered = false;
+  let i = start;
+
+  while (i < lines.length) {
+    const item = markdownListPattern(lines[i]);
+    if (!item || item.indent < indent) break;
+    if (item.indent > indent) {
+      if (items.length === 0) break;
+      const nested = renderMarkdownList(lines, i, item.indent);
+      items[items.length - 1] += nested.html;
+      i = nested.next;
+      continue;
+    }
+
+    ordered = item.ordered;
+    let body = renderMarkdownInline(item.text);
+    i++;
+    while (i < lines.length) {
+      const nextItem = markdownListPattern(lines[i]);
+      if (nextItem && nextItem.indent > indent) {
+        const nested = renderMarkdownList(lines, i, nextItem.indent);
+        body += nested.html;
+        i = nested.next;
+        continue;
+      }
+      if (nextItem || !lines[i].trim()) break;
+      if (/^\s{2,}\S/.test(lines[i])) {
+        body += `<br>${renderMarkdownInline(lines[i].trim())}`;
+        i++;
+        continue;
+      }
+      break;
+    }
+    items.push(`<li>${body}</li>`);
+  }
+
+  const tag = ordered ? 'ol' : 'ul';
+  return { html: `<${tag}>${items.join('')}</${tag}>`, next: i };
+}
+
+/** Converts the editor's markdown serialization into allowlisted HTML blocks. */
+function renderMarkdownBlocks(markdown: string): string {
+  const lines = markdown.replace(/\r\n?/g, '\n').split('\n');
+  const out: string[] = [];
+  let paragraph: string[] = [];
+  const flushParagraph = () => {
+    if (paragraph.length) {
+      out.push(`<p>${paragraph.map(renderMarkdownInline).join('<br>')}</p>`);
+      paragraph = [];
+    }
+  };
+
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+
+    if (!line.trim()) {
+      flushParagraph();
+      i++;
+      continue;
+    }
+
+    // Fenced code: pre/code are not allowed, so keep the text in a paragraph.
+    const fence = /^\s*(`{3,}|~{3,})/.exec(line);
+    if (fence) {
+      flushParagraph();
+      const marker = fence[1][0];
+      i++;
+      const codeLines: string[] = [];
+      const end = new RegExp(`^\\s*${marker}{3,}`);
+      while (i < lines.length && !end.test(lines[i])) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      if (i < lines.length) i++;
+      if (codeLines.length) {
+        out.push(`<p>${codeLines.map(entry => escapeHtml(entry)).join('<br>')}</p>`);
+      }
+      continue;
+    }
+
+    if (line.includes('|') && i + 1 < lines.length && isMarkdownTableSeparator(lines[i + 1])) {
+      flushParagraph();
+      const header = splitMarkdownTableRow(line)
+        .map(cell => `<th>${renderMarkdownInline(cell)}</th>`)
+        .join('');
+      i += 2;
+      const rows: string[] = [];
+      while (i < lines.length && lines[i].includes('|') && lines[i].trim()) {
+        rows.push(
+          `<tr>${splitMarkdownTableRow(lines[i])
+            .map(cell => `<td>${renderMarkdownInline(cell)}</td>`)
+            .join('')}</tr>`
+        );
+        i++;
+      }
+      out.push(`<table><thead><tr>${header}</tr></thead><tbody>${rows.join('')}</tbody></table>`);
+      continue;
+    }
+
+    const heading = /^\s*(#{1,6})\s+(.*?)\s*#*\s*$/.exec(line);
+    if (heading) {
+      flushParagraph();
+      const level = Math.min(4, Math.max(2, heading[1].length));
+      out.push(`<h${level}>${renderMarkdownInline(heading[2])}</h${level}>`);
+      i++;
+      continue;
+    }
+
+    if (/^\s*>\s?/.test(line)) {
+      flushParagraph();
+      const quoted: string[] = [];
+      while (i < lines.length && /^\s*>\s?/.test(lines[i])) {
+        quoted.push(lines[i].replace(/^\s*>\s?/, ''));
+        i++;
+      }
+      out.push(`<blockquote>${renderMarkdownBlocks(quoted.join('\n'))}</blockquote>`);
+      continue;
+    }
+
+    const listItem = markdownListPattern(line);
+    if (listItem) {
+      flushParagraph();
+      const list = renderMarkdownList(lines, i, listItem.indent);
+      out.push(list.html);
+      i = list.next;
+      continue;
+    }
+
+    paragraph.push(line.trim());
+    i++;
+  }
+  flushParagraph();
+  return out.join('');
+}
+
+function parseTiptapDoc(value: unknown): any | null {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  if (!value.trimStart().startsWith('{') && !value.trimStart().startsWith('[')) return null;
+  try {
+    const parsed = JSON.parse(value);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function renderTiptapInline(node: any): string {
+  if (!node || typeof node !== 'object') return '';
+  if (node.type === 'text') {
+    let html = escapeHtml(typeof node.text === 'string' ? node.text : '');
+    for (const mark of Array.isArray(node.marks) ? node.marks : []) {
+      if (mark?.type === 'bold') html = `<strong>${html}</strong>`;
+      else if (mark?.type === 'italic') html = `<em>${html}</em>`;
+      else if (mark?.type === 'link') {
+        const href = sanitizeArticleHref(mark?.attrs?.href);
+        if (href) html = articleAnchor(href.href, href.external, html);
+      }
+    }
+    return html;
+  }
+  if (node.type === 'hardBreak') return '<br>';
+  if (Array.isArray(node.content)) return node.content.map(renderTiptapInline).join('');
+  return '';
+}
+
+function renderTiptapBlocks(node: any): string {
+  if (!node || typeof node !== 'object') return '';
+  if (Array.isArray(node)) return node.map(renderTiptapBlocks).join('');
+
+  const children = Array.isArray(node.content) ? node.content.map(renderTiptapBlocks).join('') : '';
+  switch (node.type) {
+    case 'paragraph':
+      return `<p>${renderTiptapInline(node)}</p>`;
+    case 'heading': {
+      const raw = Number(node.attrs?.level);
+      const level = Number.isFinite(raw) ? Math.min(4, Math.max(2, raw)) : 2;
+      return `<h${level}>${renderTiptapInline(node)}</h${level}>`;
+    }
+    case 'bulletList':
+      return `<ul>${children}</ul>`;
+    case 'orderedList':
+      return `<ol>${children}</ol>`;
+    case 'listItem':
+      return `<li>${children || renderTiptapInline(node)}</li>`;
+    case 'blockquote':
+      return `<blockquote>${children}</blockquote>`;
+    case 'table':
+      return `<table>${children}</table>`;
+    case 'tableRow':
+      return `<tr>${children}</tr>`;
+    case 'tableHeader':
+      return `<th>${children || renderTiptapInline(node)}</th>`;
+    case 'tableCell':
+      return `<td>${children || renderTiptapInline(node)}</td>`;
+    case 'text':
+    case 'hardBreak':
+      return renderTiptapInline(node);
+    default:
+      // Unknown/unsupported nodes contribute their text, never their markup.
+      return children;
+  }
+}
+
+/**
+ * Editor content is markdown; only legacy documents start with raw HTML block
+ * markup. Checking the opening of the body keeps inline HTML mentioned in
+ * prose from flipping a markdown article into the sanitizer path.
+ */
+function isLegacyHtmlArticleContent(content: string): boolean {
+  return /^\s*<(?:p|div|h[1-6]|ul|ol|li|table|thead|tbody|tr|td|th|blockquote|br|img|span|a|strong|em)\b/i.test(
+    content
+  );
+}
+
+/** Renders the stored article body in its actual format (Tiptap JSON, markdown, legacy HTML). */
+function renderArticleContentHtml(data: Record<string, any>): string {
+  const tiptapDoc = parseTiptapDoc(data.contentJson);
+  const content = typeof data.content === 'string' ? data.content.trim() : '';
+
+  if (tiptapDoc && (data.contentFormat === 'tiptap' || !content)) {
+    return sanitizeArticleHtml(renderTiptapBlocks(tiptapDoc));
+  }
+  if (!content) return '';
+
+  if (content.startsWith('{') || content.startsWith('[')) {
+    const inlineDoc = parseTiptapDoc(content);
+    if (inlineDoc) return sanitizeArticleHtml(renderTiptapBlocks(inlineDoc));
+  }
+
+  if (isLegacyHtmlArticleContent(content)) {
+    return sanitizeArticleHtml(content);
+  }
+
+  // Markdown prose is escaped rather than parsed as markup, but explicit
+  // script/style/iframe blocks must not contribute any text either.
+  const withoutEmbeddedBlocks = content
+    .replace(/<(script|style|iframe)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, '')
+    .replace(/<(script|style|iframe)\b[^>]*\/?>/gi, '');
+  const html = renderMarkdownBlocks(withoutEmbeddedBlocks);
+  return sanitizeArticleHtml(html);
+}
+
+function closingArticleTags(stack: string[]): string {
+  return stack.slice().reverse().map(tag => `</${tag}>`).join('');
+}
+
+/** Caps markup at a token boundary and always closes the open elements. */
+function capStructuredHtml(html: string, limit: number): string {
+  if (!html || limit <= 0) return '';
+  if (html.length <= limit) return html;
+
+  const tokens = html.match(/<\/?[a-zA-Z][^>]*>|[^<]+/g) || [];
+  let out = '';
+  const stack: string[] = [];
+
+  for (const token of tokens) {
+    const closings = closingArticleTags(stack);
+    if (out.length + token.length + closings.length > limit) {
+      // A long text run can still be cut at a word/entity boundary; tags are
+      // never split and the open elements are closed below.
+      if (!token.startsWith('<')) {
+        const available = limit - out.length - closings.length;
+        if (available > 0) {
+          let slice = token.slice(0, available);
+          const word = slice.lastIndexOf(' ');
+          if (word > 0) slice = slice.slice(0, word);
+          const entity = slice.lastIndexOf('&');
+          if (entity >= 0 && slice.indexOf(';', entity) === -1) slice = slice.slice(0, entity);
+          if (slice.trim()) out += slice.trimEnd();
+        }
+      }
+      break;
+    }
+
+    if (token.startsWith('</')) {
+      out += token;
+      const name = token.slice(2, -1).trim().toLowerCase();
+      const index = stack.lastIndexOf(name);
+      if (index >= 0) stack.length = index;
+      continue;
+    }
+    if (token.startsWith('<')) {
+      out += token;
+      const name = (/^<([a-zA-Z][\w-]*)/.exec(token)?.[1] || '').toLowerCase();
+      if (name && name !== 'br' && !/\/\s*>$/.test(token)) stack.push(name);
+      continue;
+    }
+    out += token;
+  }
+
+  return out + closingArticleTags(stack);
+}
+
+function relatedEntityRefs(value: unknown): Array<{ id: string; slug?: string; title?: string }> {
+  const rawList = Array.isArray(value)
+    ? value
+    : typeof value === 'string' && value.trim()
+      ? [value]
+      : [];
+  const refs: Array<{ id: string; slug?: string; title?: string }> = [];
+  for (const item of rawList) {
+    if (typeof item === 'string') {
+      const id = item.trim();
+      if (id) refs.push({ id, slug: id });
+      continue;
+    }
+    if (!item || typeof item !== 'object') continue;
+    const record = item as Record<string, any>;
+    const id = toPlainText(record.id) || toPlainText(record.slug) || toPlainText(record.name);
+    if (!id) continue;
+    refs.push({
+      id,
+      slug: toPlainText(record.slug) || id,
+      title: toPlainText(record.title) || toPlainText(record.name),
+    });
+  }
+  return refs;
+}
+
+/**
+ * Small related block built exclusively from fields already present on the
+ * article document. No extra reads, no fabricated URLs.
+ */
+function buildArticleRelatedHtml(data: Record<string, any>): string {
+  const links: string[] = [];
+  const seen = new Set<string>();
+  const add = (href: string, label: string) => {
+    if (seen.has(href) || links.length >= 8) return;
+    seen.add(href);
+    links.push(articleAnchor(href, false, escapeHtml(label)));
+  };
+
+  const category = toPlainText(data.category);
+  if (category && sanitizeArticleHref(buildCategoryPath(category))) {
+    add(buildCategoryPath(category), `Kategori: ${category}`);
+  }
+
+  for (const ref of relatedEntityRefs(data.relatedFilmId)) {
+    const href = buildFilmPath(ref);
+    add(href, ref.title || ref.slug || ref.id);
+  }
+  for (const ref of relatedEntityRefs(data.relatedFilmIds)) {
+    const href = buildFilmPath(ref);
+    add(href, ref.title || ref.slug || ref.id);
+  }
+  // Article documents currently have no related-article field, but honour one
+  // if a document already carries it (the film collection has relatedArticleIds).
+  for (const field of ['relatedArticleIds', 'relatedArticles']) {
+    for (const ref of relatedEntityRefs(data[field])) {
+      const href = buildArticlePath(ref);
+      add(href, ref.title || ref.slug || ref.id);
+    }
+  }
+
+  return links.length ? `<p>Related: ${links.join(' ')}</p>` : '';
+}
+
+/**
+ * Builds the structured article body injected inside #root for crawlers.
  */
 export function buildArticleBodyHtml(data: Record<string, any>): string {
   if (!data || typeof data !== 'object') return '';
@@ -386,11 +945,12 @@ export function buildArticleBodyHtml(data: Record<string, any>): string {
     parts.push(`<p>${escapeHtml(excerpt)}</p>`);
   }
 
-  for (const paragraph of extractArticleParagraphs(data)) {
-    parts.push(`<p>${escapeHtml(paragraph)}</p>`);
-  }
+  const related = buildArticleRelatedHtml(data);
+  const budget =
+    ARTICLE_TEXT_MAX_LENGTH - `<article>${parts.join('')}${related}</article>`.length;
+  parts.push(capStructuredHtml(renderArticleContentHtml(data), budget));
 
-  return `<article>${parts.join('')}</article>`;
+  return `<article>${parts.join('')}${related}</article>`;
 }
 
 /**
