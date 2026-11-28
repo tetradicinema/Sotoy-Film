@@ -14,6 +14,7 @@ import {
   fetchAuthorPublishedArticles,
 } from './src/lib/edge/firestoreRest.js';
 import { injectMetaTags, injectRootContent, injectPrefetchData, injectSeoLists, buildArticleBodyHtml, buildAuthorBodyHtml, buildFilmBodyHtml, buildAboutPageBodyHtml, buildEditorialGuidelinesBodyHtml, FALLBACK_HTML_TEMPLATE } from './src/lib/edge/metaInjection.js';
+import { buildPrivacyPolicyBodyHtml } from './src/lib/edge/staticPageBody.js';
 import {
   buildPeopleListBodyHtml,
   buildPersonBodyHtml,
@@ -342,6 +343,8 @@ async function buildStaticRouteResponse(
   const metadata = buildRouteMetadata(cleanPath);
   const isAboutPage = cleanPath === '/tentang-kami' || cleanPath === '/about-us';
   const isEditorialGuidelines = cleanPath === '/pedoman-redaksi';
+  const isPrivacyPolicy =
+    cleanPath === '/kebijakan-privasi' || cleanPath === '/privacy-policy';
 
   let html = await fetchBaseHtml(request);
   if (!html) {
@@ -398,6 +401,8 @@ async function buildStaticRouteResponse(
     finalHtml = injectRootContent(finalHtml, buildAboutPageBodyHtml());
   } else if (isEditorialGuidelines) {
     finalHtml = injectRootContent(finalHtml, buildEditorialGuidelinesBodyHtml());
+  } else if (isPrivacyPolicy) {
+    finalHtml = injectRootContent(finalHtml, buildPrivacyPolicyBodyHtml());
   }
 
   return new Response(finalHtml, {
