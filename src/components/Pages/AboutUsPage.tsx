@@ -8,6 +8,9 @@ import {
   Mail,
   ArrowRight,
   ExternalLink,
+  Handshake,
+  Instagram,
+  Music2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
@@ -112,6 +115,102 @@ const SectionLinks: React.FC<{ section: ContentSection }> = ({ section }) => {
   );
 };
 
+/**
+ * Contact actions are styled as branded buttons, but stay real anchors:
+ * SmartLink for the internal /kontak-bisnis route and plain <a> elements for
+ * the social profiles. Labels and URLs come from the shared content module.
+ */
+const CONTACT_BUTTON_BASE =
+  'inline-flex w-full sm:w-auto min-h-[44px] items-center justify-center gap-2.5 rounded-xl px-5 py-2.5 text-sm font-bold text-white ' +
+  'transition-[filter,background-color,border-color,box-shadow] duration-200 ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#171717]';
+
+const ContactLinks: React.FC<{ section: ContentSection }> = ({ section }) => {
+  if (!section.links || section.links.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-3 pt-1">
+      {section.links.map(link => {
+        if (link.href === '/kontak-bisnis') {
+          return (
+            <SmartLink
+              key={link.href}
+              to={link.href}
+              aria-label={`${link.label} — kirim brief kemitraan ke Sotoy Film`}
+              className={`${CONTACT_BUTTON_BASE} bg-[#FF2E7E] hover:bg-[#ff4b8f] shadow-lg shadow-[#FF2E7E]/20`}
+            >
+              <Handshake aria-hidden="true" className="w-5 h-5" />
+              <span>{link.label}</span>
+            </SmartLink>
+          );
+        }
+
+        if (link.href.includes('instagram.com')) {
+          return (
+            <a
+              key={link.href}
+              href={link.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`${link.label} — buka Instagram Sotoy Film di tab baru`}
+              className={`${CONTACT_BUTTON_BASE} hover:brightness-110 shadow-lg shadow-[#bc1888]/25`}
+              style={{
+                backgroundImage: 'linear-gradient(45deg, #f09433, #dc2743, #bc1888, #6228d7)',
+              }}
+            >
+              <Instagram aria-hidden="true" className="w-5 h-5" />
+              <span>{link.label}</span>
+            </a>
+          );
+        }
+
+        if (link.href.includes('tiktok.com')) {
+          return (
+            <a
+              key={link.href}
+              href={link.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`${link.label} — buka TikTok Sotoy Film di tab baru`}
+              className={`${CONTACT_BUTTON_BASE} border border-white/20 bg-black hover:bg-[#101010] shadow-[0_0_16px_rgba(37,244,238,0.25),0_0_16px_rgba(254,44,85,0.25)] hover:shadow-[0_0_22px_rgba(37,244,238,0.45),0_0_22px_rgba(254,44,85,0.45)]`}
+            >
+              <Music2
+                aria-hidden="true"
+                className="w-5 h-5 drop-shadow-[0_0_5px_rgba(37,244,238,0.8)]"
+              />
+              <span>{link.label}</span>
+            </a>
+          );
+        }
+
+        return link.external ? (
+          <a
+            key={link.href}
+            href={link.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`${link.label} — buka di tab baru`}
+            className={`${CONTACT_BUTTON_BASE} border border-slate-700 bg-slate-800 hover:bg-slate-700`}
+          >
+            <ExternalLink aria-hidden="true" className="w-5 h-5" />
+            <span>{link.label}</span>
+          </a>
+        ) : (
+          <SmartLink
+            key={link.href}
+            to={link.href}
+            aria-label={link.label}
+            className={`${CONTACT_BUTTON_BASE} border border-slate-700 bg-slate-800 hover:bg-slate-700`}
+          >
+            <ArrowRight aria-hidden="true" className="w-5 h-5" />
+            <span>{link.label}</span>
+          </SmartLink>
+        );
+      })}
+    </div>
+  );
+};
+
 export const AboutUsPage: React.FC = () => {
   const { navigateTo } = useApp();
 
@@ -174,7 +273,11 @@ export const AboutUsPage: React.FC = () => {
 
               {section.showTeam && <TeamGrid />}
 
-              <SectionLinks section={section} />
+              {section.id === 'hubungi-kami' ? (
+                <ContactLinks section={section} />
+              ) : (
+                <SectionLinks section={section} />
+              )}
             </section>
           ))}
         </div>
