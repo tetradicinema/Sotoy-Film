@@ -250,6 +250,7 @@ export type AppView =
   | 'settings'
   | 'search'
   | 'about-us'
+  | 'editorial-guidelines'
   | 'privacy-policy'
   | 'terms-conditions'
   | 'business-inquiries'
@@ -1120,6 +1121,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentView('search');
     } else if (path === '/tentang-kami' || path === '/about-us') {
       setCurrentView('about-us');
+    } else if (path === '/pedoman-redaksi') {
+      setCurrentView('editorial-guidelines');
     } else if (path === '/kebijakan-privasi' || path === '/privacy-policy') {
       setCurrentView('privacy-policy');
     } else if (path === '/syarat-ketentuan' || path === '/terms-conditions') {
@@ -5046,6 +5049,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         break;
       case 'about-us':
         targetPath = '/tentang-kami';
+        break;
+      case 'editorial-guidelines':
+        targetPath = '/pedoman-redaksi';
         break;
       case 'privacy-policy':
         targetPath = '/kebijakan-privasi';

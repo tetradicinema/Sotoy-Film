@@ -230,7 +230,7 @@ async function runSitemapTests(): Promise<void> {
   );
   assert(
     emptyCsv.body.split('\r\n').length >= 300,
-    'empty live CSV: is not the 18-row static-only output'
+    'empty live CSV: is not the 19-row static-only output'
   );
 
   console.warn = realWarn;

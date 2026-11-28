@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clapperboard, Star, Info, Shield, Scale, Briefcase, HelpCircle } from 'lucide-react';
+import { Clapperboard, Star, Info, Shield, Scale, Briefcase, HelpCircle, ScrollText, Instagram, Music2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { SmartLink } from '../Common/SmartLink';
 import { buildCategoryPath } from '../../utils/entityPaths';
@@ -42,6 +42,27 @@ export const Footer: React.FC = () => {
               <span className="bg-[#171717] border border-white/[0.08] text-slate-300 text-[10px] font-semibold px-2.5 py-1 rounded-md">
                 Komunitas Terbuka
               </span>
+            </div>
+
+            <div className="flex items-center gap-3 pt-1">
+              <a
+                href="https://www.instagram.com/sotoyfilm.id"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-slate-400 hover:text-[#FF2E7E] transition-colors text-[11px] font-semibold"
+              >
+                <Instagram className="w-3.5 h-3.5" />
+                <span>Instagram</span>
+              </a>
+              <a
+                href="https://www.tiktok.com/@sotoyfilmid"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-slate-400 hover:text-[#FF2E7E] transition-colors text-[11px] font-semibold"
+              >
+                <Music2 className="w-3.5 h-3.5" />
+                <span>TikTok</span>
+              </a>
             </div>
           </div>
 
@@ -159,6 +180,17 @@ export const Footer: React.FC = () => {
                 >
                   <Info className="w-3.5 h-3.5 text-slate-400" />
                   <span>Tentang Kami (About Us)</span>
+                </SmartLink>
+              </li>
+              <li>
+                <SmartLink
+                  to="/pedoman-redaksi"
+                  className={`hover:text-white transition-colors flex items-center gap-1.5 py-2 ${
+                    currentView === 'editorial-guidelines' ? 'text-[#FF2E7E] font-semibold' : ''
+                  }`}
+                >
+                  <ScrollText className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Pedoman Redaksi</span>
                 </SmartLink>
               </li>
               <li>

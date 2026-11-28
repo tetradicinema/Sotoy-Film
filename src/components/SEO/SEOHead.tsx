@@ -18,6 +18,7 @@ import {
   generateArticleSchema,
   generateWebSiteSchema,
   generateOrganizationSchema,
+  generateAboutPageSchema,
   createMovieSchemaFromFilm,
   createArticleSchemaFromArticle,
 } from '../../utils/schemaHelpers';
@@ -93,6 +94,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
   tags,
 }) => {
   const location = useLocation();
+  const isAboutRoute = /^\/(?:tentang-kami|about-us)\/?$/i.test(location.pathname);
 
   // Dynamic Central Metadata Assembly
   const metadata = useMemo<CompletePageMetadata>(() => {
@@ -263,7 +265,13 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
       if (!hasExplicitType('WebSite')) {
         list.push(generateWebSiteSchema(DEFAULT_BASE_URL));
       }
-      if (!hasExplicitType('Organization')) {
+      if (isAboutRoute) {
+        // The AboutPage's mainEntity is the NewsMediaOrganization entity, so
+        // emitting the plain Organization node as well would duplicate it.
+        if (!hasExplicitType('AboutPage')) {
+          list.push(generateAboutPageSchema(DEFAULT_BASE_URL));
+        }
+      } else if (!hasExplicitType('Organization')) {
         list.push(generateOrganizationSchema(DEFAULT_BASE_URL));
       }
     }
@@ -287,6 +295,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({
     effectivePublishedTime,
     effectiveModifiedTime,
     finalAuthor,
+    isAboutRoute,
   ]);
 
   const filmDirector = (film?.director || metadata.filmDetails?.director || '').trim();

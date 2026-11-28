@@ -71,6 +71,7 @@ const SEGMENT_LABEL_MAP: Record<string, string> = {
   'database-film': 'Database Film',
   komunitas: 'Komunitas',
   'tentang-kami': 'Tentang Kami',
+  'pedoman-redaksi': 'Pedoman Redaksi',
   'kebijakan-privasi': 'Kebijakan Privasi',
   'syarat-ketentuan': 'Syarat & Ketentuan',
   cms: 'CMS',

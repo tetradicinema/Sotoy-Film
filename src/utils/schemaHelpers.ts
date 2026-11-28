@@ -6,10 +6,10 @@
  * Designed to maximize search engine rich snippets, carousel displays, and knowledge graph visibility.
  */
 
-import { FilmItem, Article } from '../types';
-import { resolveAbsoluteUrl, DEFAULT_BASE_URL } from './seoMetadata';
-import { resolveAggregateRating } from './aggregateRating';
-import { toIsoWithTimezone, pickArticleIsoDate } from '../lib/edge/isoDate';
+import type { FilmItem, Article } from '../types';
+import { resolveAbsoluteUrl, DEFAULT_BASE_URL } from './seoMetadata.js';
+import { resolveAggregateRating } from './aggregateRating.js';
+import { toIsoWithTimezone, pickArticleIsoDate } from '../lib/edge/isoDate.js';
 
 export interface BreadcrumbItem {
   name: string;
@@ -417,19 +417,53 @@ export function generateOrganizationSchema(siteUrl = DEFAULT_BASE_URL) {
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
+    '@id': `${cleanUrl}/#organization`,
     name: 'Sotoy Film',
     url: cleanUrl,
     logo: {
       '@type': 'ImageObject',
-      url: `${cleanUrl}/sotoy-search-logo-v3-padded.png`,
-      width: 512,
-      height: 512,
+      url: `${cleanUrl}/sotoy-logo-full.webp`,
+      width: 800,
+      height: 292,
+    },
+    founder: {
+      '@type': 'Person',
+      name: 'Tony Tofani',
+      url: `${cleanUrl}/user/CsG2CY2TaIZmG7yuPfzAxmRYrlY2`,
+    },
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'customer support',
+      email: 'admin.sotoyfilm@gmail.com',
+      availableLanguage: ['id'],
     },
     sameAs: [
-      'https://twitter.com/sotoyfilm',
-      'https://instagram.com/sotoyfilm',
-      'https://tiktok.com/@sotoyfilm',
+      'https://www.instagram.com/sotoyfilm.id',
+      'https://www.tiktok.com/@sotoyfilmid',
     ],
+  };
+}
+
+/**
+ * AboutPage structured data for /tentang-kami.
+ *
+ * The `mainEntity` is the same NewsMediaOrganization described by the global
+ * Organization node, so it reuses the organization `@id` instead of creating a
+ * second, conflicting entity.
+ */
+export function generateAboutPageSchema(siteUrl = DEFAULT_BASE_URL) {
+  const cleanUrl = resolveAbsoluteUrl(siteUrl);
+  const { '@context': _context, ...organization } = generateOrganizationSchema(cleanUrl);
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'AboutPage',
+    name: 'Tentang Sotoy Film',
+    url: `${cleanUrl}/tentang-kami`,
+    mainEntity: {
+      ...organization,
+      '@type': 'NewsMediaOrganization',
+    },
   };
 }
 

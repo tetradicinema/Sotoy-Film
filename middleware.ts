@@ -13,7 +13,7 @@ import {
   fetchAuthorProfileForSeo,
   fetchAuthorPublishedArticles,
 } from './src/lib/edge/firestoreRest.js';
-import { injectMetaTags, injectRootContent, injectPrefetchData, injectSeoLists, buildArticleBodyHtml, buildAuthorBodyHtml, buildFilmBodyHtml, FALLBACK_HTML_TEMPLATE } from './src/lib/edge/metaInjection.js';
+import { injectMetaTags, injectRootContent, injectPrefetchData, injectSeoLists, buildArticleBodyHtml, buildAuthorBodyHtml, buildFilmBodyHtml, buildAboutPageBodyHtml, buildEditorialGuidelinesBodyHtml, FALLBACK_HTML_TEMPLATE } from './src/lib/edge/metaInjection.js';
 import {
   buildPeopleListBodyHtml,
   buildPersonBodyHtml,
@@ -31,6 +31,7 @@ import { buildRouteMetadata, buildUserMetadata, STATIC_ROUTE_METADATA_CONFIG } f
 import type { User } from './src/types/index.js';
 import { resolveAggregateRating } from './src/utils/aggregateRating.js';
 import { pickArticleIsoDate } from './src/lib/edge/isoDate.js';
+import { generateAboutPageSchema } from './src/utils/schemaHelpers.js';
 
 // Re-export for unit tests and external consumers
 export { isBotUserAgent, isSearchCrawlerUserAgent };
@@ -58,6 +59,7 @@ export const config = {
     '/search',
     '/tentang-kami',
     '/about-us',
+    '/pedoman-redaksi',
     '/kebijakan-privasi',
     '/privacy-policy',
     '/syarat-ketentuan',
@@ -338,6 +340,8 @@ async function buildStaticRouteResponse(
   isListRoute: boolean
 ): Promise<Response> {
   const metadata = buildRouteMetadata(cleanPath);
+  const isAboutPage = cleanPath === '/tentang-kami' || cleanPath === '/about-us';
+  const isEditorialGuidelines = cleanPath === '/pedoman-redaksi';
 
   let html = await fetchBaseHtml(request);
   if (!html) {
@@ -354,6 +358,7 @@ async function buildStaticRouteResponse(
     locale: 'id_ID',
     keywords: metadata.keywords,
     robots: metadata.noindex ? 'noindex, follow' : undefined,
+    schemaJson: isAboutPage ? generateAboutPageSchema(AUTHOR_PROFILE_BASE_URL) : undefined,
   });
 
   let finalHtml = metaHtml;
@@ -385,6 +390,14 @@ async function buildStaticRouteResponse(
     if (people.length > 0) {
       finalHtml = injectRootContent(finalHtml, buildPeopleListBodyHtml(people));
     }
+  }
+
+  // Shared editorial pages: the crawler body comes from the same module the
+  // React pages render, so bots and humans see identical text.
+  if (isAboutPage) {
+    finalHtml = injectRootContent(finalHtml, buildAboutPageBodyHtml());
+  } else if (isEditorialGuidelines) {
+    finalHtml = injectRootContent(finalHtml, buildEditorialGuidelinesBodyHtml());
   }
 
   return new Response(finalHtml, {
