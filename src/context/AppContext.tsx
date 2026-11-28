@@ -286,6 +286,8 @@ interface AppContextType {
   setLoginModalOpen: (open: boolean) => void;
   isComposeBuzzOpen: boolean;
   setIsComposeBuzzOpen: (open: boolean) => void;
+  cookieSettingsOpen: boolean;
+  setCookieSettingsOpen: (open: boolean) => void;
   logout: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<boolean>;
   signUpWithEmail: (email: string, password: string, name: string, handle: string) => Promise<boolean>;
@@ -765,6 +767,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [onboardingError, setOnboardingError] = useState<'handle_taken' | 'save_failed' | null>(null);
   const [isComposeBuzzOpen, setIsComposeBuzzOpen] = useState(false);
+  const [cookieSettingsOpen, setCookieSettingsOpen] = useState(false);
   const [buzzPrefill, setBuzzPrefill] = useState<{
     content?: string;
     sharedCollection?: {
@@ -7421,6 +7424,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setLoginModalOpen,
         isComposeBuzzOpen,
         setIsComposeBuzzOpen,
+        cookieSettingsOpen,
+        setCookieSettingsOpen,
         buzzPrefill,
         setBuzzPrefill,
         shareCollectionToBuzz,

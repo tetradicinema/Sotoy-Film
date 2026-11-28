@@ -2880,7 +2880,7 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
     check(
       'bot /kebijakan-privasi header uses the updated effective date and version',
       privacyRoot.includes('<p>Berlaku efektif sejak: 28 November 2026</p>') &&
-        privacyRoot.includes('<p>Versi Dokumen: 2.5.0</p>') &&
+        privacyRoot.includes('<p>Versi Dokumen: 2.5.1</p>') &&
         !privacyRoot.includes('3 November 2026') &&
         !privacyRoot.includes('2.4.0')
     );
@@ -2896,7 +2896,7 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
     check(
       'bot /kebijakan-privasi renders the five new sections with their links',
       privacyRoot.includes(
-        '<p>Cookie dan pengenal serupa dipakai untuk menjalankan situs (login, tema), mengukur kunjungan (Google Analytics), dan, bila nanti ada, menayangkan iklan. Anda dapat menghapus atau memblokir cookie lewat pengaturan browser, atau memakai Google Analytics Opt-out Browser Add-on. Sebagian fitur mungkin tidak berfungsi tanpa cookie esensial.</p>'
+        '<p>Cookie dan pengenal serupa dipakai untuk menjalankan situs (login, tema), mengukur kunjungan (Google Analytics), dan, bila nanti ada, menayangkan iklan. Anda dapat menghapus atau memblokir cookie lewat pengaturan browser, atau memakai Google Analytics Opt-out Browser Add-on. Sebagian fitur mungkin tidak berfungsi tanpa cookie esensial. Saat pertama kali berkunjung, Anda dapat menerima atau menolak cookie analitik lewat banner di bagian bawah layar. Pilihan itu dapat diubah kapan saja lewat tautan &quot;Pengaturan cookie&quot; di footer.</p>'
       ) &&
         privacyRoot.includes(
           '<p>Saat ini Sotoy Film belum menayangkan iklan. Bila kami menayangkan iklan lewat Google AdSense, Google dan mitra iklannya dapat memakai cookie untuk menampilkan iklan berdasarkan kunjungan Anda ke situs ini dan situs lain. Anda dapat mengelola atau menonaktifkan iklan yang dipersonalisasi di <a href="https://adssettings.google.com" rel="noopener">adssettings.google.com</a>. Kami akan memperbarui halaman ini sebelum iklan tayang.</p>'
@@ -2945,6 +2945,10 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
     check(
       'bot /privacy-policy serves the same structured body',
       getRootContent(privacyAliasHtml) === privacyRoot
+    );
+    check(
+      '/privacy-policy canonical points at /kebijakan-privasi',
+      getCanonicalHref(privacyAliasHtml) === 'https://www.sotoyfilm.my.id/kebijakan-privasi'
     );
 
     const humanHeaders = {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, LogIn, User as UserIcon, Mail, Lock, UserPlus, AlertTriangle, Chrome, Check, Loader2 } from 'lucide-react';
+import { X, LogIn, User as UserIcon, Mail, Lock, UserPlus, AlertTriangle, Check, Loader2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { normalizeHandle, validateHandle } from '../../utils/handleHelpers';
 
@@ -219,47 +219,59 @@ export const LoginModal: React.FC = () => {
           
           {/* Primary 1-Click Google Sign In */}
           <div className="space-y-2">
-            <button
-              id="google-signin-btn"
-              type="button"
-              disabled={loading}
-              onClick={async () => {
-                setLoading(true);
-                setShowRestrictedWarning(false);
-                setAuthErrorMessage(null);
-                try {
-                  const success = await signInWithGoogle();
-                  if (!success) {
-                    const errCode = getLastAuthErrorCode();
-                    if (errCode === 'auth/popup-blocked') {
-                      setAuthErrorMessage('Popup Google diblokir oleh browser. Harap izinkan popup di pengaturan browser Anda.');
-                    } else if (errCode === 'auth/popup-closed-by-user') {
-                      setAuthErrorMessage('Jendela masuk Google ditutup sebelum selesai.');
-                    } else if (errCode === 'auth/unauthorized-domain') {
-                      setAuthErrorMessage('Domain ini belum terdaftar di Firebase Authorized Domains.');
-                    } else if (errCode === 'resource-exhausted') {
-                      setAuthErrorMessage('Kuota harian Firebase tercapai (Spark Tier). Sistem menggunakan sesi lokal.');
-                    } else if (errCode) {
-                      setAuthErrorMessage(`Gagal masuk dengan Google (${errCode}).`);
+            {(() => {
+              const googleLabel = isSignUp ? 'Daftar dengan Google' : 'Masuk dengan Google';
+              return (
+                <button
+                  id="google-signin-btn"
+                  type="button"
+                  disabled={loading}
+                  aria-label={googleLabel}
+                  onClick={async () => {
+                    setLoading(true);
+                    setShowRestrictedWarning(false);
+                    setAuthErrorMessage(null);
+                    try {
+                      const success = await signInWithGoogle();
+                      if (!success) {
+                        const errCode = getLastAuthErrorCode();
+                        if (errCode === 'auth/popup-blocked') {
+                          setAuthErrorMessage('Popup Google diblokir oleh browser. Harap izinkan popup di pengaturan browser Anda.');
+                        } else if (errCode === 'auth/popup-closed-by-user') {
+                          setAuthErrorMessage('Jendela masuk Google ditutup sebelum selesai.');
+                        } else if (errCode === 'auth/unauthorized-domain') {
+                          setAuthErrorMessage('Domain ini belum terdaftar di Firebase Authorized Domains.');
+                        } else if (errCode === 'resource-exhausted') {
+                          setAuthErrorMessage('Kuota harian Firebase tercapai (Spark Tier). Sistem menggunakan sesi lokal.');
+                        } else if (errCode) {
+                          setAuthErrorMessage(`Gagal masuk dengan Google (${errCode}).`);
+                        }
+                      }
+                    } catch (err: any) {
+                      console.error(err);
+                      setAuthErrorMessage(err?.message || 'Gagal masuk dengan Google.');
+                    } finally {
+                      setLoading(false);
                     }
-                  }
-                } catch (err: any) {
-                  console.error(err);
-                  setAuthErrorMessage(err?.message || 'Gagal masuk dengan Google.');
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              className="w-full py-2.5 px-4 rounded-lg text-xs font-semibold text-white bg-white/[0.05] border border-white/10 hover:border-white/20 hover:bg-white/[0.08] transition-all flex items-center justify-center gap-3 cursor-pointer group"
-            >
-              <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center p-0.5 shrink-0 shadow-sm">
-                <Chrome className="w-3.5 h-3.5 text-[#EA4335]" />
-              </div>
-              <span>Lanjut Masuk Cepat dengan Google</span>
-            </button>
-            <p className="text-[11px] text-slate-400 text-center font-mono">
-              Aman & terintegrasi langsung dengan Firebase Google Auth.
-            </p>
+                  }}
+                  className="w-full py-2.5 px-4 rounded-lg text-sm font-medium text-[#1F1F1F] bg-[#F8FAFD] border border-[#DADCE0] hover:bg-[#F1F3F4] transition-all flex items-center justify-center gap-3 cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4285F4] focus-visible:ring-offset-2 focus-visible:ring-offset-[#171717] disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  <svg
+                    className="h-5 w-5 shrink-0"
+                    viewBox="0 0 48 48"
+                    width="20"
+                    height="20"
+                    aria-hidden="true"
+                  >
+                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+                  </svg>
+                  <span>{googleLabel}</span>
+                </button>
+              );
+            })()}
           </div>
 
           <div className="relative my-3 flex py-1 items-center">
@@ -410,7 +422,7 @@ export const LoginModal: React.FC = () => {
                     }}
                     className="text-xs font-semibold text-[#FF2E7E] hover:underline cursor-pointer"
                   >
-                    👉 Klik di sini untuk Masuk Langsung dengan Google
+                    {isSignUp ? 'Daftar dengan Google' : 'Masuk dengan Google'}
                   </button>
                 </div>
               </div>

@@ -54,7 +54,7 @@ export const PRIVACY_POLICY_CONTENT: PrivacyPageContent = {
   title: 'Kebijakan Privasi (Privacy Policy)',
   badge: 'Dokumen Resmi & Transparansi',
   effectiveDate: 'Berlaku efektif sejak: 28 November 2026',
-  version: 'Versi Dokumen: 2.5.0',
+  version: 'Versi Dokumen: 2.5.1',
   summary: {
     heading: 'Ringkasan Komitmen Privasi Kami',
     paragraphs: [
@@ -167,7 +167,7 @@ export const PRIVACY_POLICY_CONTENT: PrivacyPageContent = {
       heading: '5. Cookie dan Pilihan Anda',
       paragraphs: [
         [
-          'Cookie dan pengenal serupa dipakai untuk menjalankan situs (login, tema), mengukur kunjungan (Google Analytics), dan, bila nanti ada, menayangkan iklan. Anda dapat menghapus atau memblokir cookie lewat pengaturan browser, atau memakai Google Analytics Opt-out Browser Add-on. Sebagian fitur mungkin tidak berfungsi tanpa cookie esensial.',
+          'Cookie dan pengenal serupa dipakai untuk menjalankan situs (login, tema), mengukur kunjungan (Google Analytics), dan, bila nanti ada, menayangkan iklan. Anda dapat menghapus atau memblokir cookie lewat pengaturan browser, atau memakai Google Analytics Opt-out Browser Add-on. Sebagian fitur mungkin tidak berfungsi tanpa cookie esensial. Saat pertama kali berkunjung, Anda dapat menerima atau menolak cookie analitik lewat banner di bagian bawah layar. Pilihan itu dapat diubah kapan saja lewat tautan "Pengaturan cookie" di footer.',
         ],
       ],
     },
