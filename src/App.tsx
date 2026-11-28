@@ -1,11 +1,14 @@
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { HelmetProvider } from '@dr.pogodin/react-helmet';
 import { SEOHead } from './components/SEO/SEOHead';
 import { initAnalytics, trackPageView, isExcludedAnalyticsRoute } from './lib/analytics';
+import { getConsentState, subscribeToConsent, type ConsentState } from './lib/analyticsConsent';
+import { isCookieConsentBannerVisible } from './utils/cookieConsentVisibility';
 import { AppProvider, useApp } from './context/AppContext';
+import { CookieConsentBanner } from './components/CookieConsentBanner';
 import { Navbar } from './components/Navigation/Navbar';
 import { Footer } from './components/Navigation/Footer';
 import { HeroSection } from './components/Home/HeroSection';
@@ -367,15 +370,33 @@ const HomeView: React.FC = () => {
 };
 
 const AppContent: React.FC = () => {
-  const { toastMessage, toastType, shareModalData, loginModalOpen, isComposeBuzzOpen, currentUser } = useApp();
+  const {
+    toastMessage,
+    toastType,
+    shareModalData,
+    loginModalOpen,
+    isComposeBuzzOpen,
+    currentUser,
+    cookieSettingsOpen,
+  } = useApp();
   const location = useLocation();
 
   const isOnboarding = location.pathname === '/onboarding';
 
-  // Initialize GA4 once on client mount
+  const [cookieConsent, setCookieConsent] = useState<ConsentState>(() => getConsentState());
+
+  const cookieBannerVisible = isCookieConsentBannerVisible(
+    location.pathname,
+    cookieConsent,
+    cookieSettingsOpen
+  );
+
+  // Initialize GA4 once on client mount; consent changes are handled by the store.
   useEffect(() => {
     initAnalytics();
   }, []);
+
+  useEffect(() => subscribeToConsent(setCookieConsent), []);
 
   // Track page_view on every route change after the page title has updated (exactly one per navigation)
   const lastTrackedPathRef = useRef<string | null>(null);
@@ -409,7 +430,9 @@ const AppContent: React.FC = () => {
       {toastMessage && (
         <div
           id="global-toast-notification"
-          className={`fixed bottom-20 sm:bottom-6 right-4 sm:right-6 left-4 sm:left-auto z-[100] bg-[#171717]/95 backdrop-blur-md border ${
+          className={`fixed ${
+            cookieBannerVisible ? 'bottom-64 sm:bottom-64 lg:bottom-40' : 'bottom-20 sm:bottom-6'
+          } right-4 sm:right-6 left-4 sm:left-auto z-[100] bg-[#171717]/95 backdrop-blur-md border ${
             toastType === 'success' ? 'border-emerald-500/60' : 
             toastType === 'error' ? 'border-red-500/60' : 
             'border-[#FF2E7E]/60'
@@ -427,6 +450,9 @@ const AppContent: React.FC = () => {
           <span className="text-xs font-bold flex-1">{toastMessage}</span>
         </div>
       )}
+
+      {/* Cookie consent banner (global, never rendered for bots or workspaces) */}
+      <CookieConsentBanner visible={cookieBannerVisible} />
 
       {/* Login / Auth Modal (lazy, mounted only while open so form state resets) */}
       {loginModalOpen && (

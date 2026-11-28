@@ -1,11 +1,11 @@
 import React from 'react';
-import { Clapperboard, Star, Info, Shield, Scale, Briefcase, HelpCircle, ScrollText, Instagram, Music2 } from 'lucide-react';
+import { Clapperboard, Star, Info, Shield, Scale, Briefcase, HelpCircle, ScrollText, Instagram, Music2, Cookie } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { SmartLink } from '../Common/SmartLink';
 import { buildCategoryPath } from '../../utils/entityPaths';
 
 export const Footer: React.FC = () => {
-  const { navigateTo, currentView } = useApp();
+  const { navigateTo, currentView, setCookieSettingsOpen } = useApp();
 
   return (
     <footer id="main-footer" className="bg-[#0A0A0A] border-t border-white/[0.08] pt-12 pb-8 mt-16 text-slate-400 text-xs">
@@ -214,6 +214,16 @@ export const Footer: React.FC = () => {
                   <Shield className="w-3.5 h-3.5 text-slate-400" />
                   <span>Kebijakan Privasi</span>
                 </SmartLink>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setCookieSettingsOpen(true)}
+                  className="hover:text-white transition-colors flex items-center gap-1.5 py-2"
+                >
+                  <Cookie className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Pengaturan cookie</span>
+                </button>
               </li>
               <li>
                 <SmartLink

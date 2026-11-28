@@ -54,6 +54,9 @@
     "test:saved-buzz": "node --import tsx scripts/test-saved-buzz.ts",
     "test:collection-share-layout": "node --import tsx scripts/test-collection-share-layout.ts",
     "test:share-analytics": "node --import tsx scripts/test-share-analytics.ts",
+    "test:analytics": "node --import tsx scripts/test-analytics.ts",
+    "test:cookie-consent": "node --import tsx scripts/test-cookie-consent.ts",
+    "test:login-modal-branding": "node --import tsx scripts/test-login-modal-branding.ts",
     "test:collection-preview": "node --import tsx scripts/test-collection-preview.ts",
     "test:embeds": "node --import tsx scripts/test-embeds.ts && node --import tsx scripts/test-embeds.iframe.ts"
   },

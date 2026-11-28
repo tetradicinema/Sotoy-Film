@@ -4,52 +4,14 @@
  * and link scrapers with zero dependencies.
  */
 
-export const BOT_PATTERNS: readonly string[] = [
-  'facebookexternalhit',
-  'twitterbot',
-  'slackbot',
-  'telegrambot',
-  'whatsapp',
-  'linkedinbot',
-  'discordbot',
-  'googlebot',
-  'google-inspectiontool',
-  'googleother',
-  'storebot-google',
-  'google-read-aloud',
-  'bingbot',
-  'applebot',
-  'yandexbot',
-  'baiduspider',
-  'duckduckbot',
-  'pinterestbot',
-  'embedly',
-  'quora link preview',
-  'outbrain',
-  'vkshare',
-  'w3c_validator',
-  'meta-externalagent',
-  'meta-externalfetcher',
-  'facebot',
-  'skypeuripreview',
-  'redditbot',
-  'mastodon',
-  'iframely',
-  'signal',
-  'line-poker',
-];
+import {
+  BOT_PATTERNS as SHARED_BOT_PATTERNS,
+  SEARCH_CRAWLER_PATTERNS as SHARED_SEARCH_CRAWLER_PATTERNS,
+} from '../botPatterns.js';
 
-/**
- * Search-engine crawlers whose indexing pass must never receive a degraded
- * SPA shell in place of the real entity HTML. Social/link-preview crawlers are
- * deliberately excluded: a failed preview is harmless and should keep the
- * existing pass-through behavior.
- */
-export const SEARCH_CRAWLER_PATTERNS: readonly string[] = [
-  'googlebot',
-  'google-inspectiontool',
-  'bingbot',
-];
+// Re-exported so existing edge imports keep working unchanged.
+export const BOT_PATTERNS: readonly string[] = SHARED_BOT_PATTERNS;
+export const SEARCH_CRAWLER_PATTERNS: readonly string[] = SHARED_SEARCH_CRAWLER_PATTERNS;
 
 /**
  * Checks if an incoming request User-Agent header matches known web crawlers,

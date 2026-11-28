@@ -834,6 +834,7 @@ export const STATIC_ROUTE_METADATA_CONFIG: Record<
     description:
       'Komitmen kami dalam melindungi privasi, data pribadi, dan keamanan akun pengunjung Sotoy Film.',
     type: 'website',
+    canonicalPath: '/kebijakan-privasi',
   },
   '/syarat-ketentuan': {
     title: 'Syarat & Ketentuan Layanan - Sotoy Film',
