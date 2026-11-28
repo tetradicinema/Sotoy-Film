@@ -2684,6 +2684,191 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
     );
   }
 
+  // About + Editorial Guidelines crawler bodies and structured data
+  {
+    const aboutResponse = await middleware(botRequest('/tentang-kami'));
+    const aboutHtml = await aboutResponse.text();
+    const aboutRoot = getRootContent(aboutHtml);
+    const aboutSchema = JSON.parse(getLdJsonRaw(aboutHtml));
+
+    check('bot /tentang-kami returns 200', aboutResponse.status === 200);
+    check(
+      'bot /tentang-kami has exactly one h1',
+      countMatches(aboutRoot, /<h1\b/gi) === 1 &&
+        aboutRoot.includes('<h1>Media film dan pop-culture dari Indonesia</h1>')
+    );
+    check(
+      'bot /tentang-kami renders every section heading',
+      [
+        'Siapa di balik Sotoy Film',
+        'Kenapa namanya Sotoy Film',
+        'Apa yang kami tulis',
+        'Tim redaksi',
+        'Komunitas',
+        'Hubungi kami',
+      ].every(heading => aboutRoot.includes(`<h2>${heading}</h2>`))
+    );
+    check(
+      'bot /tentang-kami renders the exact editorial copy',
+      aboutRoot.includes(
+        '<p>Sotoy Film membahas film, serial, animasi, anime, dan peralatan sinema untuk penonton Indonesia. Kami menulis berita yang dicek ke sumbernya, review dengan skor yang bisa dipertanggungjawabkan, dan tulisan Film Studies tentang cara film dibuat.</p>'
+      ) &&
+        aboutRoot.includes(
+          '<p>Di Indonesia, &quot;sotoy&quot; artinya sok tahu. Kami memakainya dengan sengaja: setiap penonton punya pendapat soal film yang ia tonton, dan pendapat itu layak didengar. Bedanya, di sini pendapat harus disertai alasan.</p>'
+        ) &&
+        aboutRoot.includes(
+          '<p>Kamu bisa memberi Skor Sotoy, menulis buzz, dan menyimpan watchlist. Perannya: Warga Sotoy, Si Paling Sotoy (kritikus terverifikasi), Penulis, dan Admin &amp; Moderasi.</p>'
+        )
+    );
+    check(
+      'bot /tentang-kami links all five redaksi profiles',
+      [
+        'CsG2CY2TaIZmG7yuPfzAxmRYrlY2',
+        'QkNGf1ZfhsMyUEk90a6Iz8ZplZS2',
+        '4kN1JktShRNalIa7mY5f17NcjhF2',
+        'CFYzpNdVpFPc3tiqVR7o11Zx2he2',
+        'T3SXkLrZRphyJiM2Ss92yReY1Dz1',
+      ].every(id => aboutRoot.includes(`href="/user/${id}"`))
+    );
+    check(
+      'bot /tentang-kami links to the editorial guidelines',
+      aboutRoot.includes('href="/pedoman-redaksi"')
+    );
+    check(
+      'bot /tentang-kami body keeps balanced tags',
+      hasBalancedTags(aboutRoot)
+    );
+    check(
+      'bot /tentang-kami title and description match the static config',
+      aboutHtml.includes(
+        '<title>Tentang Sotoy Film - Media Film dan Pop-Culture Indonesia</title>'
+      ) &&
+        getMetaContent(aboutHtml, 'description') ===
+          'Sotoy Film adalah media film dan pop-culture dari Indonesia: berita, review, dan Film Studies, didirikan oleh Tony Tofani.'
+    );
+    check(
+      'bot /tentang-kami canonical is /tentang-kami',
+      getCanonicalHref(aboutHtml) === 'https://www.sotoyfilm.my.id/tentang-kami'
+    );
+    check(
+      'bot /tentang-kami JSON-LD is an AboutPage with a NewsMediaOrganization',
+      aboutSchema?.['@type'] === 'AboutPage' &&
+        aboutSchema?.mainEntity?.['@type'] === 'NewsMediaOrganization' &&
+        aboutSchema?.mainEntity?.name === 'Sotoy Film' &&
+        aboutSchema?.mainEntity?.url === 'https://www.sotoyfilm.my.id' &&
+        aboutSchema?.mainEntity?.logo?.url ===
+          'https://www.sotoyfilm.my.id/sotoy-logo-full.webp' &&
+        aboutSchema?.mainEntity?.founder?.name === 'Tony Tofani' &&
+        aboutSchema?.mainEntity?.founder?.url ===
+          'https://www.sotoyfilm.my.id/user/CsG2CY2TaIZmG7yuPfzAxmRYrlY2' &&
+        aboutSchema?.mainEntity?.sameAs?.includes('https://www.instagram.com/sotoyfilm.id') &&
+        aboutSchema?.mainEntity?.sameAs?.includes('https://www.tiktok.com/@sotoyfilmid') &&
+        aboutSchema?.mainEntity?.contactPoint?.email === 'admin.sotoyfilm@gmail.com'
+    );
+
+    const aboutAliasResponse = await middleware(botRequest('/about-us'));
+    const aboutAliasHtml = await aboutAliasResponse.text();
+    check(
+      '/about-us canonical points at /tentang-kami',
+      getCanonicalHref(aboutAliasHtml) === 'https://www.sotoyfilm.my.id/tentang-kami'
+    );
+
+    const guidelinesResponse = await middleware(botRequest('/pedoman-redaksi'));
+    const guidelinesHtml = await guidelinesResponse.text();
+    const guidelinesRoot = getRootContent(guidelinesHtml);
+
+    check('bot /pedoman-redaksi returns 200', guidelinesResponse.status === 200);
+    check(
+      'bot /pedoman-redaksi has exactly one h1',
+      countMatches(guidelinesRoot, /<h1\b/gi) === 1 &&
+        guidelinesRoot.includes('<h1>Pedoman Redaksi</h1>')
+    );
+    check(
+      'bot /pedoman-redaksi renders every section heading',
+      [
+        'Berita',
+        'Review',
+        'Film Studies',
+        'Opini',
+        'Koreksi',
+        'Sponsor, afiliasi, dan iklan',
+      ].every(heading => guidelinesRoot.includes(`<h2>${heading}</h2>`))
+    );
+    check(
+      'bot /pedoman-redaksi renders the exact editorial copy',
+      guidelinesRoot.includes(
+        '<li>Tanggal terbit selalu tampil. Pembaruan substansial diberi catatan &quot;Diperbarui&quot; beserta tanggalnya.</li>'
+      ) &&
+        guidelinesRoot.includes(
+          '<li>Skor Sotoy 1 sampai 10: 1-2 Bencana Sinematik, 3-4 Kurang Matang, 5-6 Solid &amp; Layak Tonton, 7-8 Sangat Direkomendasikan, 9-10 Mahakarya Abadi. Sponsor tidak memengaruhi skor.</li>'
+        ) &&
+        guidelinesRoot.includes(
+          '<p>Temukan kesalahan? Kirim ke admin.sotoyfilm@gmail.com dengan subjek &quot;Koreksi&quot;. Kesalahan substansial diperbaiki dan dicatat dengan tanggal.</p>'
+        ) &&
+        guidelinesRoot.includes(
+          '<li>Saat ini Sotoy Film belum menayangkan iklan. Bila nanti ada, iklan dipisahkan dari konten redaksi dan dicatat di halaman ini.</li>'
+        )
+    );
+    check(
+      'bot /pedoman-redaksi keeps the updated note',
+      guidelinesRoot.includes('Terakhir diperbarui: November 2026.')
+    );
+    check(
+      'bot /pedoman-redaksi body keeps balanced tags',
+      hasBalancedTags(guidelinesRoot)
+    );
+    check(
+      'bot /pedoman-redaksi title and description match the static config',
+      guidelinesHtml.includes(
+        '<title>Pedoman Redaksi Sotoy Film - Cara Kami Menulis dan Menilai</title>'
+      ) &&
+        getMetaContent(guidelinesHtml, 'description') ===
+          'Cara Sotoy Film memilih sumber, menulis berita, menilai review, mengoreksi kesalahan, dan mengungkap sponsor serta afiliasi.'
+    );
+    check(
+      'bot /pedoman-redaksi canonical is /pedoman-redaksi',
+      getCanonicalHref(guidelinesHtml) === 'https://www.sotoyfilm.my.id/pedoman-redaksi'
+    );
+
+    const forbidden = [
+      'tonytofanii27',
+      'eksposurmedia',
+      'tetradicinema27',
+      'next5.basketball',
+      'gamail',
+    ];
+    check(
+      'About and guidelines bot HTML never leak private strings',
+      forbidden.every(
+        value => !aboutHtml.includes(value) && !aboutAliasHtml.includes(value) && !guidelinesHtml.includes(value)
+      )
+    );
+
+    const humanHeaders = {
+      'user-agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+    };
+    for (const path of ['/tentang-kami', '/about-us', '/pedoman-redaksi']) {
+      const response = await middleware(
+        new Request(`https://www.sotoyfilm.my.id${path}`, { method: 'GET', headers: humanHeaders })
+      );
+      check(
+        `human UA on ${path} passes through untouched`,
+        response.headers.get('x-middleware-next') === '1' && (await response.text()) === ''
+      );
+    }
+
+    const privacyResponse = await middleware(botRequest('/kebijakan-privasi'));
+    const privacyHtml = await privacyResponse.text();
+    const privacyRoot = getRootContent(privacyHtml);
+    check(
+      'other static pages keep their metadata-only crawler response',
+      privacyResponse.status === 200 &&
+        privacyHtml.includes('<title>Kebijakan Privasi - Sotoy Film</title>') &&
+        !privacyRoot.includes('<article>')
+    );
+  }
+
   // Every known category has a distinct description and canonical URL
   {
     const categoryNames = ['movies', 'series', 'animation', 'cinema-gear', 'film-studies'];

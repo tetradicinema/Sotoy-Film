@@ -100,6 +100,7 @@ async function run() {
     { loc: `${baseUrl}/panduan-leaderboard`, lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.6' },
     { loc: `${baseUrl}/panduan`, lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.6' },
     { loc: `${baseUrl}/tentang-kami`, lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.5' },
+    { loc: `${baseUrl}/pedoman-redaksi`, lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.5' },
     { loc: `${baseUrl}/kebijakan-privasi`, lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.5' },
     { loc: `${baseUrl}/syarat-ketentuan`, lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.5' },
     { loc: `${baseUrl}/kontak-bisnis`, lastmod: STATIC_LASTMOD, changefreq: 'monthly', priority: '0.5' },

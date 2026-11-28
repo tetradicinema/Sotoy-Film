@@ -7,6 +7,13 @@
 import { TWITTER_CREATOR } from '../../utils/seoMetadata.js';
 import { buildArticlePath, buildFilmPath, buildCategoryPath } from '../../utils/entityPaths.js';
 import { pickArticleIsoDate } from './isoDate.js';
+import {
+  ABOUT_PAGE_CONTENT,
+  ABOUT_TEAM,
+  EDITORIAL_GUIDELINES_CONTENT,
+  type ContentLink,
+  type StaticPageContent,
+} from '../../content/aboutPages.js';
 
 /**
  * Attribute React Helmet uses to recognise the tags it owns. Marking the
@@ -1035,6 +1042,73 @@ export function buildAuthorBodyHtml(
   }
 
   return `<article>${parts.join('')}</article>`;
+}
+
+function contentAnchor(link: ContentLink): string {
+  const label = escapeHtml(toPlainText(link.label));
+  const href = sanitizeArticleHref(link.href);
+  if (!href) return label;
+  const external = href.external || link.external === true;
+  return `<a href="${escapeHtml(href.href)}"${external ? ' rel="noopener"' : ''}>${label}</a>`;
+}
+
+/**
+ * Renders one of the shared editorial pages (About / Pedoman Redaksi) as a
+ * crawler-only body. All text is escaped; only h1/h2/p/ul/li/a are emitted,
+ * mirroring the allowlisted article body sanitizer.
+ */
+function buildSharedStaticPageBodyHtml(page: StaticPageContent): string {
+  const parts: string[] = [`<h1>${escapeHtml(page.h1)}</h1>`];
+
+  for (const paragraph of page.intro || []) {
+    parts.push(`<p>${escapeHtml(paragraph)}</p>`);
+  }
+
+  for (const section of page.sections || []) {
+    parts.push(`<h2>${escapeHtml(section.heading)}</h2>`);
+
+    for (const paragraph of section.paragraphs || []) {
+      parts.push(`<p>${escapeHtml(paragraph)}</p>`);
+    }
+
+    if (section.bullets && section.bullets.length > 0) {
+      const items = section.bullets
+        .map(bullet => `<li>${escapeHtml(bullet)}</li>`)
+        .join('');
+      parts.push(`<ul>${items}</ul>`);
+    }
+
+    if (section.showTeam) {
+      const items = ABOUT_TEAM.map(member => {
+        const href = `/user/${encodeURIComponent(member.userId)}`;
+        return `<li><a href="${escapeHtml(href)}">${escapeHtml(member.name)}</a> - ${escapeHtml(member.role)}</li>`;
+      }).join('');
+      parts.push(`<ul>${items}</ul>`);
+    }
+
+    if (section.links && section.links.length > 0) {
+      const items = section.links
+        .map(link => `<li>${contentAnchor(link)}</li>`)
+        .join('');
+      parts.push(`<ul>${items}</ul>`);
+    }
+  }
+
+  if (page.footerNote) {
+    parts.push(`<p>${escapeHtml(page.footerNote)}</p>`);
+  }
+
+  return `<article>${parts.join('')}</article>`;
+}
+
+/** Crawler body for /tentang-kami and /about-us. */
+export function buildAboutPageBodyHtml(): string {
+  return buildSharedStaticPageBodyHtml(ABOUT_PAGE_CONTENT);
+}
+
+/** Crawler body for /pedoman-redaksi. */
+export function buildEditorialGuidelinesBodyHtml(): string {
+  return buildSharedStaticPageBodyHtml(EDITORIAL_GUIDELINES_CONTENT);
 }
 
 /**

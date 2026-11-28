@@ -171,10 +171,10 @@ const expectedContentLocs = [
   FRANCHISE_LOC,
 ];
 
-/** 13 base static routes (incl. /people) + 5 categories = 18. */
-const STATIC_COUNT = 18;
-const BASELINE_COUNT = STATIC_COUNT + expectedContentLocs.length; // 23
-const SUCCESS_COUNT = BASELINE_COUNT + expectedPeopleLocs.length; // 63
+/** 14 base static routes (incl. /people) + 5 categories = 19. */
+const STATIC_COUNT = 19;
+const BASELINE_COUNT = STATIC_COUNT + expectedContentLocs.length; // 24
+const SUCCESS_COUNT = BASELINE_COUNT + expectedPeopleLocs.length; // 64
 
 const encodeFields = (fields: Record<string, string>) =>
   Object.fromEntries(
@@ -488,11 +488,15 @@ const runTests = async () => {
       .length === 1,
     'success: duplicate person ids are emitted once'
   );
-  assertEquals(successLocs.length, SUCCESS_COUNT, 'success: total URL count is 63');
+  assertEquals(successLocs.length, SUCCESS_COUNT, 'success: total URL count is 64');
 
   for (const loc of expectedContentLocs) {
     assert(successLocs.includes(loc), `success: keeps ${loc}`);
   }
+  assert(
+    successLocs.includes(`${BASE_URL}/pedoman-redaksi`),
+    'success: includes /pedoman-redaksi'
+  );
   assert(
     !successLocs.includes(`${BASE_URL}/artikel/live-article-draft`),
     'success: still excludes draft articles'
@@ -593,10 +597,14 @@ const runTests = async () => {
       locs.filter(loc => loc.startsWith(`${BASE_URL}/person/`)).length === 0,
       `${name}: includes no /person/ URLs`
     );
-    assertEquals(locs.length, BASELINE_COUNT, `${name}: keeps all 23 baseline URLs`);
+    assertEquals(locs.length, BASELINE_COUNT, `${name}: keeps all 24 baseline URLs`);
     for (const loc of expectedContentLocs) {
       assert(locs.includes(loc), `${name}: keeps ${loc}`);
     }
+    assert(
+      locs.includes(`${BASE_URL}/pedoman-redaksi`),
+      `${name}: keeps /pedoman-redaksi`
+    );
     assert(!result.xml.includes('Adult Star'), `${name}: no adult entries`);
     assert(!result.threw, `${name}: handler does not throw`);
   }
@@ -664,6 +672,20 @@ const runTests = async () => {
     assert(
       !xml.includes('/person/666') && !xml.includes('Adult Star'),
       'adult: never appears in any sitemap response'
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Build-time sitemap static list
+  // -------------------------------------------------------------------------
+  {
+    const buildScript = fs.readFileSync(
+      path.join(repoRoot, 'scripts', 'generate-sitemap.ts'),
+      'utf-8'
+    );
+    assert(
+      buildScript.includes('/pedoman-redaksi'),
+      'build sitemap: static list includes /pedoman-redaksi'
     );
   }
 

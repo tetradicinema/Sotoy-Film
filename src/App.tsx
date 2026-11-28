@@ -106,6 +106,11 @@ const SearchPage = React.lazy(() =>
 const AboutUsPage = React.lazy(() =>
   import('./components/Pages/AboutUsPage').then(m => ({ default: m.AboutUsPage }))
 );
+const EditorialGuidelinesPage = React.lazy(() =>
+  import('./components/Pages/EditorialGuidelinesPage').then(m => ({
+    default: m.EditorialGuidelinesPage,
+  }))
+);
 const PrivacyPolicyPage = React.lazy(() =>
   import('./components/Pages/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage }))
 );
@@ -535,6 +540,7 @@ const AppContent: React.FC = () => {
             {/* Informational & Legal Pages */}
             <Route path="/tentang-kami" element={<AboutUsPage />} />
             <Route path="/about-us" element={<AboutUsPage />} />
+            <Route path="/pedoman-redaksi" element={<EditorialGuidelinesPage />} />
             <Route path="/kebijakan-privasi" element={<PrivacyPolicyPage />} />
             <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
             <Route path="/syarat-ketentuan" element={<TermsPage />} />

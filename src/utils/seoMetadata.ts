@@ -802,15 +802,25 @@ export const STATIC_ROUTE_METADATA_CONFIG: Record<
     noindex: true,
   },
   '/tentang-kami': {
-    title: 'Tentang Sotoy Film - Media Pop Culture & Sinema',
+    title: 'Tentang Sotoy Film - Media Film dan Pop-Culture Indonesia',
     description:
-      'Mengenal visi, misi, dan tim di balik media pop-culture dan komunitas film terkemuka Sotoy Film.',
+      'Sotoy Film adalah media film dan pop-culture dari Indonesia: berita, review, dan Film Studies, didirikan oleh Tony Tofani.',
+    keywords: ['tentang sotoy film', 'media film indonesia', 'tim redaksi'],
     type: 'website',
   },
   '/about-us': {
-    title: 'Tentang Sotoy Film - Media Pop Culture & Sinema',
+    title: 'Tentang Sotoy Film - Media Film dan Pop-Culture Indonesia',
     description:
-      'Mengenal visi, misi, dan tim di balik media pop-culture dan komunitas film terkemuka Sotoy Film.',
+      'Sotoy Film adalah media film dan pop-culture dari Indonesia: berita, review, dan Film Studies, didirikan oleh Tony Tofani.',
+    keywords: ['tentang sotoy film', 'media film indonesia', 'tim redaksi'],
+    type: 'website',
+    canonicalPath: '/tentang-kami',
+  },
+  '/pedoman-redaksi': {
+    title: 'Pedoman Redaksi Sotoy Film - Cara Kami Menulis dan Menilai',
+    description:
+      'Cara Sotoy Film memilih sumber, menulis berita, menilai review, mengoreksi kesalahan, dan mengungkap sponsor serta afiliasi.',
+    keywords: ['pedoman redaksi', 'kebijakan editorial', 'etika jurnalisme film'],
     type: 'website',
   },
   '/kebijakan-privasi': {
