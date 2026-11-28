@@ -2844,11 +2844,120 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
       )
     );
 
+    // Privacy Policy crawler body uses the same shared-content pattern.
+    const privacyResponse = await middleware(botRequest('/kebijakan-privasi'));
+    const privacyHtml = await privacyResponse.text();
+    const privacyRoot = getRootContent(privacyHtml);
+    const privacyHeadings = [
+      '1. Informasi yang Kami Kumpulkan',
+      '2. Bagaimana Kami Menggunakan Informasi Anda',
+      '3. Kontrol dan Hak Privasi Anda',
+      '4. Penyimpanan Lokal Browser (Local Storage &amp; Cache)',
+      '5. Cookie dan Pilihan Anda',
+      '6. Iklan',
+      '7. Afiliasi dan Konten Sponsor',
+      '8. Penyimpanan dan Transfer Data',
+      '9. Anak-anak',
+      '10. Perubahan Kebijakan',
+      '11. Hubungi Petugas Perlindungan Data',
+    ];
+    const renderedPrivacyHeadings = Array.from(
+      privacyRoot.matchAll(/<h2>([\s\S]*?)<\/h2>/g),
+      match => match[1]
+    );
+
+    check('bot /kebijakan-privasi returns 200', privacyResponse.status === 200);
+    check(
+      'bot /kebijakan-privasi has exactly one h1',
+      countMatches(privacyRoot, /<h1\b/gi) === 1 &&
+        privacyRoot.includes('<h1>Kebijakan Privasi (Privacy Policy)</h1>')
+    );
+    check(
+      'bot /kebijakan-privasi renders all 11 section h2s in order',
+      renderedPrivacyHeadings.length === privacyHeadings.length &&
+        renderedPrivacyHeadings.every((heading, index) => heading === privacyHeadings[index])
+    );
+    check(
+      'bot /kebijakan-privasi header uses the updated effective date and version',
+      privacyRoot.includes('<p>Berlaku efektif sejak: 28 November 2026</p>') &&
+        privacyRoot.includes('<p>Versi Dokumen: 2.5.0</p>') &&
+        !privacyRoot.includes('3 November 2026') &&
+        !privacyRoot.includes('2.4.0')
+    );
+    check(
+      'bot /kebijakan-privasi renders the two new collection bullets',
+      privacyRoot.includes(
+        '<li><strong>Analitik Tambahan:</strong> Kami juga memakai Vercel Analytics dan Vercel Speed Insights untuk mengukur jumlah kunjungan dan kecepatan halaman secara agregat.</li>'
+      ) &&
+        privacyRoot.includes(
+          '<li><strong>Video Tersemat:</strong> Trailer dan video dari YouTube dimuat dalam mode privasi-ditingkatkan (youtube-nocookie.com). Saat Anda memutarnya, YouTube dapat menerima data dari browser Anda sesuai kebijakannya.</li>'
+        )
+    );
+    check(
+      'bot /kebijakan-privasi renders the five new sections with their links',
+      privacyRoot.includes(
+        '<p>Cookie dan pengenal serupa dipakai untuk menjalankan situs (login, tema), mengukur kunjungan (Google Analytics), dan, bila nanti ada, menayangkan iklan. Anda dapat menghapus atau memblokir cookie lewat pengaturan browser, atau memakai Google Analytics Opt-out Browser Add-on. Sebagian fitur mungkin tidak berfungsi tanpa cookie esensial.</p>'
+      ) &&
+        privacyRoot.includes(
+          '<p>Saat ini Sotoy Film belum menayangkan iklan. Bila kami menayangkan iklan lewat Google AdSense, Google dan mitra iklannya dapat memakai cookie untuk menampilkan iklan berdasarkan kunjungan Anda ke situs ini dan situs lain. Anda dapat mengelola atau menonaktifkan iklan yang dipersonalisasi di <a href="https://adssettings.google.com" rel="noopener">adssettings.google.com</a>. Kami akan memperbarui halaman ini sebelum iklan tayang.</p>'
+        ) &&
+        privacyRoot.includes(
+          '<p>Sebagian tautan dapat berupa tautan afiliasi: bila Anda membeli lewat tautan itu, kami dapat menerima komisi tanpa biaya tambahan bagi Anda, dan mitra dapat memakai cookie untuk mencatat pembelian. Tautan afiliasi dan konten berbayar selalu diberi tanda (lihat <a href="/pedoman-redaksi">Pedoman Redaksi</a>).</p>'
+        ) &&
+        privacyRoot.includes(
+          '<p>Layanan yang kami pakai (Firebase/Google, Vercel, Google Analytics) dapat memproses data di server di luar Indonesia. Data akun disimpan selama akun aktif. Setelah Anda meminta penghapusan akun, data akun dan konten Anda dihapus dalam waktu paling lama 30 hari, kecuali data yang wajib kami simpan menurut hukum.</p>'
+        ) &&
+        privacyRoot.includes(
+          '<p>Sotoy Film tidak ditujukan bagi anak di bawah 13 tahun, dan kami tidak sengaja mengumpulkan data pribadi mereka. Bila Anda mengetahui anak di bawah usia itu memiliki akun, hubungi kami di admin.sotoyfilm@gmail.com agar akun tersebut kami hapus.</p>'
+        ) &&
+        privacyRoot.includes(
+          '<p>Bila ada perubahan material, kami memperbarui tanggal di atas dan mencatatnya di halaman ini.</p>'
+        )
+    );
+    check(
+      'bot /kebijakan-privasi contact box is unchanged',
+      privacyRoot.includes('<p><strong>Email:</strong> admin.sotoyfilm@gmail.com</p>') &&
+        privacyRoot.includes(
+          '<p><strong>Subjek:</strong> Permohonan Hak Privasi Pengguna Sotoy Film</p>'
+        )
+    );
+    const privacyEmails = privacyRoot.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g) || [];
+    check(
+      'bot /kebijakan-privasi only exposes the public email address',
+      privacyEmails.length > 0 &&
+        privacyEmails.every(email => email === 'admin.sotoyfilm@gmail.com')
+    );
+    check('bot /kebijakan-privasi body keeps balanced tags', hasBalancedTags(privacyRoot));
+    check(
+      'bot /kebijakan-privasi title, description and canonical match the static config',
+      privacyHtml.includes('<title>Kebijakan Privasi - Sotoy Film</title>') &&
+        getMetaContent(privacyHtml, 'description') ===
+          'Komitmen kami dalam melindungi privasi, data pribadi, dan keamanan akun pengunjung Sotoy Film.' &&
+        getCanonicalHref(privacyHtml) === 'https://www.sotoyfilm.my.id/kebijakan-privasi'
+    );
+    check(
+      'privacy bot HTML never leaks private strings',
+      forbidden.every(value => !privacyHtml.includes(value))
+    );
+
+    const privacyAliasResponse = await middleware(botRequest('/privacy-policy'));
+    const privacyAliasHtml = await privacyAliasResponse.text();
+    check(
+      'bot /privacy-policy serves the same structured body',
+      getRootContent(privacyAliasHtml) === privacyRoot
+    );
+
     const humanHeaders = {
       'user-agent':
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
     };
-    for (const path of ['/tentang-kami', '/about-us', '/pedoman-redaksi']) {
+    for (const path of [
+      '/tentang-kami',
+      '/about-us',
+      '/pedoman-redaksi',
+      '/kebijakan-privasi',
+      '/privacy-policy',
+    ]) {
       const response = await middleware(
         new Request(`https://www.sotoyfilm.my.id${path}`, { method: 'GET', headers: humanHeaders })
       );
@@ -2858,14 +2967,13 @@ async function runCrawlerBodyTests(): Promise<{ passed: number; failed: number }
       );
     }
 
-    const privacyResponse = await middleware(botRequest('/kebijakan-privasi'));
-    const privacyHtml = await privacyResponse.text();
-    const privacyRoot = getRootContent(privacyHtml);
+    const termsResponse = await middleware(botRequest('/syarat-ketentuan'));
+    const termsHtml = await termsResponse.text();
     check(
       'other static pages keep their metadata-only crawler response',
-      privacyResponse.status === 200 &&
-        privacyHtml.includes('<title>Kebijakan Privasi - Sotoy Film</title>') &&
-        !privacyRoot.includes('<article>')
+      termsResponse.status === 200 &&
+        termsHtml.includes('<title>Syarat &amp; Ketentuan Layanan - Sotoy Film</title>') &&
+        !getRootContent(termsHtml).includes('<article>')
     );
   }
 

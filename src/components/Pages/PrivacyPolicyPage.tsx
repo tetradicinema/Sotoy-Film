@@ -7,34 +7,84 @@ import {
   UserCheck,
   Database,
   Mail,
-  AlertCircle,
+  Cookie,
+  Megaphone,
+  BadgeDollarSign,
+  CloudUpload,
+  Baby,
+  History,
   CheckCircle2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { AdBannerSlot } from '../Common/AdBannerSlot';
+import { SmartLink } from '../Common/SmartLink';
+import { PRIVACY_POLICY_CONTENT, type RichText } from '../../content/privacyPage';
+
+/** Renders the structured inline runs from the shared content module. */
+const RichTextContent: React.FC<{ value: RichText }> = ({ value }) => (
+  <>
+    {value.map((entry, index) => {
+      if (typeof entry === 'string') {
+        return <React.Fragment key={index}>{entry}</React.Fragment>;
+      }
+
+      let node: React.ReactNode = entry.text;
+      if (entry.code) node = <code>{node}</code>;
+      if (entry.em) node = <em>{node}</em>;
+      if (entry.strong) node = <strong>{node}</strong>;
+
+      if (entry.href) {
+        node = entry.external ? (
+          <a href={entry.href} target="_blank" rel="noopener">
+            {node}
+          </a>
+        ) : (
+          <SmartLink to={entry.href}>{node}</SmartLink>
+        );
+      }
+
+      return <React.Fragment key={index}>{node}</React.Fragment>;
+    })}
+  </>
+);
+
+const SECTION_ICONS: Record<string, React.ReactNode> = {
+  'informasi-yang-kami-kumpulkan': <Database className="w-5 h-5 text-[#FF2E7E]" />,
+  'bagaimana-kami-menggunakan-informasi-anda': <Eye className="w-5 h-5 text-[#FF2E7E]" />,
+  'kontrol-dan-hak-privasi-anda': <UserCheck className="w-5 h-5 text-purple-400" />,
+  'penyimpanan-lokal-browser': <FileText className="w-5 h-5 text-emerald-400" />,
+  'cookie-dan-pilihan-anda': <Cookie className="w-5 h-5 text-[#FF2E7E]" />,
+  iklan: <Megaphone className="w-5 h-5 text-[#FF2E7E]" />,
+  'afiliasi-dan-konten-sponsor': <BadgeDollarSign className="w-5 h-5 text-[#FF2E7E]" />,
+  'penyimpanan-dan-transfer-data': <CloudUpload className="w-5 h-5 text-[#FF2E7E]" />,
+  'anak-anak': <Baby className="w-5 h-5 text-[#FF2E7E]" />,
+  'perubahan-kebijakan': <History className="w-5 h-5 text-[#FF2E7E]" />,
+  'hubungi-petugas-perlindungan-data': <Mail className="w-5 h-5 text-[#FF2E7E]" />,
+};
 
 export const PrivacyPolicyPage: React.FC = () => {
   const { navigateTo } = useApp();
+  const page = PRIVACY_POLICY_CONTENT;
 
   return (
     <div id="privacy-policy-page" className="min-h-screen py-10">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-        
+
         {/* Header Title */}
         <div className="space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF2E7E]/10 border border-[#FF2E7E]/30 text-[#FF2E7E] text-xs font-black uppercase tracking-wider">
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Dokumen Resmi & Transparansi</span>
+            <span>{page.badge}</span>
           </div>
 
           <h1 className="font-display font-black text-3xl sm:text-4xl text-white tracking-tight">
-            Kebijakan Privasi (Privacy Policy)
+            {page.title}
           </h1>
 
           <div className="flex items-center gap-3 text-xs text-slate-400">
-            <span>Berlaku efektif sejak: 3 November 2026</span>
+            <span>{page.effectiveDate}</span>
             <span>•</span>
-            <span>Versi Dokumen: 2.4.0</span>
+            <span>{page.version}</span>
           </div>
         </div>
 
@@ -45,124 +95,66 @@ export const PrivacyPolicyPage: React.FC = () => {
         <div className="bg-[#171717] border border-[#FF2E7E]/30 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xl">
           <h2 className="font-display font-black text-lg text-white flex items-center gap-2">
             <Lock className="w-5 h-5 text-[#FF2E7E]" />
-            <span>Ringkasan Komitmen Privasi Kami</span>
+            <span>{page.summary.heading}</span>
           </h2>
-          <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
-            Sotoy Film menghargai privasi setiap pengguna. Kami <strong>tidak pernah menjual data pribadi Anda</strong> kepada broker data atau pihak ketiga. Data yang kami simpan murni ditujukan untuk menghitung agregasi Skor Sotoy yang adil, menyimpan Watchlist film Anda, dan menyajikan feed sosial yang relevan.
-          </p>
+          {page.summary.paragraphs.map((paragraph, index) => (
+            <p key={index} className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+              <RichTextContent value={paragraph} />
+            </p>
+          ))}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-            <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800 flex items-center gap-2 text-xs text-slate-300">
-              <CheckCircle2 className="w-4 h-4 text-[#FF2E7E] shrink-0" />
-              <span>Tanpa Pelacakan Lokasi Latar Belakang</span>
-            </div>
-            <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800 flex items-center gap-2 text-xs text-slate-300">
-              <CheckCircle2 className="w-4 h-4 text-[#FF2E7E] shrink-0" />
-              <span>Opsi Ekspor JSON Data Kapan Saja</span>
-            </div>
-            <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800 flex items-center gap-2 text-xs text-slate-300">
-              <CheckCircle2 className="w-4 h-4 text-[#FF2E7E] shrink-0" />
-              <span>Kontrol Penuh Profil Publik/Privat</span>
-            </div>
+            {page.summary.highlights.map(highlight => (
+              <div
+                key={highlight}
+                className="bg-slate-900/60 p-3 rounded-xl border border-slate-800 flex items-center gap-2 text-xs text-slate-300"
+              >
+                <CheckCircle2 className="w-4 h-4 text-[#FF2E7E] shrink-0" />
+                <span>{highlight}</span>
+              </div>
+            ))}
           </div>
         </div>
 
         {/* Detailed Sections */}
         <div className="space-y-8 text-slate-300 text-xs sm:text-sm leading-relaxed">
-          
-          {/* Section 1 */}
-          <section className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
-            <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
-              <Database className="w-5 h-5 text-[#FF2E7E]" />
-              <span>1. Informasi yang Kami Kumpulkan</span>
-            </h3>
-            <p>
-              Saat Anda menggunakan platform Sotoy Film, kami dapat mengumpulkan jenis informasi berikut:
-            </p>
-            <ul className="list-disc pl-5 space-y-2 text-slate-300">
-              <li>
-                <strong>Data Profil Pengguna:</strong> Nama tampilan, handle unik (misalnya <em>@wargasotoy</em>), tautan avatar, bio profil, dan peran akun (Warga, Si Paling Sotoy, Penulis, atau Admin).
-              </li>
-              <li>
-                <strong>Aktivitas Sinematik & Konten Buatan Pengguna:</strong> Ulasan teks, angka rating Skor Sotoy (1.0 - 10.0), postingan Buzz kilat, komentar pada artikel, daftar film di Watchlist, dan penanda suka (likes).
-              </li>
-              <li>
-                <strong>Preferensi Akun:</strong> Genre film favorit, preferensi pemutaran cuplikan (trailer), dan pengaturan privasi visibilitas profil yang Anda konfigurasi di menu Pengaturan.
-              </li>
-              <li>
-                <strong>Data Teknis Perangkat:</strong> Alamat IP tersamar, tipe browser, resolusi layar, dan metadata sesi untuk keamanan pencegahan bot review-bombing.
-              </li>
-              <li>
-                <strong>Data Analitik Kunjungan:</strong> Kami memakai Google Analytics 4 (Google LLC) untuk memahami halaman mana yang dibaca dan bagaimana pengunjung menemukan Sotoy Film. Layanan ini memakai cookie atau pengenal serupa dan mencatat data seperti halaman yang dibuka, jenis perangkat dan browser, serta perkiraan lokasi tingkat kota. Halaman pengelolaan (admin, penulis, dan editor artikel) tidak dilacak. Anda dapat menolaknya lewat pengaturan cookie di browser atau dengan add-on resmi <em>Google Analytics Opt-out Browser Add-on</em>.
-              </li>
-              <li>
-                <strong>Layanan Pihak Ketiga:</strong> Autentikasi akun dan basis data berjalan di Firebase (Google). Data dan poster film berasal dari TMDB, dan font dimuat dari Google Fonts, sehingga browser Anda terhubung langsung ke server mereka saat halaman dibuka. Masing-masing layanan menerapkan kebijakan privasinya sendiri.
-              </li>
-            </ul>
-          </section>
 
-          {/* Section 2 */}
-          <section className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
-            <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
-              <Eye className="w-5 h-5 text-[#FF2E7E]" />
-              <span>2. Bagaimana Kami Menggunakan Informasi Anda</span>
-            </h3>
-            <p>Kami menggunakan data yang dikumpulkan semata-mata untuk:</p>
-            <ul className="list-disc pl-5 space-y-2 text-slate-300">
-              <li>Menghitung rata-rata Skor Sotoy Warga dan membedakannya dari Skor Kurator Resmi (*Critics Score*).</li>
-              <li>Menyimpan dan menyinkronkan daftar film tontonan (*Watchlist*) Anda di berbagai sesi browser.</li>
-              <li>Mempersonalisasi rekomendasi film pada fitur <em>Rekomendasi Film Mood</em> berdasarkan genre yang Anda minati.</li>
-              <li>Mencegah kecurangan peringkat sinema (*anti-manipulation algorithm*) agar hasil voting film tetap jujur dan organik.</li>
-              <li>Menganalisis pola kunjungan secara agregat, misalnya halaman terpopuler, untuk meningkatkan konten dan performa situs.</li>
-            </ul>
-          </section>
+          {page.sections.map(section => (
+            <section
+              key={section.id}
+              className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4"
+            >
+              <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
+                {SECTION_ICONS[section.id]}
+                <span>{section.heading}</span>
+              </h3>
 
-          {/* Section 3 */}
-          <section className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
-            <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
-              <UserCheck className="w-5 h-5 text-purple-400" />
-              <span>3. Kontrol dan Hak Privasi Anda</span>
-            </h3>
-            <p>
-              Setiap pengguna Sotoy Film memegang kendali penuh atas privasi akun mereka:
-            </p>
-            <ul className="list-disc pl-5 space-y-2 text-slate-300">
-              <li>
-                <strong>Profil Privat vs Publik:</strong> Anda dapat mengaktifkan mode Akun Privat di menu Pengaturan agar Watchlist dan riwayat ulasan hanya dapat dilihat oleh diri Anda sendiri.
-              </li>
-              <li>
-                <strong>Ekspor Salinan Data (JSON):</strong> Melalui dashboard pengaturan akun, Anda dapat mengunduh seluruh data riwayat rating, buzz, dan watchlist dalam format JSON standar.
-              </li>
-              <li>
-                <strong>Penghapusan Data:</strong> Anda berhak meminta penghapusan permanen akun beserta seluruh catatan ulasan dengan menghubungi tim perlindungan data kami.
-              </li>
-            </ul>
-          </section>
+              {section.paragraphs.map((paragraph, index) => (
+                <p key={index}>
+                  <RichTextContent value={paragraph} />
+                </p>
+              ))}
 
-          {/* Section 4 */}
-          <section className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
-            <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
-              <FileText className="w-5 h-5 text-emerald-400" />
-              <span>4. Penyimpanan Lokal Browser (Local Storage & Cache)</span>
-            </h3>
-            <p>
-              Aplikasi Sotoy Film menggunakan teknologi <code>localStorage</code> pada peramban web Anda untuk menyimpan status login simulasi, tema tampilan, daftar tontonan offline cepat, dan draf tulisan artikel. Anda dapat membersihkan data ini kapan saja melalui pengaturan cache browser Anda.
-            </p>
-          </section>
+              {section.bullets && section.bullets.length > 0 && (
+                <ul className="list-disc pl-5 space-y-2 text-slate-300">
+                  {section.bullets.map((bullet, index) => (
+                    <li key={index}>
+                      <RichTextContent value={bullet} />
+                    </li>
+                  ))}
+                </ul>
+              )}
 
-          {/* Section 5 */}
-          <section className="bg-[#171717] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
-            <h3 className="font-display font-black text-lg text-white flex items-center gap-2">
-              <Mail className="w-5 h-5 text-[#FF2E7E]" />
-              <span>5. Hubungi Petugas Perlindungan Data</span>
-            </h3>
-            <p>
-              Apabila Anda memiliki pertanyaan, keberatan, atau ingin meminta penghapusan data seputar Kebijakan Privasi ini, silakan hubungi tim Sotoy Film:
-            </p>
-            <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs space-y-1">
-              <div><strong>Email:</strong> admin.sotoyfilm@gmail.com</div>
-              <div><strong>Subjek:</strong> Permohonan Hak Privasi Pengguna Sotoy Film</div>
-            </div>
-          </section>
+              {section.contactBox && section.contactBox.length > 0 && (
+                <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs space-y-1">
+                  {section.contactBox.map((line, index) => (
+                    <div key={index}>
+                      <RichTextContent value={line} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          ))}
 
         </div>
 
@@ -172,13 +164,13 @@ export const PrivacyPolicyPage: React.FC = () => {
             onClick={() => navigateTo('home')}
             className="text-xs font-bold text-slate-400 hover:text-white transition-colors"
           >
-            ← Kembali ke Beranda
+            {page.backHomeLabel}
           </button>
           <button
             onClick={() => navigateTo('terms-conditions')}
             className="text-xs font-bold text-[#FF2E7E] hover:underline"
           >
-            Baca Syarat & Ketentuan →
+            {page.termsLabel}
           </button>
         </div>
 
